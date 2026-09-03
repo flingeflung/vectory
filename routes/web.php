@@ -1,0 +1,48 @@
+<?php
+
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DisplayFilterController;
+use App\Http\Controllers\FavoriteController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectWorkflowStepController;
+use App\Http\Controllers\TaskController;
+use Illuminate\Support\Facades\Route;
+
+Route::get('/', function () {
+    return redirect()->route(auth()->check() ? 'dashboard' : 'login');
+});
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::post('/dashboard/layout', [DashboardController::class, 'updateLayout'])->name('dashboard.layout');
+    Route::delete('/dashboard/recent/{recentlyViewedProject}', [DashboardController::class, 'removeRecent'])->name('dashboard.recent.destroy');
+});
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/projekte', [ProjectController::class, 'index'])->name('projekte');
+    Route::get('/projekte/{project}', [ProjectController::class, 'show'])->name('projekte.show');
+    Route::patch('/projekte/{project}', [ProjectController::class, 'update'])->name('projekte.update');
+    Route::post('/projekte/{project}/favorite', [FavoriteController::class, 'toggle'])->name('projekte.favorite');
+    Route::patch('/projekte/{project}/workflow-steps/{projectWorkflowStep}/due-date', [ProjectWorkflowStepController::class, 'updateDueDate'])->name('projekte.workflow-steps.due-date');
+
+    Route::get('/favoriten', [FavoriteController::class, 'index'])->name('favoriten');
+
+    Route::get('/aufgaben', [TaskController::class, 'index'])->name('aufgaben');
+    Route::post('/aufgaben/{task}/sichtbarkeit', [TaskController::class, 'toggleVisibility'])->name('aufgaben.visibility');
+});
+
+Route::middleware(['auth', 'verified'])->prefix('projekte/anzeigefilter')->name('projekte.anzeigefilter.')->group(function () {
+    Route::post('/', [DisplayFilterController::class, 'update'])->name('update');
+    Route::post('/sets', [DisplayFilterController::class, 'store'])->name('sets.store');
+    Route::post('/sets/{displayFilterSet}/activate', [DisplayFilterController::class, 'activate'])->name('sets.activate');
+    Route::delete('/sets/{displayFilterSet}', [DisplayFilterController::class, 'destroy'])->name('sets.destroy');
+});
+
+Route::middleware('auth')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
+require __DIR__.'/auth.php';

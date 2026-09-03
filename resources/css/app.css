@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Marken-/Theme-Farben. Bewusst als CSS-Variablen statt fester Tailwind-Farben,
+ * damit sie sich später pro Mandant (Kunde) austauschen lassen, ohne die
+ * Templates anzufassen.
+ */
+:root {
+    --color-topbar: #0b2e4e;
+    --color-topbar-content: #ffffff;
+
+    --color-sidebar: #ffffff;
+    --color-sidebar-content: #4b5563;
+    --color-sidebar-content-hover: #111827;
+    --color-sidebar-hover: #f3f4f6;
+    --color-sidebar-active: #eff6ff;
+    --color-sidebar-active-content: #0b2e4e;
+}
