@@ -1,4 +1,6 @@
 <x-guest-layout>
+    <h1 class="text-xl font-semibold text-gray-800 mb-4">Willkommen bei Vectory</h1>
+
     <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
 
