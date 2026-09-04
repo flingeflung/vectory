@@ -459,6 +459,20 @@ class ProjectController extends Controller
                 continue;
             }
 
+            if ($key === 'source_pn') {
+                // Präfix-Suche statt Teilstring - eine PN-Eingabe wie "100"
+                // soll nur Projekte finden, deren PN damit ANFÄNGT, nicht
+                // irgendwo "100" enthält (sonst treffen z.B. Jahres- und
+                // Mittelziffern beliebiger anderer PN mit rein). Wer
+                // wirklich einen Teilstring/eine andere Position sucht,
+                // kann "*" als Wildcard direkt an die gewünschte Stelle
+                // setzen (z.B. "*100" oder "26*01").
+                $pattern = str_contains($value, '*') ? str_replace('*', '%', $value) : "{$value}%";
+                $query->where('source_pn', 'like', $pattern);
+
+                continue;
+            }
+
             if ($key === 'localization') {
                 $value === 'null' ? $query->whereNull('localization') : $query->where('localization', (bool) $value);
 
