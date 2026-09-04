@@ -8,33 +8,62 @@
     <div class="h-full flex flex-col p-4 sm:p-6 lg:p-8">
         <div class="w-full max-w-7xl mx-auto flex flex-1 min-h-0 flex-col">
             <form method="GET" action="{{ route('illustrationen') }}" class="mb-3 flex shrink-0 flex-wrap items-start gap-x-6 gap-y-3 text-sm">
-                <div>
-                    <div class="mb-1 text-xs text-gray-500">{{ __('Status') }}</div>
-                    <div class="flex flex-wrap gap-x-3 gap-y-1">
+                <x-filter-dropdown label="{{ __('Status') }} ({{ $selectedStatuses->count() }}/{{ $statuses->count() }})">
+                    <div class="mb-2 flex items-center justify-between">
+                        <span class="text-xs font-medium text-gray-500">{{ __('Status') }}</span>
+                        <span class="flex gap-2 text-xs">
+                            <button type="button" onclick="this.closest('[x-data]').querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = true)" class="text-indigo-600 hover:underline">{{ __('Alle') }}</button>
+                            <button type="button" onclick="this.closest('[x-data]').querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false)" class="text-indigo-600 hover:underline">{{ __('Keiner') }}</button>
+                        </span>
+                    </div>
+                    <div class="max-h-56 space-y-1 overflow-y-auto">
                         @foreach ($statuses as $status)
-                            <label class="flex items-center gap-1 text-gray-700">
-                                <input type="checkbox" name="status[]" value="{{ $status->id }}" onchange="this.form.submit()" class="rounded border-gray-300" @checked($selectedStatuses->contains($status->id))>
+                            <label class="flex items-center gap-1.5 text-gray-700">
+                                <input type="checkbox" name="status[]" value="{{ $status->id }}" class="rounded border-gray-300" @checked($selectedStatuses->contains($status->id))>
                                 {{ $status->name }}
                             </label>
                         @endforeach
                     </div>
-                </div>
+                    <button type="submit" class="mt-2 w-full rounded bg-gray-800 px-2 py-1 text-xs font-medium text-white hover:bg-gray-700">{{ __('Anwenden') }}</button>
+                </x-filter-dropdown>
 
-                <div>
-                    <div class="mb-1 text-xs text-gray-500">{{ __('Illustrator') }}</div>
-                    <div class="flex flex-wrap gap-x-3 gap-y-1">
-                        <label class="flex items-center gap-1 text-gray-700">
-                            <input type="checkbox" name="illustrator[]" value="none" onchange="this.form.submit()" class="rounded border-gray-300" @checked($selectedIllustrators->contains('none'))>
-                            {{ __('– nicht zugewiesen –') }}
-                        </label>
-                        @foreach ($illustrationPersons as $person)
-                            <label class="flex items-center gap-1 @class(['text-gray-400' => ! $person->active])">
-                                <input type="checkbox" name="illustrator[]" value="{{ $person->id }}" onchange="this.form.submit()" class="rounded border-gray-300" @checked($selectedIllustrators->contains($person->id))>
-                                {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }}
+                <x-filter-dropdown label="{{ __('Illustrator') }} ({{ $selectedIllustrators->count() }})">
+                    <div x-data="{ showInactive: false }">
+                        <div class="mb-2 flex items-center justify-between">
+                            <span class="text-xs font-medium text-gray-500">{{ __('Illustrator') }}</span>
+                            <span class="flex gap-2 text-xs">
+                                <button type="button" onclick="this.closest('[x-data]').querySelectorAll('input[type=checkbox][name^=illustrator]').forEach(cb => cb.checked = true)" class="text-indigo-600 hover:underline">{{ __('Alle') }}</button>
+                                <button type="button" onclick="this.closest('[x-data]').querySelectorAll('input[type=checkbox][name^=illustrator]').forEach(cb => cb.checked = false)" class="text-indigo-600 hover:underline">{{ __('Keiner') }}</button>
+                            </span>
+                        </div>
+                        <div class="max-h-56 space-y-1 overflow-y-auto">
+                            <label class="flex items-center gap-1.5 text-gray-700">
+                                <input type="checkbox" name="illustrator[]" value="none" class="rounded border-gray-300" @checked($selectedIllustrators->contains('none'))>
+                                {{ __('– nicht zugewiesen –') }}
                             </label>
-                        @endforeach
+                            @foreach ($illustrationPersons as $person)
+                                <label
+                                    class="flex items-center gap-1.5"
+                                    @class(['text-gray-400' => ! $person->active])
+                                    @unless ($person->active) x-show="showInactive" x-cloak @endunless
+                                >
+                                    <input type="checkbox" name="illustrator[]" value="{{ $person->id }}" class="rounded border-gray-300" @checked($selectedIllustrators->contains($person->id))>
+                                    {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }}
+                                </label>
+                            @endforeach
+                        </div>
+                        {{-- Nur ein Anzeige-Umschalter, kein eigener Submit - die
+                             Checkboxen der inaktiven Personen sind schon im Formular
+                             (Standard: mit angehakt), nur unsichtbar. So bleibt "alle
+                             (auch inaktive) ausgewählt" der Default, ohne dass ihn ein
+                             Klick auf diesen Umschalter verändert. --}}
+                        <label class="mt-2 flex items-center gap-1.5 border-t border-gray-100 pt-2 text-xs text-gray-600">
+                            <input type="checkbox" x-model="showInactive" class="rounded border-gray-300">
+                            {{ __('Inaktive auch anzeigen') }}
+                        </label>
                     </div>
-                </div>
+                    <button type="submit" class="mt-2 w-full rounded bg-gray-800 px-2 py-1 text-xs font-medium text-white hover:bg-gray-700">{{ __('Anwenden') }}</button>
+                </x-filter-dropdown>
 
                 <label class="flex items-center gap-1.5">
                     <span class="text-gray-500">{{ __('Auftraggeber') }}:</span>
