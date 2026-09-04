@@ -221,7 +221,7 @@
             gab es noch Folgefehler. Als eigenständiges, globales Modal (wie project-overlay
             selbst) tritt das Problem gar nicht erst auf.
         --}}
-        <x-modal name="illustration-orders" max-width="lg">
+        <x-modal name="illustration-orders" max-width="lg" :dirty-check="'illustrationOrdersIsDirty'">
             <div class="flex max-h-[85vh] flex-col">
                 <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
                     <h3 class="text-sm font-semibold text-gray-900">{{ __('Illustrationsaufträge') }}</h3>
@@ -256,12 +256,31 @@
                 const illuBody = () => document.getElementById('illustration-orders-body');
                 const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
                 let currentProjectId = null;
+                let savedSnapshot = null;
+
+                // Alle Formulare zusammen (nicht nur "Neuer Auftrag") - es können
+                // mehrere gleichzeitig im DOM stehen (je Auftrag ein "Status
+                // ändern"-Formular, auch wenn per x-show gerade eingeklappt:
+                // FormData erfasst Werte unabhängig von der CSS-Sichtbarkeit).
+                const serializeAllForms = () => [...illuBody().querySelectorAll('form')]
+                    .map((form) => new URLSearchParams(new FormData(form)).toString())
+                    .join('|');
+
+                const snapshot = () => {
+                    savedSnapshot = serializeAllForms();
+                };
+
+                window.illustrationOrdersIsDirty = () => {
+                    return savedSnapshot !== null && serializeAllForms() !== savedSnapshot;
+                };
 
                 window.openIllustrationOrders = async (projectId) => {
                     currentProjectId = projectId;
+                    savedSnapshot = null;
                     illuBody().innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
                     window.dispatchEvent(new CustomEvent('open-modal', { detail: 'illustration-orders' }));
                     illuBody().innerHTML = await fetch(`/projekte/${projectId}/illustrationsauftraege`).then((r) => r.text());
+                    snapshot();
                 };
 
                 // Nach dem Speichern auch die Illustration-Zusammenfassung im
@@ -308,6 +327,7 @@
                     illuBody().innerHTML = await response.text();
 
                     if (response.ok) {
+                        snapshot();
                         refreshUnderlyingProject();
                     }
                 });
