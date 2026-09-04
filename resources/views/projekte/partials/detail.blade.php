@@ -436,18 +436,41 @@
         </form>
         </div>
 
-        <div x-show="activeTab === 'vorgaenge'" x-cloak class="space-y-1 text-xs text-gray-600">
-            @forelse ($project->activities as $activity)
-                <div>
-                    <span class="text-gray-400">{{ $activity->created_at->format('d.m.Y H:i') }}</span>
-                    {{ $activity->message }}
-                    @if ($activity->user)
-                        <span class="text-gray-400">({{ $activity->user->name }})</span>
-                    @endif
+        @php
+            $activityCategories = $project->activities->map(fn ($activity) => $activity->type->category())->unique('value')->sortBy('value')->values();
+        @endphp
+        <div
+            x-show="activeTab === 'vorgaenge'"
+            x-cloak
+            x-data="{ activeCategories: {{ \Illuminate\Support\Js::from($activityCategories->pluck('value')->all()) }} }"
+            class="text-xs text-gray-600"
+        >
+            @if ($activityCategories->count() > 1)
+                <div class="mb-2 flex flex-wrap gap-3">
+                    @foreach ($activityCategories as $category)
+                        <label class="flex items-center gap-1">
+                            <input type="checkbox" value="{{ $category->value }}" x-model="activeCategories" class="rounded border-gray-300">
+                            <span class="inline-block h-2 w-2 rounded-full {{ $category->dotClass() }}"></span>
+                            {{ $category->label() }}
+                        </label>
+                    @endforeach
                 </div>
-            @empty
-                <div class="text-gray-400">&ndash; {{ __('Keine Vorgänge') }} &ndash;</div>
-            @endforelse
+            @endif
+
+            <div class="space-y-1">
+                @forelse ($project->activities as $activity)
+                    <div x-show="activeCategories.includes('{{ $activity->type->category()->value }}')">
+                        <span class="inline-block h-2 w-2 rounded-full {{ $activity->type->category()->dotClass() }}" title="{{ $activity->type->category()->label() }}"></span>
+                        <span class="text-gray-400">{{ $activity->created_at->format('d.m.Y H:i') }}</span>
+                        {{ $activity->message }}
+                        @if ($activity->user)
+                            <span class="text-gray-400">({{ $activity->user->name }})</span>
+                        @endif
+                    </div>
+                @empty
+                    <div class="text-gray-400">&ndash; {{ __('Keine Vorgänge') }} &ndash;</div>
+                @endforelse
+            </div>
         </div>
 
         <div x-show="activeTab === 'workflow_steps'" x-cloak class="text-sm">
