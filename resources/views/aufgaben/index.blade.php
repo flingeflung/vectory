@@ -20,7 +20,11 @@
                         @foreach ($peopleByGroup as $group)
                             <optgroup label="{{ $group['label'] }}">
                                 @foreach ($group['people'] as $person)
-                                    <option value="{{ $person->id }}" @selected($selectedPerson === (string) $person->id)>{{ $person->fullName() }}</option>
+                                    <option
+                                        value="{{ $person->id }}"
+                                        @selected($selectedPerson === (string) $person->id)
+                                        @class(['text-gray-400' => ! $person->active])
+                                    >{{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }}</option>
                                 @endforeach
                             </optgroup>
                         @endforeach
@@ -35,6 +39,11 @@
                 <label class="flex items-center gap-1.5 text-gray-700" title="{{ __('Alle Personen dieses Workflow-Schritts zeigen') }}">
                     <input type="checkbox" name="all_wfs_persons" value="1" onchange="this.form.submit()" class="rounded border-gray-300" @checked($showAllWfsPersons)>
                     {{ __('Alle WFS-Personen zeigen') }}
+                </label>
+
+                <label class="flex items-center gap-1.5 text-gray-700" title="{{ __('Auch inaktive Personen in der Personen-Auswahl oben anzeigen') }}">
+                    <input type="checkbox" name="show_inactive_people" value="1" onchange="this.form.submit()" class="rounded border-gray-300" @checked($showInactivePeople)>
+                    {{ __('Inaktive Personen auswählbar') }}
                 </label>
             </form>
 

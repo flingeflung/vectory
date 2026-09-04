@@ -34,15 +34,17 @@ class TaskController extends Controller
                 'person' => $request->query('person'),
                 'hidden' => $request->boolean('hidden'),
                 'all_wfs_persons' => $request->boolean('all_wfs_persons'),
+                'show_inactive_people' => $request->boolean('show_inactive_people'),
             ];
             $this->persistFilters($user, $filters);
-        } elseif (! $request->hasAny(['person', 'hidden', 'all_wfs_persons', 'sort', 'direction', 'page'])) {
+        } elseif (! $request->hasAny(['person', 'hidden', 'all_wfs_persons', 'show_inactive_people', 'sort', 'direction', 'page'])) {
             $filters = $this->persistedFiltersFor($user);
         } else {
             $filters = [
                 'person' => $request->query('person'),
                 'hidden' => $request->boolean('hidden'),
                 'all_wfs_persons' => $request->boolean('all_wfs_persons'),
+                'show_inactive_people' => $request->boolean('show_inactive_people'),
             ];
         }
 
@@ -51,6 +53,7 @@ class TaskController extends Controller
         $selectedPerson = $filters['person'] ?? null;
         $showHidden = (bool) ($filters['hidden'] ?? false);
         $showAllWfsPersons = (bool) ($filters['all_wfs_persons'] ?? false);
+        $showInactivePeople = (bool) ($filters['show_inactive_people'] ?? false);
 
         $query = Task::query()
             ->whereIn('tasks.source', [TaskSource::WorkflowStep, TaskSource::GraphicOrder])
@@ -96,10 +99,11 @@ class TaskController extends Controller
             'tasks' => $tasks,
             'sort' => $sort,
             'direction' => $direction,
-            'peopleByGroup' => $this->peopleByFunctionGroup(),
+            'peopleByGroup' => $this->peopleByFunctionGroup($showInactivePeople),
             'selectedPerson' => $selectedPerson,
             'showHidden' => $showHidden,
             'showAllWfsPersons' => $showAllWfsPersons,
+            'showInactivePeople' => $showInactivePeople,
             'hiddenTaskIds' => TaskVisibility::query()->where('user_id', $user->id)->pluck('task_id')->all(),
             'wfsPeopleByTask' => $wfsPeopleByTask,
         ]);
@@ -128,7 +132,7 @@ class TaskController extends Controller
      *
      * @return list<array{label: string, people: \Illuminate\Support\Collection<int, Person>}>
      */
-    private function peopleByFunctionGroup(): array
+    private function peopleByFunctionGroup(bool $includeInactive): array
     {
         $pairs = Task::query()
             ->whereIn('source', [TaskSource::WorkflowStep, TaskSource::GraphicOrder])
@@ -137,7 +141,11 @@ class TaskController extends Controller
             ->distinct()
             ->get();
 
-        $people = Person::query()->whereIn('id', $pairs->pluck('person_id')->unique())->get()->keyBy('id');
+        $people = Person::query()
+            ->whereIn('id', $pairs->pluck('person_id')->unique())
+            ->when(! $includeInactive, fn ($query) => $query->where('active', true))
+            ->get()
+            ->keyBy('id');
         $groups = FunctionGroup::query()->whereIn('id', $pairs->pluck('function_group_id')->unique())->orderBy('sort')->get()->keyBy('id');
 
         return $pairs
@@ -156,17 +164,17 @@ class TaskController extends Controller
     }
 
     /**
-     * @return array{person: ?string, hidden: bool, all_wfs_persons: bool}
+     * @return array{person: ?string, hidden: bool, all_wfs_persons: bool, show_inactive_people: bool}
      */
     private function persistedFiltersFor(User $user): array
     {
         $set = ProjectColumnCatalog::ensureDefaultSetFor($user);
 
-        return $set->config['aufgaben_filter'] ?? ['person' => null, 'hidden' => false, 'all_wfs_persons' => false];
+        return $set->config['aufgaben_filter'] ?? ['person' => null, 'hidden' => false, 'all_wfs_persons' => false, 'show_inactive_people' => false];
     }
 
     /**
-     * @param  array{person: ?string, hidden: bool, all_wfs_persons: bool}  $filters
+     * @param  array{person: ?string, hidden: bool, all_wfs_persons: bool, show_inactive_people: bool}  $filters
      */
     private function persistFilters(User $user, array $filters): void
     {

@@ -321,7 +321,11 @@
                 <select name="workflow_id" class="w-full max-w-sm rounded border-gray-300 py-1 text-sm">
                     <option value="">{{ __('– kein Workflow zugewiesen –') }}</option>
                     @foreach ($availableWorkflows as $availableWorkflow)
-                        <option value="{{ $availableWorkflow->id }}" @selected(old('workflow_id', $project->workflow_id) == $availableWorkflow->id)>{{ $availableWorkflow->name }}{{ ! $availableWorkflow->active ? ' ('.__('inaktiv').')' : '' }}</option>
+                        <option
+                            value="{{ $availableWorkflow->id }}"
+                            @selected(old('workflow_id', $project->workflow_id) == $availableWorkflow->id)
+                            @class(['text-gray-400' => ! $availableWorkflow->active])
+                        >{{ $availableWorkflow->name }}{{ ! $availableWorkflow->active ? ' [i]' : '' }}</option>
                     @endforeach
                 </select>
             </div>
@@ -348,7 +352,7 @@
                                 <div>
                                     <span class="text-gray-500">{{ $group->short_name }}:</span>
                                     @foreach ($entries as $entry)
-                                        {{ $entry->person->fullName() }}@if ($entry->is_primary)<span class="text-amber-500" title="{{ __('Erstansprechpartner') }}">&#9733;</span>@endif @if (! $loop->last), @endif
+                                        <span class="{{ $entry->person->active ? '' : 'text-gray-400' }}">{{ $entry->person->fullName() }}{{ ! $entry->person->active ? ' [i]' : '' }}</span>@if ($entry->is_primary)<span class="text-amber-500" title="{{ __('Erstansprechpartner') }}">&#9733;</span>@endif @if (! $loop->last), @endif
                                     @endforeach
                                 </div>
                             @endif
@@ -369,7 +373,7 @@
                             <div class="mb-0.5 font-medium text-gray-600">{{ $group->name }}</div>
                             <div class="grid grid-cols-2 gap-x-3 gap-y-0.5">
                                 @foreach ($group->members as $person)
-                                    <label class="flex items-center gap-1 text-gray-600">
+                                    <label class="flex items-center gap-1 {{ $person->active ? 'text-gray-600' : 'text-gray-400' }}">
                                         <input
                                             type="checkbox"
                                             name="project_people[{{ $group->id }}][]"
@@ -386,7 +390,7 @@
                                             onclick="this.previousElementSibling.checked = true"
                                             @checked($currentPrimaryId === $person->id)
                                         >
-                                        {{ $person->fullName() }}
+                                        {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }}
                                     </label>
                                 @endforeach
                             </div>

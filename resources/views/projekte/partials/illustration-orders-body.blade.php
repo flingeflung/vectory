@@ -4,7 +4,7 @@
 
 <div class="mb-3 text-xs text-gray-500">{{ __('Projekt') }} {{ $project->source_pn }}</div>
 
-<div x-data="{ showNew: false }">
+<div x-data="{ showNew: false }" class="mb-4">
     <button
         type="button"
         x-show="!showNew"
@@ -72,7 +72,7 @@
                 </button>
             </div>
             <div class="mt-1">{{ __('Status') }}: {{ $order->status?->name }}</div>
-            <div>{{ __('Illustrator') }}: {{ $order->illustrator?->fullName() ?? '–' }}</div>
+            <div>{{ __('Illustrator') }}: {{ $order->illustrator?->fullName() ?? '–' }}{{ $order->illustrator && ! $order->illustrator->active ? ' [i]' : '' }}</div>
             @if ($order->description)
                 <div class="mt-1 whitespace-pre-line text-gray-700">{{ $order->description }}</div>
             @endif
@@ -111,7 +111,7 @@
                     <select name="illustrator_person_id" x-model="illustrator" class="mt-0.5 rounded border-gray-300 py-1 text-xs">
                         <option value="">&ndash; {{ __('nicht zugewiesen') }} &ndash;</option>
                         @foreach ($illustrationPersons as $person)
-                            <option value="{{ $person->id }}">{{ $person->fullName() }}</option>
+                            <option value="{{ $person->id }}" @class(['text-gray-400' => ! $person->active])>{{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }}</option>
                         @endforeach
                     </select>
                 </div>
