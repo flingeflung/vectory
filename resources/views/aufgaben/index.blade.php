@@ -91,7 +91,12 @@
                                     </td>
                                     <td class="px-4 py-2 whitespace-nowrap">
                                         @if ($typeSub?->smallSymbol())
-                                            <img src="{{ asset('images/dashboard-icons/'.$typeSub->smallSymbol()) }}" alt="" class="h-3 w-auto shrink-0">
+                                            <img
+                                                src="{{ asset('images/dashboard-icons/'.$typeSub->smallSymbol()) }}"
+                                                alt="{{ $typeSub->name }}"
+                                                title="{{ $typeSub->main ? $typeSub->main->name.': '.$typeSub->name : $typeSub->name }}"
+                                                class="h-3 w-auto shrink-0"
+                                            >
                                         @endif
                                     </td>
                                     <td class="px-4 py-2 whitespace-nowrap text-gray-500">
