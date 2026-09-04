@@ -115,7 +115,7 @@
                     :class="{ 'bg-gray-50': index === selectedIndex }"
                 >
                     <span class="shrink-0 font-semibold text-gray-800" x-text="item.pn"></span>
-                    <img x-show="item.type_symbol" :src="'{{ asset('images/project-type-icons') }}/' + item.type_symbol" :title="item.type_name" class="h-3 w-auto shrink-0">
+                    <img x-show="item.type_symbol" :src="'{{ asset('images/project-type-icons') }}/' + item.type_symbol" :title="item.type_name" class="h-3 w-3 shrink-0 object-contain">
                     <span class="h-1.5 w-1.5 shrink-0 rounded-full" :class="statusClass(item.status)" :title="statusLabel(item.status)"></span>
                     <span class="truncate text-gray-600" :title="item.title" x-text="item.title"></span>
                 </button>
