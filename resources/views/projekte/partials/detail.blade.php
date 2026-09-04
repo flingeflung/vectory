@@ -569,7 +569,7 @@
                                         @if ($illuTotal === 0)
                                             {{ __('Keine Aufträge vorhanden') }}
                                         @else
-                                            {{ $illuTotal }} {{ $illuTotal === 1 ? __('Auftrag') : __('Aufträge') }}, {{ $illuDone }} {{ __('erledigt') }}@if ($illuDiscarded > 0), {{ $illuDiscarded }} {{ __('verworfen') }}@endif
+                                            {{ $illuTotal }} {{ $illuTotal === 1 ? __('Auftrag') : __('Aufträge') }}: {{ $illuOpen }} {{ __('offen') }}, {{ $illuDone }} {{ __('erledigt') }}, {{ $illuDiscarded }} {{ __('verworfen') }}
                                         @endif
                                     </div>
                                     @if ($illuAllClosed)
