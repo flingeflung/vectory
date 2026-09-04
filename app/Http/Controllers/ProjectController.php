@@ -260,7 +260,22 @@ class ProjectController extends Controller
             }
         }
 
-        if ($isOverlay) {
+        return $this->respondAfterSave($request, $project);
+    }
+
+    /**
+     * Antwort nach einer erfolgreichen Änderung, egal aus welchem Formular
+     * (Projekt-Detailformular, aber auch z.B. Illustrationsaufträge) -
+     * im Overlay-Kontext muss IMMER der Detail-Partial zurückkommen, sonst
+     * fängt der globale Submit-Interceptor (siehe layouts/app.blade.php)
+     * die Antwort ab und kippt eine komplette Seite ins Overlay-DIV statt
+     * des erwarteten Fragments. Ein normales redirect()/back() funktioniert
+     * hier NICHT, weil fetch() den X-Overlay-Header beim automatischen
+     * Folgen eines 302 nicht mitschickt.
+     */
+    public function respondAfterSave(Request $request, Project $project): RedirectResponse|Response
+    {
+        if ($this->isOverlayRequest($request)) {
             return response()->view('projekte.partials.detail', [
                 ...$this->detailData($request, $project->fresh()),
                 'overlay' => true,

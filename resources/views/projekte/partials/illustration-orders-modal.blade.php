@@ -1,4 +1,4 @@
-<x-modal name="illustration-orders" max-width="lg">
+<x-modal name="illustration-orders" max-width="lg" :teleport="true">
     <div class="flex max-h-[85vh] flex-col">
         <div class="shrink-0 border-b border-gray-200 px-4 py-3">
             <h3 class="text-sm font-semibold text-gray-900">{{ __('Illustrationsaufträge') }} &ndash; {{ $project->source_pn }}</h3>

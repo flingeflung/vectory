@@ -15,6 +15,14 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans antialiased">
+        {{-- Eigenständiges, leeres Teleport-Ziel für Modals (siehe components/modal.blade.php) -
+             NICHT direkt nach body teleportieren: die Modal-<template>-Quellen selbst liegen
+             ebenfalls als Kinder von body, das Anhängen eines Klons dorthin während desselben
+             Baum-Durchlaufs ließ Alpine bei den letzten beiden Modals (project-overlay,
+             favorites) den Teleport-Vorgang verlieren (reproduzierbar: die ersten beiden
+             klappten, die letzten beiden nicht). Ein separates, von Anfang an leeres Ziel
+             umgeht das. --}}
+        <div id="modal-root"></div>
         <div
             x-data="{ sidebarOpen: localStorage.getItem('vectory-sidebar-open') !== 'false' }"
             x-init="$watch('sidebarOpen', value => localStorage.setItem('vectory-sidebar-open', value))"
@@ -136,6 +144,14 @@
                     showLoading();
                     window.dispatchEvent(new CustomEvent('open-modal', { detail: 'project-overlay' }));
 
+                    // Teleportierte Modals aus dem VORHERIGEN Overlay-Inhalt (z.B.
+                    // Illustrationsaufträge, siehe components/modal.blade.php) hängen
+                    // an #modal-root, nicht an #project-overlay-body - werden also vom
+                    // gleich folgenden body().innerHTML NICHT mit entsorgt. Ohne dieses
+                    // Aufräumen sammeln sich bei jedem Projektwechsel weitere Klone samt
+                    // eigener window-Listener an.
+                    document.getElementById('modal-root').innerHTML = '';
+
                     const params = new URLSearchParams();
                     if (sort) params.set('sort', sort);
                     if (direction) params.set('direction', direction);
@@ -158,8 +174,16 @@
                 });
 
                 // Event-Delegation: das Formular wird erst nach dem Öffnen per fetch eingefügt.
+                // Erfasst auch Formulare in teleportierten Modals (siehe components/modal.blade.php,
+                // z.B. Illustrationsaufträge) - die hängen an #modal-root, NICHT mehr an
+                // #project-overlay-body, zählen aber trotzdem zum Overlay-Kontext, solange
+                // das Overlay gerade offen ist (offsetParent === null, wenn ein Vorfahre
+                // display:none hat, z.B. weil das Overlay geschlossen ist).
                 document.addEventListener('submit', async (event) => {
-                    if (!body() || !body().contains(event.target)) {
+                    const overlayOpen = !!body() && body().offsetParent !== null;
+                    const inOverlay = !!body() && body().contains(event.target);
+                    const inTeleportedModal = overlayOpen && document.getElementById('modal-root').contains(event.target);
+                    if (!inOverlay && !inTeleportedModal) {
                         return;
                     }
 
@@ -177,6 +201,10 @@
                         headers: { 'X-Overlay': '1', 'X-CSRF-TOKEN': csrfToken },
                         body: formData,
                     });
+                    // Siehe open-project-Handler oben: alte teleportierte Modal-Klone
+                    // (#modal-root) hängen nicht mehr an body() und würden sonst bei
+                    // jedem Speichern einen weiteren verwaisten Klon anhäufen.
+                    document.getElementById('modal-root').innerHTML = '';
                     body().innerHTML = await response.text();
                     hideLoading();
 

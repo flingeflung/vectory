@@ -7,6 +7,7 @@ use App\Models\GraphicOrderStatus;
 use App\Models\Project;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Validation\Rule;
 
 /**
@@ -15,7 +16,9 @@ use Illuminate\Validation\Rule;
  */
 class GraphicOrderController extends Controller
 {
-    public function store(Request $request, Project $project): RedirectResponse
+    public function __construct(private ProjectController $projectController) {}
+
+    public function store(Request $request, Project $project): RedirectResponse|Response
     {
         $validated = $request->validate([
             'description' => ['required', 'string'],
@@ -38,10 +41,10 @@ class GraphicOrderController extends Controller
             'initiated_by_person_id' => $request->user()->person_id,
         ]);
 
-        return back();
+        return $this->projectController->respondAfterSave($request, $project);
     }
 
-    public function update(Request $request, Project $project, GraphicOrder $graphicOrder): RedirectResponse
+    public function update(Request $request, Project $project, GraphicOrder $graphicOrder): RedirectResponse|Response
     {
         abort_unless($graphicOrder->project_id === $project->id, 404);
 
@@ -59,6 +62,6 @@ class GraphicOrderController extends Controller
             'completed_by_person_id' => $status->is_open === false && ! $status->is_discarded ? $request->user()->person_id : null,
         ]);
 
-        return back();
+        return $this->projectController->respondAfterSave($request, $project);
     }
 }
