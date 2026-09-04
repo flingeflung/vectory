@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['tenant_id', 'project_id', 'person_id', 'function_group_id', 'project_workflow_step_id', 'source'])]
+#[Fillable(['tenant_id', 'project_id', 'person_id', 'function_group_id', 'project_workflow_step_id', 'graphic_order_id', 'source'])]
 class Task extends Model
 {
     use BelongsToTenant;
@@ -36,6 +36,11 @@ class Task extends Model
     public function projectWorkflowStep(): BelongsTo
     {
         return $this->belongsTo(ProjectWorkflowStep::class);
+    }
+
+    public function graphicOrder(): BelongsTo
+    {
+        return $this->belongsTo(GraphicOrder::class);
     }
 
     /**
@@ -92,6 +97,53 @@ class Task extends Model
                 ]);
             }
         }
+    }
+
+    /**
+     * Aufgabe aus einem Illustrationsauftrag ableiten: sobald ein Illustrator
+     * zugewiesen ist UND der Auftrag noch offen ist (status->is_open), wird
+     * er automatisch Projektbeteiligter (function_group_id = Illustration)
+     * und bekommt eine Aufgabe. Bei Statuswechsel/Umzuweisung wird die alte
+     * Aufgabe gelöscht und ggf. neu angelegt - analog
+     * syncWorkflowTasksForProject(), nur je Auftrag statt je Projekt/WFS.
+     * Wird vom GraphicOrderObserver aufgerufen, sobald sich
+     * illustrator_person_id oder graphic_order_status_id ändert.
+     */
+    public static function syncIllustrationTaskForOrder(GraphicOrder $graphicOrder): void
+    {
+        self::query()
+            ->where('graphic_order_id', $graphicOrder->id)
+            ->where('source', TaskSource::GraphicOrder)
+            ->delete();
+
+        if (! $graphicOrder->illustrator_person_id || ! $graphicOrder->status?->is_open) {
+            return;
+        }
+
+        $functionGroup = FunctionGroup::query()
+            ->where('tenant_id', $graphicOrder->tenant_id)
+            ->where('legacy_id', 5)
+            ->first();
+
+        if (! $functionGroup) {
+            return;
+        }
+
+        ProjectPerson::query()->firstOrCreate([
+            'tenant_id' => $graphicOrder->tenant_id,
+            'project_id' => $graphicOrder->project_id,
+            'person_id' => $graphicOrder->illustrator_person_id,
+            'function_group_id' => $functionGroup->id,
+        ]);
+
+        self::create([
+            'tenant_id' => $graphicOrder->tenant_id,
+            'project_id' => $graphicOrder->project_id,
+            'person_id' => $graphicOrder->illustrator_person_id,
+            'function_group_id' => $functionGroup->id,
+            'graphic_order_id' => $graphicOrder->id,
+            'source' => TaskSource::GraphicOrder,
+        ]);
     }
 
     /**

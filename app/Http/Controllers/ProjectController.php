@@ -280,11 +280,12 @@ class ProjectController extends Controller
         $filters = $this->filtersFromRequest($request);
 
         return [
-            'project' => $project->loadMissing(['markets', 'projectPeople.person', 'projectPeople.functionGroup', 'workflow', 'activities.user', 'projectWorkflowSteps.workflowStep.functionGroups', 'projectWorkflowSteps.people.functionGroup', 'projectWorkflowSteps.people.person']),
+            'project' => $project->loadMissing(['markets', 'projectPeople.person', 'projectPeople.functionGroup', 'workflow', 'activities.user', 'projectWorkflowSteps.workflowStep.functionGroups', 'projectWorkflowSteps.people.functionGroup', 'projectWorkflowSteps.people.person', 'graphicOrders.status', 'graphicOrders.initiatedBy', 'graphicOrders.illustrator']),
             'attributes' => $project->relevantAttributes(),
             'allMarkets' => Market::query()->where('tenant_id', $project->tenant_id)->orderBy('sort')->get(),
             'marketSets' => MarketSet::query()->where('tenant_id', $project->tenant_id)->with('markets:id')->orderBy('sort')->get(),
             'allFunctionGroups' => FunctionGroup::query()->where('tenant_id', $project->tenant_id)->with('members')->orderBy('sort')->get(),
+            'graphicOrderStatuses' => \App\Models\GraphicOrderStatus::query()->where('tenant_id', $project->tenant_id)->orderBy('sort')->get(),
             // Der aktuell zugewiesene Workflow muss immer in der Liste auftauchen, auch wenn er
             // inzwischen inaktiv/ersetzt ist - sonst würde ein Speichern ohne bewusste Auswahl
             // den Workflow fälschlich entfernen, weil kein <option> mehr dazu passt.

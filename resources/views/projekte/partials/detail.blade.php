@@ -453,6 +453,7 @@
                             @php
                                 $peopleByGroup = $pws->people->groupBy('function_group_id');
                             @endphp
+                            <div class="flex w-full items-start justify-center gap-3">
                             <div
                                 x-data="{ expanded: false }"
                                 class="w-full max-w-2xl rounded-md px-3 py-2 {{ $pws->is_current ? 'border-2 border-blue-500' : 'border border-gray-300' }}"
@@ -536,6 +537,38 @@
                                 @endif
                                 </div>
                             </div>
+
+                            @if ($step->js_function === 'wfs_grafik')
+                                @php
+                                    $illuOrders = $project->graphicOrders;
+                                    $illuTotal = $illuOrders->count();
+                                    $illuOpen = $illuOrders->filter(fn ($o) => $o->status?->is_open)->count();
+                                    $illuDone = $illuOrders->filter(fn ($o) => $o->status && ! $o->status->is_open && ! $o->status->is_discarded)->count();
+                                    $illuDiscarded = $illuOrders->filter(fn ($o) => $o->status?->is_discarded)->count();
+                                    $illuAllClosed = $illuTotal > 0 && $illuOpen === 0;
+                                @endphp
+                                <div class="w-48 shrink-0 rounded-md border-2 border-dashed px-3 py-2 text-xs {{ $illuAllClosed ? 'border-green-400 bg-green-50' : 'border-blue-300 bg-blue-50' }}">
+                                    <div class="font-medium text-gray-900">{{ __('Illustration') }}</div>
+                                    <div class="mt-1 text-gray-700">
+                                        @if ($illuTotal === 0)
+                                            {{ __('Keine Aufträge vorhanden') }}
+                                        @else
+                                            {{ $illuTotal }} {{ $illuTotal === 1 ? __('Auftrag') : __('Aufträge') }}, {{ $illuDone }} {{ __('erledigt') }}@if ($illuDiscarded > 0), {{ $illuDiscarded }} {{ __('verworfen') }}@endif
+                                        @endif
+                                    </div>
+                                    @if ($illuAllClosed)
+                                        <div class="mt-1 font-medium text-green-700">{{ __('Erledigt') }}</div>
+                                    @endif
+                                    <button
+                                        type="button"
+                                        @click.stop="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'illustration-orders' }))"
+                                        class="mt-2 rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                                    >
+                                        {{ __('Illustrationsauftrag') }}
+                                    </button>
+                                </div>
+                            @endif
+                            </div>
                             @unless ($loop->last)
                                 <svg class="h-5 w-5 shrink-0 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M10 3a.75.75 0 01.75.75v10.638l3.96-4.158a.75.75 0 111.08 1.04l-5.25 5.5a.75.75 0 01-1.08 0l-5.25-5.5a.75.75 0 111.08-1.04l3.96 4.158V3.75A.75.75 0 0110 3z" clip-rule="evenodd" />
@@ -548,6 +581,12 @@
         </div>
         </div>
     </div>
+
+    @include('projekte.partials.illustration-orders-modal', [
+        'project' => $project,
+        'illustrationPersons' => $allFunctionGroups->firstWhere('legacy_id', 5)?->members ?? collect(),
+        'graphicOrderStatuses' => $graphicOrderStatuses,
+    ])
 
     @if ($isOverlay)
         <div

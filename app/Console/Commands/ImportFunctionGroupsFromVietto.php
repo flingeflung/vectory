@@ -16,6 +16,14 @@ class ImportFunctionGroupsFromVietto extends Command
 
     protected $description = 'Funktionsgruppen aus Vietto übernehmen';
 
+    /**
+     * Umbenennungen ggü. Vietto (legacy_id => Vectory-Name) - z.B.
+     * "Grafikerstellung" heißt bei uns einheitlich "Illustration".
+     */
+    private const NAME_OVERRIDES = [
+        5 => 'Illustration',
+    ];
+
     public function handle(): int
     {
         $tenant = Tenant::first();
@@ -33,7 +41,7 @@ class ImportFunctionGroupsFromVietto extends Command
             FunctionGroup::updateOrCreate(
                 ['tenant_id' => $tenant->id, 'legacy_id' => $row->valID],
                 [
-                    'name' => $row->strFunktionsgruppe,
+                    'name' => self::NAME_OVERRIDES[$row->valID] ?? $row->strFunktionsgruppe,
                     'short_name' => $row->strFunktionsgruppeShort,
                     'sort' => $row->intSort,
                     'active' => (bool) $row->blnActive,
