@@ -8,6 +8,8 @@
     <div class="h-full flex flex-col p-4 sm:p-6 lg:p-8">
         <div class="w-full max-w-7xl mx-auto flex flex-1 min-h-0 flex-col">
             <form method="GET" action="{{ route('illustrationen') }}" class="mb-3 flex shrink-0 flex-wrap items-start gap-x-6 gap-y-3 text-sm">
+                <input type="hidden" name="illustrationsfilter_submitted" value="1">
+
                 <x-filter-dropdown label="{{ __('Status') }} ({{ $selectedStatuses->count() }}/{{ $statuses->count() }})">
                     <div class="mb-2 flex items-center justify-between">
                         <span class="text-xs font-medium text-gray-500">{{ __('Status') }}</span>
@@ -101,7 +103,7 @@
                     <button type="submit" class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200">
                         {{ __('Anwenden') }}
                     </button>
-                    <a href="{{ route('illustrationen') }}" class="text-xs text-gray-500 hover:text-gray-700">
+                    <a href="{{ route('illustrationen', ['illustrationsfilter_submitted' => 1]) }}" class="text-xs text-gray-500 hover:text-gray-700">
                         {{ __('Filter zurücksetzen') }}
                     </a>
                 </div>

@@ -6,6 +6,8 @@ use App\Models\FunctionGroup;
 use App\Models\GraphicOrder;
 use App\Models\GraphicOrderStatus;
 use App\Models\Person;
+use App\Models\User;
+use App\Support\ProjectColumnCatalog;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -30,8 +32,14 @@ class IllustrationOverviewController extends Controller
      */
     private const UNASSIGNED = 'none';
 
+    /**
+     * @var list<string>
+     */
+    private const FILTER_KEYS = ['status', 'illustrator', 'initiator', 'due_from', 'due_to', 'q'];
+
     public function index(Request $request): View
     {
+        $user = $request->user();
         $statuses = GraphicOrderStatus::query()->orderBy('sort')->get();
         $illustrationPersons = FunctionGroup::query()
             ->where('legacy_id', 5)
@@ -40,12 +48,30 @@ class IllustrationOverviewController extends Controller
             ->sortBy(fn (Person $person) => $person->fullName())
             ->values() ?? collect();
 
-        $selectedStatuses = $this->selectedIds($request, 'status', $statuses->pluck('id'));
-        $selectedIllustrators = $this->selectedIds($request, 'illustrator', [...$illustrationPersons->pluck('id'), self::UNASSIGNED]);
-        $initiatorId = $request->query('initiator');
-        $dueFrom = $request->query('due_from');
-        $dueTo = $request->query('due_to');
-        $search = trim((string) $request->query('q', ''));
+        // Gleiches Muster wie Projekt-/Aufgaben-Filter: ein expliziter
+        // Marker unterscheidet "Filterformular abgeschickt" (jetzt merken,
+        // auch wenn dabei einzelne Checkbox-Gruppen komplett leer sind) von
+        // "nackte Navigation zu /illustrationen" (zuletzt gemerkten Stand
+        // wiederherstellen).
+        if ($request->has('illustrationsfilter_submitted')) {
+            $filters = $this->filtersFromRequest($request);
+            $this->persistFilters($user, $filters);
+        } elseif (! $request->hasAny([...self::FILTER_KEYS, 'illustrationsfilter_submitted'])) {
+            $filters = $this->persistedFiltersFor($user);
+        } else {
+            $filters = $this->filtersFromRequest($request);
+        }
+
+        $selectedStatuses = $filters['status'] !== null
+            ? collect($filters['status'])->map(fn ($value) => (int) $value)->values()
+            : $statuses->pluck('id');
+        $selectedIllustrators = $filters['illustrator'] !== null
+            ? collect($filters['illustrator'])->map(fn ($value) => $value === self::UNASSIGNED ? $value : (int) $value)->values()
+            : collect([...$illustrationPersons->pluck('id'), self::UNASSIGNED]);
+        $initiatorId = $filters['initiator'];
+        $dueFrom = $filters['due_from'];
+        $dueTo = $filters['due_to'];
+        $search = (string) $filters['q'];
 
         $query = GraphicOrder::query()
             ->with(['project', 'status', 'initiatedBy', 'illustrator.company'])
@@ -110,21 +136,44 @@ class IllustrationOverviewController extends Controller
     }
 
     /**
-     * Query-Array einlesen (z.B. status[]=1&status[]=2) - fehlt der Parameter
-     * komplett (erster Aufruf ohne Filter), gilt alles als ausgewählt statt
-     * nichts, sonst wäre die Liste beim ersten Öffnen leer.
-     *
-     * @param  Collection<int, int|string>  $allValues
-     * @return Collection<int, int|string>
+     * @return array{status: ?list<string>, illustrator: ?list<string>, initiator: ?string, due_from: ?string, due_to: ?string, q: ?string}
      */
-    private function selectedIds(Request $request, string $key, iterable $allValues): Collection
+    private function filtersFromRequest(Request $request): array
     {
-        if (! $request->has($key)) {
-            return collect($allValues)->values();
-        }
+        return [
+            // null = Parameter fehlt komplett (Filtergruppe nie angefasst) ->
+            // später als "alles ausgewählt" behandelt. Leeres Array dagegen
+            // heißt "abgeschickt, aber bewusst nichts angehakt" (z.B. "Keiner"
+            // + Anwenden) und bleibt auch leer.
+            'status' => $request->has('status') ? array_map('strval', (array) $request->query('status')) : null,
+            'illustrator' => $request->has('illustrator') ? array_map('strval', (array) $request->query('illustrator')) : null,
+            'initiator' => $request->query('initiator') ?: null,
+            'due_from' => $request->query('due_from') ?: null,
+            'due_to' => $request->query('due_to') ?: null,
+            'q' => trim((string) $request->query('q', '')) ?: null,
+        ];
+    }
 
-        return collect((array) $request->query($key))
-            ->map(fn ($value) => is_numeric($value) ? (int) $value : $value)
-            ->values();
+    /**
+     * @return array{status: ?list<string>, illustrator: ?list<string>, initiator: ?string, due_from: ?string, due_to: ?string, q: ?string}
+     */
+    private function persistedFiltersFor(User $user): array
+    {
+        $set = ProjectColumnCatalog::ensureDefaultSetFor($user);
+
+        return $set->config['illustrationen_filter'] ?? [
+            'status' => null, 'illustrator' => null, 'initiator' => null, 'due_from' => null, 'due_to' => null, 'q' => null,
+        ];
+    }
+
+    /**
+     * @param  array{status: ?list<string>, illustrator: ?list<string>, initiator: ?string, due_from: ?string, due_to: ?string, q: ?string}  $filters
+     */
+    private function persistFilters(User $user, array $filters): void
+    {
+        $set = ProjectColumnCatalog::ensureDefaultSetFor($user);
+        $config = $set->config;
+        $config['illustrationen_filter'] = $filters;
+        $set->update(['config' => $config]);
     }
 }
