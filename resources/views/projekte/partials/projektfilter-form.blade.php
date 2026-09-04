@@ -68,8 +68,16 @@
                                     @unless ($field['no_placeholder'] ?? false)
                                         <option value="">{{ __('Alle') }}</option>
                                     @endunless
-                                    @foreach ($field['options'] as $value => $label)
-                                        <option value="{{ $value }}" @selected($currentValue !== null && (string) $currentValue === (string) $value)>{{ $label }}</option>
+                                    @foreach ($field['options'] as $value => $option)
+                                        @php
+                                            $optionInactive = is_array($option) && ($option['inactive'] ?? false);
+                                            $optionLabel = is_array($option) ? $option['label'] : $option;
+                                        @endphp
+                                        <option
+                                            value="{{ $value }}"
+                                            @selected($currentValue !== null && (string) $currentValue === (string) $value)
+                                            @class(['text-gray-400' => $optionInactive])
+                                        >{{ $optionLabel }}</option>
                                     @endforeach
                                 </select>
                             @elseif ($field['type'] === 'multiselect')

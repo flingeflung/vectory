@@ -7,6 +7,7 @@ use App\Models\Market;
 use App\Models\Project;
 use App\Models\ProjectTypeMain;
 use App\Models\User;
+use App\Models\Workflow;
 
 /**
  * Verfügbare Kriterien für den Projektfilter: feste Felder + variable
@@ -43,6 +44,7 @@ class ProjectFilterCatalog
             ['key' => 'project_year', 'label' => __('Projektjahr'), 'type' => 'multiselect', 'options' => self::projectYearOptions($tenantId)],
             ['key' => 'project_type', 'label' => __('Projekttyp/-art'), 'type' => 'grouped_multiselect', 'groups' => self::projectTypeGroups($tenantId)],
             ['key' => 'version', 'label' => __('Version'), 'type' => 'select', 'options' => self::versionOptions($tenantId)],
+            ['key' => 'workflow_id', 'label' => __('Workflow'), 'type' => 'select', 'options' => self::workflowOptions($tenantId)],
             ['key' => 'construction_year', 'label' => __('Baujahr'), 'type' => 'text'],
             ['key' => 'initiator', 'label' => __('Initiator'), 'type' => 'text'],
             ['key' => 'system_model', 'label' => __('Modell/System'), 'type' => 'text'],
@@ -94,6 +96,29 @@ class ProjectFilterCatalog
         }
 
         return $options;
+    }
+
+    /**
+     * Alle Workflows (auch inaktive/ersetzte, wie in Vietto) - inaktive
+     * werden mit " [i]" markiert und im Filterformular ausgegraut
+     * (Vietto: class="selwfinactive").
+     *
+     * @return array<int, array{label: string, inactive: bool}>
+     */
+    private static function workflowOptions(int $tenantId): array
+    {
+        return Workflow::query()
+            ->where('tenant_id', $tenantId)
+            ->orderBy('sort')
+            ->orderBy('name')
+            ->get()
+            ->mapWithKeys(fn (Workflow $workflow) => [
+                $workflow->id => [
+                    'label' => $workflow->name.(! $workflow->active ? ' [i]' : ''),
+                    'inactive' => ! $workflow->active,
+                ],
+            ])
+            ->all();
     }
 
     /**
@@ -176,7 +201,9 @@ class ProjectFilterCatalog
     private static function describeValue(array $field, mixed $value): string
     {
         return match ($field['type']) {
-            'select' => (string) ($field['options'][$value] ?? $value),
+            'select' => is_array($field['options'][$value] ?? null)
+                ? $field['options'][$value]['label']
+                : (string) ($field['options'][$value] ?? $value),
             'multiselect' => collect($field['options'])
                 ->whereIn('value', (array) $value)
                 ->pluck('label')

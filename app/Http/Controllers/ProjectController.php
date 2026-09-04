@@ -437,6 +437,12 @@ class ProjectController extends Controller
                 continue;
             }
 
+            if ($key === 'workflow_id') {
+                $query->where('workflow_id', $value);
+
+                continue;
+            }
+
             if ($key === 'graphic_orders') {
                 match ($value) {
                     'ohne' => $query->whereDoesntHave('graphicOrders'),
