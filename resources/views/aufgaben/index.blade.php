@@ -17,8 +17,12 @@
                     <select name="person" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 text-sm">
                         <option value="" @selected(! $selectedPerson)>{{ __('– Eigene –') }}</option>
                         <option value="all" @selected($selectedPerson === 'all')>{{ __('– Alle –') }}</option>
-                        @foreach ($people as $person)
-                            <option value="{{ $person->id }}" @selected($selectedPerson === (string) $person->id)>{{ $person->fullName() }}</option>
+                        @foreach ($peopleByGroup as $group)
+                            <optgroup label="{{ $group['label'] }}">
+                                @foreach ($group['people'] as $person)
+                                    <option value="{{ $person->id }}" @selected($selectedPerson === (string) $person->id)>{{ $person->fullName() }}</option>
+                                @endforeach
+                            </optgroup>
                         @endforeach
                     </select>
                 </label>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\TaskSource;
+use App\Models\FunctionGroup;
 use App\Models\Person;
 use App\Models\Task;
 use App\Models\TaskVisibility;
@@ -95,11 +96,7 @@ class TaskController extends Controller
             'tasks' => $tasks,
             'sort' => $sort,
             'direction' => $direction,
-            'people' => Person::query()
-                ->whereIn('id', Task::query()->whereIn('source', [TaskSource::WorkflowStep, TaskSource::GraphicOrder])->distinct()->pluck('person_id'))
-                ->orderBy('last_name')
-                ->orderBy('first_name')
-                ->get(),
+            'peopleByGroup' => $this->peopleByFunctionGroup(),
             'selectedPerson' => $selectedPerson,
             'showHidden' => $showHidden,
             'showAllWfsPersons' => $showAllWfsPersons,
@@ -120,6 +117,42 @@ class TaskController extends Controller
         }
 
         return response()->noContent();
+    }
+
+    /**
+     * Personen für die Filterauswahl, gruppiert nach der Funktionsgruppe
+     * ihrer tatsächlichen Aufgaben (nicht nach genereller
+     * Funktionsgruppen-Mitgliedschaft) - zeigt also, "warum" jemand hier
+     * überhaupt auftaucht. Eine Person mit Aufgaben in mehreren
+     * Funktionsgruppen erscheint entsprechend in mehreren Gruppen.
+     *
+     * @return list<array{label: string, people: \Illuminate\Support\Collection<int, Person>}>
+     */
+    private function peopleByFunctionGroup(): array
+    {
+        $pairs = Task::query()
+            ->whereIn('source', [TaskSource::WorkflowStep, TaskSource::GraphicOrder])
+            ->whereNotNull('function_group_id')
+            ->select('person_id', 'function_group_id')
+            ->distinct()
+            ->get();
+
+        $people = Person::query()->whereIn('id', $pairs->pluck('person_id')->unique())->get()->keyBy('id');
+        $groups = FunctionGroup::query()->whereIn('id', $pairs->pluck('function_group_id')->unique())->orderBy('sort')->get()->keyBy('id');
+
+        return $pairs
+            ->groupBy('function_group_id')
+            ->sortBy(fn ($groupPairs, $groupId) => $groups->get($groupId)?->sort ?? PHP_INT_MAX)
+            ->map(fn ($groupPairs, $groupId) => [
+                'label' => $groups->get($groupId)?->name ?? __('Ohne Funktionsgruppe'),
+                'people' => $groupPairs
+                    ->map(fn ($pair) => $people->get($pair->person_id))
+                    ->filter()
+                    ->sortBy(fn (Person $person) => $person->fullName())
+                    ->values(),
+            ])
+            ->values()
+            ->all();
     }
 
     /**
