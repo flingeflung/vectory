@@ -43,7 +43,10 @@ Setze ausschließlich den beschriebenen Auftrag um.
 
 ## Git
 
-Git-Aktionen wie Commit, Branch, Merge, Rebase, Tag, Push oder Pull ausschließlich nach ausdrücklicher Anweisung.
+- Arbeit erfolgt direkt auf Branch `main` (kein Team, keine Feature-Branches nötig).
+- Vor Beginn einer neuen Aufgabe: `git pull origin main`, damit nichts überschrieben wird.
+- Nach jeder abgeschlossenen Änderung automatisch: `git add`, `git commit` mit aussagekräftiger Nachricht, `git push origin main`. GitHub ist damit laufend der aktuelle Stand – falls diese Instanz/Session mal nicht erreichbar ist, kann eine andere Instanz nahtlos auf `main` weiterarbeiten, ohne Rückfrage.
+- Branch, Merge, Rebase oder Tag ausschließlich nach ausdrücklicher Anweisung.
 
 ## Composer / Frontend
 
