@@ -92,7 +92,10 @@
         {{-- Titel, Meldungen und Reiter bleiben fix stehen - nur der Inhalt
              darunter soll scrollen. --}}
         <div class="{{ $isOverlay ? 'shrink-0 px-4 pt-3' : '' }}">
-            <div class="mb-3 text-sm text-gray-600">{{ $project->title }}</div>
+            <div class="mb-3 flex items-center gap-1.5 text-sm text-gray-600">
+                {{ $project->title }}
+                <x-status-icon :status="$project->status" class="inline-block h-4 w-auto shrink-0 align-middle" />
+            </div>
 
             @if (($justSaved ?? false))
                 <div class="mb-2 rounded bg-green-50 px-2 py-1 text-xs text-green-700">{{ __('Gespeichert.') }}</div>

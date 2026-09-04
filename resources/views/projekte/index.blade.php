@@ -120,6 +120,17 @@
                                                     $goImages = $summary->images ?? 0;
                                                 @endphp
                                                 <span title="{{ $goTotal }} {{ $goTotal == 1 ? __('Illustrationsauftrag') : __('Illustrationsaufträge') }}, {{ $goDone }} {{ __('erledigt') }}, {{ $goImages }} {{ $goImages == 1 ? __('Bild') : __('Bilder') }} {{ __('ges.') }}">{{ $goTotal }}/{{ $goDone }}/{{ $goImages }}</span>
+                                            @elseif ($column['key'] === 'status')
+                                                <x-status-icon :status="$project->status" />
+                                            @elseif ($column['key'] === 'workflow')
+                                                @if ($project->workflow)
+                                                    <div>{{ $project->workflow->id }} - {{ $project->workflow->short_name }}</div>
+                                                    @if ($project->progressStepLabel())
+                                                        <div class="text-xs text-gray-400">{{ $project->progressStepLabel() }}</div>
+                                                    @endif
+                                                @else
+                                                    <span class="text-gray-400">&ndash;</span>
+                                                @endif
                                             @elseif ($column['progress'] ?? false)
                                                 @php $progress = $project->progressPercent(); @endphp
                                                 @if ($progress !== null)

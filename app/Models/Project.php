@@ -177,12 +177,7 @@ class Project extends Model
             return null;
         }
 
-        $steps = $this->projectWorkflowSteps
-            ->filter(fn (ProjectWorkflowStep $step) => $step->workflowStep && $step->workflowStep->workflow_id === $this->workflow_id)
-            ->filter(fn (ProjectWorkflowStep $step) => $step->workflowStep->lifecycle_status < 4)
-            ->sortBy('sort')
-            ->values();
-
+        $steps = $this->progressSteps();
         $currentIndex = $steps->search(fn (ProjectWorkflowStep $step) => $step->is_current);
 
         if ($currentIndex === false || $steps->count() < 2) {
@@ -190,6 +185,39 @@ class Project extends Model
         }
 
         return (int) floor(100 / ($steps->count() - 1) * $currentIndex);
+    }
+
+    /**
+     * "aktueller Schritt/Schritte gesamt" (z.B. "2/18") für die
+     * Workflow-Spalte der Übersicht, analog Viettos WF-Anzeige. null, wenn
+     * kein Workflow zugewiesen oder noch kein Schritt aktuell ist.
+     */
+    public function progressStepLabel(): ?string
+    {
+        if (! $this->workflow_id) {
+            return null;
+        }
+
+        $steps = $this->progressSteps();
+        $currentIndex = $steps->search(fn (ProjectWorkflowStep $step) => $step->is_current);
+
+        if ($currentIndex === false) {
+            return null;
+        }
+
+        return ($currentIndex + 1).'/'.$steps->count();
+    }
+
+    /**
+     * @return Collection<int, ProjectWorkflowStep>
+     */
+    private function progressSteps(): Collection
+    {
+        return $this->projectWorkflowSteps
+            ->filter(fn (ProjectWorkflowStep $step) => $step->workflowStep && $step->workflowStep->workflow_id === $this->workflow_id)
+            ->filter(fn (ProjectWorkflowStep $step) => $step->workflowStep->lifecycle_status < 4)
+            ->sortBy('sort')
+            ->values();
     }
 
     public function activities(): HasMany
