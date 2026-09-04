@@ -105,18 +105,18 @@
         <div
             x-show="open && results.length > 0"
             x-cloak
-            class="absolute left-4 right-4 z-20 mt-1 max-h-72 overflow-y-auto rounded-md border border-gray-200 bg-white text-sm shadow-lg"
+            class="absolute left-4 right-4 z-20 mt-1 max-h-72 overflow-y-auto rounded-md border border-gray-200 bg-white text-xs shadow-lg"
         >
             <template x-for="(item, index) in results" :key="item.id">
                 <button
                     type="button"
                     @click="openProject(item)"
-                    class="flex w-full items-center gap-1.5 px-3 py-1.5 text-left hover:bg-gray-50"
+                    class="flex w-full items-center gap-1 px-2 py-1 text-left hover:bg-gray-50"
                     :class="{ 'bg-gray-50': index === selectedIndex }"
                 >
-                    <span class="font-semibold text-gray-800" x-text="item.pn"></span>
-                    <img x-show="item.type_symbol" :src="'{{ asset('images/project-type-icons') }}/' + item.type_symbol" :title="item.type_name" class="h-4 w-auto shrink-0">
-                    <span class="h-2 w-2 shrink-0 rounded-full" :class="statusClass(item.status)" :title="statusLabel(item.status)"></span>
+                    <span class="shrink-0 font-semibold text-gray-800" x-text="item.pn"></span>
+                    <img x-show="item.type_symbol" :src="'{{ asset('images/project-type-icons') }}/' + item.type_symbol" :title="item.type_name" class="h-3 w-auto shrink-0">
+                    <span class="h-1.5 w-1.5 shrink-0 rounded-full" :class="statusClass(item.status)" :title="statusLabel(item.status)"></span>
                     <span class="truncate text-gray-600" :title="item.title" x-text="item.title"></span>
                 </button>
             </template>
