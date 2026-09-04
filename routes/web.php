@@ -22,6 +22,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/projekte', [ProjectController::class, 'index'])->name('projekte');
+    Route::get('/schnellsuche', [ProjectController::class, 'quickSearch'])->name('projekte.schnellsuche');
     Route::get('/projekte/{project}', [ProjectController::class, 'show'])->name('projekte.show');
     Route::patch('/projekte/{project}', [ProjectController::class, 'update'])->name('projekte.update');
     Route::post('/projekte/{project}/favorite', [FavoriteController::class, 'toggle'])->name('projekte.favorite');

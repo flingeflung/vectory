@@ -12,6 +12,7 @@ use App\Models\Favorite;
 use App\Models\Project;
 use App\Models\ProjectPerson;
 use App\Models\RecentlyViewedProject;
+use App\Models\ProjectTypeSub;
 use App\Models\ProjectWorkflowStep;
 use App\Models\Workflow;
 use App\Models\WorkflowStep;
@@ -101,6 +102,39 @@ class ProjectController extends Controller
             'favoriteProjectIds' => Favorite::where('user_id', $user->id)->pluck('project_id')->all(),
             'graphicOrderSummaries' => $graphicOrderSummaries,
         ]);
+    }
+
+    /**
+     * Schnellsuche-Dropdown (Sidebar): AJAX-Vorschau ab 3 Zeichen, wie in
+     * Vietto. Nutzt denselben Feldkatalog wie die "alle Treffer"-Liste
+     * (applyQuickSearchTerm) - ein Suchbegriff, ein Verhalten an beiden
+     * Stellen. Absichtlich nur auf bereits nach Vectory migrierte Felder
+     * beschränkt (Vietto durchsucht zusätzlich ODN/CosimaID/VideoPN/
+     * DevProjNr/OEM/Bogengröße/verstecktes Modellfeld - die existieren hier
+     * noch nicht).
+     */
+    public function quickSearch(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $term = trim((string) $request->query('q', ''));
+        if (mb_strlen($term) < 3) {
+            return response()->json([]);
+        }
+
+        $query = Project::query();
+        $this->applyQuickSearchTerm($query, $term);
+
+        $projects = $query->orderByDesc('source_pn')->limit(50)->get();
+
+        return response()->json($projects->map(fn (Project $project) => [
+            'id' => $project->id,
+            'pn' => $project->source_pn,
+            'title' => $project->title,
+            'status' => $project->status,
+            // Kein smallSymbol() ("_kl"-Variante) - die Dateien wurden (noch)
+            // nicht aus Vietto importiert, nur die normalgroßen Icons.
+            'type_symbol' => $project->project_type_sub_model?->symbol,
+            'type_name' => $project->project_type_sub_model?->name,
+        ])->all());
     }
 
     /**
@@ -339,6 +373,17 @@ class ProjectController extends Controller
      */
     private function filtersFromRequest(Request $request): array
     {
+        // Schnellsuche (Sidebar, Enter/Lupe) ersetzt jeden anderen Filter,
+        // statt sich mit ihm zu kombinieren - wie in Vietto, und auf
+        // Rückfrage von Ralf bewusst so entschieden (sonst nie klar, warum
+        // ein erwarteter Treffer fehlt). Eigener Key statt Eintrag im
+        // regulären, whitelisted filter[]-Katalog (ProjectFilterCatalog),
+        // da sie kein normales Formularfeld ist.
+        $quickSearch = trim((string) $request->input('filter.schnellsuche', ''));
+        if ($quickSearch !== '') {
+            return ['schnellsuche' => $quickSearch];
+        }
+
         $available = array_column(ProjectFilterCatalog::available($request->user()->tenant_id), null, 'key');
         $raw = $request->query('filter', []);
         $filters = [];
@@ -384,6 +429,12 @@ class ProjectController extends Controller
     private function applyFilters(Builder $query, array $filters): void
     {
         foreach ($filters as $key => $value) {
+            if ($key === 'schnellsuche') {
+                $this->applyQuickSearchTerm($query, $value);
+
+                continue;
+            }
+
             if (str_starts_with($key, 'attribute:')) {
                 $attributeKey = substr($key, strlen('attribute:'));
                 $query->where("attributes->{$attributeKey}", 'like', "%{$value}%");
@@ -478,6 +529,35 @@ class ProjectController extends Controller
 
             $query->where($key, 'like', "%{$value}%");
         }
+    }
+
+    /**
+     * Feldkatalog der Schnellsuche (Dropdown UND "alle Treffer"-Liste,
+     * orientiert an Viettos ajax_direktsuche.php): PN als Präfix, alles
+     * andere als Teilstring. Projekt-Art wird über die Namen der
+     * zugehörigen ProjectTypeSub-Datensätze aufgelöst, da project_type_sub
+     * auf Project nur die legacy_id trägt, nicht den Namen selbst.
+     */
+    private function applyQuickSearchTerm(Builder $query, string $term): void
+    {
+        $typeIds = ProjectTypeSub::query()
+            ->where('name', 'like', "%{$term}%")
+            ->pluck('legacy_id')
+            ->all();
+
+        $query->where(function (Builder $query) use ($term, $typeIds) {
+            $query->where('source_pn', 'like', "{$term}%")
+                ->orWhere('title', 'like', "%{$term}%")
+                ->orWhere('codename', 'like', "%{$term}%")
+                ->orWhere('initiator', 'like', "%{$term}%")
+                ->orWhere('system_model', 'like', "%{$term}%")
+                ->orWhere('remarks', 'like', "%{$term}%")
+                ->orWhere('attributes_material_number', 'like', "%{$term}%");
+
+            if (! empty($typeIds)) {
+                $query->orWhereIn('project_type_sub', $typeIds);
+            }
+        });
     }
 
     /**

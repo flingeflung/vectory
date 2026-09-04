@@ -44,7 +44,15 @@
                     @endif
                 </div>
 
-                @if (! empty($filterChips))
+                @if (! empty($filters['schnellsuche'] ?? null))
+                    <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
+                        <span class="text-gray-500">{{ __('Schnellsuche') }}:</span>
+                        <span class="inline-flex items-center gap-1 rounded bg-indigo-50 px-2 py-0.5 text-indigo-700">
+                            "{{ $filters['schnellsuche'] }}"
+                            <a href="{{ route('projekte') }}" class="text-indigo-400 hover:text-indigo-700" title="{{ __('Schnellsuche verlassen') }}">&times;</a>
+                        </span>
+                    </div>
+                @elseif (! empty($filterChips))
                     <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
                         <span class="text-gray-500">{{ __('Filter') }}:</span>
                         @foreach ($filterChips as $chip)
