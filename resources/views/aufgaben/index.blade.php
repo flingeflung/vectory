@@ -96,7 +96,13 @@
                                             {{ $task->person?->fullName() ?? '–' }}
                                         @endif
                                     </td>
-                                    <td class="px-4 py-2 text-gray-900">{{ $step?->short_title ?? $step?->title ?? '–' }}</td>
+                                    <td class="px-4 py-2 text-gray-900">
+                                        @if ($task->graphicOrder)
+                                            Illu-{{ $task->graphicOrder->id }}: {{ \Illuminate\Support\Str::limit($task->graphicOrder->description, 40) }}
+                                        @else
+                                            {{ $step?->short_title ?? $step?->title ?? '–' }}
+                                        @endif
+                                    </td>
                                     <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ $task->created_at?->format('d.m.Y') }}</td>
                                 </tr>
                             @empty

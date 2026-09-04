@@ -52,10 +52,10 @@ class TaskController extends Controller
         $showAllWfsPersons = (bool) ($filters['all_wfs_persons'] ?? false);
 
         $query = Task::query()
-            ->where('tasks.source', TaskSource::WorkflowStep)
+            ->whereIn('tasks.source', [TaskSource::WorkflowStep, TaskSource::GraphicOrder])
             ->join('projects', 'projects.id', '=', 'tasks.project_id')
             ->select('tasks.*')
-            ->with(['project.workflow', 'person', 'functionGroup', 'projectWorkflowStep.workflowStep', 'projectWorkflowStep.people']);
+            ->with(['project.workflow', 'person', 'functionGroup', 'projectWorkflowStep.workflowStep', 'projectWorkflowStep.people', 'graphicOrder']);
 
         // Kein Rechtesystem für "alle Aufgaben sehen" bisher (siehe
         // DashboardTileCatalog) - die Auswahl "Alle"/andere Person steht
@@ -96,7 +96,7 @@ class TaskController extends Controller
             'sort' => $sort,
             'direction' => $direction,
             'people' => Person::query()
-                ->whereIn('id', Task::query()->where('source', TaskSource::WorkflowStep)->distinct()->pluck('person_id'))
+                ->whereIn('id', Task::query()->whereIn('source', [TaskSource::WorkflowStep, TaskSource::GraphicOrder])->distinct()->pluck('person_id'))
                 ->orderBy('last_name')
                 ->orderBy('first_name')
                 ->get(),
