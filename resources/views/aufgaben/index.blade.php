@@ -8,6 +8,7 @@
     <div class="h-full flex flex-col p-4 sm:p-6 lg:p-8">
         <div class="w-full max-w-7xl mx-auto flex flex-1 min-h-0 flex-col">
             <form method="GET" action="{{ route('aufgaben') }}" class="mb-3 flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                <input type="hidden" name="aufgabenfilter_submitted" value="1">
                 <input type="hidden" name="sort" value="{{ $sort }}">
                 <input type="hidden" name="direction" value="{{ $direction }}">
 

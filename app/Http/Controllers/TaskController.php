@@ -6,6 +6,8 @@ use App\Enums\TaskSource;
 use App\Models\Person;
 use App\Models\Task;
 use App\Models\TaskVisibility;
+use App\Models\User;
+use App\Support\ProjectColumnCatalog;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
@@ -21,11 +23,33 @@ class TaskController extends Controller
     {
         $user = $request->user();
 
+        // Gleiches Muster wie beim Projektfilter (ProjectController@index):
+        // ein expliziter Marker unterscheidet "Filterformular abgeschickt"
+        // (jetzt merken) von "nackte Navigation zu /aufgaben" (zuletzt
+        // gemerkten Stand wiederherstellen) von "nur sortiert/geblättert"
+        // (weder merken noch wiederherstellen - aktuelle URL gilt).
+        if ($request->has('aufgabenfilter_submitted')) {
+            $filters = [
+                'person' => $request->query('person'),
+                'hidden' => $request->boolean('hidden'),
+                'all_wfs_persons' => $request->boolean('all_wfs_persons'),
+            ];
+            $this->persistFilters($user, $filters);
+        } elseif (! $request->hasAny(['person', 'hidden', 'all_wfs_persons', 'sort', 'direction', 'page'])) {
+            $filters = $this->persistedFiltersFor($user);
+        } else {
+            $filters = [
+                'person' => $request->query('person'),
+                'hidden' => $request->boolean('hidden'),
+                'all_wfs_persons' => $request->boolean('all_wfs_persons'),
+            ];
+        }
+
         $sort = in_array($request->query('sort'), self::SORTABLE_COLUMNS, true) ? $request->query('sort') : 'source_pn';
         $direction = $request->query('direction') === 'desc' ? 'desc' : 'asc';
-        $selectedPerson = $request->query('person');
-        $showHidden = $request->boolean('hidden');
-        $showAllWfsPersons = $request->boolean('all_wfs_persons');
+        $selectedPerson = $filters['person'] ?? null;
+        $showHidden = (bool) ($filters['hidden'] ?? false);
+        $showAllWfsPersons = (bool) ($filters['all_wfs_persons'] ?? false);
 
         $query = Task::query()
             ->where('tasks.source', TaskSource::WorkflowStep)
@@ -96,5 +120,26 @@ class TaskController extends Controller
         }
 
         return response()->noContent();
+    }
+
+    /**
+     * @return array{person: ?string, hidden: bool, all_wfs_persons: bool}
+     */
+    private function persistedFiltersFor(User $user): array
+    {
+        $set = ProjectColumnCatalog::ensureDefaultSetFor($user);
+
+        return $set->config['aufgaben_filter'] ?? ['person' => null, 'hidden' => false, 'all_wfs_persons' => false];
+    }
+
+    /**
+     * @param  array{person: ?string, hidden: bool, all_wfs_persons: bool}  $filters
+     */
+    private function persistFilters(User $user, array $filters): void
+    {
+        $set = ProjectColumnCatalog::ensureDefaultSetFor($user);
+        $config = $set->config;
+        $config['aufgaben_filter'] = $filters;
+        $set->update(['config' => $config]);
     }
 }
