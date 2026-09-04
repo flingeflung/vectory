@@ -24,6 +24,14 @@ class ImportFunctionGroupsFromVietto extends Command
         5 => 'Illustration',
     ];
 
+    /**
+     * Kurzform-Umbenennungen (legacy_id => Vectory-Kurzform) - Viettos
+     * strFunktionsgruppeShort für Gruppe 5 ist weiterhin "Grafik".
+     */
+    private const SHORT_NAME_OVERRIDES = [
+        5 => 'Illu',
+    ];
+
     public function handle(): int
     {
         $tenant = Tenant::first();
@@ -42,7 +50,7 @@ class ImportFunctionGroupsFromVietto extends Command
                 ['tenant_id' => $tenant->id, 'legacy_id' => $row->valID],
                 [
                     'name' => self::NAME_OVERRIDES[$row->valID] ?? $row->strFunktionsgruppe,
-                    'short_name' => $row->strFunktionsgruppeShort,
+                    'short_name' => self::SHORT_NAME_OVERRIDES[$row->valID] ?? $row->strFunktionsgruppeShort,
                     'sort' => $row->intSort,
                     'active' => (bool) $row->blnActive,
                 ]
