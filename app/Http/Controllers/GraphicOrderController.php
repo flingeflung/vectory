@@ -7,6 +7,7 @@ use App\Models\Activity;
 use App\Models\FunctionGroup;
 use App\Models\GraphicOrder;
 use App\Models\GraphicOrderStatus;
+use App\Models\Person;
 use App\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -90,7 +91,9 @@ class GraphicOrderController extends Controller
                 ->where('tenant_id', $project->tenant_id)
                 ->where('legacy_id', 5)
                 ->first()
-                ?->members ?? collect(),
+                ?->members
+                ->sortBy(fn (Person $person) => $person->fullName())
+                ->values() ?? collect(),
             'graphicOrderStatuses' => GraphicOrderStatus::query()
                 ->where('tenant_id', $project->tenant_id)
                 ->orderBy('sort')

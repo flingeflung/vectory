@@ -36,7 +36,9 @@ class IllustrationOverviewController extends Controller
         $illustrationPersons = FunctionGroup::query()
             ->where('legacy_id', 5)
             ->first()
-            ?->members ?? collect();
+            ?->members
+            ->sortBy(fn (Person $person) => $person->fullName())
+            ->values() ?? collect();
 
         $selectedStatuses = $this->selectedIds($request, 'status', $statuses->pluck('id'));
         $selectedIllustrators = $this->selectedIds($request, 'illustrator', [...$illustrationPersons->pluck('id'), self::UNASSIGNED]);
