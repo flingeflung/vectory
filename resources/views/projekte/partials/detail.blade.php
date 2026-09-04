@@ -511,7 +511,7 @@
                 @if ($currentSteps->isEmpty())
                     <div class="text-gray-400">&ndash; {{ __('Keine Schritte vorhanden') }} &ndash;</div>
                 @else
-                    <div class="flex flex-col items-center">
+                    <div class="flex flex-col items-start">
                         @foreach ($currentSteps as $pws)
                             @php
                                 $step = $pws->workflowStep;
@@ -520,7 +520,7 @@
                             @php
                                 $peopleByGroup = $pws->people->groupBy('function_group_id');
                             @endphp
-                            <div class="flex w-full items-start justify-center gap-3">
+                            <div class="flex w-full items-start gap-3">
                             <div
                                 x-data="{ expanded: false }"
                                 class="w-full max-w-2xl rounded-md px-3 py-2 {{ $pws->is_current ? 'border-2 border-blue-500' : 'border border-gray-300' }}"
