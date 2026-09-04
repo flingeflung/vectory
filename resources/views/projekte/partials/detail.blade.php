@@ -546,8 +546,20 @@
                                     $illuDone = $illuOrders->filter(fn ($o) => $o->status && ! $o->status->is_open && ! $o->status->is_discarded)->count();
                                     $illuDiscarded = $illuOrders->filter(fn ($o) => $o->status?->is_discarded)->count();
                                     $illuAllClosed = $illuTotal > 0 && $illuOpen === 0;
+                                    // Solange mind. 1 Auftrag offen ist: "aktiviert", gleiche Farbe wie
+                                    // der Haupt-WFS (lifecycle_status=2). Erst wenn alle abgeschlossen
+                                    // sind, wechselt die Farbe auf "Beendet" (lifecycle_status=3) -
+                                    // siehe WorkflowStep::LIFECYCLE_COLORS, dieselbe Quelle wie oben.
+                                    $illuBgColor = match (true) {
+                                        $illuTotal === 0 => null,
+                                        $illuAllClosed => \App\Models\WorkflowStep::LIFECYCLE_COLORS[3],
+                                        default => \App\Models\WorkflowStep::LIFECYCLE_COLORS[2],
+                                    };
                                 @endphp
-                                <div class="w-48 shrink-0 rounded-md border-2 border-dashed px-3 py-2 text-xs {{ $illuAllClosed ? 'border-green-400 bg-green-50' : 'border-blue-300 bg-blue-50' }}">
+                                <div
+                                    class="w-48 shrink-0 rounded-md px-3 py-2 text-xs {{ $illuTotal === 0 ? 'border-2 border-dashed border-gray-300' : 'border border-gray-300' }}"
+                                    @if ($illuBgColor) style="background-color: {{ $illuBgColor }}" @endif
+                                >
                                     <div class="font-medium text-gray-900">{{ __('Illustration') }}</div>
                                     <div class="mt-1 text-gray-700">
                                         @if ($illuTotal === 0)
@@ -557,7 +569,7 @@
                                         @endif
                                     </div>
                                     @if ($illuAllClosed)
-                                        <div class="mt-1 font-medium text-green-700">{{ __('Erledigt') }}</div>
+                                        <div class="mt-1 font-medium text-green-800">{{ __('Erledigt') }}</div>
                                     @endif
                                     <button
                                         type="button"
