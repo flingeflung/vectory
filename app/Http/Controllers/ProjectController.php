@@ -107,8 +107,8 @@ class ProjectController extends Controller
     /**
      * Schnellsuche-Dropdown (Sidebar): AJAX-Vorschau ab 3 Zeichen, wie in
      * Vietto. Nutzt denselben Feldkatalog wie die "alle Treffer"-Liste
-     * (applyQuickSearchTerm) - ein Suchbegriff, ein Verhalten an beiden
-     * Stellen. Absichtlich nur auf bereits nach Vectory migrierte Felder
+     * (applyQuickSearchTerm), aber ohne Bemerkungen - siehe dortigen
+     * Kommentar. Absichtlich nur auf bereits nach Vectory migrierte Felder
      * beschränkt (Vietto durchsucht zusätzlich ODN/CosimaID/VideoPN/
      * DevProjNr/OEM/Bogengröße/verstecktes Modellfeld - die existieren hier
      * noch nicht).
@@ -121,7 +121,7 @@ class ProjectController extends Controller
         }
 
         $query = Project::query();
-        $this->applyQuickSearchTerm($query, $term);
+        $this->applyQuickSearchTerm($query, $term, includeRemarks: false);
 
         $projects = $query->orderByDesc('source_pn')->limit(50)->get();
 
@@ -537,22 +537,30 @@ class ProjectController extends Controller
      * andere als Teilstring. Projekt-Art wird über die Namen der
      * zugehörigen ProjectTypeSub-Datensätze aufgelöst, da project_type_sub
      * auf Project nur die legacy_id trägt, nicht den Namen selbst.
+     *
+     * Bemerkungen ist ein freier Fließtext - Teilstring-Suche darin trifft
+     * bei kurzen Begriffen leicht rein zufällig (z.B. "test" in "könntest").
+     * Vietto durchsucht dieses Feld deshalb nur in der "alle Treffer"-Liste,
+     * nicht im Live-Dropdown - hier per $includeRemarks nachgebildet.
      */
-    private function applyQuickSearchTerm(Builder $query, string $term): void
+    private function applyQuickSearchTerm(Builder $query, string $term, bool $includeRemarks = true): void
     {
         $typeIds = ProjectTypeSub::query()
             ->where('name', 'like', "%{$term}%")
             ->pluck('legacy_id')
             ->all();
 
-        $query->where(function (Builder $query) use ($term, $typeIds) {
+        $query->where(function (Builder $query) use ($term, $typeIds, $includeRemarks) {
             $query->where('source_pn', 'like', "{$term}%")
                 ->orWhere('title', 'like', "%{$term}%")
                 ->orWhere('codename', 'like', "%{$term}%")
                 ->orWhere('initiator', 'like', "%{$term}%")
                 ->orWhere('system_model', 'like', "%{$term}%")
-                ->orWhere('remarks', 'like', "%{$term}%")
                 ->orWhere('attributes_material_number', 'like', "%{$term}%");
+
+            if ($includeRemarks) {
+                $query->orWhere('remarks', 'like', "%{$term}%");
+            }
 
             if (! empty($typeIds)) {
                 $query->orWhereIn('project_type_sub', $typeIds);
