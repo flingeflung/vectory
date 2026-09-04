@@ -3,7 +3,7 @@
 ## Rolle
 
 Du arbeitest als Implementierer und technischer Analyst.
-ChatGPT übernimmt Architektur, Review und Aufgabenplanung.
+Architektur, Review und Aufgabenplanung übernimmt ein Kollege (separate Claude-Session).
 Setze ausschließlich den beschriebenen Auftrag um.
 
 ## Projekte
