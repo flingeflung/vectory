@@ -75,6 +75,15 @@ return [
             'channel' => env('MAIL_LOG_CHANNEL'),
         ],
 
+        // Eigener Transport (siehe App\Mail\Transport\FileLogTransport,
+        // registriert in AppServiceProvider) - schreibt Mails lesbar in
+        // storage/logs/mails.log statt sie zu versenden, solange kein
+        // echter SMTP-Server konfiguriert ist.
+        'filelog' => [
+            'transport' => 'filelog',
+            'path' => storage_path('logs/mails.log'),
+        ],
+
         'array' => [
             'transport' => 'array',
         ],

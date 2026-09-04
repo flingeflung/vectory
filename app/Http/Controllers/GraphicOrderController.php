@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ActivityType;
+use App\Models\Activity;
 use App\Models\FunctionGroup;
 use App\Models\GraphicOrder;
 use App\Models\GraphicOrderStatus;
@@ -39,7 +41,7 @@ class GraphicOrderController extends Controller
             ->where('legacy_id', 1)
             ->firstOrFail();
 
-        GraphicOrder::create([
+        $graphicOrder = GraphicOrder::create([
             'tenant_id' => $project->tenant_id,
             'project_id' => $project->id,
             'graphic_order_status_id' => $initialStatus->id,
@@ -48,6 +50,8 @@ class GraphicOrderController extends Controller
             'due_date' => $validated['due_date'] ?? null,
             'initiated_by_person_id' => $request->user()->person_id,
         ]);
+
+        Activity::log($project, ActivityType::GraphicOrderStatusChanged, __('Illustrationsauftrag Illu-:id angelegt.', ['id' => $graphicOrder->id]));
 
         return view('projekte.partials.illustration-orders-body', $this->viewData($project));
     }
@@ -69,6 +73,8 @@ class GraphicOrderController extends Controller
             'done_at' => $status->is_open === false && ! $status->is_discarded ? now() : null,
             'completed_by_person_id' => $status->is_open === false && ! $status->is_discarded ? $request->user()->person_id : null,
         ]);
+
+        Activity::log($project, ActivityType::GraphicOrderStatusChanged, __('Status für Illustrationsauftrag Illu-:id: :status', ['id' => $graphicOrder->id, 'status' => $status->name]));
 
         return view('projekte.partials.illustration-orders-body', $this->viewData($project));
     }

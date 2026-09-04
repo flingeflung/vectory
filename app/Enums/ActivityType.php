@@ -22,12 +22,16 @@ enum ActivityType: string
 {
     case WorkflowAssigned = 'workflow_assigned';
     case WorkflowUnassigned = 'workflow_unassigned';
+    case WorkflowStepActivated = 'workflow_step_activated';
+    case GraphicOrderStatusChanged = 'graphic_order_status_changed';
 
     public function label(): string
     {
         return match ($this) {
             self::WorkflowAssigned => __('Workflow zugewiesen'),
             self::WorkflowUnassigned => __('Workflow entfernt'),
+            self::WorkflowStepActivated => __('Workflow-Schritt aktiviert'),
+            self::GraphicOrderStatusChanged => __('Illustrationsauftrag-Status geändert'),
         };
     }
 }

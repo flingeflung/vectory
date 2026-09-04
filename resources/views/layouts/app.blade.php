@@ -252,6 +252,37 @@
         </x-modal>
 
         <script>
+            // Aktualisiert die Projekt-Detailansicht (Overlay oder Vollseite - je
+            // nachdem, welche Ansicht gerade offen ist) nach dem Speichern in
+            // einem eigenständigen globalen Modal (Illustrationsaufträge,
+            // WFS-Schritt aktivieren). Global statt pro Modal dupliziert, weil
+            // mehrere solcher Modals dasselbe Bedürfnis haben.
+            window.refreshUnderlyingProject = async (projectId) => {
+                if (! projectId) {
+                    return;
+                }
+
+                const overlayBody = document.getElementById('project-overlay-body');
+                if (overlayBody && overlayBody.offsetParent !== null) {
+                    overlayBody.innerHTML = await fetch(`/projekte/${projectId}`, {
+                        headers: { 'X-Overlay': '1' },
+                    }).then((r) => r.text());
+
+                    return;
+                }
+
+                const container = document.getElementById('project-detail-container');
+                if (container && window.location.pathname === `/projekte/${projectId}`) {
+                    const html = await fetch(window.location.href).then((r) => r.text());
+                    const fresh = new DOMParser().parseFromString(html, 'text/html').getElementById('project-detail-container');
+                    if (fresh) {
+                        container.innerHTML = fresh.innerHTML;
+                    }
+                }
+            };
+        </script>
+
+        <script>
             (function () {
                 const illuBody = () => document.getElementById('illustration-orders-body');
                 const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
@@ -283,35 +314,6 @@
                     snapshot();
                 };
 
-                // Nach dem Speichern auch die Illustration-Zusammenfassung im
-                // WFS-Kasten dahinter aktualisieren (Projekt-Overlay oder
-                // Vollseite - je nachdem, wo dieses Modal gerade offen ist).
-                // Ohne das bleibt der Kasten bis zum nächsten manuellen Neuladen
-                // auf "keine Aufträge vorhanden" stehen.
-                const refreshUnderlyingProject = async () => {
-                    if (! currentProjectId) {
-                        return;
-                    }
-
-                    const overlayBody = document.getElementById('project-overlay-body');
-                    if (overlayBody && overlayBody.offsetParent !== null) {
-                        overlayBody.innerHTML = await fetch(`/projekte/${currentProjectId}`, {
-                            headers: { 'X-Overlay': '1' },
-                        }).then((r) => r.text());
-
-                        return;
-                    }
-
-                    const container = document.getElementById('project-detail-container');
-                    if (container && window.location.pathname === `/projekte/${currentProjectId}`) {
-                        const html = await fetch(window.location.href).then((r) => r.text());
-                        const fresh = new DOMParser().parseFromString(html, 'text/html').getElementById('project-detail-container');
-                        if (fresh) {
-                            container.innerHTML = fresh.innerHTML;
-                        }
-                    }
-                };
-
                 document.addEventListener('submit', async (event) => {
                     if (!illuBody() || !illuBody().contains(event.target)) {
                         return;
@@ -328,7 +330,74 @@
 
                     if (response.ok) {
                         snapshot();
-                        refreshUnderlyingProject();
+                        window.refreshUnderlyingProject(currentProjectId);
+                    }
+                });
+            })();
+        </script>
+
+        {{--
+            WFS-Schritt aktivieren - Bestätigungs-Dialog (Empfänger, E-Mail-
+            Optionen) vor dem eigentlichen Wechsel. Gleiches Muster wie das
+            Illustrationsaufträge-Modal: eigenständig, global, eigener fetch().
+        --}}
+        <x-modal name="activate-workflow-step" max-width="md">
+            <div class="flex max-h-[85vh] flex-col">
+                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Workflow-Schritt aktivieren') }}</h3>
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'activate-workflow-step' }))"
+                        class="text-gray-400 hover:text-gray-600"
+                        aria-label="{{ __('Schließen') }}"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="activate-workflow-step-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
+                    {{ __('Lädt…') }}
+                </div>
+            </div>
+        </x-modal>
+
+        <script>
+            (function () {
+                const activateBody = () => document.getElementById('activate-workflow-step-body');
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                let currentProjectId = null;
+
+                window.openActivateWorkflowStep = async (projectId, projectWorkflowStepId) => {
+                    currentProjectId = projectId;
+                    activateBody().innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
+                    window.dispatchEvent(new CustomEvent('open-modal', { detail: 'activate-workflow-step' }));
+                    activateBody().innerHTML = await fetch(`/projekte/${projectId}/workflow-steps/${projectWorkflowStepId}/activate`).then((r) => r.text());
+                };
+
+                document.addEventListener('submit', async (event) => {
+                    if (!activateBody() || !activateBody().contains(event.target)) {
+                        return;
+                    }
+
+                    event.preventDefault();
+
+                    const response = await fetch(event.target.action, {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': csrfToken },
+                        body: new FormData(event.target),
+                    });
+
+                    if (!response.ok) {
+                        return;
+                    }
+
+                    const data = await response.json();
+                    window.dispatchEvent(new CustomEvent('close-modal', { detail: 'activate-workflow-step' }));
+                    await window.refreshUnderlyingProject(currentProjectId);
+
+                    if (data.open_graphic_orders_count) {
+                        alert({{ \Illuminate\Support\Js::from(__('Achtung, für dieses Projekt sind noch offene Illustrationsaufträge vorhanden:')) }} + ' ' + data.open_graphic_orders_count);
                     }
                 });
             })();

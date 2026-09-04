@@ -165,6 +165,33 @@ class Project extends Model
         return $this->hasMany(ProjectWorkflowStep::class)->orderBy('sort');
     }
 
+    /**
+     * Fortschritt in Prozent (0-100), analog Viettos intStand: Position des
+     * aktuellen Schritts unter allen Nicht-Ende-Schritten (lifecycle_status
+     * < 4, also alles außer "Projekt verworfen") des zugewiesenen Workflows.
+     * null, wenn kein Workflow zugewiesen oder noch kein Schritt aktuell ist.
+     */
+    public function progressPercent(): ?int
+    {
+        if (! $this->workflow_id) {
+            return null;
+        }
+
+        $steps = $this->projectWorkflowSteps
+            ->filter(fn (ProjectWorkflowStep $step) => $step->workflowStep && $step->workflowStep->workflow_id === $this->workflow_id)
+            ->filter(fn (ProjectWorkflowStep $step) => $step->workflowStep->lifecycle_status < 4)
+            ->sortBy('sort')
+            ->values();
+
+        $currentIndex = $steps->search(fn (ProjectWorkflowStep $step) => $step->is_current);
+
+        if ($currentIndex === false || $steps->count() < 2) {
+            return $currentIndex === false ? null : 0;
+        }
+
+        return (int) floor(100 / ($steps->count() - 1) * $currentIndex);
+    }
+
     public function activities(): HasMany
     {
         return $this->hasMany(Activity::class)->latest('created_at');
