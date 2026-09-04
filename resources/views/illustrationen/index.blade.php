@@ -65,15 +65,23 @@
                     <button type="submit" class="mt-2 w-full rounded bg-gray-800 px-2 py-1 text-xs font-medium text-white hover:bg-gray-700">{{ __('Anwenden') }}</button>
                 </x-filter-dropdown>
 
-                <label class="flex items-center gap-1.5">
-                    <span class="text-gray-500">{{ __('Auftraggeber') }}:</span>
-                    <select name="initiator" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 text-sm">
-                        <option value="">{{ __('– Alle –') }}</option>
+                @php $selectedInitiator = $initiatorOptions->firstWhere('id', (int) $initiatorId); @endphp
+                <x-filter-dropdown label="{{ __('Auftraggeber') }}{{ $selectedInitiator ? ': '.$selectedInitiator->fullName() : '' }}">
+                    <div class="mb-2 text-xs font-medium text-gray-500">{{ __('Auftraggeber') }}</div>
+                    <div class="max-h-56 space-y-1 overflow-y-auto">
+                        <label class="flex items-center gap-1.5 text-gray-700">
+                            <input type="radio" name="initiator" value="" class="border-gray-300" @checked(! $initiatorId)>
+                            {{ __('– Alle –') }}
+                        </label>
                         @foreach ($initiatorOptions as $person)
-                            <option value="{{ $person->id }}" @selected($initiatorId == $person->id)>{{ $person->fullName() }}</option>
+                            <label class="flex items-center gap-1.5 @class(['text-gray-400' => ! $person->active])">
+                                <input type="radio" name="initiator" value="{{ $person->id }}" class="border-gray-300" @checked($initiatorId == $person->id)>
+                                {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }}
+                            </label>
                         @endforeach
-                    </select>
-                </label>
+                    </div>
+                    <button type="submit" class="mt-2 w-full rounded bg-gray-800 px-2 py-1 text-xs font-medium text-white hover:bg-gray-700">{{ __('Anwenden') }}</button>
+                </x-filter-dropdown>
 
                 <label class="flex items-center gap-1.5">
                     <span class="text-gray-500">{{ __('Termin von') }}:</span>
