@@ -56,7 +56,8 @@
             </div>
         </div>
 
-        {{-- Platz für weitere Aktions-Buttons (Aufgabe zuweisen, Grafikauftrag, Sperrmail, ...) – folgt später. --}}
+        {{-- Aktions-Buttons stehen neben den Reitern (S. u.), nicht hier in
+             der Verschiebeleiste - die dient nur zum Ziehen des Overlays. --}}
         <div class="flex-1"></div>
 
         @if ($isOverlay)
@@ -107,10 +108,23 @@
                 </div>
             @endif
 
-            <div class="mb-3 flex gap-4 border-b border-gray-200 text-sm">
-                <button type="button" @click="activeTab = 'details'" :class="activeTab === 'details' ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700'" class="pb-2">{{ __('Details') }}</button>
-                <button type="button" @click="activeTab = 'vorgaenge'" :class="activeTab === 'vorgaenge' ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700'" class="pb-2">{{ __('Vorgänge') }}</button>
-                <button type="button" @click="activeTab = 'workflow_steps'" :class="activeTab === 'workflow_steps' ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700'" class="pb-2">{{ __('Workflow') }}</button>
+            <div class="mb-3 flex items-center justify-between gap-4 border-b border-gray-200 text-sm">
+                <div class="flex gap-4">
+                    <button type="button" @click="activeTab = 'details'" :class="activeTab === 'details' ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700'" class="pb-2">{{ __('Details') }}</button>
+                    <button type="button" @click="activeTab = 'vorgaenge'" :class="activeTab === 'vorgaenge' ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700'" class="pb-2">{{ __('Vorgänge') }}</button>
+                    <button type="button" @click="activeTab = 'workflow_steps'" :class="activeTab === 'workflow_steps' ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700'" class="pb-2">{{ __('Workflow') }}</button>
+                </div>
+
+                <div class="mb-2 flex flex-wrap items-center gap-2">
+                    <button
+                        type="button"
+                        @click="window.openIllustrationOrders({{ $project->id }})"
+                        class="{{ $secondaryBtn }}"
+                    >
+                        {{ __('Illustrationsauftrag') }}
+                    </button>
+                    {{-- weitere Aktions-Buttons (Aufgabe zuweisen, -> Projekt-Pool, Fehlercheck, Sichtbarkeit, Sperrmail, ...) folgen später. --}}
+                </div>
             </div>
         </div>
 

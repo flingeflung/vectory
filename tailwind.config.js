@@ -7,6 +7,11 @@ export default {
         './vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php',
         './storage/framework/views/*.php',
         './resources/views/**/*.blade.php',
+        // Enums wie ActivityCategory liefern komplette Tailwind-Klassen als
+        // PHP-String zurück (z. B. dotClass()) - liegen aber unter app/, das
+        // sonst nicht gescannt wird. Ohne diesen Pfad baut Tailwind diese
+        // Klassen nie ins CSS.
+        './app/**/*.php',
     ],
 
     theme: {
