@@ -137,6 +137,7 @@
             @csrf
             @method('patch')
 
+        <div class="mb-1 border-t-2 pt-0.5 text-[11px] font-medium" style="border-color: #09f; color: #999">{{ __('Stammdaten') }}</div>
         <div class="flex gap-3">
         <div class="w-1 shrink-0 rounded-full" style="background-color: #09f" title="{{ __('Stammdaten') }}"></div>
         <div class="min-w-0 flex-1 space-y-3">
@@ -320,6 +321,7 @@
         </div>
 
         @if ($attributes->isNotEmpty())
+        <div class="mb-1 border-t-2 pt-0.5 text-[11px] font-medium" style="border-color: {{ $project->attribute_section_color }}; color: #999">{{ __('Typspezifische Attribute') }}</div>
         <div class="flex gap-3">
         <div class="w-1 shrink-0 rounded-full" style="background-color: {{ $project->attribute_section_color }}" title="{{ __('Typspezifische Attribute') }}"></div>
         <div class="min-w-0 flex-1">
@@ -340,6 +342,7 @@
         </div>
         @endif
 
+        <div class="mb-1 border-t-2 pt-0.5 text-[11px] font-medium" style="border-color: #396; color: #999">{{ __('Ablaufdaten') }}</div>
         <div class="flex gap-3">
         <div class="w-1 shrink-0 rounded-full" style="background-color: #396" title="{{ __('Ablaufdaten') }}"></div>
         <div class="min-w-0 flex-1 space-y-3">
