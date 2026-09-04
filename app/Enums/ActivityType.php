@@ -34,4 +34,12 @@ enum ActivityType: string
             self::GraphicOrderStatusChanged => __('Illustrationsauftrag-Status geändert'),
         };
     }
+
+    public function category(): ActivityCategory
+    {
+        return match ($this) {
+            self::WorkflowAssigned, self::WorkflowUnassigned, self::WorkflowStepActivated => ActivityCategory::Workflow,
+            self::GraphicOrderStatusChanged => ActivityCategory::Illustration,
+        };
+    }
 }

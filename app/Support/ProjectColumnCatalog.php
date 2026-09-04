@@ -38,6 +38,7 @@ class ProjectColumnCatalog
             ['key' => 'remarks', 'label' => __('Bemerkungen'), 'long_text' => true],
             ['key' => 'markets', 'label' => __('Märkte/Subsprachen'), 'long_text' => false, 'icons' => true],
             ['key' => 'graphic_orders_summary', 'label' => __('Illustration'), 'long_text' => false, 'graphic_summary' => true],
+            ['key' => 'progress', 'label' => __('Fortschritt'), 'long_text' => false, 'progress' => true],
         ];
 
         $attributes = Attribute::query()
@@ -95,6 +96,7 @@ class ProjectColumnCatalog
                     'icons' => $column['icons'] ?? false,
                     'type_icon' => $column['type_icon'] ?? false,
                     'graphic_summary' => $column['graphic_summary'] ?? false,
+                    'progress' => $column['progress'] ?? false,
                     'visible' => $saved['visible'] ?? false,
                     'show_long_text' => $saved['long_text'] ?? false,
                     'short_length' => $saved['short_length'] ?? self::DEFAULT_SHORT_LENGTH,

@@ -73,6 +73,9 @@ class ProjectController extends Controller
         if (array_any($visibleColumns, fn (array $column) => $column['key'] === 'workflow')) {
             $query->with('workflow');
         }
+        if (array_any($visibleColumns, fn (array $column) => $column['key'] === 'progress')) {
+            $query->with('projectWorkflowSteps.workflowStep');
+        }
         $projects = $query->paginate(25)->withQueryString();
 
         $graphicOrderSummaries = array_any($visibleColumns, fn (array $column) => $column['key'] === 'graphic_orders_summary')

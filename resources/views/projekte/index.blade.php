@@ -111,7 +111,19 @@
                                                     $goDone = $summary->done ?? 0;
                                                     $goImages = $summary->images ?? 0;
                                                 @endphp
-                                                <span title="{{ $goTotal }} {{ $goTotal == 1 ? __('Grafikauftrag') : __('Grafikaufträge') }}, {{ $goDone }} {{ __('erledigt') }}, {{ $goImages }} {{ $goImages == 1 ? __('Grafik') : __('Grafiken') }} {{ __('ges.') }}">{{ $goTotal }}/{{ $goDone }}/{{ $goImages }}</span>
+                                                <span title="{{ $goTotal }} {{ $goTotal == 1 ? __('Illustrationsauftrag') : __('Illustrationsaufträge') }}, {{ $goDone }} {{ __('erledigt') }}, {{ $goImages }} {{ $goImages == 1 ? __('Bild') : __('Bilder') }} {{ __('ges.') }}">{{ $goTotal }}/{{ $goDone }}/{{ $goImages }}</span>
+                                            @elseif ($column['progress'] ?? false)
+                                                @php $progress = $project->progressPercent(); @endphp
+                                                @if ($progress !== null)
+                                                    <div class="flex items-center gap-1.5" title="{{ $progress }} %">
+                                                        <div class="h-1.5 w-16 overflow-hidden rounded-full bg-gray-200">
+                                                            <div class="h-full rounded-full bg-blue-500" style="width: {{ $progress }}%"></div>
+                                                        </div>
+                                                        <span class="text-xs">{{ $progress }}%</span>
+                                                    </div>
+                                                @else
+                                                    <span class="text-gray-400">&ndash;</span>
+                                                @endif
                                             @elseif ($column['icons'] ?? false)
                                                 @php $marketPreviewCount = 5; $marketList = $project->markets; @endphp
                                                 @if ($marketList->count() > $marketPreviewCount)
