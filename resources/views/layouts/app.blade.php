@@ -15,14 +15,6 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans antialiased">
-        {{-- Eigenständiges, leeres Teleport-Ziel für Modals (siehe components/modal.blade.php) -
-             NICHT direkt nach body teleportieren: die Modal-<template>-Quellen selbst liegen
-             ebenfalls als Kinder von body, das Anhängen eines Klons dorthin während desselben
-             Baum-Durchlaufs ließ Alpine bei den letzten beiden Modals (project-overlay,
-             favorites) den Teleport-Vorgang verlieren (reproduzierbar: die ersten beiden
-             klappten, die letzten beiden nicht). Ein separates, von Anfang an leeres Ziel
-             umgeht das. --}}
-        <div id="modal-root"></div>
         <div
             x-data="{ sidebarOpen: localStorage.getItem('vectory-sidebar-open') !== 'false' }"
             x-init="$watch('sidebarOpen', value => localStorage.setItem('vectory-sidebar-open', value))"
@@ -144,14 +136,6 @@
                     showLoading();
                     window.dispatchEvent(new CustomEvent('open-modal', { detail: 'project-overlay' }));
 
-                    // Teleportierte Modals aus dem VORHERIGEN Overlay-Inhalt (z.B.
-                    // Illustrationsaufträge, siehe components/modal.blade.php) hängen
-                    // an #modal-root, nicht an #project-overlay-body - werden also vom
-                    // gleich folgenden body().innerHTML NICHT mit entsorgt. Ohne dieses
-                    // Aufräumen sammeln sich bei jedem Projektwechsel weitere Klone samt
-                    // eigener window-Listener an.
-                    document.getElementById('modal-root').innerHTML = '';
-
                     const params = new URLSearchParams();
                     if (sort) params.set('sort', sort);
                     if (direction) params.set('direction', direction);
@@ -174,16 +158,8 @@
                 });
 
                 // Event-Delegation: das Formular wird erst nach dem Öffnen per fetch eingefügt.
-                // Erfasst auch Formulare in teleportierten Modals (siehe components/modal.blade.php,
-                // z.B. Illustrationsaufträge) - die hängen an #modal-root, NICHT mehr an
-                // #project-overlay-body, zählen aber trotzdem zum Overlay-Kontext, solange
-                // das Overlay gerade offen ist (offsetParent === null, wenn ein Vorfahre
-                // display:none hat, z.B. weil das Overlay geschlossen ist).
                 document.addEventListener('submit', async (event) => {
-                    const overlayOpen = !!body() && body().offsetParent !== null;
-                    const inOverlay = !!body() && body().contains(event.target);
-                    const inTeleportedModal = overlayOpen && document.getElementById('modal-root').contains(event.target);
-                    if (!inOverlay && !inTeleportedModal) {
+                    if (!body() || !body().contains(event.target)) {
                         return;
                     }
 
@@ -201,10 +177,6 @@
                         headers: { 'X-Overlay': '1', 'X-CSRF-TOKEN': csrfToken },
                         body: formData,
                     });
-                    // Siehe open-project-Handler oben: alte teleportierte Modal-Klone
-                    // (#modal-root) hängen nicht mehr an body() und würden sonst bei
-                    // jedem Speichern einen weiteren verwaisten Klon anhäufen.
-                    document.getElementById('modal-root').innerHTML = '';
                     body().innerHTML = await response.text();
                     hideLoading();
 
@@ -236,6 +208,74 @@
                         current.innerHTML = fresh.innerHTML;
                     }
                 };
+            })();
+        </script>
+
+        {{--
+            Global (nicht im Projekt-Overlay verschachtelt!) Illustrationsaufträge-Modal -
+            wird per window.openIllustrationOrders(projectId) geöffnet und lädt seinen
+            Inhalt selbst per fetch(), genau wie project-overlay/favorites oben. Bewusst
+            NICHT als Teil des Overlay-HTML verschachtelt: das führte zu Positionierungs-
+            und Stacking-Problemen ("position:fixed" bricht in einem Vorfahren mit
+            "transform"), die nur mit Alpine x-teleport lösbar waren - und selbst damit
+            gab es noch Folgefehler. Als eigenständiges, globales Modal (wie project-overlay
+            selbst) tritt das Problem gar nicht erst auf.
+        --}}
+        <x-modal name="illustration-orders" max-width="lg">
+            <div class="flex max-h-[85vh] flex-col">
+                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Illustrationsaufträge') }}</h3>
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'illustration-orders' }))"
+                        class="text-gray-400 hover:text-gray-600"
+                        aria-label="{{ __('Schließen') }}"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="illustration-orders-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
+                    {{ __('Lädt…') }}
+                </div>
+                <div class="flex shrink-0 justify-end border-t border-gray-200 px-4 py-2">
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'illustration-orders' }))"
+                        class="rounded border border-gray-300 bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                    >
+                        {{ __('Schließen') }}
+                    </button>
+                </div>
+            </div>
+        </x-modal>
+
+        <script>
+            (function () {
+                const illuBody = () => document.getElementById('illustration-orders-body');
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
+                window.openIllustrationOrders = async (projectId) => {
+                    illuBody().innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
+                    window.dispatchEvent(new CustomEvent('open-modal', { detail: 'illustration-orders' }));
+                    illuBody().innerHTML = await fetch(`/projekte/${projectId}/illustrationsauftraege`).then((r) => r.text());
+                };
+
+                document.addEventListener('submit', async (event) => {
+                    if (!illuBody() || !illuBody().contains(event.target)) {
+                        return;
+                    }
+
+                    event.preventDefault();
+
+                    const response = await fetch(event.target.action, {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': csrfToken },
+                        body: new FormData(event.target),
+                    });
+                    illuBody().innerHTML = await response.text();
+                });
             })();
         </script>
     </body>

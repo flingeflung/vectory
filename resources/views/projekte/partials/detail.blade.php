@@ -561,7 +561,7 @@
                                     @endif
                                     <button
                                         type="button"
-                                        @click.stop="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'illustration-orders' }))"
+                                        @click.stop="window.openIllustrationOrders({{ $project->id }})"
                                         class="mt-2 rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
                                     >
                                         {{ __('Illustrationsauftrag') }}
@@ -581,12 +581,6 @@
         </div>
         </div>
     </div>
-
-    @include('projekte.partials.illustration-orders-modal', [
-        'project' => $project,
-        'illustrationPersons' => $allFunctionGroups->firstWhere('legacy_id', 5)?->members ?? collect(),
-        'graphicOrderStatuses' => $graphicOrderStatuses,
-    ])
 
     @if ($isOverlay)
         <div

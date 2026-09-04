@@ -6,7 +6,6 @@
     'draggable' => false,
     'height' => null,
     'resizable' => false,
-    'teleport' => false,
 ])
 
 @php
@@ -29,23 +28,6 @@ $heightStyle = $height ? "height: {$height};" : '';
 $storageKey = "vectory-modal-size-{$name}";
 @endphp
 
-{{--
-    :teleport - bewusst NICHT global für alle Modals aktiv, sondern nur wo
-    ausdrücklich angefordert (aktuell: Illustrationsaufträge-Modal, weil es
-    innerhalb des Projekt-Overlays verschachtelt vorkommt - dessen Box hat
-    "transform", was einen neuen Containing Block für "position: fixed"
-    öffnet und das innere Modal sonst relativ zur äußeren Box statt zum
-    Viewport positioniert). Reproduzierbarer Alpine-Eigenheit: sind mehrere
-    <template x-teleport> beim initialen Seitenaufbau vorhanden, verliert
-    Alpine bei mehr als zwei den Teleport-Vorgang für die weiteren (das
-    Projekt-Overlay- und Favoriten-Modal, beide global im Layout). Dynamisch
-    nachträglich eingefügte Templates (z.B. dieses hier, kommt erst per
-    fetch() ins Overlay) sind davon nicht betroffen - daher hier isoliert
-    und opt-in statt global gefixt.
---}}
-@if ($teleport)
-<template x-teleport="#modal-root">
-@endif
 <div
     x-data="{
         show: @js($show),
@@ -231,6 +213,3 @@ $storageKey = "vectory-modal-size-{$name}";
         {{ $slot }}
     </div>
 </div>
-@if ($teleport)
-</template>
-@endif

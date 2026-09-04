@@ -2,23 +2,31 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FunctionGroup;
 use App\Models\GraphicOrder;
 use App\Models\GraphicOrderStatus;
 use App\Models\Project;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
+use Illuminate\View\View;
 use Illuminate\Validation\Rule;
 
 /**
- * Illustrationsaufträge je Projekt - Vietto: grafikerstellung. Erreichbar aus
- * dem WFS-Kasten mit js_function "wfs_grafik" im Workflow-Tab.
+ * Illustrationsaufträge je Projekt - Vietto: grafikerstellung. Eigenständiges,
+ * global im Layout deklariertes Modal (siehe layouts/app.blade.php), das
+ * seinen Inhalt selbst per fetch() nachlädt - genau wie das Projekt-Overlay
+ * selbst. Bewusst NICHT im Projekt-Detail-Overlay verschachtelt: das führte
+ * zu Positionierungs-/Stacking-Problemen (Alpine x-teleport nötig) und
+ * einer Fehlerquelle beim Speichern, die zwischenzeitlich sogar ein
+ * komplett falsches Modal geöffnet hat.
  */
 class GraphicOrderController extends Controller
 {
-    public function __construct(private ProjectController $projectController) {}
+    public function index(Project $project): View
+    {
+        return view('projekte.partials.illustration-orders-body', $this->viewData($project));
+    }
 
-    public function store(Request $request, Project $project): RedirectResponse|Response
+    public function store(Request $request, Project $project): View
     {
         $validated = $request->validate([
             'description' => ['required', 'string'],
@@ -41,10 +49,10 @@ class GraphicOrderController extends Controller
             'initiated_by_person_id' => $request->user()->person_id,
         ]);
 
-        return $this->projectController->respondAfterSave($request, $project);
+        return view('projekte.partials.illustration-orders-body', $this->viewData($project));
     }
 
-    public function update(Request $request, Project $project, GraphicOrder $graphicOrder): RedirectResponse|Response
+    public function update(Request $request, Project $project, GraphicOrder $graphicOrder): View
     {
         abort_unless($graphicOrder->project_id === $project->id, 404);
 
@@ -62,6 +70,25 @@ class GraphicOrderController extends Controller
             'completed_by_person_id' => $status->is_open === false && ! $status->is_discarded ? $request->user()->person_id : null,
         ]);
 
-        return $this->projectController->respondAfterSave($request, $project);
+        return view('projekte.partials.illustration-orders-body', $this->viewData($project));
+    }
+
+    /**
+     * @return array{project: Project, illustrationPersons: \Illuminate\Support\Collection, graphicOrderStatuses: \Illuminate\Support\Collection}
+     */
+    private function viewData(Project $project): array
+    {
+        return [
+            'project' => $project->fresh()->loadMissing(['graphicOrders.status', 'graphicOrders.initiatedBy', 'graphicOrders.illustrator', 'graphicOrders.completedBy']),
+            'illustrationPersons' => FunctionGroup::query()
+                ->where('tenant_id', $project->tenant_id)
+                ->where('legacy_id', 5)
+                ->first()
+                ?->members ?? collect(),
+            'graphicOrderStatuses' => GraphicOrderStatus::query()
+                ->where('tenant_id', $project->tenant_id)
+                ->orderBy('sort')
+                ->get(),
+        ];
     }
 }

@@ -264,16 +264,15 @@ class ProjectController extends Controller
     }
 
     /**
-     * Antwort nach einer erfolgreichen Änderung, egal aus welchem Formular
-     * (Projekt-Detailformular, aber auch z.B. Illustrationsaufträge) -
-     * im Overlay-Kontext muss IMMER der Detail-Partial zurückkommen, sonst
-     * fängt der globale Submit-Interceptor (siehe layouts/app.blade.php)
-     * die Antwort ab und kippt eine komplette Seite ins Overlay-DIV statt
-     * des erwarteten Fragments. Ein normales redirect()/back() funktioniert
+     * Antwort nach erfolgreichem Speichern des Projekt-Detailformulars - im
+     * Overlay-Kontext muss der Detail-Partial zurückkommen, sonst fängt der
+     * globale Submit-Interceptor (siehe layouts/app.blade.php) die Antwort
+     * ab und kippt eine komplette Seite ins Overlay-DIV statt des
+     * erwarteten Fragments. Ein normales redirect()/back() funktioniert
      * hier NICHT, weil fetch() den X-Overlay-Header beim automatischen
      * Folgen eines 302 nicht mitschickt.
      */
-    public function respondAfterSave(Request $request, Project $project): RedirectResponse|Response
+    private function respondAfterSave(Request $request, Project $project): RedirectResponse|Response
     {
         if ($this->isOverlayRequest($request)) {
             return response()->view('projekte.partials.detail', [
@@ -300,7 +299,6 @@ class ProjectController extends Controller
             'allMarkets' => Market::query()->where('tenant_id', $project->tenant_id)->orderBy('sort')->get(),
             'marketSets' => MarketSet::query()->where('tenant_id', $project->tenant_id)->with('markets:id')->orderBy('sort')->get(),
             'allFunctionGroups' => FunctionGroup::query()->where('tenant_id', $project->tenant_id)->with('members')->orderBy('sort')->get(),
-            'graphicOrderStatuses' => \App\Models\GraphicOrderStatus::query()->where('tenant_id', $project->tenant_id)->orderBy('sort')->get(),
             // Der aktuell zugewiesene Workflow muss immer in der Liste auftauchen, auch wenn er
             // inzwischen inaktiv/ersetzt ist - sonst würde ein Speichern ohne bewusste Auswahl
             // den Workflow fälschlich entfernen, weil kein <option> mehr dazu passt.
