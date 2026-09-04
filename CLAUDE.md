@@ -33,5 +33,11 @@ Umsetzungsidee: Rolle 4 als eigene `person`-Entität modellieren, `user` referen
 - `rollen` in Vietto sind fachliche Funktionen (Admin/TR/PM-PT/ÜS-Mgmt/Gast/Prozess) – andere Achse als das neue Zugriffsrollen-Modell oben, nicht 1:1 übernehmen.
 - Vietto-Rechtesystem (`rechte`, `rechte_cx`, `navigation.blnActive`) ist granular, aber Alt-typisch gewachsen – fachlich neu bewerten statt kopieren.
 
+## UI-Konventionen
+
+- **Speichern-Button statt Sofort-Speichern**: Formulare mit mehreren/größeren Feldern (z. B. Illustrationsauftrag anlegen, Status ändern) speichern erst über einen expliziten Button, nicht bei jeder Änderung automatisch. Ausnahme: reine Anzeige-/Filtersteuerung (Dropdowns, Checkboxen für Filter/Sichtbarkeit) darf per `onchange` sofort submitten – die ändert keine Daten, nur die Ansicht.
+- **Sicherheitsabfrage bei ungespeicherten Änderungen**: Jeder Dialog mit einem Speichern-Button (siehe oben) muss beim Schließen (X, Escape, "Schließen"-Button) nachfragen, wenn etwas geändert, aber nicht gespeichert wurde. Umsetzung: `x-modal`-Komponente mit `:dirty-check="'irgendeineWindowFunktion'"`; die Funktion vergleicht die aktuell serialisierten Formulare gegen einen beim Laden/nach dem Speichern erstellten Snapshot. Beispiele: `projectOverlayIsDirty` (Projekt-Overlay), `illustrationOrdersIsDirty` (Illustrationsaufträge-Modal), siehe `resources/views/layouts/app.blade.php`.
+- **Inaktive Elemente in Auswahllisten**: graue Schrift (`text-gray-400`) + Suffix " [i]" am Namen (z. B. `{{ $x->name }}{{ ! $x->active ? ' [i]' : '' }}`, Option/Label mit `@class(['text-gray-400' => ! $x->active])`). Gilt für alle Personen-/Workflow-Auswahllisten im Projekt. Bei großen Listen (z. B. Aufgaben-Personenfilter) inaktive standardmäßig ausblenden, mit einer eigenen Checkbox einblendbar machen statt immer anzuzeigen.
+
 ## Kommunikationsstil
 - Ralf möchte kurze, prägnante Antworten ohne ausschweifende Erklärungen ("keine Romane").
