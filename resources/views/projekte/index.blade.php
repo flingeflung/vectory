@@ -124,12 +124,12 @@
                                                 <x-status-icon :status="$project->status" />
                                             @elseif ($column['key'] === 'workflow')
                                                 @if ($project->workflow)
-                                                    <div>{{ $project->workflow->id }} - {{ $project->workflow->short_name }}</div>
+                                                    <div title="{{ $project->workflow->name }}">{{ $project->workflow->id }} - {{ $project->workflow->short_name }}</div>
                                                     @if ($project->progressStepLabel())
-                                                        <div class="text-xs text-gray-400">{{ $project->progressStepLabel() }}</div>
+                                                        <div class="text-xs text-gray-400" title="{{ $project->currentStepTitle() }}">{{ $project->progressStepLabel() }}</div>
                                                     @endif
                                                 @else
-                                                    <span class="text-gray-400">&ndash;</span>
+                                                    <span class="text-gray-400" title="{{ __('– Kein Workflow zugewiesen –') }}">&ndash;</span>
                                                 @endif
                                             @elseif ($column['progress'] ?? false)
                                                 @php $progress = $project->progressPercent(); @endphp

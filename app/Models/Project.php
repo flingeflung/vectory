@@ -209,6 +209,22 @@ class Project extends Model
     }
 
     /**
+     * Titel des gerade aktuellen Schritts - für den Tooltip auf dem
+     * Schritt-Zähler in der Übersicht (analog Viettos $wfstepname-Tooltip).
+     */
+    public function currentStepTitle(): ?string
+    {
+        if (! $this->workflow_id) {
+            return null;
+        }
+
+        $steps = $this->progressSteps();
+        $current = $steps->first(fn (ProjectWorkflowStep $step) => $step->is_current);
+
+        return $current?->workflowStep->title;
+    }
+
+    /**
      * @return Collection<int, ProjectWorkflowStep>
      */
     private function progressSteps(): Collection
