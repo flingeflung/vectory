@@ -114,7 +114,7 @@
                     class="flex w-full items-center gap-1 px-2 py-1 text-left hover:bg-gray-50"
                     :class="{ 'bg-gray-50': index === selectedIndex }"
                 >
-                    <span class="shrink-0 font-semibold text-gray-800" x-text="item.pn"></span>
+                    <span class="shrink-0 font-semibold tabular-nums text-gray-800" x-text="item.pn"></span>
                     <img
                         :src="item.type_symbol ? '{{ asset('images/project-type-icons') }}/' + item.type_symbol : ''"
                         :title="item.type_name"
