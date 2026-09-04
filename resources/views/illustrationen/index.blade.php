@@ -116,53 +116,53 @@
                     <table class="min-w-full divide-y divide-gray-200 text-sm">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="sticky top-0 z-10 bg-gray-50 px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('Auftr.-Nr.') }}</th>
-                                <th class="sticky top-0 z-10 bg-gray-50 px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('Projekt') }}</th>
-                                <th class="sticky top-0 z-10 bg-gray-50 px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap" title="{{ __('Anzahl Bilder') }}">{{ __('Anz.') }}</th>
-                                <th class="sticky top-0 z-10 bg-gray-50 px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('Status') }}</th>
-                                <th class="sticky top-0 z-10 bg-gray-50 px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('Aufgabe') }}</th>
-                                <th class="sticky top-0 z-10 bg-gray-50 px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('Termin') }}</th>
-                                <th class="sticky top-0 z-10 bg-gray-50 px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('Auftrag von') }}</th>
-                                <th class="sticky top-0 z-10 bg-gray-50 px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('Illustrator') }}</th>
-                                <th class="sticky top-0 z-10 bg-gray-50 px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('Firma') }}</th>
-                                <th class="sticky top-0 z-10 bg-gray-50 px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('erledigt') }}</th>
-                                <th class="sticky top-0 z-10 bg-gray-50 px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap"></th>
+                                <th class="sticky top-0 z-10 bg-gray-50 px-2 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('Auftr.-Nr.') }}</th>
+                                <th class="sticky top-0 z-10 bg-gray-50 px-2 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('Projekt') }}</th>
+                                <th class="sticky top-0 z-10 bg-gray-50 px-2 py-3 text-left font-medium text-gray-500 whitespace-nowrap" title="{{ __('Anzahl Bilder') }}">{{ __('Anz.') }}</th>
+                                <th class="sticky top-0 z-10 bg-gray-50 px-2 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('Status') }}</th>
+                                <th class="sticky top-0 z-10 bg-gray-50 px-2 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('Aufgabe') }}</th>
+                                <th class="sticky top-0 z-10 bg-gray-50 px-2 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('Termin') }}</th>
+                                <th class="sticky top-0 z-10 bg-gray-50 px-2 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('Auftrag von') }}</th>
+                                <th class="sticky top-0 z-10 bg-gray-50 px-2 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('Illustrator') }}</th>
+                                <th class="sticky top-0 z-10 bg-gray-50 px-2 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('Firma') }}</th>
+                                <th class="sticky top-0 z-10 bg-gray-50 px-2 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('erledigt') }}</th>
+                                <th class="sticky top-0 right-0 z-20 bg-gray-50 px-2 py-3 text-left font-medium text-gray-500 whitespace-nowrap"></th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
                             @forelse ($orders as $order)
                                 <tr class="hover:bg-gray-50">
-                                    <td class="px-4 py-2 whitespace-nowrap text-gray-500">Illu-{{ $order->id }}</td>
-                                    <td class="px-4 py-2 whitespace-nowrap text-gray-500">
+                                    <td class="px-2 py-2 whitespace-nowrap text-gray-500">Illu-{{ $order->id }}</td>
+                                    <td class="px-2 py-2 whitespace-nowrap text-gray-500">
                                         <x-pn-link :project="$order->project" />
                                     </td>
-                                    <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ $order->image_count }}</td>
-                                    <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ $order->status?->name }}</td>
-                                    <td class="px-4 py-2 max-w-xs text-gray-900">
+                                    <td class="px-2 py-2 whitespace-nowrap text-gray-500">{{ $order->image_count }}</td>
+                                    <td class="px-2 py-2 whitespace-nowrap text-gray-500">{{ $order->status?->name }}</td>
+                                    <td class="px-2 py-2 max-w-[160px] text-gray-900">
                                         <span x-data="{ expanded: false }">
                                             <span x-show="!expanded" @click="expanded = true" class="cursor-pointer" title="{{ __('Klicken zum Erweitern') }}">
-                                                {{ \Illuminate\Support\Str::limit($order->description, 30) }}
+                                                {{ \Illuminate\Support\Str::limit($order->description, 18) }}
                                             </span>
                                             <span x-show="expanded" x-cloak @click="expanded = false" class="cursor-pointer">
                                                 {{ $order->description }}
                                             </span>
                                         </span>
                                     </td>
-                                    <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ $order->due_date?->format('d.m.Y') ?? '–' }}</td>
-                                    <td class="px-4 py-2 whitespace-nowrap text-gray-500">
+                                    <td class="px-2 py-2 whitespace-nowrap text-gray-500">{{ $order->due_date?->format('d.m.Y') ?? '–' }}</td>
+                                    <td class="px-2 py-2 whitespace-nowrap text-gray-500">
                                         {{ $order->initiatedBy?->fullName() ?? '–' }}
-                                        <div class="text-xs text-gray-400">{{ $order->created_at?->format('d.m.Y H:i') }}</div>
+                                        <div class="text-xs text-gray-400">{{ $order->created_at?->format('d.m.Y') }}</div>
                                     </td>
-                                    <td class="px-4 py-2 whitespace-nowrap text-gray-500">
+                                    <td class="px-2 py-2 whitespace-nowrap text-gray-500">
                                         @if ($order->illustrator)
                                             <span @class(['text-gray-400' => ! $order->illustrator->active])>{{ $order->illustrator->fullName() }}{{ ! $order->illustrator->active ? ' [i]' : '' }}</span>
                                         @else
                                             &ndash;
                                         @endif
                                     </td>
-                                    <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ $order->illustrator?->company?->short_name ?? '–' }}</td>
-                                    <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ $order->done_at?->format('d.m.Y') ?? '–' }}</td>
-                                    <td class="px-4 py-2 whitespace-nowrap">
+                                    <td class="px-2 py-2 whitespace-nowrap text-gray-500">{{ $order->illustrator?->company?->short_name ?? '–' }}</td>
+                                    <td class="px-2 py-2 whitespace-nowrap text-gray-500">{{ $order->done_at?->format('d.m.Y') ?? '–' }}</td>
+                                    <td class="sticky right-0 whitespace-nowrap bg-white px-2 py-2">
                                         <button
                                             type="button"
                                             @click="window.openIllustrationOrders({{ $order->project_id }})"

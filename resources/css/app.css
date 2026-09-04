@@ -3,6 +3,15 @@
 @tailwind utilities;
 
 /*
+ * Ohne diese Regel tut x-cloak nichts (ist nur ein Attribut, keine
+ * Tailwind-Klasse) - Elemente blitzen beim Laden kurz sichtbar auf, bis
+ * Alpine initialisiert ist und x-cloak wieder entfernt.
+ */
+[x-cloak] {
+    display: none !important;
+}
+
+/*
  * Marken-/Theme-Farben. Bewusst als CSS-Variablen statt fester Tailwind-Farben,
  * damit sie sich später pro Mandant (Kunde) austauschen lassen, ohne die
  * Templates anzufassen.
