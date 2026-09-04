@@ -109,9 +109,9 @@
                 <div>
                     <label class="text-xs text-gray-500">{{ __('Illustrator') }}</label>
                     <select name="illustrator_person_id" x-model="illustrator" class="mt-0.5 rounded border-gray-300 py-1 text-xs">
-                        <option value="">&ndash; {{ __('nicht zugewiesen') }} &ndash;</option>
+                        <option value="" @selected(! $order->illustrator_person_id)>&ndash; {{ __('nicht zugewiesen') }} &ndash;</option>
                         @foreach ($illustrationPersons as $person)
-                            <option value="{{ $person->id }}" @class(['text-gray-400' => ! $person->active])>{{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }}</option>
+                            <option value="{{ $person->id }}" @selected($person->id === $order->illustrator_person_id) @class(['text-gray-400' => ! $person->active])>{{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }}</option>
                         @endforeach
                     </select>
                 </div>
