@@ -6,7 +6,7 @@
     </x-slot>
 
     <div class="h-full overflow-y-auto p-4 sm:p-6">
-        <div class="w-full max-w-3xl mx-auto bg-white shadow-sm sm:rounded-lg">
+        <div id="project-detail-container" class="w-full max-w-3xl mx-auto bg-white shadow-sm sm:rounded-lg">
             @include('projekte.partials.detail', ['overlay' => false])
         </div>
     </div>

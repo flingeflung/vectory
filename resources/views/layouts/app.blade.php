@@ -255,11 +255,42 @@
             (function () {
                 const illuBody = () => document.getElementById('illustration-orders-body');
                 const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                let currentProjectId = null;
 
                 window.openIllustrationOrders = async (projectId) => {
+                    currentProjectId = projectId;
                     illuBody().innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
                     window.dispatchEvent(new CustomEvent('open-modal', { detail: 'illustration-orders' }));
                     illuBody().innerHTML = await fetch(`/projekte/${projectId}/illustrationsauftraege`).then((r) => r.text());
+                };
+
+                // Nach dem Speichern auch die Illustration-Zusammenfassung im
+                // WFS-Kasten dahinter aktualisieren (Projekt-Overlay oder
+                // Vollseite - je nachdem, wo dieses Modal gerade offen ist).
+                // Ohne das bleibt der Kasten bis zum nächsten manuellen Neuladen
+                // auf "keine Aufträge vorhanden" stehen.
+                const refreshUnderlyingProject = async () => {
+                    if (! currentProjectId) {
+                        return;
+                    }
+
+                    const overlayBody = document.getElementById('project-overlay-body');
+                    if (overlayBody && overlayBody.offsetParent !== null) {
+                        overlayBody.innerHTML = await fetch(`/projekte/${currentProjectId}`, {
+                            headers: { 'X-Overlay': '1' },
+                        }).then((r) => r.text());
+
+                        return;
+                    }
+
+                    const container = document.getElementById('project-detail-container');
+                    if (container && window.location.pathname === `/projekte/${currentProjectId}`) {
+                        const html = await fetch(window.location.href).then((r) => r.text());
+                        const fresh = new DOMParser().parseFromString(html, 'text/html').getElementById('project-detail-container');
+                        if (fresh) {
+                            container.innerHTML = fresh.innerHTML;
+                        }
+                    }
                 };
 
                 document.addEventListener('submit', async (event) => {
@@ -275,6 +306,10 @@
                         body: new FormData(event.target),
                     });
                     illuBody().innerHTML = await response.text();
+
+                    if (response.ok) {
+                        refreshUnderlyingProject();
+                    }
                 });
             })();
         </script>
