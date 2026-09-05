@@ -79,6 +79,13 @@ class ProjectWorkflowStepController extends Controller
 
         $projectWorkflowStep->loadMissing('workflowStep.functionGroups');
         $target = $projectWorkflowStep;
+
+        // Beenden/Verwerfen (lifecycle_status 3/4) braucht das Recht
+        // project.complete - alle anderen Schritte (auch Rücksprünge) darf
+        // jeder aktivieren, der bis hierhin überhaupt Zugriff hat.
+        if (in_array($target->workflowStep->lifecycle_status, [3, 4], true)) {
+            abort_unless($request->user()->can('project.complete'), 403);
+        }
         $currentStep = $project->projectWorkflowSteps->firstWhere('is_current', true);
         $person = $request->user()->person;
 

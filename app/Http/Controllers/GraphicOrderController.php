@@ -64,16 +64,28 @@ class GraphicOrderController extends Controller
         $validated = $request->validate([
             'graphic_order_status_id' => ['required', 'integer', Rule::exists('graphic_order_statuses', 'id')->where('tenant_id', $project->tenant_id)],
             'illustrator_person_id' => ['nullable', 'integer', Rule::exists('people', 'id')->where('tenant_id', $project->tenant_id)],
+            'image_count' => ['nullable', 'integer', 'min:0'],
+            'due_date' => ['nullable', 'date'],
         ]);
 
         $status = GraphicOrderStatus::findOrFail($validated['graphic_order_status_id']);
 
-        $graphicOrder->update([
+        $update = [
             'graphic_order_status_id' => $status->id,
             'illustrator_person_id' => $validated['illustrator_person_id'] ?? null,
             'done_at' => $status->is_open === false && ! $status->is_discarded ? now() : null,
             'completed_by_person_id' => $status->is_open === false && ! $status->is_discarded ? $request->user()->person_id : null,
-        ]);
+        ];
+
+        // Termin/Anzahl Bilder nur änderbar mit eigenem Recht - Feldrechte
+        // aus Vietto übernommen (dort: nur Auftraggeber oder Admin).
+        if ($request->has('image_count') || $request->has('due_date')) {
+            abort_unless($request->user()->can('illustration_order.edit_terms'), 403);
+            $update['image_count'] = $validated['image_count'] ?? $graphicOrder->image_count;
+            $update['due_date'] = $validated['due_date'] ?? null;
+        }
+
+        $graphicOrder->update($update);
 
         Activity::log($project, ActivityType::GraphicOrderStatusChanged, __('Status für Illustrationsauftrag Illu-:id: :status', ['id' => $graphicOrder->id, 'status' => $status->name]));
 

@@ -229,6 +229,16 @@ class ProjectController extends Controller
         }
 
         $validated = $validator->validated();
+
+        // Auf Beendet/Verworfen setzen braucht project.complete - bei
+        // Projekten mit aktuellem WFS-Schritt läuft das normalerweise über
+        // activate() (siehe ProjectWorkflowStepController), das Statusfeld
+        // hier ist dann nur ein schreibgeschütztes Hidden-Feld; die Prüfung
+        // greift trotzdem als zweite Absicherung gegen manipulierte Requests.
+        if (in_array($validated['status'], [2, 3], true) && $validated['status'] !== $project->status) {
+            abort_unless($request->user()->can('project.complete'), 403);
+        }
+
         $validated['archived'] = $request->boolean('archived');
         // Tri-state: leere Auswahl = nicht zugewiesen (null), sonst Ja/Nein.
         // ConvertEmptyStringsToNull (globale Middleware) macht aus "" bereits null, bevor wir hier ankommen.

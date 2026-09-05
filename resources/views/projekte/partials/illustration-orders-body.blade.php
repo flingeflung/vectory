@@ -115,6 +115,16 @@
                         @endforeach
                     </select>
                 </div>
+                @can('illustration_order.edit_terms')
+                    <div>
+                        <label class="text-xs text-gray-500">{{ __('Anzahl Bilder') }}</label>
+                        <input type="number" name="image_count" min="0" value="{{ $order->image_count }}" class="mt-0.5 w-20 rounded border-gray-300 py-1 text-xs">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500">{{ __('Fertigstellung bis') }}</label>
+                        <input type="date" name="due_date" value="{{ $order->due_date?->format('Y-m-d') }}" class="mt-0.5 rounded border-gray-300 py-1 text-xs">
+                    </div>
+                @endcan
                 <button
                     type="button"
                     @click="illustrator = {{ \Illuminate\Support\Js::from((string) auth()->user()->person_id) }}"

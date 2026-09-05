@@ -42,7 +42,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/aufgaben', [TaskController::class, 'index'])->name('aufgaben');
     Route::post('/aufgaben/{task}/sichtbarkeit', [TaskController::class, 'toggleVisibility'])->name('aufgaben.visibility');
 
-    Route::get('/admin', [AdminController::class, 'index'])->name('admin');
+    Route::get('/admin', [AdminController::class, 'index'])->name('admin')->middleware('can:access-admin');
 });
 
 Route::middleware(['auth', 'verified'])->prefix('projekte/anzeigefilter')->name('projekte.anzeigefilter.')->group(function () {

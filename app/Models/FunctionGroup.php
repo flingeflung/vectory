@@ -23,4 +23,13 @@ class FunctionGroup extends Model
     {
         return $this->belongsToMany(Person::class, 'function_group_member')->orderBy('sort');
     }
+
+    /**
+     * Rechte-Vorlage dieser Gruppe - Mitglieder bekommen diese Rechte
+     * standardmäßig, individuell überschreibbar (siehe Person::hasPermission()).
+     */
+    public function permissions(): BelongsToMany
+    {
+        return $this->belongsToMany(Permission::class, 'function_group_permission');
+    }
 }

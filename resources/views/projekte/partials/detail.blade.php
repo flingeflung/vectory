@@ -183,7 +183,9 @@
                 @else
                     <select name="status" class="mt-0.5 w-full rounded border-gray-300 py-1 text-sm">
                         @foreach ($statusOptions as $value => $label)
-                            <option value="{{ $value }}" @selected(old('status', $project->status) == $value)>{{ $label }}</option>
+                            @if (! in_array($value, [2, 3], true) || auth()->user()->can('project.complete') || $project->status === $value)
+                                <option value="{{ $value }}" @selected(old('status', $project->status) == $value)>{{ $label }}</option>
+                            @endif
                         @endforeach
                     </select>
                 @endif
@@ -598,13 +600,15 @@
                                         </div>
 
                                         @unless ($pws->is_current)
-                                            <button
-                                                type="button"
-                                                @click.stop="window.openActivateWorkflowStep({{ $project->id }}, {{ $pws->id }})"
-                                                class="mt-1 rounded border border-gray-300 bg-white px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                                            >
-                                                {{ __('Aktivieren') }}
-                                            </button>
+                                            @if (! in_array($step->lifecycle_status, [3, 4], true) || auth()->user()->can('project.complete'))
+                                                <button
+                                                    type="button"
+                                                    @click.stop="window.openActivateWorkflowStep({{ $project->id }}, {{ $pws->id }})"
+                                                    class="mt-1 rounded border border-gray-300 bg-white px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                                                >
+                                                    {{ __('Aktivieren') }}
+                                                </button>
+                                            @endif
                                         @endunless
                                     </div>
                                 </div>
