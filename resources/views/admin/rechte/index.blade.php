@@ -4,42 +4,52 @@
     @endif
 
     <div class="flex flex-1 min-h-0 gap-4">
-        {{-- Links: WEN - erst Funktionsgruppen, dann alle Personen. --}}
-        <div x-data="{ search: '', showInactive: false }" class="flex w-72 shrink-0 flex-col rounded-lg border border-gray-200 bg-white">
-            <div class="shrink-0 space-y-1.5 border-b border-gray-100 p-2">
-                <input
-                    type="search"
-                    x-model="search"
-                    placeholder="{{ __('Schnellsuche (Nachname)') }}"
-                    class="w-full rounded-md border-gray-300 py-1 text-sm"
-                >
-                <label class="flex items-center gap-1.5 text-xs text-gray-600">
-                    <input type="checkbox" x-model="showInactive" class="rounded border-gray-300">
-                    {{ __('Inaktive Personen zeigen') }}
-                </label>
-            </div>
+        {{-- Links: WEN - erst die Rechte-Sets, dann alle Personen. --}}
+        <div x-data="{ search: '', showInactive: false, newSet: false }" class="flex w-72 shrink-0 flex-col rounded-lg border border-gray-200 bg-white">
             <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm">
-                @if (auth()->user()->role === 'super_admin')
-                    <a
-                        href="{{ route('admin.rechte', ['admin' => 1]) }}"
-                        class="block rounded px-2 py-1 {{ $showAdminSection ? 'bg-indigo-50 font-medium text-indigo-700' : 'text-gray-700 hover:bg-gray-50' }}"
-                    >
-                        {{ __('Admin') }}
-                    </a>
-                    <div class="my-2 border-t border-gray-100"></div>
-                @endif
+                <div class="flex items-center justify-between px-1 py-1">
+                    <span class="text-xs font-semibold text-gray-500">{{ __('Rechte-Sets') }}</span>
+                    <button type="button" @click="newSet = !newSet" class="text-xs text-indigo-600 hover:text-indigo-800">
+                        + {{ __('Neu') }}
+                    </button>
+                </div>
 
-                <div class="px-1 py-1 text-xs font-semibold text-gray-500">{{ __('Funktionsgruppen') }}</div>
-                @foreach ($functionGroups as $group)
+                <form x-show="newSet" x-cloak method="POST" action="{{ route('admin.rechte.sets.store') }}" class="mb-2 space-y-1.5 rounded border border-gray-200 p-2">
+                    @csrf
+                    <select name="base_id" class="w-full rounded-md border-gray-300 text-xs" required>
+                        <option value="">{{ __('Auf Basis von…') }}</option>
+                        @foreach ($templates as $template)
+                            <option value="{{ $template->id }}">{{ $template->name }}</option>
+                        @endforeach
+                    </select>
+                    <input type="text" name="name" placeholder="{{ __('Name des neuen Sets') }}" class="w-full rounded-md border-gray-300 text-xs" required>
+                    <button type="submit" class="w-full rounded-md bg-gray-800 px-2 py-1 text-xs font-medium text-white hover:bg-gray-700">
+                        {{ __('Anlegen') }}
+                    </button>
+                </form>
+
+                @foreach ($templates as $template)
                     <a
-                        href="{{ route('admin.rechte', ['group' => $group->id]) }}"
-                        class="block rounded px-2 py-1 {{ $selectedGroup?->id === $group->id ? 'bg-indigo-50 font-medium text-indigo-700' : 'text-gray-700 hover:bg-gray-50' }}"
+                        href="{{ route('admin.rechte', ['set' => $template->id]) }}"
+                        class="block rounded px-2 py-1 {{ $selectedTemplate?->id === $template->id ? 'bg-indigo-50 font-medium text-indigo-700' : 'text-gray-700 hover:bg-gray-50' }}"
                     >
-                        {{ $group->name }}
+                        {{ $template->name }}
                     </a>
                 @endforeach
 
-                <div class="mt-3 px-1 py-1 text-xs font-semibold text-gray-500">{{ __('Personen') }}</div>
+                <div class="mt-3 space-y-1.5 px-1 py-1">
+                    <span class="text-xs font-semibold text-gray-500">{{ __('Personen') }}</span>
+                    <input
+                        type="search"
+                        x-model="search"
+                        placeholder="{{ __('Schnellsuche (Nachname)') }}"
+                        class="w-full rounded-md border-gray-300 py-1 text-xs"
+                    >
+                    <label class="flex items-center gap-1.5 text-xs text-gray-600">
+                        <input type="checkbox" x-model="showInactive" class="rounded border-gray-300">
+                        {{ __('Inaktive Personen zeigen') }}
+                    </label>
+                </div>
                 @foreach ($people as $person)
                     <a
                         href="{{ route('admin.rechte', ['person' => $person->id]) }}"
@@ -52,58 +62,16 @@
             </div>
         </div>
 
-        {{-- Rechts: WAS - eine gemeinsame Liste für alle Rechte (auch künftige
-             Navigations-Rechte wie "Admin sehen") statt zwei getrennter Spalten
-             wie in Vietto. Noch ohne Kategorien - kommt, sobald der Katalog
-             wächst und eine flache Liste unübersichtlich wird. --}}
+        {{-- Rechts: WAS - entweder die Rechte-Checkliste eines Sets (plus wer
+             es gerade erbt, damit die Tragweite jeder Änderung sichtbar ist),
+             oder das Set einer Person. --}}
         <div x-data="{ search: '' }" class="flex flex-1 min-h-0 flex-col rounded-lg border border-gray-200 bg-white">
-            @if ($showAdminSection)
-                <div class="shrink-0 border-b border-gray-100 p-3">
-                    <div class="text-sm font-medium text-gray-900">{{ __('Admin') }}</div>
-                    <div class="text-xs text-gray-400">{{ __('Rechte, die die Admin-Rolle standardmäßig hat.') }}</div>
-                </div>
-
-                <div class="flex-1 min-h-0 overflow-y-auto p-3">
-                    <form method="POST" action="{{ route('admin.rechte.admins.update') }}">
-                        @csrf
-                        <table class="min-w-full divide-y divide-gray-100 text-sm">
-                            <tbody class="divide-y divide-gray-100">
-                                @foreach ($permissions as $permission)
-                                    <tr>
-                                        <td class="w-10 px-3 py-2 text-center">
-                                            <input
-                                                type="checkbox"
-                                                name="permissions[]"
-                                                value="{{ $permission->id }}"
-                                                class="rounded border-gray-300"
-                                                @checked($adminPermissionIds->contains($permission->id))
-                                            >
-                                        </td>
-                                        <td class="px-3 py-2 text-gray-700" title="{{ $permission->key }}">{{ $permission->label }}</td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-
-                        <button type="submit" class="mt-3 rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
-                            {{ __('Speichern') }}
-                        </button>
-                    </form>
-
-                    <div class="mt-6 border-t border-gray-100 pt-3">
-                        <div class="mb-1 text-xs font-semibold text-gray-500">{{ __('Super-Admin (nur zur Information)') }}</div>
-                        <div class="mb-2 text-xs text-gray-400">{{ __('Hat immer alle Rechte, unabhängig von dieser Liste.') }}</div>
-                        @foreach ($permissions as $permission)
-                            <div class="px-1 py-1 text-sm text-gray-500" title="{{ $permission->key }}">{{ $permission->label }}</div>
-                        @endforeach
-                    </div>
-                </div>
-            @elseif ($selectedGroup || $selectedPerson)
+            @if ($selectedTemplate)
                 <div class="shrink-0 flex items-center justify-between gap-3 border-b border-gray-100 p-3">
                     <div class="text-sm font-medium text-gray-900">
-                        {{ $selectedGroup?->name ?? $selectedPerson->fullName() }}
+                        {{ $selectedTemplate->name }}
                         <span class="ml-1 text-xs font-normal text-gray-400">
-                            {{ $selectedGroup ? __('(Funktionsgruppe – Rechte-Vorlage)') : __('(Person – individuelle Ausnahmen)') }}
+                            {{ __('Gilt für :count Person(en) - Änderungen wirken sofort für alle.', ['count' => $templatePeople->count()]) }}
                         </span>
                     </div>
                     <input
@@ -114,19 +82,18 @@
                     >
                 </div>
 
-                <form
-                    method="POST"
-                    action="{{ $selectedGroup ? route('admin.rechte.funktionsgruppen.update', $selectedGroup) : route('admin.rechte.personen.update', $selectedPerson) }}"
-                    class="flex flex-1 min-h-0 flex-col"
-                >
-                    @csrf
-                    <div class="flex-1 min-h-0 overflow-y-auto">
-                        <table class="min-w-full divide-y divide-gray-100 text-sm">
-                            <tbody class="divide-y divide-gray-100">
-                                @foreach ($permissions as $permission)
-                                    <tr x-show="!search || {{ \Illuminate\Support\Js::from(mb_strtolower($permission->label)) }}.includes(search.toLowerCase())">
-                                        <td class="px-3 py-2 text-gray-700" title="{{ $permission->key }}">{{ $permission->label }}</td>
-                                        @if ($selectedGroup)
+                <div class="flex flex-1 min-h-0">
+                    <form
+                        method="POST"
+                        action="{{ route('admin.rechte.sets.update', $selectedTemplate) }}"
+                        class="flex flex-1 min-h-0 flex-col border-r border-gray-100"
+                    >
+                        @csrf
+                        <div class="flex-1 min-h-0 overflow-y-auto">
+                            <table class="min-w-full divide-y divide-gray-100 text-sm">
+                                <tbody class="divide-y divide-gray-100">
+                                    @foreach ($permissions as $permission)
+                                        <tr x-show="!search || {{ \Illuminate\Support\Js::from(mb_strtolower($permission->label)) }}.includes(search.toLowerCase())">
                                             <td class="w-10 px-3 py-2 text-center">
                                                 <input
                                                     type="checkbox"
@@ -136,36 +103,81 @@
                                                     @checked($grantedPermissionIds->contains($permission->id))
                                                 >
                                             </td>
-                                        @else
-                                            @php $current = $personOverrides->get($permission->id)?->pivot->granted; @endphp
-                                            <td class="w-20 px-2 py-2 text-center text-xs text-gray-400">
-                                                <input type="radio" name="override[{{ $permission->id }}]" value="" @checked($current === null)>
-                                                {{ __('Vorlage') }}
-                                            </td>
-                                            <td class="w-20 px-2 py-2 text-center text-xs text-gray-400">
-                                                <input type="radio" name="override[{{ $permission->id }}]" value="1" @checked($current === true)>
-                                                {{ __('Zusätzlich') }}
-                                            </td>
-                                            <td class="w-20 px-2 py-2 text-center text-xs text-gray-400">
-                                                <input type="radio" name="override[{{ $permission->id }}]" value="0" @checked($current === false)>
-                                                {{ __('Entzogen') }}
-                                            </td>
-                                        @endif
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
+                                            <td class="px-3 py-2 text-gray-700" title="{{ $permission->key }}">{{ $permission->label }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="shrink-0 border-t border-gray-100 p-3">
+                            <button type="submit" class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
+                                {{ __('Speichern') }}
+                            </button>
+                        </div>
+                    </form>
 
-                    <div class="shrink-0 border-t border-gray-100 p-3">
-                        <button type="submit" class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
-                            {{ __('Speichern') }}
-                        </button>
+                    <div class="flex w-64 shrink-0 flex-col">
+                        <div class="shrink-0 border-b border-gray-100 p-3 text-xs font-semibold text-gray-500">
+                            {{ __('Personen mit diesem Set') }} ({{ $templatePeople->count() }})
+                        </div>
+                        <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm">
+                            @forelse ($templatePeople as $person)
+                                <div class="px-1 py-1 {{ $person->active ? 'text-gray-700' : 'text-gray-400' }}">
+                                    {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }}
+                                </div>
+                            @empty
+                                <div class="px-1 py-1 text-gray-400">{{ __('Niemand.') }}</div>
+                            @endforelse
+                        </div>
+                        <div class="shrink-0 border-t border-gray-100 p-3">
+                            <form
+                                method="POST"
+                                action="{{ route('admin.rechte.sets.destroy', $selectedTemplate) }}"
+                                class="space-y-1.5"
+                                onsubmit="return confirm('{{ __('Set wirklich löschen?') }}')"
+                            >
+                                @csrf
+                                @method('DELETE')
+                                @if ($templatePeople->isNotEmpty())
+                                    <select name="reassign_to" class="w-full rounded-md border-gray-300 text-xs" required>
+                                        <option value="">{{ __('Personen übernehmen in…') }}</option>
+                                        @foreach ($templates as $template)
+                                            @if ($template->id !== $selectedTemplate->id)
+                                                <option value="{{ $template->id }}">{{ $template->name }}</option>
+                                            @endif
+                                        @endforeach
+                                    </select>
+                                @endif
+                                <button type="submit" class="w-full rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50">
+                                    {{ __('Set löschen') }}
+                                </button>
+                            </form>
+                        </div>
                     </div>
+                </div>
+            @elseif ($selectedPerson)
+                <div class="shrink-0 border-b border-gray-100 p-3 text-sm font-medium text-gray-900">
+                    {{ $selectedPerson->fullName() }}
+                </div>
+
+                <form method="POST" action="{{ route('admin.rechte.personen.update', $selectedPerson) }}" class="flex-1 min-h-0 overflow-y-auto p-3">
+                    @csrf
+                    <div class="mb-3 text-xs text-gray-500">{{ __('Rechte-Set auswählen - bestimmt die Rechte dieser Person vollständig.') }}</div>
+                    <div class="space-y-1">
+                        @foreach ($templates as $template)
+                            <label class="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-gray-50">
+                                <input type="radio" name="permission_template_id" value="{{ $template->id }}" @checked($selectedPerson->permission_template_id === $template->id)>
+                                <span class="text-sm text-gray-700">{{ $template->name }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+                    <button type="submit" class="mt-3 rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
+                        {{ __('Speichern') }}
+                    </button>
                 </form>
             @else
                 <div class="flex flex-1 items-center justify-center text-sm text-gray-400">
-                    {{ __('Links eine Funktionsgruppe oder Person auswählen.') }}
+                    {{ __('Links ein Rechte-Set oder eine Person auswählen.') }}
                 </div>
             @endif
         </div>

@@ -7,6 +7,10 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+/**
+ * Reines Task-Routing (Illustrator-Auswahl etc.) - hat bewusst keinen
+ * Einfluss auf Rechte, siehe PermissionTemplate/Person::hasPermission().
+ */
 #[Fillable(['tenant_id', 'legacy_id', 'name', 'short_name', 'sort', 'active'])]
 class FunctionGroup extends Model
 {
@@ -22,14 +26,5 @@ class FunctionGroup extends Model
     public function members(): BelongsToMany
     {
         return $this->belongsToMany(Person::class, 'function_group_member')->orderBy('sort');
-    }
-
-    /**
-     * Rechte-Vorlage dieser Gruppe - Mitglieder bekommen diese Rechte
-     * standardmäßig, individuell überschreibbar (siehe Person::hasPermission()).
-     */
-    public function permissions(): BelongsToMany
-    {
-        return $this->belongsToMany(Permission::class, 'function_group_permission')->withTimestamps();
     }
 }

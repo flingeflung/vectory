@@ -11,8 +11,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
     'tenant_id', 'legacy_id', 'first_name', 'last_name', 'email',
-    'company_id', 'department_id', 'legacy_role_id', 'last_login_at',
-    'start_date', 'end_date', 'remarks', 'language', 'sort', 'active',
+    'company_id', 'department_id', 'legacy_role_id', 'permission_template_id',
+    'last_login_at', 'start_date', 'end_date', 'remarks', 'language', 'sort', 'active',
 ])]
 class Person extends Model
 {
@@ -57,48 +57,34 @@ class Person extends Model
         return trim("{$this->last_name}, {$this->first_name}", ', ');
     }
 
+    /**
+     * Rein für Task-Routing (Illustrator-Auswahl etc.) - hat bewusst KEINEN
+     * Einfluss mehr auf Rechte, siehe PermissionTemplate/hasPermission().
+     * Grund: eine Person kann in mehreren Fktgrps sein, was bei einer
+     * Rechte-Vererbung über Fktgrps zu ungewollten Rechten führen würde
+     * (z.B. ein PM, der aus Routing-Gründen auch in "Lektorat" ist, hätte
+     * sonst automatisch Lektorat-Rechte).
+     */
     public function functionGroups(): BelongsToMany
     {
         return $this->belongsToMany(FunctionGroup::class, 'function_group_member');
     }
 
     /**
-     * Individuelle Ausnahmen von der Funktionsgruppen-Rechte-Vorlage (siehe
-     * hasPermission()) - granted=1 gewährt zusätzlich, granted=0 entzieht.
+     * Jede Person hat genau EIN Rechte-Set, das ihre Rechte vollständig
+     * bestimmt - keine individuellen Ausnahmen mehr (die führten zu nicht
+     * mehr nachvollziehbarem "Permission Sprawl", siehe Rechtekonzept-
+     * Diskussion). Admin 2 kann sich in der Rechte-Verwaltung beliebig
+     * viele eigene Sets anlegen (z.B. "PM", "Lektorat") und Personen frei
+     * zuordnen. Super-Admin braucht kein Set, siehe Gate::before().
      */
-    public function permissionOverrides(): BelongsToMany
+    public function permissionTemplate(): BelongsTo
     {
-        return $this->belongsToMany(Permission::class, 'person_permission')->withPivot('granted')->withTimestamps();
+        return $this->belongsTo(PermissionTemplate::class);
     }
 
-    /**
-     * Rechte-Auflösung: eine individuelle Ausnahme (siehe permissionOverrides())
-     * gewinnt immer - darüber kann Super-Admin einem einzelnen Admin auch
-     * mal ein sonst nicht vorgesehenes Recht zuweisen. Sonst zählt bei
-     * Admins die Rechte-Vorlage der Rolle (RolePermission, von Super-Admin
-     * in der Rechte-Verwaltung gepflegt), bei allen anderen die Vorlage der
-     * Funktionsgruppen, in denen die Person Mitglied ist. Super-Admin läuft
-     * NICHT hierüber, siehe Gate::before() in AppServiceProvider.
-     */
     public function hasPermission(string $key): bool
     {
-        $override = $this->permissionOverrides()->where('key', $key)->first();
-        if ($override !== null) {
-            return (bool) $override->pivot->granted;
-        }
-
-        if ($this->user?->role === 'admin') {
-            $hasRoleGrant = RolePermission::query()
-                ->where('tenant_id', $this->tenant_id)
-                ->where('role', 'admin')
-                ->whereHas('permission', fn ($query) => $query->where('key', $key))
-                ->exists();
-
-            if ($hasRoleGrant) {
-                return true;
-            }
-        }
-
-        return $this->functionGroups()->whereHas('permissions', fn ($query) => $query->where('key', $key))->exists();
+        return $this->permissionTemplate?->permissions()->where('key', $key)->exists() ?? false;
     }
 }

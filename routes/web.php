@@ -47,9 +47,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::middleware(['auth', 'verified', 'can:access-admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::redirect('/', '/admin/rechte')->name('index');
     Route::get('/rechte', [AdminPermissionController::class, 'index'])->name('rechte');
-    Route::post('/rechte/funktionsgruppen/{group}', [AdminPermissionController::class, 'updateFunctionGroup'])->name('rechte.funktionsgruppen.update');
-    Route::post('/rechte/personen/{person}', [AdminPermissionController::class, 'updatePerson'])->name('rechte.personen.update');
-    Route::post('/rechte/admins', [AdminPermissionController::class, 'updateAdminPermissions'])->name('rechte.admins.update');
+    Route::post('/rechte/sets', [AdminPermissionController::class, 'store'])->name('rechte.sets.store');
+    Route::post('/rechte/sets/{template}', [AdminPermissionController::class, 'update'])->name('rechte.sets.update');
+    Route::delete('/rechte/sets/{template}', [AdminPermissionController::class, 'destroy'])->name('rechte.sets.destroy');
+    Route::post('/rechte/personen/{person}', [AdminPermissionController::class, 'assignPerson'])->name('rechte.personen.update');
 });
 
 Route::middleware(['auth', 'verified'])->prefix('projekte/anzeigefilter')->name('projekte.anzeigefilter.')->group(function () {
