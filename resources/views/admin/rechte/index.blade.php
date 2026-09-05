@@ -75,6 +75,7 @@
                         method="POST"
                         action="{{ route('admin.rechte.sets.assign-people', $selectedTemplate) }}"
                         @change="dirty = true"
+                        @submit="dirty = false"
                         x-init="window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } })"
                     >
                         @csrf
