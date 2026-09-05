@@ -73,15 +73,30 @@ class Person extends Model
 
     /**
      * Rechte-Auflösung: eine individuelle Ausnahme (siehe permissionOverrides())
-     * gewinnt immer, sonst zählt die Vorlage der Funktionsgruppen, in denen
-     * die Person Mitglied ist. Super-Admin/Admin laufen NICHT hierüber,
-     * siehe Gate::before() in AppServiceProvider.
+     * gewinnt immer - darüber kann Super-Admin einem einzelnen Admin auch
+     * mal ein sonst nicht vorgesehenes Recht zuweisen. Sonst zählt bei
+     * Admins die Rechte-Vorlage der Rolle (RolePermission, von Super-Admin
+     * in der Rechte-Verwaltung gepflegt), bei allen anderen die Vorlage der
+     * Funktionsgruppen, in denen die Person Mitglied ist. Super-Admin läuft
+     * NICHT hierüber, siehe Gate::before() in AppServiceProvider.
      */
     public function hasPermission(string $key): bool
     {
         $override = $this->permissionOverrides()->where('key', $key)->first();
         if ($override !== null) {
             return (bool) $override->pivot->granted;
+        }
+
+        if ($this->user?->role === 'admin') {
+            $hasRoleGrant = RolePermission::query()
+                ->where('tenant_id', $this->tenant_id)
+                ->where('role', 'admin')
+                ->whereHas('permission', fn ($query) => $query->where('key', $key))
+                ->exists();
+
+            if ($hasRoleGrant) {
+                return true;
+            }
         }
 
         return $this->functionGroups()->whereHas('permissions', fn ($query) => $query->where('key', $key))->exists();

@@ -26,14 +26,16 @@ class AppServiceProvider extends ServiceProvider
     {
         Mail::extend('filelog', fn (array $config) => new FileLogTransport($config['path'] ?? storage_path('logs/mails.log')));
 
-        // Rechtekonzept: Super-Admin/Admin dürfen immer alles (Admin ist
-        // durch die ohnehin überall greifende Mandanten-Scope faktisch auf
-        // den eigenen Mandanten beschränkt). Für alle anderen: jede
+        // Rechtekonzept: Nur Super-Admin darf immer alles. Admin hat eine
+        // eigene, von Super-Admin gepflegte Rechte-Vorlage (RolePermission,
+        // siehe Person::hasPermission()) statt eines pauschalen Bypasses -
+        // damit können mandantenübergreifende Rechte Admin vorenthalten und
+        // bei Bedarf einzelnen Admins gezielt zugewiesen werden. Jede
         // Ability, die im Rechte-Katalog als Recht existiert, wird gegen
         // Person::hasPermission() geprüft - so muss für ein neues Recht nur
         // eine Katalog-Zeile ergänzt werden, kein neues Gate::define() hier.
         Gate::before(function (User $user, string $ability) {
-            if (in_array($user->role, ['admin', 'super_admin'], true)) {
+            if ($user->role === 'super_admin') {
                 return true;
             }
 

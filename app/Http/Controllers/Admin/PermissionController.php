@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\FunctionGroup;
 use App\Models\Permission;
 use App\Models\Person;
-use App\Models\User;
+use App\Models\RolePermission;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -42,27 +42,22 @@ class PermissionController extends Controller
         $grantedPermissionIds = collect();
         $personOverrides = collect();
         $showAdminSection = false;
-        $adminUsers = collect();
-        $superAdminUsers = collect();
+        $adminPermissionIds = collect();
 
         if ($request->boolean('admin') && $request->user()->role === 'super_admin') {
-            // Wer Admin werden darf, verwaltet ausschließlich der Super-Admin -
-            // ein normaler Admin bekommt diesen Bereich gar nicht erst zu sehen
-            // (siehe access-admin-Gate im View) und soll auch nicht erfahren,
-            // dass es über ihm noch eine Ebene gibt. Super-Admins selbst
-            // werden hier nur informativ gezeigt, nicht per Checkbox
-            // umschaltbar - das bleibt eine bewusste, seltene Handaktion.
+            // Die Rechte-Vorlage der Admin-Rolle verwaltet ausschließlich der
+            // Super-Admin - ein normaler Admin bekommt diesen Bereich gar
+            // nicht erst zu sehen (siehe access-admin-Gate im View) und soll
+            // auch nicht erfahren, dass es über ihm noch eine Ebene gibt.
+            // Super-Admin hat per Definition immer alle Rechte (siehe
+            // Gate::before() in AppServiceProvider) - die Liste wird der
+            // Vollständigkeit halber nur informativ mitangezeigt, nicht
+            // bearbeitbar.
             $showAdminSection = true;
-            $adminUsers = User::query()
+            $adminPermissionIds = RolePermission::query()
                 ->where('tenant_id', $tenantId)
-                ->whereIn('role', ['user', 'admin'])
-                ->orderBy('name')
-                ->get();
-            $superAdminUsers = User::query()
-                ->where('tenant_id', $tenantId)
-                ->where('role', 'super_admin')
-                ->orderBy('name')
-                ->get();
+                ->where('role', 'admin')
+                ->pluck('permission_id');
         } elseif ($request->filled('group')) {
             $selectedGroup = $functionGroups->firstWhere('id', (int) $request->query('group'));
             if ($selectedGroup) {
@@ -84,8 +79,7 @@ class PermissionController extends Controller
             'grantedPermissionIds' => $grantedPermissionIds,
             'personOverrides' => $personOverrides,
             'showAdminSection' => $showAdminSection,
-            'adminUsers' => $adminUsers,
-            'superAdminUsers' => $superAdminUsers,
+            'adminPermissionIds' => $adminPermissionIds,
         ]);
     }
 
@@ -130,20 +124,24 @@ class PermissionController extends Controller
     }
 
     /**
-     * Wer Admin ist, komplett neu setzen (Checkboxliste) - nur für
-     * Super-Admin aufrufbar, siehe index(). Rührt Super-Admin-Konten nicht an.
+     * Rechte-Vorlage der Admin-Rolle komplett neu setzen - nur für
+     * Super-Admin aufrufbar, siehe index(). Wer Admin IST, wird nicht hier,
+     * sondern (künftig) in der Personenverwaltung festgelegt.
      */
-    public function updateAdmins(Request $request): RedirectResponse
+    public function updateAdminPermissions(Request $request): RedirectResponse
     {
         abort_unless($request->user()->role === 'super_admin', 403);
 
-        $adminUserIds = collect($request->array('admins'))->map(fn ($id) => (int) $id);
+        $tenantId = $request->user()->tenant_id;
+        $permissionIds = collect($request->array('permissions'))->map(fn ($id) => (int) $id);
 
-        User::query()
-            ->where('tenant_id', $request->user()->tenant_id)
-            ->whereIn('role', ['user', 'admin'])
-            ->get()
-            ->each(fn (User $user) => $user->update(['role' => $adminUserIds->contains($user->id) ? 'admin' : 'user']));
+        RolePermission::query()->where('tenant_id', $tenantId)->where('role', 'admin')->delete();
+
+        $permissionIds->each(fn ($permissionId) => RolePermission::query()->create([
+            'tenant_id' => $tenantId,
+            'role' => 'admin',
+            'permission_id' => $permissionId,
+        ]));
 
         return redirect()->route('admin.rechte', ['admin' => 1])->with('status', 'rechte-updated');
     }

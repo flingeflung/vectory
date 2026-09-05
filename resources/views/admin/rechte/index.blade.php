@@ -60,7 +60,7 @@
             @if ($showAdminSection)
                 <div class="shrink-0 border-b border-gray-100 p-3">
                     <div class="text-sm font-medium text-gray-900">{{ __('Admin') }}</div>
-                    <div class="text-xs text-gray-400">{{ __('Wer administrative Rechte für diesen Mandanten hat.') }}</div>
+                    <div class="text-xs text-gray-400">{{ __('Rechte, die die Admin-Rolle standardmäßig hat.') }}</div>
                 </div>
 
                 <div class="flex-1 min-h-0 overflow-y-auto p-3">
@@ -68,18 +68,18 @@
                         @csrf
                         <table class="min-w-full divide-y divide-gray-100 text-sm">
                             <tbody class="divide-y divide-gray-100">
-                                @foreach ($adminUsers as $adminUser)
+                                @foreach ($permissions as $permission)
                                     <tr>
                                         <td class="w-10 px-3 py-2 text-center">
                                             <input
                                                 type="checkbox"
-                                                name="admins[]"
-                                                value="{{ $adminUser->id }}"
+                                                name="permissions[]"
+                                                value="{{ $permission->id }}"
                                                 class="rounded border-gray-300"
-                                                @checked($adminUser->role === 'admin')
+                                                @checked($adminPermissionIds->contains($permission->id))
                                             >
                                         </td>
-                                        <td class="px-3 py-2 text-gray-700">{{ $adminUser->person?->fullName() ?? $adminUser->name }}</td>
+                                        <td class="px-3 py-2 text-gray-700" title="{{ $permission->key }}">{{ $permission->label }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -90,16 +90,13 @@
                         </button>
                     </form>
 
-                    @if ($superAdminUsers->isNotEmpty())
-                        <div class="mt-6 border-t border-gray-100 pt-3">
-                            <div class="mb-1 text-xs font-semibold text-gray-500">{{ __('Super-Admin (nur zur Information)') }}</div>
-                            @foreach ($superAdminUsers as $superAdminUser)
-                                <div class="px-1 py-1 text-sm text-gray-500">
-                                    {{ $superAdminUser->person?->fullName() ?? $superAdminUser->name }}
-                                </div>
-                            @endforeach
-                        </div>
-                    @endif
+                    <div class="mt-6 border-t border-gray-100 pt-3">
+                        <div class="mb-1 text-xs font-semibold text-gray-500">{{ __('Super-Admin (nur zur Information)') }}</div>
+                        <div class="mb-2 text-xs text-gray-400">{{ __('Hat immer alle Rechte, unabhängig von dieser Liste.') }}</div>
+                        @foreach ($permissions as $permission)
+                            <div class="px-1 py-1 text-sm text-gray-500" title="{{ $permission->key }}">{{ $permission->label }}</div>
+                        @endforeach
+                    </div>
                 </div>
             @elseif ($selectedGroup || $selectedPerson)
                 <div class="shrink-0 flex items-center justify-between gap-3 border-b border-gray-100 p-3">

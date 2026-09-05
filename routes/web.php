@@ -49,7 +49,7 @@ Route::middleware(['auth', 'verified', 'can:access-admin'])->prefix('admin')->na
     Route::get('/rechte', [AdminPermissionController::class, 'index'])->name('rechte');
     Route::post('/rechte/funktionsgruppen/{group}', [AdminPermissionController::class, 'updateFunctionGroup'])->name('rechte.funktionsgruppen.update');
     Route::post('/rechte/personen/{person}', [AdminPermissionController::class, 'updatePerson'])->name('rechte.personen.update');
-    Route::post('/rechte/admins', [AdminPermissionController::class, 'updateAdmins'])->name('rechte.admins.update');
+    Route::post('/rechte/admins', [AdminPermissionController::class, 'updateAdminPermissions'])->name('rechte.admins.update');
 });
 
 Route::middleware(['auth', 'verified'])->prefix('projekte/anzeigefilter')->name('projekte.anzeigefilter.')->group(function () {
