@@ -23,7 +23,7 @@ class PermissionController extends Controller
     {
         $tenantId = $request->user()->tenant_id;
 
-        $templates = PermissionTemplate::query()->where('tenant_id', $tenantId)->orderBy('role')->orderBy('name')->get();
+        $templates = PermissionTemplate::query()->where('tenant_id', $tenantId)->orderBy('sort')->get();
         if ($request->user()->role !== 'super_admin') {
             // Admin-Sets bleiben Super-Admin vorbehalten - ein normaler
             // Admin bekommt sie hier gar nicht erst zu sehen (siehe auch
@@ -79,10 +79,12 @@ class PermissionController extends Controller
         $name = trim((string) $request->string('name'));
         abort_if($name === '', 422);
 
+        $nextSort = 1 + (int) PermissionTemplate::query()->where('tenant_id', $tenantId)->max('sort');
         $template = PermissionTemplate::query()->create([
             'tenant_id' => $tenantId,
             'role' => $base->role,
             'name' => $name,
+            'sort' => $nextSort,
         ]);
         $template->permissions()->sync($base->permissions()->pluck('permissions.id'));
 
@@ -171,6 +173,22 @@ class PermissionController extends Controller
             ->each(fn (Person $person) => $this->assignTemplate($request, $person, $template));
 
         return redirect()->route('admin.rechte', ['set' => $template->id])->with('status', 'rechte-updated');
+    }
+
+    /**
+     * Reine visuelle Rangordnung der Sets per Drag&Drop (z.B. um sie
+     * absteigend nach Rechte-Umfang anzuordnen) - hat keinerlei fachlichen
+     * Effekt, nur die Reihenfolge in der Liste.
+     */
+    public function reorderSets(Request $request): RedirectResponse
+    {
+        $tenantId = $request->user()->tenant_id;
+
+        collect($request->array('sets'))->values()->each(function (string $id, int $index) use ($tenantId) {
+            PermissionTemplate::query()->where('tenant_id', $tenantId)->where('id', (int) $id)->update(['sort' => $index]);
+        });
+
+        return redirect()->route('admin.rechte');
     }
 
     /**

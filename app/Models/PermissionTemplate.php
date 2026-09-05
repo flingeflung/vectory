@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * kann eigene Sets anlegen (i.d.R. durch Klonen eines vorhandenen), Rechte
  * werden ausschließlich über das zugewiesene Set vererbt, nie individuell.
  */
-#[Fillable(['tenant_id', 'role', 'name'])]
+#[Fillable(['tenant_id', 'role', 'name', 'sort'])]
 class PermissionTemplate extends Model
 {
     use BelongsToTenant;

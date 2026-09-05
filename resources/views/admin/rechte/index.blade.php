@@ -1,43 +1,72 @@
 <x-admin-layout>
     @if (session('status') === 'rechte-updated')
-        <div class="mb-3 shrink-0 rounded bg-green-50 px-3 py-2 text-sm text-green-700">{{ __('Gespeichert.') }}</div>
+        <x-flash-message class="mb-3 shrink-0 px-3 py-2 text-sm">{{ __('Gespeichert.') }}</x-flash-message>
     @endif
 
     <div class="flex flex-1 min-h-0 gap-4">
-        {{-- Links: WEN - erst die Rechte-Sets, dann alle Personen. --}}
-        <div x-data="{ search: '', showInactive: false, newSet: false, dirty: false }" class="flex w-72 shrink-0 flex-col rounded-lg border border-gray-200 bg-white">
-            <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm">
-                <div class="flex items-center justify-between px-1 py-1">
+        {{-- Links: WEN - erst die Rechte-Sets, dann alle Personen. Zwei
+             getrennte Boxen mit je eigenem fixen Header, nur die Listen
+             selbst scrollen - so bleibt "+ Neu" bzw. Suche/Toggle immer
+             sichtbar, egal wie lang die jeweilige Liste ist. --}}
+        <div x-data="{ search: '', showInactive: false, newSet: false, dirty: false }" class="flex w-72 shrink-0 flex-col gap-3">
+            {{-- Rechte-Sets: bewusst etwas höher als nötig (Wunsch: mehr auf
+                 einen Blick) und per Drag&Drop sortierbar (x-sort, gleiches
+                 Muster wie beim Dashboard-Kachel-Layout) - rein visuelle
+                 Rangordnung (z.B. "wer hat absteigend die meisten Rechte"),
+                 kein fachlicher Effekt. --}}
+            <div class="flex h-64 shrink-0 flex-col rounded-lg border border-gray-200 bg-white">
+                <div class="shrink-0 flex items-center justify-between border-b border-gray-100 p-2">
                     <span class="text-xs font-semibold text-gray-500">{{ __('Rechte-Sets') }}</span>
                     <button type="button" @click="newSet = !newSet" class="text-xs text-indigo-600 hover:text-indigo-800">
                         + {{ __('Neu') }}
                     </button>
                 </div>
+                <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm">
+                    <form x-show="newSet" x-cloak method="POST" action="{{ route('admin.rechte.sets.store') }}" class="mb-2 space-y-1.5 rounded border border-gray-200 p-2">
+                        @csrf
+                        <select name="base_id" class="w-full rounded-md border-gray-300 text-xs" required>
+                            <option value="">{{ __('Auf Basis von…') }}</option>
+                            @foreach ($templates as $template)
+                                <option value="{{ $template->id }}">{{ $template->name }}</option>
+                            @endforeach
+                        </select>
+                        <input type="text" name="name" placeholder="{{ __('Name des neuen Sets') }}" class="w-full rounded-md border-gray-300 text-xs" required>
+                        <button type="submit" class="w-full rounded-md bg-gray-800 px-2 py-1 text-xs font-medium text-white hover:bg-gray-700">
+                            {{ __('Anlegen') }}
+                        </button>
+                    </form>
 
-                <form x-show="newSet" x-cloak method="POST" action="{{ route('admin.rechte.sets.store') }}" class="mb-2 space-y-1.5 rounded border border-gray-200 p-2">
-                    @csrf
-                    <select name="base_id" class="w-full rounded-md border-gray-300 text-xs" required>
-                        <option value="">{{ __('Auf Basis von…') }}</option>
-                        @foreach ($templates as $template)
-                            <option value="{{ $template->id }}">{{ $template->name }}</option>
-                        @endforeach
-                    </select>
-                    <input type="text" name="name" placeholder="{{ __('Name des neuen Sets') }}" class="w-full rounded-md border-gray-300 text-xs" required>
-                    <button type="submit" class="w-full rounded-md bg-gray-800 px-2 py-1 text-xs font-medium text-white hover:bg-gray-700">
-                        {{ __('Anlegen') }}
-                    </button>
-                </form>
-
-                @foreach ($templates as $template)
-                    <a
-                        href="{{ route('admin.rechte', ['set' => $template->id]) }}"
-                        class="block rounded px-2 py-1 {{ $selectedTemplate?->id === $template->id ? 'bg-indigo-50 font-medium text-indigo-700' : 'text-gray-700 hover:bg-gray-50' }}"
+                    <div
+                        x-data="{
+                            async saveOrder() {
+                                const ids = [...this.$el.querySelectorAll('[x-sort\\:item]')].map(el => el.getAttribute('x-sort:item'));
+                                await fetch({{ \Illuminate\Support\Js::from(route('admin.rechte.sets.reorder')) }}, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': {{ \Illuminate\Support\Js::from(csrf_token()) }} },
+                                    body: JSON.stringify({ sets: ids }),
+                                });
+                            },
+                        }"
+                        x-sort="saveOrder()"
                     >
-                        {{ $template->name }}
-                    </a>
-                @endforeach
+                        @foreach ($templates as $template)
+                            <div x-sort:item="{{ $template->id }}" class="flex items-center gap-1 rounded {{ $selectedTemplate?->id === $template->id ? 'bg-indigo-50' : 'hover:bg-gray-50' }}">
+                                <span x-sort:handle class="cursor-move px-1 text-gray-300 hover:text-gray-500" title="{{ __('Verschieben') }}">⠿</span>
+                                <a
+                                    href="{{ route('admin.rechte', ['set' => $template->id]) }}"
+                                    class="flex-1 py-1 {{ $selectedTemplate?->id === $template->id ? 'font-medium text-indigo-700' : 'text-gray-700' }}"
+                                >
+                                    {{ $template->name }}
+                                </a>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
 
-                <div class="mt-3 space-y-1.5 px-1 py-1">
+            {{-- Personen: nimmt den restlichen Platz. --}}
+            <div class="flex flex-1 min-h-0 flex-col rounded-lg border border-gray-200 bg-white">
+                <div class="shrink-0 space-y-1.5 border-b border-gray-100 p-2">
                     <span class="text-xs font-semibold text-gray-500">{{ __('Personen') }}</span>
                     <input
                         type="search"
@@ -62,7 +91,7 @@
                         </button>
                     @endif
                 </div>
-
+                <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm">
                 @if ($selectedTemplate)
                     {{-- Bulk-Zuordnung: nur unzugeordnete Personen sind hier
                          anklickbar (leer). Wer schon einem Set angehört -
@@ -113,6 +142,7 @@
                         </a>
                     @endforeach
                 @endif
+                </div>
             </div>
         </div>
 

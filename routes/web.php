@@ -48,6 +48,7 @@ Route::middleware(['auth', 'verified', 'can:access-admin'])->prefix('admin')->na
     Route::redirect('/', '/admin/rechte')->name('index');
     Route::get('/rechte', [AdminPermissionController::class, 'index'])->name('rechte');
     Route::post('/rechte/sets', [AdminPermissionController::class, 'store'])->name('rechte.sets.store');
+    Route::post('/rechte/sets/reorder', [AdminPermissionController::class, 'reorderSets'])->name('rechte.sets.reorder');
     Route::post('/rechte/sets/{template}', [AdminPermissionController::class, 'update'])->name('rechte.sets.update');
     Route::delete('/rechte/sets/{template}', [AdminPermissionController::class, 'destroy'])->name('rechte.sets.destroy');
     Route::post('/rechte/sets/{template}/personen', [AdminPermissionController::class, 'assignPeopleToTemplate'])->name('rechte.sets.assign-people');

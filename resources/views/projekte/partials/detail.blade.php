@@ -98,7 +98,7 @@
             </div>
 
             @if (($justSaved ?? false))
-                <div class="mb-2 rounded bg-green-50 px-2 py-1 text-xs text-green-700">{{ __('Gespeichert.') }}</div>
+                <x-flash-message class="mb-2 px-2 py-1 text-xs">{{ __('Gespeichert.') }}</x-flash-message>
             @endif
 
             @if ($errors->any())
