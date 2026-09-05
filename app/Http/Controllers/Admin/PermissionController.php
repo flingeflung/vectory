@@ -49,6 +49,12 @@ class PermissionController extends Controller
             if ($selectedTemplate) {
                 $grantedPermissionIds = $selectedTemplate->permissions()->pluck('permissions.id');
                 $templatePeople = $people->where('permission_template_id', $selectedTemplate->id)->values();
+
+                // Bei der Bulk-Zuordnung erst die schon angehakten Personen
+                // (alphabetisch), danach der Rest (ebenfalls alphabetisch) -
+                // sortByDesc ist stabil, behält also die alphabetische
+                // Reihenfolge innerhalb jeder der beiden Gruppen bei.
+                $people = $people->sortByDesc(fn (Person $person) => $person->permission_template_id === $selectedTemplate->id)->values();
             }
         } elseif ($request->filled('person')) {
             $selectedPerson = Person::query()->where('tenant_id', $tenantId)->find($request->query('person'));
