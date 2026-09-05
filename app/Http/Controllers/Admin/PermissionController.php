@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\FunctionGroup;
 use App\Models\Permission;
 use App\Models\Person;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -40,8 +41,29 @@ class PermissionController extends Controller
         $selectedPerson = null;
         $grantedPermissionIds = collect();
         $personOverrides = collect();
+        $showAdminSection = false;
+        $adminUsers = collect();
+        $superAdminUsers = collect();
 
-        if ($request->filled('group')) {
+        if ($request->boolean('admin') && $request->user()->role === 'super_admin') {
+            // Wer Admin werden darf, verwaltet ausschließlich der Super-Admin -
+            // ein normaler Admin bekommt diesen Bereich gar nicht erst zu sehen
+            // (siehe access-admin-Gate im View) und soll auch nicht erfahren,
+            // dass es über ihm noch eine Ebene gibt. Super-Admins selbst
+            // werden hier nur informativ gezeigt, nicht per Checkbox
+            // umschaltbar - das bleibt eine bewusste, seltene Handaktion.
+            $showAdminSection = true;
+            $adminUsers = User::query()
+                ->where('tenant_id', $tenantId)
+                ->whereIn('role', ['user', 'admin'])
+                ->orderBy('name')
+                ->get();
+            $superAdminUsers = User::query()
+                ->where('tenant_id', $tenantId)
+                ->where('role', 'super_admin')
+                ->orderBy('name')
+                ->get();
+        } elseif ($request->filled('group')) {
             $selectedGroup = $functionGroups->firstWhere('id', (int) $request->query('group'));
             if ($selectedGroup) {
                 $grantedPermissionIds = $selectedGroup->permissions()->pluck('permissions.id');
@@ -61,6 +83,9 @@ class PermissionController extends Controller
             'selectedPerson' => $selectedPerson,
             'grantedPermissionIds' => $grantedPermissionIds,
             'personOverrides' => $personOverrides,
+            'showAdminSection' => $showAdminSection,
+            'adminUsers' => $adminUsers,
+            'superAdminUsers' => $superAdminUsers,
         ]);
     }
 
@@ -102,5 +127,24 @@ class PermissionController extends Controller
         }
 
         return redirect()->route('admin.rechte', ['person' => $person->id])->with('status', 'rechte-updated');
+    }
+
+    /**
+     * Wer Admin ist, komplett neu setzen (Checkboxliste) - nur für
+     * Super-Admin aufrufbar, siehe index(). Rührt Super-Admin-Konten nicht an.
+     */
+    public function updateAdmins(Request $request): RedirectResponse
+    {
+        abort_unless($request->user()->role === 'super_admin', 403);
+
+        $adminUserIds = collect($request->array('admins'))->map(fn ($id) => (int) $id);
+
+        User::query()
+            ->where('tenant_id', $request->user()->tenant_id)
+            ->whereIn('role', ['user', 'admin'])
+            ->get()
+            ->each(fn (User $user) => $user->update(['role' => $adminUserIds->contains($user->id) ? 'admin' : 'user']));
+
+        return redirect()->route('admin.rechte', ['admin' => 1])->with('status', 'rechte-updated');
     }
 }

@@ -19,6 +19,16 @@
                 </label>
             </div>
             <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm">
+                @if (auth()->user()->role === 'super_admin')
+                    <a
+                        href="{{ route('admin.rechte', ['admin' => 1]) }}"
+                        class="block rounded px-2 py-1 {{ $showAdminSection ? 'bg-indigo-50 font-medium text-indigo-700' : 'text-gray-700 hover:bg-gray-50' }}"
+                    >
+                        {{ __('Admin') }}
+                    </a>
+                    <div class="my-2 border-t border-gray-100"></div>
+                @endif
+
                 <div class="px-1 py-1 text-xs font-semibold text-gray-500">{{ __('Funktionsgruppen') }}</div>
                 @foreach ($functionGroups as $group)
                     <a
@@ -47,7 +57,51 @@
              wie in Vietto. Noch ohne Kategorien - kommt, sobald der Katalog
              wächst und eine flache Liste unübersichtlich wird. --}}
         <div x-data="{ search: '' }" class="flex flex-1 min-h-0 flex-col rounded-lg border border-gray-200 bg-white">
-            @if ($selectedGroup || $selectedPerson)
+            @if ($showAdminSection)
+                <div class="shrink-0 border-b border-gray-100 p-3">
+                    <div class="text-sm font-medium text-gray-900">{{ __('Admin') }}</div>
+                    <div class="text-xs text-gray-400">{{ __('Wer administrative Rechte für diesen Mandanten hat.') }}</div>
+                </div>
+
+                <div class="flex-1 min-h-0 overflow-y-auto p-3">
+                    <form method="POST" action="{{ route('admin.rechte.admins.update') }}">
+                        @csrf
+                        <table class="min-w-full divide-y divide-gray-100 text-sm">
+                            <tbody class="divide-y divide-gray-100">
+                                @foreach ($adminUsers as $adminUser)
+                                    <tr>
+                                        <td class="w-10 px-3 py-2 text-center">
+                                            <input
+                                                type="checkbox"
+                                                name="admins[]"
+                                                value="{{ $adminUser->id }}"
+                                                class="rounded border-gray-300"
+                                                @checked($adminUser->role === 'admin')
+                                            >
+                                        </td>
+                                        <td class="px-3 py-2 text-gray-700">{{ $adminUser->person?->fullName() ?? $adminUser->name }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+
+                        <button type="submit" class="mt-3 rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
+                            {{ __('Speichern') }}
+                        </button>
+                    </form>
+
+                    @if ($superAdminUsers->isNotEmpty())
+                        <div class="mt-6 border-t border-gray-100 pt-3">
+                            <div class="mb-1 text-xs font-semibold text-gray-500">{{ __('Super-Admin (nur zur Information)') }}</div>
+                            @foreach ($superAdminUsers as $superAdminUser)
+                                <div class="px-1 py-1 text-sm text-gray-500">
+                                    {{ $superAdminUser->person?->fullName() ?? $superAdminUser->name }}
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            @elseif ($selectedGroup || $selectedPerson)
                 <div class="shrink-0 flex items-center justify-between gap-3 border-b border-gray-100 p-3">
                     <div class="text-sm font-medium text-gray-900">
                         {{ $selectedGroup?->name ?? $selectedPerson->fullName() }}
