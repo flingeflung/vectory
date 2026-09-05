@@ -4,6 +4,7 @@
 
 <div class="mb-3 text-xs text-gray-500">{{ __('Projekt') }} {{ $project->source_pn }}</div>
 
+@can('graphic_order.create')
 <div x-data="{ showNew: false }" class="mb-4">
     <button
         type="button"
@@ -46,6 +47,7 @@
         </div>
     </form>
 </div>
+@endcan
 
 <div class="mt-3 space-y-2">
     @forelse ($orders as $order)

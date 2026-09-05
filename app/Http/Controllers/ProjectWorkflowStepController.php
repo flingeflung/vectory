@@ -25,6 +25,7 @@ class ProjectWorkflowStepController extends Controller
     public function updateDueDate(Request $request, Project $project, ProjectWorkflowStep $projectWorkflowStep): JsonResponse
     {
         abort_unless($projectWorkflowStep->project_id === $project->id, 404);
+        abort_unless($request->user()->can('workflow_step.due_date'), 403);
 
         $validated = $request->validate(['due_date' => ['nullable', 'date']]);
 
@@ -70,6 +71,7 @@ class ProjectWorkflowStepController extends Controller
     public function activate(Request $request, Project $project, ProjectWorkflowStep $projectWorkflowStep): JsonResponse
     {
         abort_unless($projectWorkflowStep->project_id === $project->id, 404);
+        abort_unless($request->user()->can('workflow_step.activate'), 403);
 
         $validated = $request->validate([
             'send_email' => ['boolean'],
@@ -80,9 +82,9 @@ class ProjectWorkflowStepController extends Controller
         $projectWorkflowStep->loadMissing('workflowStep.functionGroups');
         $target = $projectWorkflowStep;
 
-        // Beenden/Verwerfen (lifecycle_status 3/4) braucht das Recht
-        // project.complete - alle anderen Schritte (auch Rücksprünge) darf
-        // jeder aktivieren, der bis hierhin überhaupt Zugriff hat.
+        // Beenden/Verwerfen (lifecycle_status 3/4) braucht zusätzlich
+        // project.complete - workflow_step.activate oben deckt nur das
+        // normale Aktivieren/Zurückspringen ab.
         if (in_array($target->workflowStep->lifecycle_status, [3, 4], true)) {
             abort_unless($request->user()->can('project.complete'), 403);
         }

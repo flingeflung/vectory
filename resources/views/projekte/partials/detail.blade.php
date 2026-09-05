@@ -573,7 +573,7 @@
                                                     <input
                                                         type="date"
                                                         x-model="value"
-                                                        :disabled="saving"
+                                                        :disabled="saving || {{ auth()->user()->can('workflow_step.due_date') ? 'false' : 'true' }}"
                                                         @change="
                                                             saving = true;
                                                             fetch({{ \Illuminate\Support\Js::from(route('projekte.workflow-steps.due-date', [$project, $pws])) }}, {
@@ -600,7 +600,7 @@
                                         </div>
 
                                         @unless ($pws->is_current)
-                                            @if (! in_array($step->lifecycle_status, [3, 4], true) || auth()->user()->can('project.complete'))
+                                            @if (auth()->user()->can('workflow_step.activate') && (! in_array($step->lifecycle_status, [3, 4], true) || auth()->user()->can('project.complete')))
                                                 <button
                                                     type="button"
                                                     @click.stop="window.openActivateWorkflowStep({{ $project->id }}, {{ $pws->id }})"

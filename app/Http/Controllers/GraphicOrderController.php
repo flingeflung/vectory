@@ -31,6 +31,8 @@ class GraphicOrderController extends Controller
 
     public function store(Request $request, Project $project): View
     {
+        abort_unless($request->user()->can('graphic_order.create'), 403);
+
         $validated = $request->validate([
             'description' => ['required', 'string'],
             'image_count' => ['nullable', 'integer', 'min:0'],

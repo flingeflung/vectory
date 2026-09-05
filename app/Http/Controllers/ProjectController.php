@@ -169,6 +169,8 @@ class ProjectController extends Controller
      */
     public function show(Request $request, Project $project): View|Response
     {
+        abort_unless($request->user()->can('project.view'), 403);
+
         RecentlyViewedProject::record($project, $request->user());
 
         $data = $this->detailData($request, $project);
@@ -182,6 +184,8 @@ class ProjectController extends Controller
 
     public function update(Request $request, Project $project): RedirectResponse|Response
     {
+        abort_unless($request->user()->can('project.edit'), 403);
+
         $relevantAttributes = $project->relevantAttributes();
         $isOverlay = $this->isOverlayRequest($request);
 
@@ -289,6 +293,20 @@ class ProjectController extends Controller
         ])->all());
 
         // Projektbeteiligte Personen: komplett aus der Formularauswahl neu aufbauen.
+        // project.people.manage nur einfordern, wenn sich dabei wirklich
+        // etwas ändert - wer nur den Titel o.ä. speichert, braucht dieses
+        // Recht nicht extra (analog project.complete beim Statusfeld oben).
+        $currentPeopleByGroup = ProjectPerson::where('project_id', $project->id)->get()
+            ->groupBy('function_group_id')
+            ->map(fn ($rows) => $rows->pluck('person_id')->sort()->values()->all())
+            ->all();
+        $incomingPeopleByGroup = collect($projectPeopleInput)
+            ->map(fn ($personIds) => collect($personIds)->map(fn ($id) => (int) $id)->sort()->values()->all())
+            ->all();
+        if ($currentPeopleByGroup !== $incomingPeopleByGroup) {
+            abort_unless($request->user()->can('project.people.manage'), 403);
+        }
+
         // Einzeln statt per Bulk-delete() löschen - ein Bulk-Query löst keine
         // Model-Events aus, das würde den Aufgaben-Rebuild (ProjectPersonObserver)
         // genau dann NICHT anstoßen, wenn alle Personen entfernt werden und
