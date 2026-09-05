@@ -5,14 +5,18 @@
 
     <div class="flex flex-1 min-h-0 gap-4">
         {{-- Links: WEN - erst Funktionsgruppen, dann alle Personen. --}}
-        <div x-data="{ search: '' }" class="flex w-72 shrink-0 flex-col rounded-lg border border-gray-200 bg-white">
-            <div class="shrink-0 border-b border-gray-100 p-2">
+        <div x-data="{ search: '', showInactive: false }" class="flex w-72 shrink-0 flex-col rounded-lg border border-gray-200 bg-white">
+            <div class="shrink-0 space-y-1.5 border-b border-gray-100 p-2">
                 <input
                     type="search"
                     x-model="search"
                     placeholder="{{ __('Schnellsuche (Nachname)') }}"
                     class="w-full rounded-md border-gray-300 py-1 text-sm"
                 >
+                <label class="flex items-center gap-1.5 text-xs text-gray-600">
+                    <input type="checkbox" x-model="showInactive" class="rounded border-gray-300">
+                    {{ __('Inaktive Personen zeigen') }}
+                </label>
             </div>
             <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm">
                 <div class="px-1 py-1 text-xs font-semibold text-gray-500">{{ __('Funktionsgruppen') }}</div>
@@ -29,7 +33,7 @@
                 @foreach ($people as $person)
                     <a
                         href="{{ route('admin.rechte', ['person' => $person->id]) }}"
-                        x-show="!search || {{ \Illuminate\Support\Js::from(mb_strtolower($person->fullName())) }}.includes(search.toLowerCase())"
+                        x-show="(showInactive || {{ $person->active || $selectedPerson?->id === $person->id ? 'true' : 'false' }}) && (!search || {{ \Illuminate\Support\Js::from(mb_strtolower($person->fullName())) }}.includes(search.toLowerCase()))"
                         class="block rounded px-2 py-1 {{ $selectedPerson?->id === $person->id ? 'bg-indigo-50 font-medium text-indigo-700' : ($person->active ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-400 hover:bg-gray-50') }}"
                     >
                         {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }}
