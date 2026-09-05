@@ -16,18 +16,20 @@
                     <span class="text-gray-500">{{ __('Personen') }}:</span>
                     <select name="person" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 text-sm">
                         <option value="" @selected(! $selectedPerson)>{{ __('– Eigene –') }}</option>
-                        <option value="all" @selected($selectedPerson === 'all')>{{ __('– Alle –') }}</option>
-                        @foreach ($peopleByGroup as $group)
-                            <optgroup label="{{ $group['label'] }}">
-                                @foreach ($group['people'] as $person)
-                                    <option
-                                        value="{{ $person->id }}"
-                                        @selected($selectedPerson === (string) $person->id)
-                                        @class(['text-gray-400' => ! $person->active])
-                                    >{{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }}</option>
-                                @endforeach
-                            </optgroup>
-                        @endforeach
+                        @can('tasks.view_all')
+                            <option value="all" @selected($selectedPerson === 'all')>{{ __('– Alle –') }}</option>
+                            @foreach ($peopleByGroup as $group)
+                                <optgroup label="{{ $group['label'] }}">
+                                    @foreach ($group['people'] as $person)
+                                        <option
+                                            value="{{ $person->id }}"
+                                            @selected($selectedPerson === (string) $person->id)
+                                            @class(['text-gray-400' => ! $person->active])
+                                        >{{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }}</option>
+                                    @endforeach
+                                </optgroup>
+                            @endforeach
+                        @endcan
                     </select>
                 </label>
 
@@ -41,10 +43,12 @@
                     {{ __('Alle WFS-Personen zeigen') }}
                 </label>
 
-                <label class="flex items-center gap-1.5 text-gray-700" title="{{ __('Auch inaktive Personen in der Personen-Auswahl oben anzeigen') }}">
-                    <input type="checkbox" name="show_inactive_people" value="1" onchange="this.form.submit()" class="rounded border-gray-300" @checked($showInactivePeople)>
-                    {{ __('Inaktive Personen auswählbar') }}
-                </label>
+                @can('tasks.view_all')
+                    <label class="flex items-center gap-1.5 text-gray-700" title="{{ __('Auch inaktive Personen in der Personen-Auswahl oben anzeigen') }}">
+                        <input type="checkbox" name="show_inactive_people" value="1" onchange="this.form.submit()" class="rounded border-gray-300" @checked($showInactivePeople)>
+                        {{ __('Inaktive Personen auswählbar') }}
+                    </label>
+                @endcan
             </form>
 
             <div class="mb-3 shrink-0 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">

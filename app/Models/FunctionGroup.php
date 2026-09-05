@@ -30,6 +30,6 @@ class FunctionGroup extends Model
      */
     public function permissions(): BelongsToMany
     {
-        return $this->belongsToMany(Permission::class, 'function_group_permission');
+        return $this->belongsToMany(Permission::class, 'function_group_permission')->withTimestamps();
     }
 }

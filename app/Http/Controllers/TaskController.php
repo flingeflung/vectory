@@ -61,10 +61,13 @@ class TaskController extends Controller
             ->select('tasks.*')
             ->with(['project.workflow', 'person', 'functionGroup', 'projectWorkflowStep.workflowStep', 'projectWorkflowStep.people', 'graphicOrder']);
 
-        // Kein Rechtesystem für "alle Aufgaben sehen" bisher (siehe
-        // DashboardTileCatalog) - die Auswahl "Alle"/andere Person steht
-        // deshalb aktuell jedem offen, nicht nur Admins. Sobald es Rollen
-        // gibt, muss das hier gegen ein echtes Recht geprüft werden.
+        // "Alle"/andere Person nur mit tasks.view_all - ohne das Recht zählt
+        // die Auswahl nicht, auch wenn sie (z.B. per direktem Request) doch
+        // mitgeschickt wurde.
+        if ($selectedPerson && ! $user->can('tasks.view_all')) {
+            $selectedPerson = null;
+        }
+
         if ($selectedPerson === 'all') {
             // kein Personen-Filter
         } elseif ($selectedPerson) {

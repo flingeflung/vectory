@@ -68,7 +68,7 @@ class Person extends Model
      */
     public function permissionOverrides(): BelongsToMany
     {
-        return $this->belongsToMany(Permission::class, 'person_permission')->withPivot('granted');
+        return $this->belongsToMany(Permission::class, 'person_permission')->withPivot('granted')->withTimestamps();
     }
 
     /**

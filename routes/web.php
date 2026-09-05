@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\AdminController;
+use App\Http\Controllers\Admin\PermissionController as AdminPermissionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DisplayFilterController;
 use App\Http\Controllers\FavoriteController;
@@ -42,7 +42,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/aufgaben', [TaskController::class, 'index'])->name('aufgaben');
     Route::post('/aufgaben/{task}/sichtbarkeit', [TaskController::class, 'toggleVisibility'])->name('aufgaben.visibility');
 
-    Route::get('/admin', [AdminController::class, 'index'])->name('admin')->middleware('can:access-admin');
+});
+
+Route::middleware(['auth', 'verified', 'can:access-admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::redirect('/', '/admin/rechte')->name('index');
+    Route::get('/rechte', [AdminPermissionController::class, 'index'])->name('rechte');
+    Route::post('/rechte/funktionsgruppen', [AdminPermissionController::class, 'updateFunctionGroups'])->name('rechte.funktionsgruppen');
+    Route::post('/rechte/personen/{person}', [AdminPermissionController::class, 'updatePerson'])->name('rechte.personen.update');
 });
 
 Route::middleware(['auth', 'verified'])->prefix('projekte/anzeigefilter')->name('projekte.anzeigefilter.')->group(function () {
