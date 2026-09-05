@@ -5,7 +5,7 @@
 
     <div class="flex flex-1 min-h-0 gap-4">
         {{-- Links: WEN - erst die Rechte-Sets, dann alle Personen. --}}
-        <div x-data="{ search: '', showInactive: false, newSet: false }" class="flex w-72 shrink-0 flex-col rounded-lg border border-gray-200 bg-white">
+        <div x-data="{ search: '', showInactive: false, newSet: false, dirty: false }" class="flex w-72 shrink-0 flex-col rounded-lg border border-gray-200 bg-white">
             <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm">
                 <div class="flex items-center justify-between px-1 py-1">
                     <span class="text-xs font-semibold text-gray-500">{{ __('Rechte-Sets') }}</span>
@@ -49,16 +49,69 @@
                         <input type="checkbox" x-model="showInactive" class="rounded border-gray-300">
                         {{ __('Inaktive Personen zeigen') }}
                     </label>
+
+                    @if ($selectedTemplate)
+                        <button
+                            type="submit"
+                            form="bulk-assign-form"
+                            x-show="dirty"
+                            x-cloak
+                            class="w-full rounded-md bg-gray-800 px-2 py-1 text-xs font-medium text-white hover:bg-gray-700"
+                        >
+                            {{ __('Speichern') }}
+                        </button>
+                    @endif
                 </div>
-                @foreach ($people as $person)
-                    <a
-                        href="{{ route('admin.rechte', ['person' => $person->id]) }}"
-                        x-show="(showInactive || {{ $person->active || $selectedPerson?->id === $person->id ? 'true' : 'false' }}) && (!search || {{ \Illuminate\Support\Js::from(mb_strtolower($person->fullName())) }}.includes(search.toLowerCase()))"
-                        class="block rounded px-2 py-1 {{ $selectedPerson?->id === $person->id ? 'bg-indigo-50 font-medium text-indigo-700' : ($person->active ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-400 hover:bg-gray-50') }}"
+
+                @if ($selectedTemplate)
+                    {{-- Bulk-Zuordnung: nur unzugeordnete Personen sind hier
+                         anklickbar (leer). Wer schon einem Set angehört -
+                         diesem oder einem anderen - ist gesperrt, damit man
+                         beim schnellen Durchklicken niemanden versehentlich
+                         "klaut". Verschieben einer Person in ein anderes Set
+                         läuft bewusst über ihre Einzelseite (siehe unten). --}}
+                    <form
+                        id="bulk-assign-form"
+                        method="POST"
+                        action="{{ route('admin.rechte.sets.assign-people', $selectedTemplate) }}"
+                        @change="dirty = true"
+                        x-init="window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } })"
                     >
-                        {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }}
-                    </a>
-                @endforeach
+                        @csrf
+                        @foreach ($people as $person)
+                            @php $isAssigned = $person->permission_template_id !== null; @endphp
+                            <div
+                                x-show="(showInactive || {{ $person->active || $selectedPerson?->id === $person->id ? 'true' : 'false' }}) && (!search || {{ \Illuminate\Support\Js::from(mb_strtolower($person->fullName())) }}.includes(search.toLowerCase()))"
+                                class="flex items-center gap-1.5 rounded px-2 py-1 {{ $isAssigned ? 'opacity-50' : 'hover:bg-gray-50' }}"
+                            >
+                                <input
+                                    type="checkbox"
+                                    name="person_ids[]"
+                                    value="{{ $person->id }}"
+                                    class="rounded border-gray-300"
+                                    @checked($person->permission_template_id === $selectedTemplate->id)
+                                    @disabled($isAssigned)
+                                >
+                                <a
+                                    href="{{ route('admin.rechte', ['person' => $person->id]) }}"
+                                    class="flex-1 {{ $person->active ? 'text-gray-700 hover:underline' : 'text-gray-400 hover:underline' }}"
+                                >
+                                    {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }}
+                                </a>
+                            </div>
+                        @endforeach
+                    </form>
+                @else
+                    @foreach ($people as $person)
+                        <a
+                            href="{{ route('admin.rechte', ['person' => $person->id]) }}"
+                            x-show="(showInactive || {{ $person->active || $selectedPerson?->id === $person->id ? 'true' : 'false' }}) && (!search || {{ \Illuminate\Support\Js::from(mb_strtolower($person->fullName())) }}.includes(search.toLowerCase()))"
+                            class="block rounded px-2 py-1 {{ $selectedPerson?->id === $person->id ? 'bg-indigo-50 font-medium text-indigo-700' : ($person->active ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-400 hover:bg-gray-50') }}"
+                        >
+                            {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }}
+                        </a>
+                    @endforeach
+                @endif
             </div>
         </div>
 
@@ -69,7 +122,14 @@
             @if ($selectedTemplate)
                 <div class="shrink-0 flex items-center justify-between gap-3 border-b border-gray-100 p-3">
                     <div class="text-sm font-medium text-gray-900">
-                        {{ $selectedTemplate->name }}
+                        <input
+                            type="text"
+                            name="name"
+                            form="set-form"
+                            value="{{ $selectedTemplate->name }}"
+                            required
+                            class="rounded-md border-gray-300 py-0.5 text-sm font-medium text-gray-900"
+                        >
                         <span class="ml-1 text-xs font-normal text-gray-400">
                             {{ __('Gilt für :count Person(en) - Änderungen wirken sofort für alle.', ['count' => $templatePeople->count()]) }}
                         </span>
@@ -84,6 +144,7 @@
 
                 <div class="flex flex-1 min-h-0">
                     <form
+                        id="set-form"
                         method="POST"
                         action="{{ route('admin.rechte.sets.update', $selectedTemplate) }}"
                         class="flex flex-1 min-h-0 flex-col border-r border-gray-100"
@@ -139,6 +200,9 @@
                                 @csrf
                                 @method('DELETE')
                                 @if ($templatePeople->isNotEmpty())
+                                    <div class="text-xs text-gray-400">
+                                        {{ __('Zum Löschen eines Sets müssen die zugewiesenen Personen in ein anderes Set übernommen werden.') }}
+                                    </div>
                                     <select name="reassign_to" class="w-full rounded-md border-gray-300 text-xs" required>
                                         <option value="">{{ __('Personen übernehmen in…') }}</option>
                                         @foreach ($templates as $template)

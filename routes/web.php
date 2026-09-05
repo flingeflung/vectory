@@ -50,6 +50,7 @@ Route::middleware(['auth', 'verified', 'can:access-admin'])->prefix('admin')->na
     Route::post('/rechte/sets', [AdminPermissionController::class, 'store'])->name('rechte.sets.store');
     Route::post('/rechte/sets/{template}', [AdminPermissionController::class, 'update'])->name('rechte.sets.update');
     Route::delete('/rechte/sets/{template}', [AdminPermissionController::class, 'destroy'])->name('rechte.sets.destroy');
+    Route::post('/rechte/sets/{template}/personen', [AdminPermissionController::class, 'assignPeopleToTemplate'])->name('rechte.sets.assign-people');
     Route::post('/rechte/personen/{person}', [AdminPermissionController::class, 'assignPerson'])->name('rechte.personen.update');
 });
 

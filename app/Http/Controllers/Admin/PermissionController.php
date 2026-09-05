@@ -99,7 +99,11 @@ class PermissionController extends Controller
         abort_unless($template->tenant_id === $request->user()->tenant_id, 404);
         abort_if($template->role === 'admin' && $request->user()->role !== 'super_admin', 403);
 
+        $name = trim((string) $request->string('name'));
+        abort_if($name === '', 422);
+
         $permissionIds = collect($request->array('permissions'))->map(fn ($id) => (int) $id);
+        $template->update(['name' => $name]);
         $template->permissions()->sync($permissionIds);
 
         return redirect()->route('admin.rechte', ['set' => $template->id])->with('status', 'rechte-updated');
@@ -143,6 +147,30 @@ class PermissionController extends Controller
         $this->assignTemplate($request, $person, $template);
 
         return redirect()->route('admin.rechte', ['person' => $person->id])->with('status', 'rechte-updated');
+    }
+
+    /**
+     * Mehrere bisher unzugeordnete Personen auf einmal diesem Set zuweisen -
+     * Massenwerkzeug fürs Ersteinrichten (siehe View: nur wirklich
+     * unzugeordnete Personen sind dort überhaupt anklickbar). Wer schon ein
+     * Set hat, wird hier serverseitig ignoriert statt verschoben - Wechsel
+     * eines bestehenden Sets läuft bewusst nur über assignPerson() oben.
+     */
+    public function assignPeopleToTemplate(Request $request, PermissionTemplate $template): RedirectResponse
+    {
+        abort_unless($template->tenant_id === $request->user()->tenant_id, 404);
+        abort_if($template->role === 'admin' && $request->user()->role !== 'super_admin', 403);
+
+        $personIds = collect($request->array('person_ids'))->map(fn ($id) => (int) $id);
+
+        Person::query()
+            ->where('tenant_id', $template->tenant_id)
+            ->whereIn('id', $personIds)
+            ->whereNull('permission_template_id')
+            ->get()
+            ->each(fn (Person $person) => $this->assignTemplate($request, $person, $template));
+
+        return redirect()->route('admin.rechte', ['set' => $template->id])->with('status', 'rechte-updated');
     }
 
     /**
