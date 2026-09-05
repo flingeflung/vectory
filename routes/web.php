@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DisplayFilterController;
 use App\Http\Controllers\FavoriteController;
@@ -40,6 +41,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/aufgaben', [TaskController::class, 'index'])->name('aufgaben');
     Route::post('/aufgaben/{task}/sichtbarkeit', [TaskController::class, 'toggleVisibility'])->name('aufgaben.visibility');
+
+    Route::get('/admin', [AdminController::class, 'index'])->name('admin');
 });
 
 Route::middleware(['auth', 'verified'])->prefix('projekte/anzeigefilter')->name('projekte.anzeigefilter.')->group(function () {
