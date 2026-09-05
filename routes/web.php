@@ -47,7 +47,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::middleware(['auth', 'verified', 'can:access-admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::redirect('/', '/admin/rechte')->name('index');
     Route::get('/rechte', [AdminPermissionController::class, 'index'])->name('rechte');
-    Route::post('/rechte/funktionsgruppen', [AdminPermissionController::class, 'updateFunctionGroups'])->name('rechte.funktionsgruppen');
+    Route::post('/rechte/funktionsgruppen/{group}', [AdminPermissionController::class, 'updateFunctionGroup'])->name('rechte.funktionsgruppen.update');
     Route::post('/rechte/personen/{person}', [AdminPermissionController::class, 'updatePerson'])->name('rechte.personen.update');
 });
 

@@ -12,9 +12,10 @@ use Illuminate\View\View;
 
 /**
  * Verwaltung des Rechtekonzepts (Ebene 3) - Nav-Ebene 2 unter "Admin".
- * Zwei Bausteine, siehe Person::hasPermission(): die Funktionsgruppen-
- * Rechte-Vorlage (Matrix) und individuelle Personen-Ausnahmen (Zusatz/
- * Entzug on top der Vorlage).
+ * Ein Editor, analog Viettos rechte.php: links wählt man WEN (Funktions-
+ * gruppe oder Person), rechts hakt man an WAS. Bewusst nicht als Matrix
+ * (Rechte x Gruppen nebeneinander) - das würde mit jedem neuen Recht
+ * breiter, hier wächst nur die rechte Liste nach unten.
  */
 class PermissionController extends Controller
 {
@@ -22,49 +23,59 @@ class PermissionController extends Controller
     {
         $tenantId = $request->user()->tenant_id;
 
-        $functionGroups = FunctionGroup::query()->where('tenant_id', $tenantId)->orderBy('sort')->with('permissions:id')->get();
-        $permissions = Permission::query()->orderBy('key')->get();
-
-        $selectedPerson = null;
-        $personOverrides = collect();
-        if ($request->filled('person')) {
-            $selectedPerson = Person::query()->where('tenant_id', $tenantId)->find($request->query('person'));
-            if ($selectedPerson) {
-                $personOverrides = $selectedPerson->permissionOverrides()->get()->keyBy('id');
-            }
-        }
-
+        $functionGroups = FunctionGroup::query()->where('tenant_id', $tenantId)->orderBy('sort')->get();
         $people = Person::query()
             ->where('tenant_id', $tenantId)
             ->orderBy('last_name')
             ->orderBy('first_name')
             ->get(['id', 'first_name', 'last_name', 'active']);
 
+        // Vereinte Liste (siehe Konzept-Absprache: Navigation ist nur ein
+        // normales Recht im selben Katalog, kein eigenes System) - solange
+        // der Katalog klein ist, ohne weitere Kategorisierung; die wird
+        // fällig, sobald hier deutlich mehr Rechte stehen.
+        $permissions = Permission::query()->orderBy('key')->get();
+
+        $selectedGroup = null;
+        $selectedPerson = null;
+        $grantedPermissionIds = collect();
+        $personOverrides = collect();
+
+        if ($request->filled('group')) {
+            $selectedGroup = $functionGroups->firstWhere('id', (int) $request->query('group'));
+            if ($selectedGroup) {
+                $grantedPermissionIds = $selectedGroup->permissions()->pluck('permissions.id');
+            }
+        } elseif ($request->filled('person')) {
+            $selectedPerson = Person::query()->where('tenant_id', $tenantId)->find($request->query('person'));
+            if ($selectedPerson) {
+                $personOverrides = $selectedPerson->permissionOverrides()->get()->keyBy('id');
+            }
+        }
+
         return view('admin.rechte.index', [
             'functionGroups' => $functionGroups,
-            'permissions' => $permissions,
             'people' => $people,
+            'permissions' => $permissions,
+            'selectedGroup' => $selectedGroup,
             'selectedPerson' => $selectedPerson,
+            'grantedPermissionIds' => $grantedPermissionIds,
             'personOverrides' => $personOverrides,
         ]);
     }
 
     /**
-     * Rechte-Vorlage je Funktionsgruppe komplett aus der Matrix neu setzen.
-     * Checkbox-Grid: permissions[{function_group_id}][] = {permission_id}.
+     * Rechte-Vorlage EINER Funktionsgruppe komplett neu setzen.
      */
-    public function updateFunctionGroups(Request $request): RedirectResponse
+    public function updateFunctionGroup(Request $request, FunctionGroup $group): RedirectResponse
     {
-        $tenantId = $request->user()->tenant_id;
-        $submitted = $request->array('permissions');
+        abort_unless($group->tenant_id === $request->user()->tenant_id, 404);
 
-        FunctionGroup::query()->where('tenant_id', $tenantId)->get()->each(function (FunctionGroup $group) use ($submitted) {
-            $permissionIds = collect($submitted[$group->id] ?? [])
-                ->mapWithKeys(fn ($permissionId) => [$permissionId => ['tenant_id' => $group->tenant_id]]);
-            $group->permissions()->sync($permissionIds);
-        });
+        $permissionIds = collect($request->array('permissions'))
+            ->mapWithKeys(fn ($permissionId) => [$permissionId => ['tenant_id' => $group->tenant_id]]);
+        $group->permissions()->sync($permissionIds);
 
-        return back()->with('status', 'rechte-updated');
+        return redirect()->route('admin.rechte', ['group' => $group->id])->with('status', 'rechte-updated');
     }
 
     /**
@@ -90,6 +101,6 @@ class PermissionController extends Controller
             }
         }
 
-        return redirect()->route('admin.rechte', ['person' => $person->id]);
+        return redirect()->route('admin.rechte', ['person' => $person->id])->with('status', 'rechte-updated');
     }
 }
