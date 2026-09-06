@@ -123,7 +123,14 @@
         <div class="flex flex-1 min-h-0 flex-col rounded-lg border border-gray-200 bg-white">
             @if ($selectedGroup)
                 @php $inUse = array_sum($usage) > 0; @endphp
-                <form method="POST" action="{{ route('admin.function-groups.update', $selectedGroup) }}" class="flex flex-1 min-h-0 flex-col">
+                <form
+                    method="POST"
+                    action="{{ route('admin.function-groups.update', $selectedGroup) }}"
+                    class="flex flex-1 min-h-0 flex-col"
+                    x-data="{ dirty: false }"
+                    @input="dirty = true"
+                    @change="dirty = true"
+                >
                     @csrf
                     <div class="shrink-0 space-y-2 border-b border-gray-100 p-3">
                         <div class="flex items-center gap-2">
@@ -146,7 +153,7 @@
                     </div>
 
                     <div class="shrink-0 border-t border-gray-100 p-3">
-                        <button type="submit" class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
+                        <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
                             {{ __('Speichern') }}
                         </button>
                     </div>

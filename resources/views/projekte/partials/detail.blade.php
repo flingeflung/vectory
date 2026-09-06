@@ -413,9 +413,17 @@
 
             <div x-show="editingPeople" x-cloak class="mt-0.5 max-h-56 overflow-y-auto rounded border border-gray-300 bg-white p-2 text-xs space-y-2">
                 @foreach ($allFunctionGroups as $group)
-                    @if ($group->members->isNotEmpty())
+                    @php
+                        $currentEntries = $project->projectPeople->where('function_group_id', $group->id);
+                    @endphp
+                    {{-- Inaktive Funktionsgruppen werden für NEUE Zuordnungen
+                         nicht mehr angeboten, bleiben aber sichtbar/editierbar,
+                         wenn hier im Projekt schon jemand darüber zugeordnet
+                         ist - sonst würde ein Speichern diese Zuordnung
+                         stillschweigend entfernen (ihre Checkboxen kämen ja
+                         gar nicht mehr im Formular vor). --}}
+                    @if ($group->members->isNotEmpty() && ($group->active || $currentEntries->isNotEmpty()))
                         @php
-                            $currentEntries = $project->projectPeople->where('function_group_id', $group->id);
                             $currentPersonIds = $currentEntries->pluck('person_id')->all();
                             $currentPrimaryId = optional($currentEntries->firstWhere('is_primary', true))->person_id;
                         @endphp

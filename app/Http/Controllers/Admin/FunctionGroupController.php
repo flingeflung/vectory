@@ -42,6 +42,11 @@ class FunctionGroupController extends Controller
             if ($selectedGroup) {
                 $groupMemberIds = $selectedGroup->members()->pluck('people.id');
                 $usage = $this->usageCounts($selectedGroup);
+
+                // Mitglieder zuerst (alphabetisch), danach der Rest
+                // (ebenfalls alphabetisch) - gleiches Muster wie bei der
+                // Rechte-Set-Bulk-Zuordnung, sortByDesc ist stabil.
+                $people = $people->sortByDesc(fn (Person $person) => $groupMemberIds->contains($person->id))->values();
             }
         } elseif ($request->filled('person')) {
             $selectedPerson = Person::query()->where('tenant_id', $tenantId)->find($request->query('person'));
