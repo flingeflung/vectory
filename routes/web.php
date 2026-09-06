@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\BusinessUnitController;
 use App\Http\Controllers\Admin\CompanyController;
+use App\Http\Controllers\Admin\ConfigController;
 use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\FunctionGroupController;
 use App\Http\Controllers\Admin\LegacyRoleController;
@@ -93,6 +94,9 @@ Route::middleware(['auth', 'verified', 'can:access-admin'])->prefix('admin')->na
     Route::post('/personen/{person}', [AdminPersonController::class, 'update'])->name('personen.update');
     Route::post('/personen/{person}/login', [AdminPersonController::class, 'createLogin'])->name('personen.login.store');
     Route::post('/personen/{person}/passwort', [AdminPersonController::class, 'resetPassword'])->name('personen.password.reset');
+
+    Route::get('/konfig', [ConfigController::class, 'index'])->name('config');
+    Route::post('/konfig', [ConfigController::class, 'update'])->name('config.update');
 });
 
 Route::middleware(['auth', 'verified'])->prefix('projekte/anzeigefilter')->name('projekte.anzeigefilter.')->group(function () {
