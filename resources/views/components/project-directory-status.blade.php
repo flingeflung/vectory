@@ -15,25 +15,19 @@
                     copied = true;
                     setTimeout(() => copied = false, 1500);
                 "
-                class="hover:text-gray-700"
+                class="hover:opacity-75"
                 title="{{ $status['archived'] ? __('Pfad des Projektverzeichnisses (Archiv) in die Zwischenablage kopieren') : __('Pfad des Projektverzeichnisses in die Zwischenablage kopieren') }}"
             >
-                <svg x-show="!copied" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-19.5 0v6a2.25 2.25 0 002.25 2.25h15a2.25 2.25 0 002.25-2.25v-6m-19.5 0h19.5M4.5 9.75V6.75A2.25 2.25 0 016.75 4.5h4.5l1.5 1.5h5.5a2.25 2.25 0 012.25 2.25v1.5" />
-                </svg>
-                <svg x-show="copied" x-cloak class="h-4 w-4 text-green-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                </svg>
+                <img x-show="!copied" src="{{ asset('images/directory-status/copy2clipboard.png') }}" alt="" class="h-4 w-4">
+                <img x-show="copied" x-cloak src="{{ asset('images/directory-status/copy2clipboard_ok.png') }}" alt="" class="h-4 w-4">
             </button>
             <button
                 type="button"
                 onclick="window.openProjectDirectoryContent({{ $project->id }})"
-                class="hover:text-gray-700"
+                class="hover:opacity-75"
                 title="{{ $status['archived'] ? __('Verzeichnisinhalt auflisten (Archiv)') : __('Verzeichnisinhalt auflisten') }}"
             >
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
-                </svg>
+                <img src="{{ asset('images/directory-status/'.($status['archived'] ? 'show_dircontentArchiv.png' : 'show_dircontent.png')) }}" alt="" class="h-4 w-4">
             </button>
         @break
 
@@ -42,18 +36,14 @@
                 <button
                     type="button"
                     onclick="window.openProjectDirectoryCreate({{ $project->id }}, {{ \Illuminate\Support\Js::from($suggestedFolderName) }})"
-                    class="hover:text-gray-700"
+                    class="hover:opacity-75"
                     title="{{ __('Kein Projektverzeichnis vorhanden - anlegen') }}"
                 >
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-19.5 0v6a2.25 2.25 0 002.25 2.25h15a2.25 2.25 0 002.25-2.25v-6m-19.5 0h19.5M4.5 9.75V6.75A2.25 2.25 0 016.75 4.5h4.5l1.5 1.5h5.5a2.25 2.25 0 012.25 2.25v1.5M12 13.5v3.75m1.875-1.875H10.125" />
-                    </svg>
+                    <img src="{{ asset('images/directory-status/show_directory0.png') }}" alt="" class="h-4 w-4">
                 </button>
             @else
                 <span title="{{ __('Kein Projektverzeichnis vorhanden.') }}">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-19.5 0v6a2.25 2.25 0 002.25 2.25h15a2.25 2.25 0 002.25-2.25v-6m-19.5 0h19.5M4.5 9.75V6.75A2.25 2.25 0 016.75 4.5h4.5l1.5 1.5h5.5a2.25 2.25 0 012.25 2.25v1.5" />
-                    </svg>
+                    <img src="{{ asset('images/directory-status/show_directory0.png') }}" alt="" class="h-4 w-4">
                 </span>
             @endif
         @break
