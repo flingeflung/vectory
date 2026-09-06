@@ -13,7 +13,7 @@
     <div class="max-h-80 space-y-2 overflow-y-auto">
         @forelse ($legacyRoles as $legacyRole)
             <div class="rounded-md border border-gray-200 p-2">
-                <form method="POST" action="{{ route('admin.legacy-roles.update', $legacyRole) }}" class="flex items-end gap-2">
+                <form data-row-form method="POST" action="{{ route('admin.legacy-roles.update', $legacyRole) }}" class="flex items-end gap-2">
                     @csrf
                     <div class="flex-1">
                         <label class="block text-xs text-gray-500">{{ __('Name') }}</label>

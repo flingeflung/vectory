@@ -75,6 +75,81 @@
             })();
         </script>
 
+        {{--
+            Neu laden einer "klitzekleine Unterbereiche"-Verwalten-Liste
+            (Firma/Abteilung/Geschäftsbereich/Rolle), OHNE ungespeicherte
+            Eingaben in anderen Zeilen zu verlieren: jede Zeile hat ihr
+            eigenes Speichern-Formular, ein einzelnes Speichern lädt bisher
+            aber die KOMPLETTE Liste per fetch() neu - das wischt getippte,
+            aber noch nicht abgeschickte Änderungen in anderen Zeilen weg
+            (Ralfs konkreter Bug-Report: mehrere Abteilungs-Kürzel getippt,
+            nur eine Zeile gespeichert, Rest weg). Fix: vor dem Neuladen
+            die aktuellen Feldwerte aller Zeilen-Formulare sichern, danach
+            wieder einsetzen - nur die gerade gespeicherte Zeile hat ohnehin
+            denselben Wert (kein Unterschied), alle anderen behalten ihre
+            unfertige Eingabe. Setzt data-row-form auf dem jeweiligen
+            Zeilen-Formular voraus (NICHT auf Anlegen-/Löschen-Formularen -
+            die sollen nach dem Neuladen normal zurückgesetzt werden).
+        --}}
+        <script>
+            window.reloadManageListPreservingEdits = async function (body, url) {
+                const snapshot = new Map();
+                body.querySelectorAll('form[data-row-form]').forEach((form) => {
+                    const values = {};
+                    form.querySelectorAll('input[type="text"], input[type="checkbox"]').forEach((input) => {
+                        values[input.name] = input.type === 'checkbox' ? input.checked : input.value;
+                    });
+                    snapshot.set(form.action, values);
+                });
+
+                body.innerHTML = await fetch(url).then((r) => r.text());
+
+                body.querySelectorAll('form[data-row-form]').forEach((form) => {
+                    const values = snapshot.get(form.action);
+                    if (!values) {
+                        return;
+                    }
+                    form.querySelectorAll('input[type="text"], input[type="checkbox"]').forEach((input) => {
+                        if (!(input.name in values)) {
+                            return;
+                        }
+                        if (input.type === 'checkbox') {
+                            input.checked = values[input.name];
+                        } else {
+                            input.value = values[input.name];
+                        }
+                    });
+                });
+            };
+        </script>
+
+        {{--
+            Filter-Pulldowns (Firma/Abteilung/Geschäftsbereich/Rolle) in der
+            Personenverwaltung live aktuell halten, wenn eine dieser Listen
+            über die neuen Stift-Buttons direkt aus dem Filterbereich heraus
+            bearbeitet wurde (z.B. Firma umbenannt) - sonst zeigt das
+            Pulldown bis zum nächsten normalen Seiten-Reload noch den alten
+            Namen. No-op, wenn die Personenliste gerade gar nicht offen ist.
+        --}}
+        <script>
+            window.refreshPersonenFiltersInBackground = async function refreshPersonenFiltersInBackground() {
+                const ids = ['filter-company_id', 'filter-department_id', 'filter-business_unit_id', 'filter-legacy_role_id'];
+                if (! ids.some((id) => document.getElementById(id))) {
+                    return;
+                }
+
+                const html = await fetch(window.location.href).then((r) => r.text());
+                const fresh = new DOMParser().parseFromString(html, 'text/html');
+                ids.forEach((id) => {
+                    const current = document.getElementById(id);
+                    const updated = fresh.getElementById(id);
+                    if (current && updated) {
+                        current.innerHTML = updated.innerHTML;
+                    }
+                });
+            };
+        </script>
+
         {{-- Global Projekt-Detail-Overlay: von überall im Tool per PN-Klick (x-pn-link) öffenbar. --}}
         <x-modal name="project-overlay" max-width="2xl" :dirty-check="'projectOverlayIsDirty'" :draggable="true" :resizable="true">
             <div class="relative h-full">
@@ -290,7 +365,7 @@
                 };
 
                 const load = async () => {
-                    body().innerHTML = await fetch({{ \Illuminate\Support\Js::from(route('admin.companies')) }}).then((r) => r.text());
+                    await window.reloadManageListPreservingEdits(body(), {{ \Illuminate\Support\Js::from(route('admin.companies')) }});
                     snapshot();
                 };
 
@@ -311,6 +386,7 @@
                     // halten - einfach neu laden statt gezielt nur die
                     // <option>-Liste auszutauschen.
                     window.reopenCurrentPersonOverlay?.();
+                    window.refreshPersonenFiltersInBackground?.();
                 });
 
                 document.addEventListener('submit', async (event) => {
@@ -376,7 +452,7 @@
                 };
 
                 const load = async () => {
-                    body().innerHTML = await fetch({{ \Illuminate\Support\Js::from(route('admin.departments')) }}).then((r) => r.text());
+                    await window.reloadManageListPreservingEdits(body(), {{ \Illuminate\Support\Js::from(route('admin.departments')) }});
                     snapshot();
                 };
 
@@ -394,6 +470,7 @@
                     }
                     wasOpened = false;
                     window.reopenCurrentPersonOverlay?.();
+                    window.refreshPersonenFiltersInBackground?.();
                 });
 
                 document.addEventListener('submit', async (event) => {
@@ -458,7 +535,7 @@
                 };
 
                 const load = async () => {
-                    body().innerHTML = await fetch({{ \Illuminate\Support\Js::from(route('admin.geschaeftsbereiche')) }}).then((r) => r.text());
+                    await window.reloadManageListPreservingEdits(body(), {{ \Illuminate\Support\Js::from(route('admin.geschaeftsbereiche')) }});
                     snapshot();
                 };
 
@@ -476,6 +553,7 @@
                     }
                     wasOpened = false;
                     window.reopenCurrentPersonOverlay?.();
+                    window.refreshPersonenFiltersInBackground?.();
                 });
 
                 document.addEventListener('submit', async (event) => {
@@ -540,7 +618,7 @@
                 };
 
                 const load = async () => {
-                    body().innerHTML = await fetch({{ \Illuminate\Support\Js::from(route('admin.legacy-roles')) }}).then((r) => r.text());
+                    await window.reloadManageListPreservingEdits(body(), {{ \Illuminate\Support\Js::from(route('admin.legacy-roles')) }});
                     snapshot();
                 };
 
@@ -558,6 +636,7 @@
                     }
                     wasOpened = false;
                     window.reopenCurrentPersonOverlay?.();
+                    window.refreshPersonenFiltersInBackground?.();
                 });
 
                 document.addEventListener('submit', async (event) => {
