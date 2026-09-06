@@ -921,24 +921,44 @@
                     params.append(prefix, value);
                 };
 
+                // Wie beim Personen-Overlay gemerkt, damit der Speichern-POST
+                // unten dieselben Filter/Sortierung als Query-String mitgeben
+                // kann - sonst sieht der Server bei diesem POST keine Filter
+                // mehr (die stecken sonst nur in der GET-URL, mit der das
+                // Projekt ursprünglich geöffnet wurde) und < > würde nach dem
+                // Speichern aus dem gefilterten Kontext herausspringen
+                // (derselbe Bug wie beim Personen-Overlay, jetzt hier auch
+                // behoben statt nur hingenommen).
+                let currentProjectId = null;
+                let currentProjectSort = null;
+                let currentProjectDirection = null;
+                let currentProjectFilters = null;
+
+                const currentProjectQuery = () => {
+                    const params = new URLSearchParams();
+                    if (currentProjectSort) params.set('sort', currentProjectSort);
+                    if (currentProjectDirection) params.set('direction', currentProjectDirection);
+                    if (currentProjectFilters) appendNested(params, 'filter', currentProjectFilters);
+                    return params.toString() ? '?' + params.toString() : '';
+                };
+
                 window.addEventListener('open-project', async (event) => {
                     const { id, sort, direction, filters } = event.detail;
                     if (!id) {
                         return;
                     }
 
+                    currentProjectId = id;
+                    currentProjectSort = sort;
+                    currentProjectDirection = direction;
+                    currentProjectFilters = filters;
+
                     // Alten Inhalt stehen lassen, nur ein Spinner-Overlay drüberlegen -
                     // kein Leeren/"Zucken" mehr beim Blättern zwischen Projekten.
                     showLoading();
                     window.dispatchEvent(new CustomEvent('open-modal', { detail: 'project-overlay' }));
 
-                    const params = new URLSearchParams();
-                    if (sort) params.set('sort', sort);
-                    if (direction) params.set('direction', direction);
-                    if (filters) appendNested(params, 'filter', filters);
-                    const query = params.toString() ? '?' + params.toString() : '';
-
-                    const response = await fetch('/projekte/' + id + query, {
+                    const response = await fetch('/projekte/' + id + currentProjectQuery(), {
                         headers: { 'X-Overlay': '1' },
                     });
                     body().innerHTML = await response.text();
@@ -968,7 +988,7 @@
                         formData.append(submitter.name, submitter.value);
                     }
 
-                    const response = await fetch(event.target.action, {
+                    const response = await fetch(event.target.action + currentProjectQuery(), {
                         method: 'POST',
                         headers: { 'X-Overlay': '1', 'X-CSRF-TOKEN': csrfToken },
                         body: formData,
