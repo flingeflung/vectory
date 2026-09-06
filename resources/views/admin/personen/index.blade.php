@@ -19,7 +19,10 @@
                     >
                 </div>
                 <div>
-                    <label class="block text-xs text-gray-500">{{ __('Firma') }}</label>
+                    <div class="flex items-center gap-1">
+                        <label class="block text-xs text-gray-500">{{ __('Firma') }}</label>
+                        <x-manage-lookup-button modal="company-manager" :title="__('Firmen verwalten')" />
+                    </div>
                     <select name="company_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-sm">
                         <option value="">{{ __('– Alle –') }}</option>
                         <option value="none" @selected(request('company_id') === 'none')>{{ __('– nicht zugewiesen –') }}</option>
@@ -29,7 +32,10 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs text-gray-500">{{ __('Abteilung') }}</label>
+                    <div class="flex items-center gap-1">
+                        <label class="block text-xs text-gray-500">{{ __('Abteilung') }}</label>
+                        <x-manage-lookup-button modal="department-manager" :title="__('Abteilungen verwalten')" />
+                    </div>
                     <select name="department_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-sm">
                         <option value="">{{ __('– Alle –') }}</option>
                         <option value="none" @selected(request('department_id') === 'none')>{{ __('– nicht zugewiesen –') }}</option>
@@ -39,7 +45,10 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs text-gray-500">{{ __('Geschäftsbereich') }}</label>
+                    <div class="flex items-center gap-1">
+                        <label class="block text-xs text-gray-500">{{ __('Geschäftsbereich') }}</label>
+                        <x-manage-lookup-button modal="business-unit-manager" :title="__('Geschäftsbereiche verwalten')" />
+                    </div>
                     <select name="business_unit_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-sm">
                         <option value="">{{ __('– Alle –') }}</option>
                         <option value="none" @selected(request('business_unit_id') === 'none')>{{ __('– nicht zugewiesen –') }}</option>
@@ -59,7 +68,10 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs text-gray-500">{{ __('Rolle') }}</label>
+                    <div class="flex items-center gap-1">
+                        <label class="block text-xs text-gray-500">{{ __('Rolle') }}</label>
+                        <x-manage-lookup-button modal="legacy-role-manager" :title="__('Rollen verwalten')" />
+                    </div>
                     <select name="legacy_role_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-sm">
                         <option value="">{{ __('– Alle –') }}</option>
                         <option value="none" @selected(request('legacy_role_id') === 'none')>{{ __('– nicht zugewiesen –') }}</option>
