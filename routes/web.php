@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\BusinessUnitController;
 use App\Http\Controllers\Admin\PermissionController as AdminPermissionController;
+use App\Http\Controllers\Admin\PersonController as AdminPersonController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DisplayFilterController;
 use App\Http\Controllers\FavoriteController;
@@ -58,6 +59,13 @@ Route::middleware(['auth', 'verified', 'can:access-admin'])->prefix('admin')->na
     Route::get('/geschaeftsbereiche', [BusinessUnitController::class, 'index'])->name('geschaeftsbereiche');
     Route::post('/geschaeftsbereiche', [BusinessUnitController::class, 'store'])->name('geschaeftsbereiche.store');
     Route::post('/geschaeftsbereiche/{businessUnit}', [BusinessUnitController::class, 'update'])->name('geschaeftsbereiche.update');
+
+    Route::get('/personen', [AdminPersonController::class, 'index'])->name('personen');
+    Route::post('/personen', [AdminPersonController::class, 'store'])->name('personen.store');
+    Route::get('/personen/{person}', [AdminPersonController::class, 'edit'])->name('personen.edit');
+    Route::post('/personen/{person}', [AdminPersonController::class, 'update'])->name('personen.update');
+    Route::post('/personen/{person}/login', [AdminPersonController::class, 'createLogin'])->name('personen.login.store');
+    Route::post('/personen/{person}/passwort', [AdminPersonController::class, 'resetPassword'])->name('personen.password.reset');
 });
 
 Route::middleware(['auth', 'verified'])->prefix('projekte/anzeigefilter')->name('projekte.anzeigefilter.')->group(function () {
