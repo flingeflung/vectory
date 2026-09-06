@@ -17,56 +17,55 @@
         class="flex items-center justify-between gap-2 {{ $isOverlay ? 'shrink-0 cursor-move select-none rounded-t-lg border-b border-gray-200 bg-gray-100 px-4 py-2' : 'mb-3' }}"
         @if ($isOverlay) data-drag-handle title="{{ __('Ziehen zum Verschieben') }}" @endif
     >
-        <div class="flex items-center gap-2">
-            @if ($isOverlay)
-                <span class="text-sm font-semibold text-gray-900">{{ $person->fullName() }}</span>
-            @else
-                <a href="{{ route('admin.personen') }}" class="text-sm text-gray-500 hover:text-gray-700">&laquo; {{ __('Zur Liste') }}</a>
-            @endif
-
-            <div class="flex items-center text-gray-500">
-                @if ($isOverlay)
-                    <button
-                        type="button"
-                        @disabled(! $previousPerson)
-                        onclick="window.dispatchEvent(new CustomEvent('open-person', { detail: { id: {{ $previousPerson?->id ?? 'null' }}, filters: {{ \Illuminate\Support\Js::from($filters) }} } }))"
-                        class="{{ $navBtn }}"
-                        title="{{ __('Vorherige Person') }}"
-                    >{!! $chevronLeft !!}</button>
-                    <button
-                        type="button"
-                        @disabled(! $nextPerson)
-                        onclick="window.dispatchEvent(new CustomEvent('open-person', { detail: { id: {{ $nextPerson?->id ?? 'null' }}, filters: {{ \Illuminate\Support\Js::from($filters) }} } }))"
-                        class="{{ $navBtn }}"
-                        title="{{ __('Nächste Person') }}"
-                    >{!! $chevronRight !!}</button>
-                @else
-                    <a
-                        href="{{ $previousPerson ? route('admin.personen.edit', [...$filters, 'person' => $previousPerson->id]) : '#' }}"
-                        class="{{ $navBtn }} {{ ! $previousPerson ? 'pointer-events-none opacity-25' : '' }}"
-                        title="{{ __('Vorherige Person') }}"
-                    >{!! $chevronLeft !!}</a>
-                    <a
-                        href="{{ $nextPerson ? route('admin.personen.edit', [...$filters, 'person' => $nextPerson->id]) : '#' }}"
-                        class="{{ $navBtn }} {{ ! $nextPerson ? 'pointer-events-none opacity-25' : '' }}"
-                        title="{{ __('Nächste Person') }}"
-                    >{!! $chevronRight !!}</a>
-                @endif
-            </div>
-        </div>
-
         @if ($isOverlay)
-            <button
-                type="button"
-                onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'person-overlay' }))"
-                class="text-gray-400 hover:text-gray-600"
-                aria-label="{{ __('Schließen') }}"
-            >
-                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
+            <span class="min-w-0 truncate text-sm font-semibold text-gray-900">{{ $person->fullName() }}</span>
+        @else
+            <a href="{{ route('admin.personen') }}" class="text-sm text-gray-500 hover:text-gray-700">&laquo; {{ __('Zur Liste') }}</a>
         @endif
+
+        {{-- Feste rechte Gruppe (Pfeile + Schließen) - unabhängig von der
+             Namenslänge an derselben Stelle, hüpft beim Blättern nicht mehr
+             hin und her (anders als vorher, als die Pfeile direkt neben dem
+             unterschiedlich langen Namen standen). --}}
+        <div class="flex shrink-0 items-center gap-1 text-gray-500">
+            @if ($isOverlay)
+                <button
+                    type="button"
+                    @disabled(! $previousPerson)
+                    onclick="window.dispatchEvent(new CustomEvent('open-person', { detail: { id: {{ $previousPerson?->id ?? 'null' }}, filters: {{ \Illuminate\Support\Js::from($filters) }} } }))"
+                    class="{{ $navBtn }}"
+                    title="{{ __('Vorherige Person') }}"
+                >{!! $chevronLeft !!}</button>
+                <button
+                    type="button"
+                    @disabled(! $nextPerson)
+                    onclick="window.dispatchEvent(new CustomEvent('open-person', { detail: { id: {{ $nextPerson?->id ?? 'null' }}, filters: {{ \Illuminate\Support\Js::from($filters) }} } }))"
+                    class="{{ $navBtn }}"
+                    title="{{ __('Nächste Person') }}"
+                >{!! $chevronRight !!}</button>
+                <button
+                    type="button"
+                    onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'person-overlay' }))"
+                    class="ml-1 text-gray-400 hover:text-gray-600"
+                    aria-label="{{ __('Schließen') }}"
+                >
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            @else
+                <a
+                    href="{{ $previousPerson ? route('admin.personen.edit', [...$filters, 'person' => $previousPerson->id]) : '#' }}"
+                    class="{{ $navBtn }} {{ ! $previousPerson ? 'pointer-events-none opacity-25' : '' }}"
+                    title="{{ __('Vorherige Person') }}"
+                >{!! $chevronLeft !!}</a>
+                <a
+                    href="{{ $nextPerson ? route('admin.personen.edit', [...$filters, 'person' => $nextPerson->id]) : '#' }}"
+                    class="{{ $navBtn }} {{ ! $nextPerson ? 'pointer-events-none opacity-25' : '' }}"
+                    title="{{ __('Nächste Person') }}"
+                >{!! $chevronRight !!}</a>
+            @endif
+        </div>
     </div>
 
     <div class="{{ $isOverlay ? 'min-h-0 flex-1 overflow-y-auto px-4 py-3' : '' }}">
