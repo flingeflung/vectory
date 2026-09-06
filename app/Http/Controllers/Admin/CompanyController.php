@@ -22,7 +22,6 @@ class CompanyController extends Controller
         $companies = Company::query()
             ->where('tenant_id', $request->user()->tenant_id)
             ->withCount('people')
-            ->orderBy('sort')
             ->orderBy('name')
             ->get();
 

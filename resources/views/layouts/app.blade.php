@@ -43,6 +43,38 @@
 
         <x-confirm-dialog />
 
+        {{--
+            Live-Suche für debounced Textfeld-Filter (Nachname-Suche in der
+            Personenverwaltung, PN/Illu-Nr.-Suche bei Illustrationen, ...):
+            statt bei jedem Tastendruck nach 1-2 Sek. die ganze Seite neu zu
+            laden (verliert Fokus/Cursor im Suchfeld!), wird nur der per ID
+            angegebene Ergebnis-Container per fetch() ausgetauscht - das
+            Suchfeld selbst bleibt unangetastet, Fokus/Cursor bleiben erhalten.
+            Generelle Regel (CLAUDE.md): jede neue/bestehende debounced
+            Text-Suche soll dieses Muster nutzen, kurzes Delay (400ms).
+        --}}
+        <script>
+            window.liveFilterSearch = (function () {
+                const timers = new WeakMap();
+                return function (input, resultContainerId, delay = 400) {
+                    clearTimeout(timers.get(input));
+                    const timer = setTimeout(async () => {
+                        const form = input.form;
+                        const params = new URLSearchParams(new FormData(form));
+                        const url = form.action + '?' + params.toString();
+                        const html = await fetch(url).then((r) => r.text());
+                        const fresh = new DOMParser().parseFromString(html, 'text/html').getElementById(resultContainerId);
+                        const current = document.getElementById(resultContainerId);
+                        if (fresh && current) {
+                            current.innerHTML = fresh.innerHTML;
+                        }
+                        history.replaceState(null, '', url);
+                    }, delay);
+                    timers.set(input, timer);
+                };
+            })();
+        </script>
+
         {{-- Global Projekt-Detail-Overlay: von überall im Tool per PN-Klick (x-pn-link) öffenbar. --}}
         <x-modal name="project-overlay" max-width="2xl" :dirty-check="'projectOverlayIsDirty'" :draggable="true" :resizable="true">
             <div class="relative h-full">
@@ -168,13 +200,13 @@
                 // Tabelle sichtbar sind - ohne das hier stünde dort bis zum
                 // nächsten manuellen Reload der alte Stand.
                 window.refreshPersonenListInBackground = async function refreshPersonenListInBackground() {
-                    const current = document.getElementById('personen-content');
+                    const current = document.getElementById('personen-list');
                     if (!current) {
                         return;
                     }
 
                     const html = await fetch(window.location.href).then((r) => r.text());
-                    const fresh = new DOMParser().parseFromString(html, 'text/html').getElementById('personen-content');
+                    const fresh = new DOMParser().parseFromString(html, 'text/html').getElementById('personen-list');
                     if (fresh) {
                         current.innerHTML = fresh.innerHTML;
                     }
@@ -214,7 +246,7 @@
             (als Nächstes: Abteilung, Geschäftsbereich) - bewusst noch nicht
             generisch abstrahiert, bis das Muster ein zweites Mal steht.
         --}}
-        <x-modal name="company-manager" max-width="lg">
+        <x-modal name="company-manager" max-width="lg" :dirty-check="'companyManagerIsDirty'">
             <div class="flex max-h-[80vh] flex-col">
                 <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
                     <h3 class="text-sm font-semibold text-gray-900">{{ __('Firmen verwalten') }}</h3>
@@ -240,9 +272,26 @@
                 const body = () => document.getElementById('company-manager-body');
                 const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
                 let wasOpened = false;
+                let savedSnapshot = null;
+
+                // Alle Formulare zusammen (Anlegen + je Firma ein Umbenennen-
+                // und ein Löschen-Formular) - gleiches Muster wie bei den
+                // Illustrationsaufträgen (illustrationOrdersIsDirty).
+                const serializeAllForms = () => [...body().querySelectorAll('form')]
+                    .map((form) => new URLSearchParams(new FormData(form)).toString())
+                    .join('|');
+
+                const snapshot = () => {
+                    savedSnapshot = serializeAllForms();
+                };
+
+                window.companyManagerIsDirty = () => {
+                    return savedSnapshot !== null && serializeAllForms() !== savedSnapshot;
+                };
 
                 const load = async () => {
                     body().innerHTML = await fetch({{ \Illuminate\Support\Js::from(route('admin.companies')) }}).then((r) => r.text());
+                    snapshot();
                 };
 
                 window.addEventListener('open-modal', (event) => {
@@ -261,6 +310,253 @@
                     // Zurück im Personen-Overlay den Firma-Vorschlag aktuell
                     // halten - einfach neu laden statt gezielt nur die
                     // <option>-Liste auszutauschen.
+                    window.reopenCurrentPersonOverlay?.();
+                });
+
+                document.addEventListener('submit', async (event) => {
+                    if (!body() || !body().contains(event.target)) {
+                        return;
+                    }
+                    event.preventDefault();
+
+                    const formData = new FormData(event.target);
+                    await fetch(event.target.action, {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': csrfToken },
+                        body: formData,
+                    });
+                    await load();
+                });
+            })();
+        </script>
+
+        {{--
+            Abteilungs-Verwaltung: gleiches Muster wie company-manager oben
+            (klitzekleines Unterbereich-Overlay, aus dem Personen-Overlay
+            heraus per Link neben "Abteilung" öffenbar).
+        --}}
+        <x-modal name="department-manager" max-width="lg" :dirty-check="'departmentManagerIsDirty'">
+            <div class="flex max-h-[80vh] flex-col">
+                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Abteilungen verwalten') }}</h3>
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'department-manager' }))"
+                        class="text-gray-400 hover:text-gray-600"
+                        aria-label="{{ __('Schließen') }}"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="department-manager-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
+                    {{ __('Lädt…') }}
+                </div>
+            </div>
+        </x-modal>
+
+        <script>
+            (function () {
+                const body = () => document.getElementById('department-manager-body');
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                let wasOpened = false;
+                let savedSnapshot = null;
+
+                const serializeAllForms = () => [...body().querySelectorAll('form')]
+                    .map((form) => new URLSearchParams(new FormData(form)).toString())
+                    .join('|');
+
+                const snapshot = () => {
+                    savedSnapshot = serializeAllForms();
+                };
+
+                window.departmentManagerIsDirty = () => {
+                    return savedSnapshot !== null && serializeAllForms() !== savedSnapshot;
+                };
+
+                const load = async () => {
+                    body().innerHTML = await fetch({{ \Illuminate\Support\Js::from(route('admin.departments')) }}).then((r) => r.text());
+                    snapshot();
+                };
+
+                window.addEventListener('open-modal', (event) => {
+                    if (event.detail !== 'department-manager') {
+                        return;
+                    }
+                    wasOpened = true;
+                    load();
+                });
+
+                window.addEventListener('close-modal', (event) => {
+                    if (event.detail !== 'department-manager' || !wasOpened) {
+                        return;
+                    }
+                    wasOpened = false;
+                    window.reopenCurrentPersonOverlay?.();
+                });
+
+                document.addEventListener('submit', async (event) => {
+                    if (!body() || !body().contains(event.target)) {
+                        return;
+                    }
+                    event.preventDefault();
+
+                    const formData = new FormData(event.target);
+                    await fetch(event.target.action, {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': csrfToken },
+                        body: formData,
+                    });
+                    await load();
+                });
+            })();
+        </script>
+
+        {{--
+            Geschäftsbereichs-Verwaltung: gleiches Muster wie company-manager
+            oben. Ersetzt die frühere eigenständige Seite (admin/business-units).
+        --}}
+        <x-modal name="business-unit-manager" max-width="lg" :dirty-check="'businessUnitManagerIsDirty'">
+            <div class="flex max-h-[80vh] flex-col">
+                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Geschäftsbereiche verwalten') }}</h3>
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'business-unit-manager' }))"
+                        class="text-gray-400 hover:text-gray-600"
+                        aria-label="{{ __('Schließen') }}"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="business-unit-manager-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
+                    {{ __('Lädt…') }}
+                </div>
+            </div>
+        </x-modal>
+
+        <script>
+            (function () {
+                const body = () => document.getElementById('business-unit-manager-body');
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                let wasOpened = false;
+                let savedSnapshot = null;
+
+                const serializeAllForms = () => [...body().querySelectorAll('form')]
+                    .map((form) => new URLSearchParams(new FormData(form)).toString())
+                    .join('|');
+
+                const snapshot = () => {
+                    savedSnapshot = serializeAllForms();
+                };
+
+                window.businessUnitManagerIsDirty = () => {
+                    return savedSnapshot !== null && serializeAllForms() !== savedSnapshot;
+                };
+
+                const load = async () => {
+                    body().innerHTML = await fetch({{ \Illuminate\Support\Js::from(route('admin.geschaeftsbereiche')) }}).then((r) => r.text());
+                    snapshot();
+                };
+
+                window.addEventListener('open-modal', (event) => {
+                    if (event.detail !== 'business-unit-manager') {
+                        return;
+                    }
+                    wasOpened = true;
+                    load();
+                });
+
+                window.addEventListener('close-modal', (event) => {
+                    if (event.detail !== 'business-unit-manager' || !wasOpened) {
+                        return;
+                    }
+                    wasOpened = false;
+                    window.reopenCurrentPersonOverlay?.();
+                });
+
+                document.addEventListener('submit', async (event) => {
+                    if (!body() || !body().contains(event.target)) {
+                        return;
+                    }
+                    event.preventDefault();
+
+                    const formData = new FormData(event.target);
+                    await fetch(event.target.action, {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': csrfToken },
+                        body: formData,
+                    });
+                    await load();
+                });
+            })();
+        </script>
+
+        {{--
+            Rollen-Verwaltung (LegacyRole): gleiches Muster wie company-manager
+            oben, aus dem Personen-Overlay heraus per Link neben "Rolle" öffenbar.
+        --}}
+        <x-modal name="legacy-role-manager" max-width="lg" :dirty-check="'legacyRoleManagerIsDirty'">
+            <div class="flex max-h-[80vh] flex-col">
+                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Rollen verwalten') }}</h3>
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'legacy-role-manager' }))"
+                        class="text-gray-400 hover:text-gray-600"
+                        aria-label="{{ __('Schließen') }}"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="legacy-role-manager-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
+                    {{ __('Lädt…') }}
+                </div>
+            </div>
+        </x-modal>
+
+        <script>
+            (function () {
+                const body = () => document.getElementById('legacy-role-manager-body');
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                let wasOpened = false;
+                let savedSnapshot = null;
+
+                const serializeAllForms = () => [...body().querySelectorAll('form')]
+                    .map((form) => new URLSearchParams(new FormData(form)).toString())
+                    .join('|');
+
+                const snapshot = () => {
+                    savedSnapshot = serializeAllForms();
+                };
+
+                window.legacyRoleManagerIsDirty = () => {
+                    return savedSnapshot !== null && serializeAllForms() !== savedSnapshot;
+                };
+
+                const load = async () => {
+                    body().innerHTML = await fetch({{ \Illuminate\Support\Js::from(route('admin.legacy-roles')) }}).then((r) => r.text());
+                    snapshot();
+                };
+
+                window.addEventListener('open-modal', (event) => {
+                    if (event.detail !== 'legacy-role-manager') {
+                        return;
+                    }
+                    wasOpened = true;
+                    load();
+                });
+
+                window.addEventListener('close-modal', (event) => {
+                    if (event.detail !== 'legacy-role-manager' || !wasOpened) {
+                        return;
+                    }
+                    wasOpened = false;
                     window.reopenCurrentPersonOverlay?.();
                 });
 
@@ -623,7 +919,9 @@
                     await window.refreshUnderlyingProject(currentProjectId);
 
                     if (data.open_graphic_orders_count) {
-                        alert({{ \Illuminate\Support\Js::from(__('Achtung, für dieses Projekt sind noch offene Illustrationsaufträge vorhanden:')) }} + ' ' + data.open_graphic_orders_count);
+                        await window.notifyDialog(
+                            {{ \Illuminate\Support\Js::from(__('Achtung, für dieses Projekt sind noch offene Illustrationsaufträge vorhanden:')) }} + ' ' + data.open_graphic_orders_count
+                        );
                     }
                 });
             })();

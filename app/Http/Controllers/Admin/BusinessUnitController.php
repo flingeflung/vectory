@@ -9,8 +9,9 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
- * Verwaltung der Geschäftsbereiche - reine, flache Stammdatenliste ohne
- * Abhängigkeit zu Firmen/Abteilungen (siehe BusinessUnit-Model).
+ * Geschäftsbereichs-Verwaltung als "klitzekleines" Unterbereich-Overlay aus
+ * dem Personen-Overlay heraus - gleiches Muster wie CompanyController. Die
+ * frühere eigenständige Seite (admin/business-units) ist damit obsolet.
  */
 class BusinessUnitController extends Controller
 {
@@ -18,11 +19,11 @@ class BusinessUnitController extends Controller
     {
         $businessUnits = BusinessUnit::query()
             ->where('tenant_id', $request->user()->tenant_id)
-            ->orderBy('sort')
+            ->withCount('people')
             ->orderBy('name')
             ->get();
 
-        return view('admin.business-units.index', ['businessUnits' => $businessUnits]);
+        return view('admin.business-units.partials.manage-body', ['businessUnits' => $businessUnits]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -35,7 +36,7 @@ class BusinessUnitController extends Controller
             'name' => $name,
         ]);
 
-        return redirect()->route('admin.geschaeftsbereiche')->with('status', 'business-unit-updated');
+        return redirect()->route('admin.geschaeftsbereiche');
     }
 
     public function update(Request $request, BusinessUnit $businessUnit): RedirectResponse
@@ -47,6 +48,23 @@ class BusinessUnitController extends Controller
 
         $businessUnit->update(['name' => $name, 'active' => $request->boolean('active')]);
 
-        return redirect()->route('admin.geschaeftsbereiche')->with('status', 'business-unit-updated');
+        return redirect()->route('admin.geschaeftsbereiche');
+    }
+
+    public function destroy(Request $request, BusinessUnit $businessUnit): RedirectResponse
+    {
+        abort_unless($businessUnit->tenant_id === $request->user()->tenant_id, 404);
+
+        if ($businessUnit->people()->exists()) {
+            $reassignTo = $request->filled('reassign_to')
+                ? BusinessUnit::query()->where('tenant_id', $businessUnit->tenant_id)->where('id', '!=', $businessUnit->id)->find($request->integer('reassign_to'))
+                : null;
+            abort_if($request->filled('reassign_to') && $reassignTo === null, 422);
+            $businessUnit->people()->update(['business_unit_id' => $reassignTo?->id]);
+        }
+
+        $businessUnit->delete();
+
+        return redirect()->route('admin.geschaeftsbereiche');
     }
 }

@@ -96,7 +96,6 @@
             <p class="mb-3 text-xs text-gray-500">{{ __('Die Reihenfolge kannst du direkt auf der Startseite per Ziehen ändern.') }}</p>
 
             <form method="POST" action="{{ route('dashboard.layout') }}" class="space-y-2 text-sm">
-                @csrf
                 @php
                     // Aktive Kacheln zuerst, in ihrer aktuellen (per Drag&Drop
                     // sortierten) Reihenfolge - sonst würde ein simples Ab-/Anhaken
@@ -118,6 +117,7 @@
                         {{ __('Speichern') }}
                     </button>
                 </div>
+                @csrf
             </form>
         </div>
     </x-modal>

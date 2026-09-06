@@ -55,7 +55,12 @@
                 </select>
 
                 @if ($sets->count() > 1)
-                    <form method="POST" action="{{ route('projekte.anzeigefilter.sets.destroy', $activeSet) }}" onsubmit="return confirm('{{ __('Dieses Filterset wirklich löschen?') }}')">
+                    <form
+                        method="POST"
+                        action="{{ route('projekte.anzeigefilter.sets.destroy', $activeSet) }}"
+                        x-data="{ async confirmAndSubmit(e) { if (await window.confirmDialog({ title: '{{ __('Filterset löschen') }}', message: '{{ __('Dieses Filterset wirklich löschen?') }}', confirmLabel: '{{ __('Löschen') }}' })) { e.target.submit(); } } }"
+                        @submit.prevent="confirmAndSubmit($event)"
+                    >
                         @csrf
                         @method('delete')
                         <button type="submit" class="rounded-md border border-gray-300 px-2 py-1.5 text-sm text-gray-500 hover:bg-gray-50" title="{{ __('Aktuelles Set löschen') }}">

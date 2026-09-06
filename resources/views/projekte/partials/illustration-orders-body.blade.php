@@ -22,7 +22,6 @@
         action="{{ route('projekte.illustration-orders.store', $project) }}"
         class="mt-2 space-y-2 rounded-md border border-gray-200 bg-gray-50 p-3"
     >
-        @csrf
         <div>
             <label class="text-xs text-gray-500">{{ __('Beschreibung') }}</label>
             <textarea name="description" rows="3" required class="mt-0.5 w-full rounded border-gray-300 text-sm"></textarea>
@@ -45,6 +44,7 @@
                 {{ __('Abbrechen') }}
             </button>
         </div>
+        @csrf
     </form>
 </div>
 @endcan

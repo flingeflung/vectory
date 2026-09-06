@@ -11,6 +11,7 @@ use App\Models\PermissionTemplate;
 use App\Models\Person;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -49,28 +50,33 @@ class PersonController extends Controller
 
         return view('admin.personen.index', [
             'people' => $people,
-            'companies' => Company::query()->where('tenant_id', $tenantId)->orderBy('sort')->orderBy('name')->get(),
-            'departments' => Department::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('sort')->orderBy('name')->get(),
-            'businessUnits' => BusinessUnit::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('sort')->orderBy('name')->get(),
+            'companies' => Company::query()->where('tenant_id', $tenantId)->orderBy('name')->get(),
+            'departments' => Department::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('name')->get(),
+            'businessUnits' => BusinessUnit::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('name')->get(),
             'permissionTemplates' => PermissionTemplate::query()->where('tenant_id', $tenantId)->orderBy('sort')->get(),
-            'legacyRoles' => LegacyRole::query()->where('tenant_id', $tenantId)->orderBy('sort')->orderBy('name')->get(),
+            'legacyRoles' => LegacyRole::query()->where('tenant_id', $tenantId)->orderBy('name')->get(),
             'filters' => $filters,
         ]);
     }
 
     /**
      * Neue Person sofort anlegen (leer) und direkt zum Bearbeiten öffnen -
-     * genau wie Viettos create_neueperson(). Läuft bewusst immer über eine
-     * echte Navigation (nicht per Overlay-Event), damit "Neue Person" auch
-     * ohne JS als normaler Link funktioniert.
+     * genau wie Viettos create_neueperson(). Bei Aufruf aus dem Overlay
+     * heraus (X-Overlay-Header) nur die neue ID als JSON zurückgeben, das
+     * Öffnen als Overlay übernimmt dann das Frontend (window.open-person) -
+     * ohne JS/Overlay-Kontext bleibt der klassische Redirect als Fallback.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): RedirectResponse|JsonResponse
     {
         $person = Person::query()->create([
             'tenant_id' => $request->user()->tenant_id,
             'first_name' => '',
             'last_name' => __('Neue Person'),
         ]);
+
+        if ($this->isOverlayRequest($request)) {
+            return response()->json(['id' => $person->id]);
+        }
 
         return redirect()->route('admin.personen.edit', $person);
     }
@@ -229,10 +235,10 @@ class PersonController extends Controller
 
         return [
             'person' => $person->fresh(['company', 'department', 'businessUnit', 'permissionTemplate', 'legacyRole', 'user']),
-            'companies' => Company::query()->where('tenant_id', $tenantId)->orderBy('sort')->orderBy('name')->get(),
-            'departments' => Department::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('sort')->orderBy('name')->get(),
-            'businessUnits' => BusinessUnit::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('sort')->orderBy('name')->get(),
-            'legacyRoles' => LegacyRole::query()->where('tenant_id', $tenantId)->orderBy('sort')->orderBy('name')->get(),
+            'companies' => Company::query()->where('tenant_id', $tenantId)->orderBy('name')->get(),
+            'departments' => Department::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('name')->get(),
+            'businessUnits' => BusinessUnit::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('name')->get(),
+            'legacyRoles' => LegacyRole::query()->where('tenant_id', $tenantId)->orderBy('name')->get(),
             'filters' => $filters,
             'previousPerson' => $this->adjacentPerson($filters, $person, 'previous', $tenantId),
             'nextPerson' => $this->adjacentPerson($filters, $person, 'next', $tenantId),
@@ -263,21 +269,20 @@ class PersonController extends Controller
         if (empty($filters['show_inactive'])) {
             $query->where('active', true);
         }
-        if (! empty($filters['company_id'])) {
-            $query->where('company_id', (int) $filters['company_id']);
-        }
-        if (! empty($filters['department_id'])) {
-            $query->where('department_id', (int) $filters['department_id']);
-        }
-        if (! empty($filters['business_unit_id'])) {
-            $query->where('business_unit_id', (int) $filters['business_unit_id']);
-        }
-        if (! empty($filters['permission_template_id'])) {
-            $query->where('permission_template_id', (int) $filters['permission_template_id']);
-        }
-        if (! empty($filters['legacy_role_id'])) {
-            $query->where('legacy_role_id', (int) $filters['legacy_role_id']);
-        }
+        // "none" als Filterwert = gezielt nach nicht zugewiesenen Personen
+        // suchen (Pulldown-Option "– nicht zugewiesen –"), sonst normaler
+        // ID-Abgleich.
+        $applyLookupFilter = function (Builder $query, string $column, ?string $value): void {
+            if (empty($value)) {
+                return;
+            }
+            $value === 'none' ? $query->whereNull($column) : $query->where($column, (int) $value);
+        };
+        $applyLookupFilter($query, 'company_id', $filters['company_id'] ?? null);
+        $applyLookupFilter($query, 'department_id', $filters['department_id'] ?? null);
+        $applyLookupFilter($query, 'business_unit_id', $filters['business_unit_id'] ?? null);
+        $applyLookupFilter($query, 'permission_template_id', $filters['permission_template_id'] ?? null);
+        $applyLookupFilter($query, 'legacy_role_id', $filters['legacy_role_id'] ?? null);
         if (! empty($filters['typ'])) {
             // "Typ" ist rein abgeleitet aus dem Vorhandensein eines
             // User-Accounts (Login-User vs. Kontaktperson) - kein eigenes

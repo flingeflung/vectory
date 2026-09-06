@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Admin\BusinessUnitController;
 use App\Http\Controllers\Admin\CompanyController;
+use App\Http\Controllers\Admin\DepartmentController;
+use App\Http\Controllers\Admin\LegacyRoleController;
 use App\Http\Controllers\Admin\PermissionController as AdminPermissionController;
 use App\Http\Controllers\Admin\PersonController as AdminPersonController;
 use App\Http\Controllers\DashboardController;
@@ -60,6 +62,17 @@ Route::middleware(['auth', 'verified', 'can:access-admin'])->prefix('admin')->na
     Route::get('/geschaeftsbereiche', [BusinessUnitController::class, 'index'])->name('geschaeftsbereiche');
     Route::post('/geschaeftsbereiche', [BusinessUnitController::class, 'store'])->name('geschaeftsbereiche.store');
     Route::post('/geschaeftsbereiche/{businessUnit}', [BusinessUnitController::class, 'update'])->name('geschaeftsbereiche.update');
+    Route::delete('/geschaeftsbereiche/{businessUnit}', [BusinessUnitController::class, 'destroy'])->name('geschaeftsbereiche.destroy');
+
+    Route::get('/abteilungen', [DepartmentController::class, 'index'])->name('departments');
+    Route::post('/abteilungen', [DepartmentController::class, 'store'])->name('departments.store');
+    Route::post('/abteilungen/{department}', [DepartmentController::class, 'update'])->name('departments.update');
+    Route::delete('/abteilungen/{department}', [DepartmentController::class, 'destroy'])->name('departments.destroy');
+
+    Route::get('/rollen', [LegacyRoleController::class, 'index'])->name('legacy-roles');
+    Route::post('/rollen', [LegacyRoleController::class, 'store'])->name('legacy-roles.store');
+    Route::post('/rollen/{legacyRole}', [LegacyRoleController::class, 'update'])->name('legacy-roles.update');
+    Route::delete('/rollen/{legacyRole}', [LegacyRoleController::class, 'destroy'])->name('legacy-roles.destroy');
 
     Route::get('/firmen', [CompanyController::class, 'index'])->name('companies');
     Route::post('/firmen', [CompanyController::class, 'store'])->name('companies.store');

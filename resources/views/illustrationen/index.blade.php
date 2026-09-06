@@ -100,7 +100,7 @@
                         name="q"
                         value="{{ $search }}"
                         placeholder="{{ __('Suche') }}"
-                        oninput="clearTimeout(window.illustrationenSearchDebounce); window.illustrationenSearchDebounce = setTimeout(() => this.form.submit(), 1500);"
+                        oninput="window.liveFilterSearch(this, 'illustrationen-list')"
                         class="w-32 rounded-md border-gray-300 py-1 text-sm"
                     >
                 </label>
@@ -109,12 +109,13 @@
                     <button type="submit" class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200">
                         {{ __('Anwenden') }}
                     </button>
-                    <a href="{{ route('illustrationen', ['illustrationsfilter_submitted' => 1]) }}" class="text-xs text-gray-500 hover:text-gray-700">
+                    <a href="{{ route('illustrationen', ['illustrationsfilter_submitted' => 1]) }}" class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200">
                         {{ __('Filter zurücksetzen') }}
                     </a>
                 </div>
             </form>
 
+            <div id="illustrationen-list" class="flex flex-1 min-h-0 flex-col">
             <div class="mb-3 shrink-0 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
                 {{ __(':count Auftrag/Aufträge gefunden', ['count' => $orders->count()]) }}
             </div>
@@ -188,6 +189,7 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
             </div>
         </div>
     </div>

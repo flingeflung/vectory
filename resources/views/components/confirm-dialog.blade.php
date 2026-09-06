@@ -1,11 +1,20 @@
 {{--
-    Globaler, gestylter Bestätigungsdialog als Ersatz für das native confirm().
-    Aufruf aus JS: const ok = await window.confirmDialog('Text …');
+    Globaler, gestylter Bestätigungs-/Hinweis-Dialog als Ersatz für die
+    nativen confirm()/alert() Browser-Dialoge - die will Ralf in Vectory
+    grundsätzlich nicht mehr sehen (siehe CLAUDE.md UI-Konventionen).
+    Aufruf aus JS:
+      const ok = await window.confirmDialog('Text …');
+      const ok = await window.confirmDialog({ title, message, confirmLabel, cancelLabel });
+      await window.notifyDialog('Text …'); // reiner Hinweis, nur ein OK-Button
 --}}
 <div
-    x-data="{ show: false, message: '', resolve: null }"
+    x-data="{ show: false, title: '', message: '', confirmLabel: '', cancelLabel: '', alertOnly: false, resolve: null }"
     x-on:open-confirm-dialog.window="
+        title = $event.detail.title;
         message = $event.detail.message;
+        confirmLabel = $event.detail.confirmLabel;
+        cancelLabel = $event.detail.cancelLabel;
+        alertOnly = $event.detail.alertOnly;
         resolve = $event.detail.resolve;
         // Erst im nächsten Tick öffnen: wird dieser Dialog per Escape ausgelöst
         // (z.B. aus dem Schließen-Handler eines anderen Modals), läuft das
@@ -17,7 +26,7 @@
     "
     x-show="show"
     x-cloak
-    x-on:keydown.escape.window="if (show) { show = false; resolve(false); }"
+    x-on:keydown.escape.window="if (show) { show = false; resolve(alertOnly ? true : false); }"
     class="fixed inset-0 z-[60] overflow-y-auto"
     style="display: none"
 >
@@ -50,7 +59,7 @@
                     </svg>
                 </div>
                 <div class="pt-1">
-                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Ungespeicherte Änderungen') }}</h3>
+                    <h3 class="text-sm font-semibold text-gray-900" x-text="title"></h3>
                     <p class="mt-1 text-sm text-gray-500" x-text="message"></p>
                 </div>
             </div>
@@ -58,25 +67,48 @@
             <div class="mt-5 flex justify-end gap-2">
                 <button
                     type="button"
+                    x-show="!alertOnly"
                     @click="show = false; resolve(false)"
                     class="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                    {{ __('Weiter bearbeiten') }}
-                </button>
+                    x-text="cancelLabel"
+                ></button>
                 <button
                     type="button"
                     @click="show = false; resolve(true)"
-                    class="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
-                >
-                    {{ __('Änderungen verwerfen') }}
-                </button>
+                    class="rounded-md px-3 py-1.5 text-sm font-medium text-white"
+                    :class="alertOnly ? 'bg-gray-800 hover:bg-gray-700' : 'bg-red-600 hover:bg-red-700'"
+                    x-text="confirmLabel"
+                ></button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    window.confirmDialog = (message) => new Promise((resolve) => {
-        window.dispatchEvent(new CustomEvent('open-confirm-dialog', { detail: { message, resolve } }));
+    window.confirmDialog = (options) => new Promise((resolve) => {
+        const opts = typeof options === 'string' ? { message: options } : (options || {});
+        window.dispatchEvent(new CustomEvent('open-confirm-dialog', {
+            detail: {
+                title: opts.title ?? {{ \Illuminate\Support\Js::from(__('Ungespeicherte Änderungen')) }},
+                message: opts.message ?? '',
+                confirmLabel: opts.confirmLabel ?? {{ \Illuminate\Support\Js::from(__('Änderungen verwerfen')) }},
+                cancelLabel: opts.cancelLabel ?? {{ \Illuminate\Support\Js::from(__('Weiter bearbeiten')) }},
+                alertOnly: false,
+                resolve,
+            },
+        }));
+    });
+
+    window.notifyDialog = (message, title) => new Promise((resolve) => {
+        window.dispatchEvent(new CustomEvent('open-confirm-dialog', {
+            detail: {
+                title: title ?? {{ \Illuminate\Support\Js::from(__('Hinweis')) }},
+                message,
+                confirmLabel: {{ \Illuminate\Support\Js::from(__('OK')) }},
+                cancelLabel: '',
+                alertOnly: true,
+                resolve,
+            },
+        }));
     });
 </script>

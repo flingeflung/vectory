@@ -134,9 +134,6 @@
         <div class="{{ $isOverlay ? 'min-h-0 flex-1 overflow-y-auto px-4 pb-3' : '' }}">
         <div x-show="activeTab === 'details'">
         <form id="project-detail-form" method="POST" action="{{ route('projekte.update', $project) }}" class="space-y-4 text-sm">
-            @csrf
-            @method('patch')
-
         <div>
         <div class="text-[11px] font-medium" style="color: #999">{{ __('Stammdaten') }}</div>
         <div class="border-t-2" style="border-color: #09f"></div>
@@ -464,6 +461,8 @@
         </div>
         </div>
         </div>
+        @csrf
+        @method('patch')
         </form>
         </div>
 

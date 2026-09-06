@@ -14,7 +14,7 @@
                         type="search"
                         name="search"
                         value="{{ request('search') }}"
-                        oninput="clearTimeout(window.personenSearchDebounce); window.personenSearchDebounce = setTimeout(() => this.form.submit(), 1500);"
+                        oninput="window.liveFilterSearch(this, 'personen-list')"
                         class="mt-0.5 rounded-md border-gray-300 text-sm"
                     >
                 </div>
@@ -22,6 +22,7 @@
                     <label class="block text-xs text-gray-500">{{ __('Firma') }}</label>
                     <select name="company_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-sm">
                         <option value="">{{ __('– Alle –') }}</option>
+                        <option value="none" @selected(request('company_id') === 'none')>{{ __('– nicht zugewiesen –') }}</option>
                         @foreach ($companies as $company)
                             <option value="{{ $company->id }}" @selected(request('company_id') == $company->id)>{{ $company->name }}</option>
                         @endforeach
@@ -31,6 +32,7 @@
                     <label class="block text-xs text-gray-500">{{ __('Abteilung') }}</label>
                     <select name="department_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-sm">
                         <option value="">{{ __('– Alle –') }}</option>
+                        <option value="none" @selected(request('department_id') === 'none')>{{ __('– nicht zugewiesen –') }}</option>
                         @foreach ($departments as $department)
                             <option value="{{ $department->id }}" @selected(request('department_id') == $department->id)>{{ $department->name }}</option>
                         @endforeach
@@ -40,6 +42,7 @@
                     <label class="block text-xs text-gray-500">{{ __('Geschäftsbereich') }}</label>
                     <select name="business_unit_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-sm">
                         <option value="">{{ __('– Alle –') }}</option>
+                        <option value="none" @selected(request('business_unit_id') === 'none')>{{ __('– nicht zugewiesen –') }}</option>
                         @foreach ($businessUnits as $unit)
                             <option value="{{ $unit->id }}" @selected(request('business_unit_id') == $unit->id)>{{ $unit->name }}</option>
                         @endforeach
@@ -49,6 +52,7 @@
                     <label class="block text-xs text-gray-500">{{ __('Rechte-Set') }}</label>
                     <select name="permission_template_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-sm">
                         <option value="">{{ __('– Alle –') }}</option>
+                        <option value="none" @selected(request('permission_template_id') === 'none')>{{ __('– nicht zugewiesen –') }}</option>
                         @foreach ($permissionTemplates as $template)
                             <option value="{{ $template->id }}" @selected(request('permission_template_id') == $template->id)>{{ $template->name }}</option>
                         @endforeach
@@ -58,6 +62,7 @@
                     <label class="block text-xs text-gray-500">{{ __('Rolle') }}</label>
                     <select name="legacy_role_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-sm">
                         <option value="">{{ __('– Alle –') }}</option>
+                        <option value="none" @selected(request('legacy_role_id') === 'none')>{{ __('– nicht zugewiesen –') }}</option>
                         @foreach ($legacyRoles as $role)
                             <option value="{{ $role->id }}" @selected(request('legacy_role_id') == $role->id)>{{ $role->name }}</option>
                         @endforeach
@@ -76,11 +81,25 @@
                     {{ __('Inaktive zeigen') }}
                 </label>
                 @if (request()->anyFilled(['search', 'company_id', 'department_id', 'business_unit_id', 'permission_template_id', 'legacy_role_id', 'typ']) || request()->boolean('show_inactive'))
-                    <a href="{{ route('admin.personen') }}" class="pb-1.5 text-xs text-gray-500 hover:text-gray-700">{{ __('Zurücksetzen') }}</a>
+                    <a href="{{ route('admin.personen') }}" class="mb-1.5 inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200">{{ __('Filter zurücksetzen') }}</a>
                 @endif
             </form>
 
-            <form method="POST" action="{{ route('admin.personen.store') }}">
+            <form
+                method="POST"
+                action="{{ route('admin.personen.store') }}"
+                x-data="{ async createAndOpen(e) {
+                    const response = await fetch(e.target.action, {
+                        method: 'POST',
+                        headers: { 'X-Overlay': '1', 'X-CSRF-TOKEN': {{ \Illuminate\Support\Js::from(csrf_token()) }} },
+                        body: new FormData(e.target),
+                    });
+                    const data = await response.json();
+                    window.dispatchEvent(new CustomEvent('open-person', { detail: { id: data.id, filters: {{ \Illuminate\Support\Js::from($filters) }} } }));
+                    window.refreshPersonenListInBackground?.();
+                } }"
+                @submit.prevent="createAndOpen($event)"
+            >
                 @csrf
                 <button type="submit" class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
                     + {{ __('Neue Person') }}
@@ -88,7 +107,10 @@
             </form>
         </div>
 
-        <div class="flex-1 min-h-0 overflow-y-auto">
+        <div id="personen-list" class="flex-1 min-h-0 overflow-y-auto">
+            <div class="px-3 py-1.5 text-xs text-gray-400">
+                {{ trans_choice(':count Person gefunden|:count Personen gefunden', $people->count(), ['count' => $people->count()]) }}
+            </div>
             <table class="min-w-full divide-y divide-gray-100 text-sm">
                 <thead class="sticky top-0 bg-white text-xs text-gray-500">
                     <tr>

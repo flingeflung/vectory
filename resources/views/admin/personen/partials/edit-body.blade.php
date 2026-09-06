@@ -96,7 +96,6 @@
 
         <div class="{{ $isOverlay ? '' : 'max-w-2xl' }} space-y-4">
             <form method="POST" action="{{ route('admin.personen.update', $person) }}" class="space-y-4 rounded-lg border border-gray-200 bg-white p-4">
-                @csrf
                 <div>
                     <label class="block text-xs text-gray-500">{{ __('ID') }}</label>
                     <input type="text" value="{{ $person->id }}" disabled class="mt-0.5 w-20 rounded-md border-gray-300 bg-gray-50 text-sm text-gray-500">
@@ -135,7 +134,14 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs text-gray-500">{{ __('Rolle') }}</label>
+                        <div class="flex items-center justify-between">
+                            <label class="block text-xs text-gray-500">{{ __('Rolle') }}</label>
+                            <button
+                                type="button"
+                                onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'legacy-role-manager' }))"
+                                class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                            >{{ __('verwalten') }}</button>
+                        </div>
                         <select name="legacy_role_id" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                             <option value="">{{ __('– nicht zugewiesen –') }}</option>
                             @foreach ($legacyRoles as $role)
@@ -144,7 +150,14 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs text-gray-500">{{ __('Abteilung') }}</label>
+                        <div class="flex items-center justify-between">
+                            <label class="block text-xs text-gray-500">{{ __('Abteilung') }}</label>
+                            <button
+                                type="button"
+                                onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'department-manager' }))"
+                                class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                            >{{ __('verwalten') }}</button>
+                        </div>
                         <select name="department_id" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                             <option value="">{{ __('– nicht zugewiesen –') }}</option>
                             @foreach ($departments as $department)
@@ -153,7 +166,14 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs text-gray-500">{{ __('Geschäftsbereich') }}</label>
+                        <div class="flex items-center justify-between">
+                            <label class="block text-xs text-gray-500">{{ __('Geschäftsbereich') }}</label>
+                            <button
+                                type="button"
+                                onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'business-unit-manager' }))"
+                                class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                            >{{ __('verwalten') }}</button>
+                        </div>
                         <select name="business_unit_id" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                             <option value="">{{ __('– nicht zugewiesen –') }}</option>
                             @foreach ($businessUnits as $unit)
@@ -181,6 +201,7 @@
                     {{ __('Aktiv') }}
                 </label>
 
+                @csrf
                 <button type="submit" class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
                     {{ __('Speichern') }}
                 </button>

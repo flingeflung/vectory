@@ -23,7 +23,6 @@
                 </div>
                 <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm">
                     <form x-show="newSet" x-cloak method="POST" action="{{ route('admin.rechte.sets.store') }}" class="mb-2 space-y-1.5 rounded border border-gray-200 p-2">
-                        @csrf
                         <select name="base_id" class="w-full rounded-md border-gray-300 text-xs" required>
                             <option value="">{{ __('Auf Basis von…') }}</option>
                             @foreach ($templates as $template)
@@ -31,6 +30,7 @@
                             @endforeach
                         </select>
                         <input type="text" name="name" placeholder="{{ __('Name des neuen Sets') }}" class="w-full rounded-md border-gray-300 text-xs" required>
+                        @csrf
                         <button type="submit" class="w-full rounded-md bg-gray-800 px-2 py-1 text-xs font-medium text-white hover:bg-gray-700">
                             {{ __('Anlegen') }}
                         </button>
@@ -226,10 +226,9 @@
                                 method="POST"
                                 action="{{ route('admin.rechte.sets.destroy', $selectedTemplate) }}"
                                 class="space-y-1.5"
-                                onsubmit="return confirm('{{ __('Set wirklich löschen?') }}')"
+                                x-data="{ async confirmAndSubmit(e) { if (await window.confirmDialog({ title: '{{ __('Set löschen') }}', message: '{{ __('Set wirklich löschen?') }}', confirmLabel: '{{ __('Löschen') }}' })) { e.target.submit(); } } }"
+                                @submit.prevent="confirmAndSubmit($event)"
                             >
-                                @csrf
-                                @method('DELETE')
                                 @if ($templatePeople->isNotEmpty())
                                     <div class="text-xs text-gray-400">
                                         {{ __('Zum Löschen eines Sets müssen die zugewiesenen Personen in ein anderes Set übernommen werden.') }}
@@ -243,6 +242,8 @@
                                         @endforeach
                                     </select>
                                 @endif
+                                @csrf
+                                @method('DELETE')
                                 <button type="submit" class="w-full rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50">
                                     {{ __('Set löschen') }}
                                 </button>
