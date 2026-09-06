@@ -47,7 +47,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::middleware(['auth', 'verified', 'can:access-admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::redirect('/', '/admin/rechte')->name('index');
+    Route::redirect('/', '/admin/personen')->name('index');
     Route::get('/rechte', [AdminPermissionController::class, 'index'])->name('rechte');
     Route::post('/rechte/sets', [AdminPermissionController::class, 'store'])->name('rechte.sets.store');
     Route::post('/rechte/sets/reorder', [AdminPermissionController::class, 'reorderSets'])->name('rechte.sets.reorder');

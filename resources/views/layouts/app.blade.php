@@ -58,12 +58,16 @@
         {{--
             Global Personen-Detail-Overlay: von der Personenverwaltung per
             Namensklick (x-person-link) öffenbar - gleiches Grundmuster wie
-            project-overlay oben, aber einfacher (kein Vor/Zurück-Blättern,
-            nicht draggable/resizable - dafür kein Bedarf hier).
+            project-overlay oben, inkl. draggable/resizable (generelle Regel
+            für Overlays dieser Art, nicht nur fürs Projekt-Overlay).
         --}}
-        <x-modal name="person-overlay" max-width="2xl" :dirty-check="'personOverlayIsDirty'">
-            <div class="flex max-h-[85vh] flex-col">
-                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+        <x-modal name="person-overlay" max-width="2xl" :dirty-check="'personOverlayIsDirty'" :draggable="true" :resizable="true">
+            <div class="flex h-full flex-col">
+                <div
+                    data-drag-handle
+                    title="{{ __('Ziehen zum Verschieben') }}"
+                    class="flex shrink-0 cursor-move select-none items-center justify-between border-b border-gray-200 px-4 py-3"
+                >
                     <h3 id="person-overlay-title" class="text-sm font-semibold text-gray-900">{{ __('Person') }}</h3>
                     <button
                         type="button"

@@ -72,17 +72,16 @@
                     <div class="mb-2 text-xs font-medium text-gray-500">{{ __('Auftraggeber') }}</div>
                     <div class="max-h-56 space-y-1 overflow-y-auto">
                         <label class="flex items-center gap-1.5 text-gray-700">
-                            <input type="radio" name="initiator" value="" class="border-gray-300" @checked(! $initiatorId)>
+                            <input type="radio" name="initiator" value="" class="border-gray-300" onchange="this.form.submit()" @checked(! $initiatorId)>
                             {{ __('– Alle –') }}
                         </label>
                         @foreach ($initiatorOptions as $person)
                             <label class="flex items-center gap-1.5 @class(['text-gray-400' => ! $person->active])">
-                                <input type="radio" name="initiator" value="{{ $person->id }}" class="border-gray-300" @checked($initiatorId == $person->id)>
+                                <input type="radio" name="initiator" value="{{ $person->id }}" class="border-gray-300" onchange="this.form.submit()" @checked($initiatorId == $person->id)>
                                 {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }}
                             </label>
                         @endforeach
                     </div>
-                    <button type="submit" class="mt-2 w-full rounded bg-gray-800 px-2 py-1 text-xs font-medium text-white hover:bg-gray-700">{{ __('Anwenden') }}</button>
                 </x-filter-dropdown>
 
                 <label class="flex items-center gap-1.5">
@@ -96,7 +95,14 @@
 
                 <label class="flex items-center gap-1.5">
                     <span class="text-gray-500">{{ __('PN/Illu-Nr.') }}:</span>
-                    <input type="search" name="q" value="{{ $search }}" placeholder="{{ __('Suche') }}" class="w-32 rounded-md border-gray-300 py-1 text-sm">
+                    <input
+                        type="search"
+                        name="q"
+                        value="{{ $search }}"
+                        placeholder="{{ __('Suche') }}"
+                        oninput="clearTimeout(window.illustrationenSearchDebounce); window.illustrationenSearchDebounce = setTimeout(() => this.form.submit(), 1500);"
+                        class="w-32 rounded-md border-gray-300 py-1 text-sm"
+                    >
                 </label>
 
                 <div class="flex items-center gap-2">

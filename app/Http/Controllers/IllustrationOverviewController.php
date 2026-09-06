@@ -103,7 +103,7 @@ class IllustrationOverviewController extends Controller
             $query->where(function (Builder $query) use ($search) {
                 $query->whereHas('project', fn (Builder $q) => $q->where('source_pn', 'like', "%{$search}%"));
                 if (ctype_digit($search)) {
-                    $query->orWhere('id', (int) $search);
+                    $query->orWhere('graphic_orders.id', (int) $search);
                 }
             });
         }
