@@ -104,6 +104,18 @@
 
                 body.innerHTML = await fetch(url).then((r) => r.text());
 
+                // Alpine initialisiert neu eingefügtes HTML (x-data, @input
+                // ...) über einen MutationObserver, NICHT synchron sofort
+                // nach dem innerHTML-Zuweisen - ein hier sofort ausgelöstes
+                // input-Event würde ins Leere laufen, weil der @input-
+                // Listener der Zeile noch gar nicht existiert. Ein Makrotask
+                // warten reicht (MutationObserver-Callbacks sind Microtasks,
+                // laufen also garantiert vorher durch) - Alpine.nextTick()
+                // NICHT verwenden, das hängt sich auf, wenn es außerhalb
+                // eines laufenden Alpine-Zyklus aufgerufen wird (kein
+                // ausstehendes Update zum "Abwarten").
+                await new Promise((resolve) => setTimeout(resolve, 0));
+
                 body.querySelectorAll('form[data-row-form]').forEach((form) => {
                     const values = snapshot.get(form.action);
                     if (!values) {
@@ -113,14 +125,49 @@
                         if (!(input.name in values)) {
                             return;
                         }
+                        const fresh = input.type === 'checkbox' ? input.checked : input.value;
+                        const restored = values[input.name];
                         if (input.type === 'checkbox') {
-                            input.checked = values[input.name];
+                            input.checked = restored;
                         } else {
-                            input.value = values[input.name];
+                            input.value = restored;
+                        }
+                        // Nur ein synthetisches input-Event feuern, wenn der
+                        // wiederhergestellte Wert wirklich vom frisch
+                        // geladenen abweicht (= eine ECHTE ungespeicherte
+                        // Änderung in dieser Zeile) - das lässt Alpines
+                        // dirty-Tracking (siehe manage-body-Partials) den
+                        // Speichern-Button für genau diese Zeile wieder
+                        // einblenden, nicht aber für die gerade gespeicherte.
+                        if (fresh !== restored) {
+                            input.dispatchEvent(new Event('input', { bubbles: true }));
                         }
                     });
                 });
             };
+        </script>
+
+        {{--
+            Kurzer grüner "Gespeichert."-Hinweis (2 Sek., dann ausgeblendet)
+            für die Firma/Abteilung/Geschäftsbereich/Rolle-Verwalten-Overlays -
+            Ralfs Anforderung: nach dem Speichern einer Zeile tut sich sonst
+            optisch nichts (Formular zeigt ja ohnehin schon die gerade
+            eingegebenen Werte), das wirkte wie "passiert nichts".
+        --}}
+        <script>
+            window.showManageSavedToast = (function () {
+                const timers = new Map();
+                return function (toastId) {
+                    const toast = document.getElementById(toastId);
+                    if (!toast) {
+                        return;
+                    }
+                    const data = Alpine.$data(toast);
+                    data.show = true;
+                    clearTimeout(timers.get(toastId));
+                    timers.set(toastId, setTimeout(() => { data.show = false; }, 2000));
+                };
+            })();
         </script>
 
         {{--
@@ -336,6 +383,9 @@
                         </svg>
                     </button>
                 </div>
+                <div id="company-manager-toast" x-data="{ show: false }" x-show="show" x-cloak x-transition.opacity class="mx-4 mt-2 shrink-0 rounded bg-green-50 px-3 py-1.5 text-xs text-green-700">
+                    {{ __('Gespeichert.') }}
+                </div>
                 <div id="company-manager-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
                     {{ __('Lädt…') }}
                 </div>
@@ -394,6 +444,7 @@
                         return;
                     }
                     event.preventDefault();
+                    const isRowForm = event.target.hasAttribute('data-row-form');
 
                     const formData = new FormData(event.target);
                     await fetch(event.target.action, {
@@ -402,6 +453,9 @@
                         body: formData,
                     });
                     await load();
+                    if (isRowForm) {
+                        window.showManageSavedToast('company-manager-toast');
+                    }
                 });
             })();
         </script>
@@ -425,6 +479,9 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
+                </div>
+                <div id="department-manager-toast" x-data="{ show: false }" x-show="show" x-cloak x-transition.opacity class="mx-4 mt-2 shrink-0 rounded bg-green-50 px-3 py-1.5 text-xs text-green-700">
+                    {{ __('Gespeichert.') }}
                 </div>
                 <div id="department-manager-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
                     {{ __('Lädt…') }}
@@ -478,6 +535,7 @@
                         return;
                     }
                     event.preventDefault();
+                    const isRowForm = event.target.hasAttribute('data-row-form');
 
                     const formData = new FormData(event.target);
                     await fetch(event.target.action, {
@@ -486,6 +544,9 @@
                         body: formData,
                     });
                     await load();
+                    if (isRowForm) {
+                        window.showManageSavedToast('department-manager-toast');
+                    }
                 });
             })();
         </script>
@@ -508,6 +569,9 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
+                </div>
+                <div id="business-unit-manager-toast" x-data="{ show: false }" x-show="show" x-cloak x-transition.opacity class="mx-4 mt-2 shrink-0 rounded bg-green-50 px-3 py-1.5 text-xs text-green-700">
+                    {{ __('Gespeichert.') }}
                 </div>
                 <div id="business-unit-manager-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
                     {{ __('Lädt…') }}
@@ -561,6 +625,7 @@
                         return;
                     }
                     event.preventDefault();
+                    const isRowForm = event.target.hasAttribute('data-row-form');
 
                     const formData = new FormData(event.target);
                     await fetch(event.target.action, {
@@ -569,6 +634,9 @@
                         body: formData,
                     });
                     await load();
+                    if (isRowForm) {
+                        window.showManageSavedToast('business-unit-manager-toast');
+                    }
                 });
             })();
         </script>
@@ -591,6 +659,9 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
+                </div>
+                <div id="legacy-role-manager-toast" x-data="{ show: false }" x-show="show" x-cloak x-transition.opacity class="mx-4 mt-2 shrink-0 rounded bg-green-50 px-3 py-1.5 text-xs text-green-700">
+                    {{ __('Gespeichert.') }}
                 </div>
                 <div id="legacy-role-manager-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
                     {{ __('Lädt…') }}
@@ -644,6 +715,7 @@
                         return;
                     }
                     event.preventDefault();
+                    const isRowForm = event.target.hasAttribute('data-row-form');
 
                     const formData = new FormData(event.target);
                     await fetch(event.target.action, {
@@ -652,6 +724,9 @@
                         body: formData,
                     });
                     await load();
+                    if (isRowForm) {
+                        window.showManageSavedToast('legacy-role-manager-toast');
+                    }
                 });
             })();
         </script>

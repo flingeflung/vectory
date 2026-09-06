@@ -17,7 +17,7 @@
     <div class="max-h-80 space-y-2 overflow-y-auto">
         @forelse ($departments as $department)
             <div class="rounded-md border border-gray-200 p-2">
-                <form data-row-form method="POST" action="{{ route('admin.departments.update', $department) }}" class="flex items-end gap-2">
+                <form data-row-form x-data="{ dirty: false }" @input="dirty = true" method="POST" action="{{ route('admin.departments.update', $department) }}" class="flex items-end gap-2">
                     @csrf
                     <div class="flex-1">
                         <label class="block text-xs text-gray-500">{{ __('Name') }}</label>
@@ -31,7 +31,7 @@
                         <input type="checkbox" name="active" value="1" @checked($department->active) class="rounded border-gray-300">
                         {{ __('Aktiv') }}
                     </label>
-                    <button type="submit" class="rounded-md border border-gray-300 px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                    <button type="submit" x-show="dirty" x-cloak class="rounded-md border border-gray-300 px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
                         {{ __('Speichern') }}
                     </button>
                 </form>
