@@ -10,11 +10,17 @@
             <form method="GET" action="{{ route('admin.personen') }}" class="flex flex-1 flex-wrap items-end gap-3">
                 <div>
                     <label class="block text-xs text-gray-500">{{ __('Nachname') }}</label>
-                    <input type="search" name="search" value="{{ request('search') }}" class="mt-0.5 rounded-md border-gray-300 text-sm">
+                    <input
+                        type="search"
+                        name="search"
+                        value="{{ request('search') }}"
+                        oninput="clearTimeout(window.personenSearchDebounce); window.personenSearchDebounce = setTimeout(() => this.form.submit(), 1500);"
+                        class="mt-0.5 rounded-md border-gray-300 text-sm"
+                    >
                 </div>
                 <div>
                     <label class="block text-xs text-gray-500">{{ __('Firma') }}</label>
-                    <select name="company_id" class="mt-0.5 rounded-md border-gray-300 text-sm">
+                    <select name="company_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-sm">
                         <option value="">{{ __('– Alle –') }}</option>
                         @foreach ($companies as $company)
                             <option value="{{ $company->id }}" @selected(request('company_id') == $company->id)>{{ $company->name }}</option>
@@ -23,7 +29,7 @@
                 </div>
                 <div>
                     <label class="block text-xs text-gray-500">{{ __('Abteilung') }}</label>
-                    <select name="department_id" class="mt-0.5 rounded-md border-gray-300 text-sm">
+                    <select name="department_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-sm">
                         <option value="">{{ __('– Alle –') }}</option>
                         @foreach ($departments as $department)
                             <option value="{{ $department->id }}" @selected(request('department_id') == $department->id)>{{ $department->name }}</option>
@@ -32,7 +38,7 @@
                 </div>
                 <div>
                     <label class="block text-xs text-gray-500">{{ __('Geschäftsbereich') }}</label>
-                    <select name="business_unit_id" class="mt-0.5 rounded-md border-gray-300 text-sm">
+                    <select name="business_unit_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-sm">
                         <option value="">{{ __('– Alle –') }}</option>
                         @foreach ($businessUnits as $unit)
                             <option value="{{ $unit->id }}" @selected(request('business_unit_id') == $unit->id)>{{ $unit->name }}</option>
@@ -41,7 +47,7 @@
                 </div>
                 <div>
                     <label class="block text-xs text-gray-500">{{ __('Rechte-Set') }}</label>
-                    <select name="permission_template_id" class="mt-0.5 rounded-md border-gray-300 text-sm">
+                    <select name="permission_template_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-sm">
                         <option value="">{{ __('– Alle –') }}</option>
                         @foreach ($permissionTemplates as $template)
                             <option value="{{ $template->id }}" @selected(request('permission_template_id') == $template->id)>{{ $template->name }}</option>
@@ -50,7 +56,7 @@
                 </div>
                 <div>
                     <label class="block text-xs text-gray-500">{{ __('Rolle') }}</label>
-                    <select name="legacy_role_id" class="mt-0.5 rounded-md border-gray-300 text-sm">
+                    <select name="legacy_role_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-sm">
                         <option value="">{{ __('– Alle –') }}</option>
                         @foreach ($legacyRoles as $role)
                             <option value="{{ $role->id }}" @selected(request('legacy_role_id') == $role->id)>{{ $role->name }}</option>
@@ -59,19 +65,16 @@
                 </div>
                 <div>
                     <label class="block text-xs text-gray-500">{{ __('Typ') }}</label>
-                    <select name="typ" class="mt-0.5 rounded-md border-gray-300 text-sm">
+                    <select name="typ" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-sm">
                         <option value="">{{ __('– Alle –') }}</option>
                         <option value="login" @selected(request('typ') === 'login')>{{ __('Login-User') }}</option>
                         <option value="kontakt" @selected(request('typ') === 'kontakt')>{{ __('Kontaktperson') }}</option>
                     </select>
                 </div>
                 <label class="flex items-center gap-1.5 pb-1.5 text-xs text-gray-600">
-                    <input type="checkbox" name="show_inactive" value="1" @checked(request()->boolean('show_inactive')) class="rounded border-gray-300">
+                    <input type="checkbox" name="show_inactive" value="1" @checked(request()->boolean('show_inactive')) onchange="this.form.submit()" class="rounded border-gray-300">
                     {{ __('Inaktive zeigen') }}
                 </label>
-                <button type="submit" class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
-                    {{ __('Filtern') }}
-                </button>
                 @if (request()->anyFilled(['search', 'company_id', 'department_id', 'business_unit_id', 'permission_template_id', 'legacy_role_id', 'typ']) || request()->boolean('show_inactive'))
                     <a href="{{ route('admin.personen') }}" class="pb-1.5 text-xs text-gray-500 hover:text-gray-700">{{ __('Zurücksetzen') }}</a>
                 @endif
