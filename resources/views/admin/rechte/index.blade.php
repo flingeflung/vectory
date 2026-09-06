@@ -15,13 +15,15 @@
                 newSet: false,
                 dirty: false,
                 sortMode: 'alpha',
+                departmentFilter: '',
                 allDepartments: @js($departments),
-                peopleData: @js($people->map(fn ($person) => ['id' => $person->id, 'name' => mb_strtolower($person->fullName()), 'active' => $person->active])),
+                peopleData: @js($people->map(fn ($person) => ['id' => $person->id, 'name' => mb_strtolower($person->fullName()), 'active' => $person->active, 'department' => $person->department?->name ?? ''])),
                 get visibleCount() {
-                    return this.peopleData.filter(p => (this.showInactive || p.active || p.id === {{ $selectedPerson?->id ?? 'null' }}) && (!this.search || p.name.includes(this.search.toLowerCase()))).length;
+                    return this.peopleData.filter(p => (this.showInactive || p.active || p.id === {{ $selectedPerson?->id ?? 'null' }}) && (!this.search || p.name.includes(this.search.toLowerCase())) && (!this.departmentFilter || p.department === this.departmentFilter)).length;
                 },
                 applyGrouping() {
-                    window.applyPersonGrouping(this.$refs.personList, this.sortMode, this.allDepartments);
+                    const mode = this.departmentFilter ? 'alpha' : this.sortMode;
+                    window.applyPersonGrouping(this.$refs.personList, mode, this.allDepartments);
                 },
             }"
             class="flex w-72 shrink-0 flex-col gap-3"
@@ -109,6 +111,16 @@
                         placeholder="{{ __('Schnellsuche (Nachname)') }}"
                         class="w-full rounded-md border-gray-300 py-1 text-xs"
                     >
+                    <select
+                        x-model="departmentFilter"
+                        @change="$nextTick(() => applyGrouping())"
+                        class="w-full rounded-md border-gray-300 py-1 text-xs"
+                    >
+                        <option value="">{{ __('– Abteilung filtern –') }}</option>
+                        <template x-for="dept in allDepartments" :key="dept">
+                            <option :value="dept" x-text="dept"></option>
+                        </template>
+                    </select>
                     <label class="flex items-center gap-1.5 text-xs text-gray-600">
                         <input type="checkbox" x-model="showInactive" @change="$nextTick(() => applyGrouping())" class="rounded border-gray-300">
                         {{ __('Inaktive Personen zeigen') }}
@@ -150,7 +162,7 @@
                                 data-person-row
                                 data-department-name="{{ $person->department?->name }}"
                                 data-sort-index="{{ $loop->index }}"
-                                x-show="(showInactive || {{ $person->active || $selectedPerson?->id === $person->id ? 'true' : 'false' }}) && (!search || {{ \Illuminate\Support\Js::from(mb_strtolower($person->fullName())) }}.includes(search.toLowerCase()))"
+                                x-show="(showInactive || {{ $person->active || $selectedPerson?->id === $person->id ? 'true' : 'false' }}) && (!search || {{ \Illuminate\Support\Js::from(mb_strtolower($person->fullName())) }}.includes(search.toLowerCase())) && (!departmentFilter || {{ \Illuminate\Support\Js::from($person->department?->name ?? '') }} === departmentFilter)"
                                 class="flex items-center gap-1.5 rounded px-2 py-1 {{ $isAssigned ? 'opacity-50' : 'hover:bg-gray-50' }}"
                             >
                                 <input
@@ -178,7 +190,7 @@
                             data-person-row
                             data-department-name="{{ $person->department?->name }}"
                             data-sort-index="{{ $loop->index }}"
-                            x-show="(showInactive || {{ $person->active || $selectedPerson?->id === $person->id ? 'true' : 'false' }}) && (!search || {{ \Illuminate\Support\Js::from(mb_strtolower($person->fullName())) }}.includes(search.toLowerCase()))"
+                            x-show="(showInactive || {{ $person->active || $selectedPerson?->id === $person->id ? 'true' : 'false' }}) && (!search || {{ \Illuminate\Support\Js::from(mb_strtolower($person->fullName())) }}.includes(search.toLowerCase())) && (!departmentFilter || {{ \Illuminate\Support\Js::from($person->department?->name ?? '') }} === departmentFilter)"
                             class="block rounded px-2 py-1 {{ $selectedPerson?->id === $person->id ? 'bg-indigo-50 font-medium text-indigo-700' : ($person->active ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-400 hover:bg-gray-50') }}"
                         >
                             {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }} <x-department-tag :person="$person" />
