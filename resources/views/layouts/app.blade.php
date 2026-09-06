@@ -97,14 +97,11 @@
                 // (siehe appendNested beim Projekt-Overlay - hier reicht ein
                 // flaches Objekt, da Personen-Filter keine verschachtelten
                 // Werte wie Datumsbereiche haben).
-                window.addEventListener('open-person', async (event) => {
-                    const { id, filters } = event.detail;
-                    if (!id) {
-                        return;
-                    }
+                let currentPersonId = null;
+                let currentPersonFilters = {};
 
+                const loadPerson = async (id, filters) => {
                     showLoading();
-                    window.dispatchEvent(new CustomEvent('open-modal', { detail: 'person-overlay' }));
 
                     const params = new URLSearchParams();
                     Object.entries(filters || {}).forEach(([key, value]) => {
@@ -121,7 +118,30 @@
                     hideLoading();
                     savedSnapshot = null;
                     snapshot();
+                };
+
+                window.addEventListener('open-person', async (event) => {
+                    const { id, filters } = event.detail;
+                    if (!id) {
+                        return;
+                    }
+
+                    currentPersonId = id;
+                    currentPersonFilters = filters || {};
+                    window.dispatchEvent(new CustomEvent('open-modal', { detail: 'person-overlay' }));
+                    await loadPerson(currentPersonId, currentPersonFilters);
                 });
+
+                // Von der Firmen-Verwaltung (o.ä. Unterbereiche) aufgerufen,
+                // wenn die dort verwaltete Liste sich geändert haben könnte -
+                // lädt das gerade offene Personen-Overlay neu, damit z.B. ein
+                // umbenannter Firmenname sofort im Firma-Dropdown auftaucht.
+                window.reopenCurrentPersonOverlay = async function reopenCurrentPersonOverlay() {
+                    if (currentPersonId === null) {
+                        return;
+                    }
+                    await loadPerson(currentPersonId, currentPersonFilters);
+                };
 
                 // Event-Delegation: die Formulare werden erst nach dem Öffnen per fetch eingefügt.
                 document.addEventListener('submit', async (event) => {
@@ -180,6 +200,84 @@
                     }
                     short.value = f.charAt(0).toUpperCase() + l.charAt(0).toUpperCase() + (l.charAt(1) || '').toLowerCase();
                 };
+            })();
+        </script>
+
+        {{--
+            Firmen-Verwaltung: kleines, nicht verschiebbares Overlay (wie
+            Illustrationsaufträge) - aus dem Personen-Overlay heraus per Link
+            neben "Firma" öffenbar. Legt sich als zweite Ebene VOR ein
+            offenes Personen-Overlay (beide <x-modal>-Instanzen können
+            gleichzeitig offen sein, das Personen-Overlay bleibt dahinter
+            erhalten, graue Wand dazwischen). Erster von perspektivisch
+            mehreren gleichartigen "klitzekleine Unterbereiche"-Overlays
+            (als Nächstes: Abteilung, Geschäftsbereich) - bewusst noch nicht
+            generisch abstrahiert, bis das Muster ein zweites Mal steht.
+        --}}
+        <x-modal name="company-manager" max-width="lg">
+            <div class="flex max-h-[80vh] flex-col">
+                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Firmen verwalten') }}</h3>
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'company-manager' }))"
+                        class="text-gray-400 hover:text-gray-600"
+                        aria-label="{{ __('Schließen') }}"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="company-manager-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
+                    {{ __('Lädt…') }}
+                </div>
+            </div>
+        </x-modal>
+
+        <script>
+            (function () {
+                const body = () => document.getElementById('company-manager-body');
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                let wasOpened = false;
+
+                const load = async () => {
+                    body().innerHTML = await fetch({{ \Illuminate\Support\Js::from(route('admin.companies')) }}).then((r) => r.text());
+                };
+
+                window.addEventListener('open-modal', (event) => {
+                    if (event.detail !== 'company-manager') {
+                        return;
+                    }
+                    wasOpened = true;
+                    load();
+                });
+
+                window.addEventListener('close-modal', (event) => {
+                    if (event.detail !== 'company-manager' || !wasOpened) {
+                        return;
+                    }
+                    wasOpened = false;
+                    // Zurück im Personen-Overlay den Firma-Vorschlag aktuell
+                    // halten - einfach neu laden statt gezielt nur die
+                    // <option>-Liste auszutauschen.
+                    window.reopenCurrentPersonOverlay?.();
+                });
+
+                document.addEventListener('submit', async (event) => {
+                    if (!body() || !body().contains(event.target)) {
+                        return;
+                    }
+                    event.preventDefault();
+
+                    const formData = new FormData(event.target);
+                    await fetch(event.target.action, {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': csrfToken },
+                        body: formData,
+                    });
+                    await load();
+                });
             })();
         </script>
 

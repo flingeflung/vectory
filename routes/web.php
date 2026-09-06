@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\BusinessUnitController;
+use App\Http\Controllers\Admin\CompanyController;
 use App\Http\Controllers\Admin\PermissionController as AdminPermissionController;
 use App\Http\Controllers\Admin\PersonController as AdminPersonController;
 use App\Http\Controllers\DashboardController;
@@ -59,6 +60,11 @@ Route::middleware(['auth', 'verified', 'can:access-admin'])->prefix('admin')->na
     Route::get('/geschaeftsbereiche', [BusinessUnitController::class, 'index'])->name('geschaeftsbereiche');
     Route::post('/geschaeftsbereiche', [BusinessUnitController::class, 'store'])->name('geschaeftsbereiche.store');
     Route::post('/geschaeftsbereiche/{businessUnit}', [BusinessUnitController::class, 'update'])->name('geschaeftsbereiche.update');
+
+    Route::get('/firmen', [CompanyController::class, 'index'])->name('companies');
+    Route::post('/firmen', [CompanyController::class, 'store'])->name('companies.store');
+    Route::post('/firmen/{company}', [CompanyController::class, 'update'])->name('companies.update');
+    Route::delete('/firmen/{company}', [CompanyController::class, 'destroy'])->name('companies.destroy');
 
     Route::get('/personen', [AdminPersonController::class, 'index'])->name('personen');
     Route::post('/personen', [AdminPersonController::class, 'store'])->name('personen.store');

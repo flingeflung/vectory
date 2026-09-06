@@ -46,7 +46,7 @@
                 <button
                     type="button"
                     onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'person-overlay' }))"
-                    class="ml-1 text-gray-400 hover:text-gray-600"
+                    class="ml-8 text-gray-400 hover:text-gray-600"
                     aria-label="{{ __('Schließen') }}"
                 >
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -119,7 +119,14 @@
                         <input type="email" name="email" value="{{ old('email', $person->email) }}" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                     </div>
                     <div>
-                        <label class="block text-xs text-gray-500">{{ __('Firma') }}</label>
+                        <div class="flex items-center justify-between">
+                            <label class="block text-xs text-gray-500">{{ __('Firma') }}</label>
+                            <button
+                                type="button"
+                                onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'company-manager' }))"
+                                class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                            >{{ __('verwalten') }}</button>
+                        </div>
                         <select name="company_id" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                             <option value="">{{ __('– nicht zugewiesen –') }}</option>
                             @foreach ($companies as $company)
@@ -183,8 +190,11 @@
                 <div class="mb-2 text-xs font-semibold text-gray-500">{{ __('Rechte-Set') }}</div>
                 <div class="text-sm text-gray-700">
                     {{ $person->permissionTemplate?->name ?? __('– nicht zugewiesen –') }}
-                    <a href="{{ route('admin.rechte', ['person' => $person->id]) }}" class="ml-2 text-xs text-indigo-600 hover:text-indigo-800">
-                        {{ __('in der Rechte-Verwaltung ändern') }}
+                    <a
+                        href="{{ route('admin.rechte', ['person' => $person->id]) }}"
+                        class="ml-2 inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                    >
+                        {{ __('ändern') }}
                     </a>
                 </div>
             </div>
