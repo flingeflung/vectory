@@ -410,8 +410,24 @@
                     event.preventDefault();
                     showLoading();
 
+                    // Aktuelle Filter als Query-String an die Speichern-URL
+                    // anhängen - sonst sieht der Server bei diesem POST keine
+                    // Filter (die stecken sonst nur in der GET-URL, mit der
+                    // die Person ursprünglich geöffnet wurde), verliert damit
+                    // den gefilterten Blätter-Kontext, und < > würde nach dem
+                    // Speichern zur nächsten Person UNGEACHTET des Filters
+                    // springen (Ralfs konkreter Bug-Report: TR gefiltert,
+                    // gespeichert, geblättert - Filter weg).
+                    const params = new URLSearchParams();
+                    Object.entries(currentPersonFilters || {}).forEach(([key, value]) => {
+                        if (value !== null && value !== undefined && value !== '') {
+                            params.append(key, value);
+                        }
+                    });
+                    const query = params.toString() ? '?' + params.toString() : '';
+
                     const formData = new FormData(event.target);
-                    const response = await fetch(event.target.action, {
+                    const response = await fetch(event.target.action + query, {
                         method: 'POST',
                         headers: { 'X-Overlay': '1', 'X-CSRF-TOKEN': csrfToken },
                         body: formData,
