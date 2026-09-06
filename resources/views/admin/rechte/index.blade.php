@@ -105,11 +105,12 @@
                     <input
                         type="search"
                         x-model="search"
+                        @input="$nextTick(() => applyGrouping())"
                         placeholder="{{ __('Schnellsuche (Nachname)') }}"
                         class="w-full rounded-md border-gray-300 py-1 text-xs"
                     >
                     <label class="flex items-center gap-1.5 text-xs text-gray-600">
-                        <input type="checkbox" x-model="showInactive" class="rounded border-gray-300">
+                        <input type="checkbox" x-model="showInactive" @change="$nextTick(() => applyGrouping())" class="rounded border-gray-300">
                         {{ __('Inaktive Personen zeigen') }}
                     </label>
                     <div class="text-xs text-gray-400" x-text="visibleCount + ' ' + (visibleCount === 1 ? {{ \Illuminate\Support\Js::from(__('Person gefunden')) }} : {{ \Illuminate\Support\Js::from(__('Personen gefunden')) }})"></div>

@@ -56,10 +56,18 @@
             data-person-row, data-department-name, data-sort-index (Server-
             Reihenfolge, für "zurück zu alphabetisch"). Optional eine Liste
             ALLER Abteilungsnamen (dritter Parameter) - auch Abteilungen
-            ohne aktuell zugeordnete Person bekommen dann eine Überschrift
-            + "keine Person zugeordnet"-Hinweis, statt einfach zu fehlen
+            ohne aktuell SICHTBARE Person bekommen dann eine Überschrift +
+            "keine Person zugeordnet"-Hinweis, statt einfach zu fehlen
             (Ralfs Anforderung: auf einen Blick sehen, welche Abteilung
-            noch niemanden hat).
+            noch niemanden hat). "Sichtbar" bezieht sich auf den aktuellen
+            Filter (Suche/"Inaktive zeigen") - eine Abteilung mit nur einer
+            gerade ausgeblendeten inaktiven Person zeigt den Hinweis also
+            auch, bis die Person sichtbar wird (konkreter Ralf-Bugreport:
+            Abteilung mit einer inaktiven Person sah "leer" aus, ohne dass
+            das gesagt wurde). Deshalb muss diese Funktion nach JEDER
+            Filter-Änderung erneut aufgerufen werden, nicht nur beim
+            A-Z/Abteilung-Umschalten - siehe @input/@change an Suchfeld und
+            "Inaktive zeigen"-Checkbox in den Personen-Boxen.
         --}}
         <script>
             window.applyPersonGrouping = function (root, mode, allDepartments = []) {
@@ -74,6 +82,7 @@
                 }
                 const parent = items[0].parentElement;
                 const byOriginalOrder = (a, b) => Number(a.dataset.sortIndex) - Number(b.dataset.sortIndex);
+                const isVisible = (item) => getComputedStyle(item).display !== 'none';
 
                 if (mode !== 'department') {
                     items.sort(byOriginalOrder).forEach((item) => parent.appendChild(item));
@@ -88,8 +97,8 @@
                     }
                     groups.get(dept).push(item);
                 });
-                // Auch Abteilungen ohne aktuell zugeordnete (bzw. gerade
-                // sichtbare) Person als leere Gruppe mit aufnehmen.
+                // Auch Abteilungen ohne aktuell zugeordnete Person als leere
+                // Gruppe mit aufnehmen.
                 allDepartments.forEach((dept) => {
                     if (!groups.has(dept)) {
                         groups.set(dept, []);
@@ -108,16 +117,16 @@
                     header.textContent = '– ' + (dept || {{ \Illuminate\Support\Js::from(__('Ohne Abteilung')) }}) + ' –';
                     parent.appendChild(header);
 
-                    const groupItems = groups.get(dept);
-                    if (groupItems.length === 0) {
+                    const groupItems = groups.get(dept).sort(byOriginalOrder);
+                    groupItems.forEach((item) => parent.appendChild(item));
+
+                    if (!groupItems.some(isVisible)) {
                         const empty = document.createElement('div');
                         empty.setAttribute('data-group-empty', '');
                         empty.className = 'px-2 py-1 text-xs italic text-gray-300';
                         empty.textContent = {{ \Illuminate\Support\Js::from(__('– keine Person zugeordnet –')) }};
                         parent.appendChild(empty);
-                        return;
                     }
-                    groupItems.sort(byOriginalOrder).forEach((item) => parent.appendChild(item));
                 });
             };
         </script>
