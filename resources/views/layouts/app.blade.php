@@ -102,7 +102,23 @@
                     snapshot.set(form.action, values);
                 });
 
+                // Scrollposition sichern: das komplette Neuladen (innerHTML)
+                // setzt sonst auf 0 zurück, man müsste nach jedem Speichern
+                // wieder zu der Zeile runterscrollen, an der man gerade war
+                // (Ralfs konkreter Report bei den Abteilungen). Sowohl den
+                // äußeren Body als auch die innere scrollende Zeilenliste
+                // sichern, je nachdem welcher tatsächlich scrollt.
+                const scrollTop = body.scrollTop;
+                const innerListBefore = body.querySelector('.overflow-y-auto');
+                const innerScrollTop = innerListBefore ? innerListBefore.scrollTop : null;
+
                 body.innerHTML = await fetch(url).then((r) => r.text());
+
+                body.scrollTop = scrollTop;
+                const innerListAfter = body.querySelector('.overflow-y-auto');
+                if (innerListAfter && innerScrollTop !== null) {
+                    innerListAfter.scrollTop = innerScrollTop;
+                }
 
                 // Alpine initialisiert neu eingefügtes HTML (x-data, @input
                 // ...) über einen MutationObserver, NICHT synchron sofort
