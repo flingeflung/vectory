@@ -16,9 +16,13 @@
                 showInactive: false,
                 newGroup: false,
                 dirty: false,
+                sortMode: 'alpha',
                 peopleData: @js($people->map(fn ($person) => ['id' => $person->id, 'name' => mb_strtolower($person->fullName()), 'active' => $person->active])),
                 get visibleCount() {
                     return this.peopleData.filter(p => (this.showInactive || p.active || p.id === {{ $selectedPerson?->id ?? 'null' }}) && (!this.search || p.name.includes(this.search.toLowerCase()))).length;
+                },
+                applyGrouping() {
+                    window.applyPersonGrouping(this.$refs.personList, this.sortMode);
                 },
             }"
             class="flex w-72 shrink-0 flex-col gap-3"
@@ -59,7 +63,23 @@
                  eine Person kann in mehreren Funktionsgruppen sein). --}}
             <div class="flex flex-1 min-h-0 flex-col rounded-lg border border-gray-200 bg-white">
                 <div class="shrink-0 space-y-1.5 border-b border-gray-100 p-2">
-                    <span class="text-xs font-semibold text-gray-500">{{ __('Personen') }}</span>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-gray-500">{{ __('Personen') }}</span>
+                        <div class="flex items-center gap-1 text-xs">
+                            <button
+                                type="button"
+                                @click="sortMode = 'alpha'; applyGrouping()"
+                                :class="sortMode === 'alpha' ? 'bg-gray-800 text-white' : 'border border-gray-300 text-gray-600 hover:bg-gray-50'"
+                                class="rounded px-1.5 py-0.5"
+                            >{{ __('A–Z') }}</button>
+                            <button
+                                type="button"
+                                @click="sortMode = 'department'; applyGrouping()"
+                                :class="sortMode === 'department' ? 'bg-gray-800 text-white' : 'border border-gray-300 text-gray-600 hover:bg-gray-50'"
+                                class="rounded px-1.5 py-0.5"
+                            >{{ __('Abteilung') }}</button>
+                        </div>
+                    </div>
                     <input
                         type="search"
                         x-model="search"
@@ -84,7 +104,7 @@
                         </button>
                     @endif
                 </div>
-                <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => $el.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' }))">
+                <div x-ref="personList" class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => $el.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' }))">
                 @if ($selectedGroup)
                     <form
                         id="member-assign-form"
@@ -97,6 +117,9 @@
                         @csrf
                         @foreach ($people as $person)
                             <div
+                                data-person-row
+                                data-department-name="{{ $person->department?->name }}"
+                                data-sort-index="{{ $loop->index }}"
                                 x-show="(showInactive || {{ $person->active || $selectedPerson?->id === $person->id ? 'true' : 'false' }}) && (!search || {{ \Illuminate\Support\Js::from(mb_strtolower($person->fullName())) }}.includes(search.toLowerCase()))"
                                 class="flex items-center gap-1.5 rounded px-2 py-1 hover:bg-gray-50"
                             >
@@ -121,6 +144,9 @@
                         <a
                             href="{{ route('admin.function-groups', ['person' => $person->id]) }}"
                             @if ($selectedPerson?->id === $person->id) data-selected @endif
+                            data-person-row
+                            data-department-name="{{ $person->department?->name }}"
+                            data-sort-index="{{ $loop->index }}"
                             x-show="(showInactive || {{ $person->active || $selectedPerson?->id === $person->id ? 'true' : 'false' }}) && (!search || {{ \Illuminate\Support\Js::from(mb_strtolower($person->fullName())) }}.includes(search.toLowerCase()))"
                             class="block rounded px-2 py-1 {{ $selectedPerson?->id === $person->id ? 'bg-indigo-50 font-medium text-indigo-700' : ($person->active ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-400 hover:bg-gray-50') }}"
                         >

@@ -44,6 +44,63 @@
         <x-confirm-dialog />
 
         {{--
+            Personen-Liste (Rechte-/Funktionsgruppen-Verwaltung, ggf. weitere
+            künftig) wahlweise alphabetisch oder nach Abteilung gruppiert
+            anzeigen - Ralfs Anforderung für mehr Übersichtlichkeit. Sortiert
+            NICHT neu vom Server, sondern verschiebt die schon vorhandenen
+            DOM-Knoten (Checkboxen/Links bleiben dieselben Elemente, kein
+            Duplizieren) - wichtig, weil manche dieser Listen ein
+            Zuordnungs-Formular mit Checkboxen sind (Bulk-Zuordnung Rechte-
+            Set / Funktionsgruppen-Mitglieder), deren Zustand beim
+            Neu-Rendern verloren ginge. Voraussetzung pro Zeile:
+            data-person-row, data-department-name, data-sort-index (Server-
+            Reihenfolge, für "zurück zu alphabetisch").
+        --}}
+        <script>
+            window.applyPersonGrouping = function (root, mode) {
+                if (!root) {
+                    return;
+                }
+                root.querySelectorAll('[data-group-header]').forEach((el) => el.remove());
+
+                const items = [...root.querySelectorAll('[data-person-row]')];
+                if (items.length === 0) {
+                    return;
+                }
+                const parent = items[0].parentElement;
+                const byOriginalOrder = (a, b) => Number(a.dataset.sortIndex) - Number(b.dataset.sortIndex);
+
+                if (mode !== 'department') {
+                    items.sort(byOriginalOrder).forEach((item) => parent.appendChild(item));
+                    return;
+                }
+
+                const groups = new Map();
+                items.forEach((item) => {
+                    const dept = item.dataset.departmentName || '';
+                    if (!groups.has(dept)) {
+                        groups.set(dept, []);
+                    }
+                    groups.get(dept).push(item);
+                });
+                const deptNames = [...groups.keys()].sort((a, b) => {
+                    if (a === '' || b === '') {
+                        return a === b ? 0 : (a === '' ? 1 : -1);
+                    }
+                    return a.localeCompare(b, 'de');
+                });
+                deptNames.forEach((dept) => {
+                    const header = document.createElement('div');
+                    header.setAttribute('data-group-header', '');
+                    header.className = 'px-2 pt-3 pb-1 text-xs font-semibold text-gray-400 first:pt-1';
+                    header.textContent = '– ' + (dept || {{ \Illuminate\Support\Js::from(__('Ohne Abteilung')) }}) + ' –';
+                    parent.appendChild(header);
+                    groups.get(dept).sort(byOriginalOrder).forEach((item) => parent.appendChild(item));
+                });
+            };
+        </script>
+
+        {{--
             Live-Suche für debounced Textfeld-Filter (Nachname-Suche in der
             Personenverwaltung, PN/Illu-Nr.-Suche bei Illustrationen, ...):
             statt bei jedem Tastendruck nach 1-2 Sek. die ganze Seite neu zu
