@@ -108,7 +108,7 @@
                     @forelse ($people as $person)
                         <tr class="hover:bg-gray-50">
                             <td class="px-3 py-2 {{ $person->active ? '' : 'text-gray-400' }}">
-                                <x-person-link :person="$person" />{{ ! $person->active ? ' [i]' : '' }}
+                                <x-person-link :person="$person" :filters="$filters" />{{ ! $person->active ? ' [i]' : '' }}
                             </td>
                             <td class="px-3 py-2 text-gray-600" title="{{ $person->fullName() }}">{{ $person->short_name ?? '–' }}</td>
                             <td class="px-3 py-2 text-gray-600">{{ $person->user ? __('Login-User') : __('Kontaktperson') }}</td>

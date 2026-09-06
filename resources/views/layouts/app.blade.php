@@ -62,26 +62,12 @@
             für Overlays dieser Art, nicht nur fürs Projekt-Overlay).
         --}}
         <x-modal name="person-overlay" max-width="2xl" :dirty-check="'personOverlayIsDirty'" :draggable="true" :resizable="true">
-            <div class="flex h-full flex-col">
-                <div
-                    data-drag-handle
-                    title="{{ __('Ziehen zum Verschieben') }}"
-                    class="flex shrink-0 cursor-move select-none items-center justify-between rounded-t-lg border-b border-gray-200 bg-gray-100 px-4 py-3"
-                >
-                    <h3 id="person-overlay-title" class="text-sm font-semibold text-gray-900">{{ __('Person') }}</h3>
-                    <button
-                        type="button"
-                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'person-overlay' }))"
-                        class="text-gray-400 hover:text-gray-600"
-                        aria-label="{{ __('Schließen') }}"
-                    >
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+            <div class="relative h-full">
+                <div id="person-overlay-body" class="flex h-full min-h-0 flex-col text-sm text-gray-500">
+                    <div class="p-4">{{ __('Lädt…') }}</div>
                 </div>
-                <div id="person-overlay-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
-                    {{ __('Lädt…') }}
+                <div id="person-overlay-loading" class="absolute inset-0 hidden items-center justify-center bg-white/70">
+                    <x-loading-spinner class="h-8 w-8 text-gray-400" />
                 </div>
             </div>
         </x-modal>
@@ -89,9 +75,12 @@
         <script>
             (function () {
                 const body = () => document.getElementById('person-overlay-body');
-                const title = () => document.getElementById('person-overlay-title');
+                const loading = () => document.getElementById('person-overlay-loading');
                 const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
                 let savedSnapshot = null;
+
+                const showLoading = () => loading().classList.replace('hidden', 'flex');
+                const hideLoading = () => loading().classList.replace('flex', 'hidden');
 
                 const serializeForms = () => Array.from(body().querySelectorAll('form')).map((form) => new URLSearchParams(new FormData(form)).toString()).join('|');
 
@@ -104,19 +93,32 @@
                     return current !== null && current !== savedSnapshot;
                 };
 
+                // PHP-kompatible bracket-Notation für die mitgegebenen Filter
+                // (siehe appendNested beim Projekt-Overlay - hier reicht ein
+                // flaches Objekt, da Personen-Filter keine verschachtelten
+                // Werte wie Datumsbereiche haben).
                 window.addEventListener('open-person', async (event) => {
-                    const { id, name } = event.detail;
+                    const { id, filters } = event.detail;
                     if (!id) {
                         return;
                     }
 
-                    title().textContent = name || {{ \Illuminate\Support\Js::from(__('Person')) }};
-                    body().innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
+                    showLoading();
                     window.dispatchEvent(new CustomEvent('open-modal', { detail: 'person-overlay' }));
 
-                    body().innerHTML = await fetch('/admin/personen/' + id, {
+                    const params = new URLSearchParams();
+                    Object.entries(filters || {}).forEach(([key, value]) => {
+                        if (value !== null && value !== undefined && value !== '') {
+                            params.append(key, value);
+                        }
+                    });
+                    const query = params.toString() ? '?' + params.toString() : '';
+
+                    const response = await fetch('/admin/personen/' + id + query, {
                         headers: { 'X-Overlay': '1' },
-                    }).then((r) => r.text());
+                    });
+                    body().innerHTML = await response.text();
+                    hideLoading();
                     savedSnapshot = null;
                     snapshot();
                 });
@@ -128,6 +130,7 @@
                     }
 
                     event.preventDefault();
+                    showLoading();
 
                     const formData = new FormData(event.target);
                     const response = await fetch(event.target.action, {
@@ -136,6 +139,7 @@
                         body: formData,
                     });
                     body().innerHTML = await response.text();
+                    hideLoading();
                     snapshot();
                     window.refreshPersonenListInBackground?.();
                 });

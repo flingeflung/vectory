@@ -10,6 +10,7 @@ use App\Models\LegacyRole;
 use App\Models\PermissionTemplate;
 use App\Models\Person;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -30,41 +31,17 @@ use Illuminate\View\View;
  */
 class PersonController extends Controller
 {
+    /**
+     * @var list<string>
+     */
+    private const FILTER_KEYS = ['search', 'company_id', 'department_id', 'business_unit_id', 'permission_template_id', 'legacy_role_id', 'typ', 'show_inactive'];
+
     public function index(Request $request): View
     {
         $tenantId = $request->user()->tenant_id;
+        $filters = $this->filtersFromRequest($request);
 
-        $query = Person::query()->where('tenant_id', $tenantId);
-
-        if ($request->filled('search')) {
-            $query->where('last_name', 'like', '%'.$request->string('search').'%');
-        }
-        if (! $request->boolean('show_inactive')) {
-            $query->where('active', true);
-        }
-        if ($request->filled('company_id')) {
-            $query->where('company_id', $request->integer('company_id'));
-        }
-        if ($request->filled('department_id')) {
-            $query->where('department_id', $request->integer('department_id'));
-        }
-        if ($request->filled('business_unit_id')) {
-            $query->where('business_unit_id', $request->integer('business_unit_id'));
-        }
-        if ($request->filled('permission_template_id')) {
-            $query->where('permission_template_id', $request->integer('permission_template_id'));
-        }
-        if ($request->filled('legacy_role_id')) {
-            $query->where('legacy_role_id', $request->integer('legacy_role_id'));
-        }
-        if ($request->filled('typ')) {
-            // "Typ" ist rein abgeleitet aus dem Vorhandensein eines
-            // User-Accounts (Login-User vs. Kontaktperson) - kein eigenes
-            // Feld, damit es nie mit der Realität auseinanderlaufen kann.
-            $request->input('typ') === 'login' ? $query->has('user') : $query->doesntHave('user');
-        }
-
-        $people = $query
+        $people = $this->filteredPeopleQuery($filters, $tenantId)
             ->with(['company', 'department', 'businessUnit', 'permissionTemplate', 'legacyRole', 'user'])
             ->orderBy('last_name')
             ->orderBy('first_name')
@@ -77,6 +54,7 @@ class PersonController extends Controller
             'businessUnits' => BusinessUnit::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('sort')->orderBy('name')->get(),
             'permissionTemplates' => PermissionTemplate::query()->where('tenant_id', $tenantId)->orderBy('sort')->get(),
             'legacyRoles' => LegacyRole::query()->where('tenant_id', $tenantId)->orderBy('sort')->orderBy('name')->get(),
+            'filters' => $filters,
         ]);
     }
 
@@ -237,11 +215,17 @@ class PersonController extends Controller
     }
 
     /**
-     * @return array{person: Person, companies: \Illuminate\Support\Collection, departments: \Illuminate\Support\Collection, businessUnits: \Illuminate\Support\Collection, legacyRoles: \Illuminate\Support\Collection}
+     * @return array{person: Person, companies: \Illuminate\Support\Collection, departments: \Illuminate\Support\Collection, businessUnits: \Illuminate\Support\Collection, legacyRoles: \Illuminate\Support\Collection, filters: array, previousPerson: ?Person, nextPerson: ?Person}
      */
     private function editData(Request $request, Person $person): array
     {
         $tenantId = $request->user()->tenant_id;
+        // Nur aus der Query-String gelesen (nicht $request->all()) - beim
+        // Speichern (POST) trägt die Action-URL bewusst keine Filter mehr
+        // mit (genau wie beim Projekt-Overlay), Vor/Zurück wirkt danach
+        // wieder auf die ungefilterte Liste, bis erneut über die Liste
+        // geöffnet wird.
+        $filters = $this->filtersFromRequest($request);
 
         return [
             'person' => $person->fresh(['company', 'department', 'businessUnit', 'permissionTemplate', 'legacyRole', 'user']),
@@ -249,7 +233,90 @@ class PersonController extends Controller
             'departments' => Department::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('sort')->orderBy('name')->get(),
             'businessUnits' => BusinessUnit::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('sort')->orderBy('name')->get(),
             'legacyRoles' => LegacyRole::query()->where('tenant_id', $tenantId)->orderBy('sort')->orderBy('name')->get(),
+            'filters' => $filters,
+            'previousPerson' => $this->adjacentPerson($filters, $person, 'previous', $tenantId),
+            'nextPerson' => $this->adjacentPerson($filters, $person, 'next', $tenantId),
         ];
+    }
+
+    /**
+     * Nur bekannte Filterfelder durchlassen, leere Werte verwerfen - liest
+     * bewusst nur aus der Query-String (siehe editData()).
+     *
+     * @return array<string, mixed>
+     */
+    private function filtersFromRequest(Request $request): array
+    {
+        return collect($request->query())
+            ->only(self::FILTER_KEYS)
+            ->reject(fn ($value) => $value === null || $value === '')
+            ->all();
+    }
+
+    private function filteredPeopleQuery(array $filters, int $tenantId): Builder
+    {
+        $query = Person::query()->where('tenant_id', $tenantId);
+
+        if (! empty($filters['search'])) {
+            $query->where('last_name', 'like', '%'.$filters['search'].'%');
+        }
+        if (empty($filters['show_inactive'])) {
+            $query->where('active', true);
+        }
+        if (! empty($filters['company_id'])) {
+            $query->where('company_id', (int) $filters['company_id']);
+        }
+        if (! empty($filters['department_id'])) {
+            $query->where('department_id', (int) $filters['department_id']);
+        }
+        if (! empty($filters['business_unit_id'])) {
+            $query->where('business_unit_id', (int) $filters['business_unit_id']);
+        }
+        if (! empty($filters['permission_template_id'])) {
+            $query->where('permission_template_id', (int) $filters['permission_template_id']);
+        }
+        if (! empty($filters['legacy_role_id'])) {
+            $query->where('legacy_role_id', (int) $filters['legacy_role_id']);
+        }
+        if (! empty($filters['typ'])) {
+            // "Typ" ist rein abgeleitet aus dem Vorhandensein eines
+            // User-Accounts (Login-User vs. Kontaktperson) - kein eigenes
+            // Feld, damit es nie mit der Realität auseinanderlaufen kann.
+            $filters['typ'] === 'login' ? $query->has('user') : $query->doesntHave('user');
+        }
+
+        return $query;
+    }
+
+    /**
+     * Blättern (< >) innerhalb der aktuell gefilterten Treffermenge -
+     * gleiches Vorgehen wie ProjectController::adjacentProject(), aber
+     * ohne dessen Komplexität für wählbare Sortier-Spalten: die
+     * Personenliste sortiert immer fix nach Nachname/Vorname, id als
+     * dritte Ebene bricht Gleichstände (gleicher Name) eindeutig auf.
+     */
+    private function adjacentPerson(array $filters, Person $current, string $way, int $tenantId): ?Person
+    {
+        $direction = $way === 'next' ? 'asc' : 'desc';
+        $operator = $direction === 'asc' ? '>' : '<';
+
+        return $this->filteredPeopleQuery($filters, $tenantId)
+            ->where(function (Builder $query) use ($operator, $current) {
+                $query->where('last_name', $operator, $current->last_name)
+                    ->orWhere(function (Builder $query) use ($operator, $current) {
+                        $query->where('last_name', $current->last_name)
+                            ->where(function (Builder $query) use ($operator, $current) {
+                                $query->where('first_name', $operator, $current->first_name)
+                                    ->orWhere(function (Builder $query) use ($operator, $current) {
+                                        $query->where('first_name', $current->first_name)->where('id', $operator, $current->id);
+                                    });
+                            });
+                    });
+            })
+            ->orderBy('last_name', $direction)
+            ->orderBy('first_name', $direction)
+            ->orderBy('id', $direction)
+            ->first();
     }
 
     private function isOverlayRequest(Request $request): bool
