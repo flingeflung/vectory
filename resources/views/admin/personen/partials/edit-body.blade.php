@@ -32,14 +32,14 @@
                 <button
                     type="button"
                     @disabled(! $previousPerson)
-                    onclick="window.dispatchEvent(new CustomEvent('open-person', { detail: { id: {{ $previousPerson?->id ?? 'null' }}, filters: {{ \Illuminate\Support\Js::from($filters) }} } }))"
+                    onclick="window.confirmDiscardIfDirty('personOverlayIsDirty').then(ok => ok && window.dispatchEvent(new CustomEvent('open-person', { detail: { id: {{ $previousPerson?->id ?? 'null' }}, filters: {{ \Illuminate\Support\Js::from($filters) }} } })))"
                     class="{{ $navBtn }}"
                     title="{{ __('Vorherige Person') }}"
                 >{!! $chevronLeft !!}</button>
                 <button
                     type="button"
                     @disabled(! $nextPerson)
-                    onclick="window.dispatchEvent(new CustomEvent('open-person', { detail: { id: {{ $nextPerson?->id ?? 'null' }}, filters: {{ \Illuminate\Support\Js::from($filters) }} } }))"
+                    onclick="window.confirmDiscardIfDirty('personOverlayIsDirty').then(ok => ok && window.dispatchEvent(new CustomEvent('open-person', { detail: { id: {{ $nextPerson?->id ?? 'null' }}, filters: {{ \Illuminate\Support\Js::from($filters) }} } })))"
                     class="{{ $navBtn }}"
                     title="{{ __('Nächste Person') }}"
                 >{!! $chevronRight !!}</button>

@@ -30,14 +30,14 @@
                     <button
                         type="button"
                         @disabled(! $previousProject)
-                        onclick="window.dispatchEvent(new CustomEvent('open-project', { detail: { id: {{ $previousProject?->id ?? 'null' }}, sort: {{ \Illuminate\Support\Js::from($sort ?? null) }}, direction: {{ \Illuminate\Support\Js::from($direction ?? 'asc') }}, filters: {{ \Illuminate\Support\Js::from($filters ?? []) }} } }))"
+                        onclick="window.confirmDiscardIfDirty('projectOverlayIsDirty').then(ok => ok && window.dispatchEvent(new CustomEvent('open-project', { detail: { id: {{ $previousProject?->id ?? 'null' }}, sort: {{ \Illuminate\Support\Js::from($sort ?? null) }}, direction: {{ \Illuminate\Support\Js::from($direction ?? 'asc') }}, filters: {{ \Illuminate\Support\Js::from($filters ?? []) }} } })))"
                         class="{{ $navBtn }}"
                         title="{{ __('Vorheriges Projekt') }}"
                     >{!! $chevronLeft !!}</button>
                     <button
                         type="button"
                         @disabled(! $nextProject)
-                        onclick="window.dispatchEvent(new CustomEvent('open-project', { detail: { id: {{ $nextProject?->id ?? 'null' }}, sort: {{ \Illuminate\Support\Js::from($sort ?? null) }}, direction: {{ \Illuminate\Support\Js::from($direction ?? 'asc') }}, filters: {{ \Illuminate\Support\Js::from($filters ?? []) }} } }))"
+                        onclick="window.confirmDiscardIfDirty('projectOverlayIsDirty').then(ok => ok && window.dispatchEvent(new CustomEvent('open-project', { detail: { id: {{ $nextProject?->id ?? 'null' }}, sort: {{ \Illuminate\Support\Js::from($sort ?? null) }}, direction: {{ \Illuminate\Support\Js::from($direction ?? 'asc') }}, filters: {{ \Illuminate\Support\Js::from($filters ?? []) }} } })))"
                         class="{{ $navBtn }}"
                         title="{{ __('Nächstes Projekt') }}"
                     >{!! $chevronRight !!}</button>

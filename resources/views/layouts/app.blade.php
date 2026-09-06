@@ -44,6 +44,26 @@
         <x-confirm-dialog />
 
         {{--
+            Sicherheitsabfrage bei ungespeicherten Änderungen greift bisher
+            nur beim SCHLIESSEN eines Overlays (X/Escape/Backdrop, siehe
+            modal.blade.php requestClose()) - das Blättern (< >) innerhalb
+            eines Overlays löst dagegen direkt ein open-person/open-project-
+            Event aus und überschreibt den Inhalt, ohne je requestClose() zu
+            durchlaufen. Ralfs Bug-Report: ungespeichert geändert, geblättert,
+            Änderung kommentarlos weg. Dieser Helper kapselt denselben Check
+            + Dialog für sowas - vor jedem Blättern-Klick aufrufen und nur
+            bei true fortfahren.
+        --}}
+        <script>
+            window.confirmDiscardIfDirty = async function (dirtyCheckFn) {
+                if (typeof window[dirtyCheckFn] !== 'function' || !window[dirtyCheckFn]()) {
+                    return true;
+                }
+                return await window.confirmDialog({{ \Illuminate\Support\Js::from(__('Es gibt ungespeicherte Änderungen. Trotzdem verwerfen?')) }});
+            };
+        </script>
+
+        {{--
             Personen-Liste (Rechte-/Funktionsgruppen-Verwaltung, ggf. weitere
             künftig) wahlweise alphabetisch oder nach Abteilung gruppiert
             anzeigen - Ralfs Anforderung für mehr Übersichtlichkeit. Sortiert
