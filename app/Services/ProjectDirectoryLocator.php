@@ -190,6 +190,24 @@ class ProjectDirectoryLocator
         return trim(preg_replace('/_+/', '_', $sanitized), '_');
     }
 
+    /**
+     * Dateityp-Icon (aus Vietto übernommen, siehe images/i_<extension>.png
+     * dort bzw. public/images/filetypes/ hier) - "i_dunno.png" als Fallback
+     * für unbekannte Endungen, genau wie in Viettos ajax_get_dircontent.php.
+     */
+    public static function fileTypeIcon(string $filename): string
+    {
+        $extension = pathinfo($filename, PATHINFO_EXTENSION);
+
+        foreach (array_unique([$extension, strtolower($extension)]) as $candidate) {
+            if ($candidate !== '' && file_exists(public_path("images/filetypes/i_{$candidate}.png"))) {
+                return "images/filetypes/i_{$candidate}.png";
+            }
+        }
+
+        return 'images/filetypes/i_dunno.png';
+    }
+
     public static function formatBytes(int $bytes): string
     {
         $units = ['B', 'KB', 'MB', 'GB'];
