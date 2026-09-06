@@ -116,7 +116,7 @@
                         @change="$nextTick(() => applyGrouping())"
                         class="w-full rounded-md border-gray-300 py-1 text-xs"
                     >
-                        <option value="">{{ __('– Abteilung filtern –') }}</option>
+                        <option value="">{{ __('– Alle Abteilungen –') }}</option>
                         <template x-for="dept in allDepartments" :key="dept">
                             <option :value="dept" x-text="dept"></option>
                         </template>
