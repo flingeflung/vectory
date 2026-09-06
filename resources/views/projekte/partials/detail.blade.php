@@ -20,6 +20,8 @@
 
             <x-favorite-star :project="$project" :is-favorite="$project->isFavoritedBy(auth()->user())" />
 
+            <x-project-directory-status :project="$project" :status="$directoryStatus" :suggested-folder-name="$directorySuggestedFolderName" />
+
             <div class="flex items-center text-gray-500">
                 @php
                     $navBtn = 'p-1.5 rounded hover:bg-gray-100 hover:text-gray-800 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-gray-500';

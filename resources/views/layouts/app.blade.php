@@ -1240,5 +1240,117 @@
                 });
             })();
         </script>
+
+        {{--
+            Projektverzeichnis: "Inhalt auflisten" (read-only Baumansicht) -
+            aus Projektübersicht UND Projektdetails per Icon neben der PN
+            öffenbar (siehe directory-status.blade.php), analog Viettos
+            ajax_get_dircontent.php/eb_getdircontent-Dialog.
+        --}}
+        <x-modal name="project-directory-content" max-width="lg">
+            <div class="flex max-h-[85vh] flex-col">
+                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Projektverzeichnis') }}</h3>
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-directory-content' }))"
+                        class="text-gray-400 hover:text-gray-600"
+                        aria-label="{{ __('Schließen') }}"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="project-directory-content-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
+                    {{ __('Lädt…') }}
+                </div>
+            </div>
+        </x-modal>
+
+        <script>
+            (function () {
+                const body = () => document.getElementById('project-directory-content-body');
+
+                window.openProjectDirectoryContent = async (projectId) => {
+                    body().innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
+                    window.dispatchEvent(new CustomEvent('open-modal', { detail: 'project-directory-content' }));
+                    body().innerHTML = await fetch(`/projekte/${projectId}/verzeichnis`).then((r) => r.text());
+                };
+            })();
+        </script>
+
+        {{--
+            Projektverzeichnis anlegen - nur für ein bestehendes Projekt ohne
+            Verzeichnis (siehe Ralfs Scope-Entscheidung: "Projekt neu
+            anlegen" selbst ist nicht Teil dieses Features), analog Viettos
+            check_createpndir()/createpndir().
+        --}}
+        <x-modal name="project-directory-create" max-width="md">
+            <div class="flex max-h-[85vh] flex-col">
+                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Projektverzeichnis anlegen') }}</h3>
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-directory-create' }))"
+                        class="text-gray-400 hover:text-gray-600"
+                        aria-label="{{ __('Schließen') }}"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="px-4 py-3 text-sm">
+                    <form id="project-directory-create-form">
+                        <label class="block text-xs text-gray-500">{{ __('Ordnername') }}</label>
+                        <input id="project-directory-create-name" type="text" required maxlength="200" class="mt-0.5 block w-full rounded-md border-gray-300 text-sm">
+                        <p class="mt-1 text-xs text-gray-400">{{ __('Wird unter dem in Admin > Konfig hinterlegten Projektpfad angelegt, inklusive der festen Unterordner-Struktur.') }}</p>
+                        <div id="project-directory-create-error" class="mt-1 text-xs text-red-600" hidden>{{ __('Anlegen fehlgeschlagen. Existiert der Ordner eventuell schon?') }}</div>
+                        <div class="mt-3 flex justify-end">
+                            <button type="submit" class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
+                                {{ __('Anlegen') }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </x-modal>
+
+        <script>
+            (function () {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                const form = document.getElementById('project-directory-create-form');
+                const nameInput = document.getElementById('project-directory-create-name');
+                const errorBox = document.getElementById('project-directory-create-error');
+                let currentProjectId = null;
+
+                window.openProjectDirectoryCreate = (projectId, suggestedName) => {
+                    currentProjectId = projectId;
+                    nameInput.value = suggestedName;
+                    errorBox.hidden = true;
+                    window.dispatchEvent(new CustomEvent('open-modal', { detail: 'project-directory-create' }));
+                };
+
+                form.addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    errorBox.hidden = true;
+
+                    const response = await fetch(`/projekte/${currentProjectId}/verzeichnis`, {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ folder_name: nameInput.value }),
+                    });
+
+                    if (!response.ok) {
+                        errorBox.hidden = false;
+                        return;
+                    }
+
+                    window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-directory-create' }));
+                    await window.refreshUnderlyingProject(currentProjectId);
+                });
+            })();
+        </script>
     </body>
 </html>

@@ -93,6 +93,7 @@
                                             @if (in_array($project->id, $favoriteProjectIds, true))
                                                 <x-favorite-star :project="$project" :is-favorite="true" size="h-3.5 w-3.5" />
                                             @endif
+                                            <x-project-directory-status :project="$project" :status="$directoryStatuses[$project->id]" />
                                         </span>
                                     </td>
                                     @foreach ($columns as $column)

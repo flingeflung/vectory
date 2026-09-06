@@ -15,6 +15,7 @@ use App\Http\Controllers\GraphicOrderController;
 use App\Http\Controllers\IllustrationOverviewController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectDirectoryController;
 use App\Http\Controllers\ProjectWorkflowStepController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
@@ -41,6 +42,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/projekte/{project}/illustrationsauftraege', [GraphicOrderController::class, 'index'])->name('projekte.illustration-orders.index');
     Route::post('/projekte/{project}/illustrationsauftraege', [GraphicOrderController::class, 'store'])->name('projekte.illustration-orders.store');
     Route::patch('/projekte/{project}/illustrationsauftraege/{graphicOrder}', [GraphicOrderController::class, 'update'])->name('projekte.illustration-orders.update');
+
+    Route::get('/projekte/{project}/verzeichnis', [ProjectDirectoryController::class, 'show'])->name('projekte.verzeichnis');
+    Route::post('/projekte/{project}/verzeichnis', [ProjectDirectoryController::class, 'store'])->name('projekte.verzeichnis.store');
 
     Route::get('/favoriten', [FavoriteController::class, 'index'])->name('favoriten');
 

@@ -16,6 +16,7 @@ use App\Models\ProjectTypeSub;
 use App\Models\ProjectWorkflowStep;
 use App\Models\Workflow;
 use App\Models\WorkflowStep;
+use App\Services\ProjectDirectoryLocator;
 use App\Support\ProjectColumnCatalog;
 use App\Support\ProjectFilterCatalog;
 use Illuminate\Database\Eloquent\Builder;
@@ -39,6 +40,8 @@ class ProjectController extends Controller
     private const DATE_RANGE_FIELDS = ['start_date', 'end_date', 'publication_date'];
 
     private const BOOL_FIELDS = ['archived'];
+
+    public function __construct(private readonly ProjectDirectoryLocator $directoryLocator) {}
 
     public function index(Request $request): View
     {
@@ -101,6 +104,7 @@ class ProjectController extends Controller
             'totalCount' => Project::query()->count(),
             'favoriteProjectIds' => Favorite::where('user_id', $user->id)->pluck('project_id')->all(),
             'graphicOrderSummaries' => $graphicOrderSummaries,
+            'directoryStatuses' => $this->directoryLocator->statusesForProjects($projects->getCollection(), $user->tenant_id),
         ]);
     }
 
@@ -378,6 +382,8 @@ class ProjectController extends Controller
             'filters' => $filters,
             'previousProject' => $this->adjacentProject($sort, $direction, $filters, $project, 'previous'),
             'nextProject' => $this->adjacentProject($sort, $direction, $filters, $project, 'next'),
+            'directoryStatus' => $this->directoryLocator->statusForProject($project),
+            'directorySuggestedFolderName' => $this->directoryLocator->suggestedFolderName($project),
         ];
     }
 
