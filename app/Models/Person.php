@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
     'tenant_id', 'legacy_id', 'first_name', 'last_name', 'email',
-    'company_id', 'department_id', 'legacy_role_id', 'permission_template_id',
+    'company_id', 'department_id', 'business_unit_id', 'legacy_role_id', 'permission_template_id',
     'last_login_at', 'start_date', 'end_date', 'remarks', 'language', 'sort', 'active',
 ])]
 class Person extends Model
@@ -41,6 +41,16 @@ class Person extends Model
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    /**
+     * Reines Zuordnungs-Hilfsattribut neben Firma/Abteilung, bewusst OHNE
+     * Abhängigkeit zu diesen (z.B. bei Viega aktuell "Global"/"Regional",
+     * unabhängig von der Abteilung) - kein Einfluss auf Prozesse/Rechte.
+     */
+    public function businessUnit(): BelongsTo
+    {
+        return $this->belongsTo(BusinessUnit::class);
     }
 
     public function legacyRole(): BelongsTo
