@@ -10,7 +10,19 @@
              Drag&Drop hier (anders als bei den Rechte-Sets) - für
              Admin-/Stammdatenlisten ist alphabetisch klarer, siehe
              "Minor confirmed decisions" im Roadmap-Memory. --}}
-        <div x-data="{ search: '', showInactive: false, newGroup: false, dirty: false }" class="flex w-72 shrink-0 flex-col gap-3">
+        <div
+            x-data="{
+                search: '',
+                showInactive: false,
+                newGroup: false,
+                dirty: false,
+                peopleData: @js($people->map(fn ($person) => ['id' => $person->id, 'name' => mb_strtolower($person->fullName()), 'active' => $person->active])),
+                get visibleCount() {
+                    return this.peopleData.filter(p => (this.showInactive || p.active || p.id === {{ $selectedPerson?->id ?? 'null' }}) && (!this.search || p.name.includes(this.search.toLowerCase()))).length;
+                },
+            }"
+            class="flex w-72 shrink-0 flex-col gap-3"
+        >
             <div class="flex h-64 shrink-0 flex-col rounded-lg border border-gray-200 bg-white">
                 <div class="shrink-0 flex items-center justify-between border-b border-gray-100 p-2">
                     <span class="text-xs font-semibold text-gray-500">{{ __('Funktionsgruppen') }}</span>
@@ -18,7 +30,7 @@
                         + {{ __('Neu') }}
                     </button>
                 </div>
-                <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm">
+                <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => $el.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' }))">
                     <form x-show="newGroup" x-cloak method="POST" action="{{ route('admin.function-groups.store') }}" class="mb-2 flex gap-1.5 rounded border border-gray-200 p-2">
                         <input type="text" name="name" placeholder="{{ __('Name') }}" class="w-full min-w-0 flex-1 rounded-md border-gray-300 text-xs" required>
                         <input type="text" name="short_name" placeholder="{{ __('Kürzel') }}" maxlength="20" class="w-16 shrink-0 rounded-md border-gray-300 text-xs" required>
@@ -31,6 +43,7 @@
                     @foreach ($groups as $group)
                         <a
                             href="{{ route('admin.function-groups', ['gruppe' => $group->id]) }}"
+                            @if ($selectedGroup?->id === $group->id) data-selected @endif
                             class="flex items-center gap-1.5 rounded px-2 py-1 {{ $selectedGroup?->id === $group->id ? 'bg-indigo-50 font-medium text-indigo-700' : ($group->active ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-400 hover:bg-gray-50') }}"
                         >
                             <span class="flex-1">{{ $group->name }}{{ ! $group->active ? ' [i]' : '' }}</span>
@@ -57,6 +70,7 @@
                         <input type="checkbox" x-model="showInactive" class="rounded border-gray-300">
                         {{ __('Inaktive Personen zeigen') }}
                     </label>
+                    <div class="text-xs text-gray-400" x-text="visibleCount + ' ' + (visibleCount === 1 ? {{ \Illuminate\Support\Js::from(__('Person gefunden')) }} : {{ \Illuminate\Support\Js::from(__('Personen gefunden')) }})"></div>
 
                     @if ($selectedGroup)
                         <button
@@ -70,7 +84,7 @@
                         </button>
                     @endif
                 </div>
-                <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm">
+                <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => $el.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' }))">
                 @if ($selectedGroup)
                     <form
                         id="member-assign-form"
@@ -97,7 +111,7 @@
                                     href="{{ route('admin.function-groups', ['person' => $person->id]) }}"
                                     class="flex-1 {{ $person->active ? 'text-gray-700 hover:underline' : 'text-gray-400 hover:underline' }}"
                                 >
-                                    {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }}
+                                    {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }} <x-department-tag :person="$person" />
                                 </a>
                             </div>
                         @endforeach
@@ -106,10 +120,11 @@
                     @foreach ($people as $person)
                         <a
                             href="{{ route('admin.function-groups', ['person' => $person->id]) }}"
+                            @if ($selectedPerson?->id === $person->id) data-selected @endif
                             x-show="(showInactive || {{ $person->active || $selectedPerson?->id === $person->id ? 'true' : 'false' }}) && (!search || {{ \Illuminate\Support\Js::from(mb_strtolower($person->fullName())) }}.includes(search.toLowerCase()))"
                             class="block rounded px-2 py-1 {{ $selectedPerson?->id === $person->id ? 'bg-indigo-50 font-medium text-indigo-700' : ($person->active ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-400 hover:bg-gray-50') }}"
                         >
-                            {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }}
+                            {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }} <x-department-tag :person="$person" />
                         </a>
                     @endforeach
                 @endif
@@ -182,7 +197,7 @@
                 </div>
             @elseif ($selectedPerson)
                 <div class="shrink-0 border-b border-gray-100 p-3 text-sm font-medium text-gray-900">
-                    {{ $selectedPerson->fullName() }}
+                    {{ $selectedPerson->fullName() }} <x-department-tag :person="$selectedPerson" />
                 </div>
 
                 <form method="POST" action="{{ route('admin.function-groups.personen.update', $selectedPerson) }}" class="flex-1 min-h-0 overflow-y-auto p-3">

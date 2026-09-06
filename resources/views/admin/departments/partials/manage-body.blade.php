@@ -5,6 +5,10 @@
             <label class="block text-xs text-gray-500">{{ __('Name') }}</label>
             <input type="text" name="name" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
         </div>
+        <div class="w-24">
+            <label class="block text-xs text-gray-500">{{ __('Kürzel') }}</label>
+            <input type="text" name="short_name" maxlength="10" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+        </div>
         <button type="submit" class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
             {{ __('Anlegen') }}
         </button>
@@ -18,6 +22,10 @@
                     <div class="flex-1">
                         <label class="block text-xs text-gray-500">{{ __('Name') }}</label>
                         <input type="text" name="name" value="{{ $department->name }}" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                    </div>
+                    <div class="w-24">
+                        <label class="block text-xs text-gray-500">{{ __('Kürzel') }}</label>
+                        <input type="text" name="short_name" value="{{ $department->short_name }}" maxlength="10" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                     </div>
                     <label class="flex items-center gap-1 text-xs text-gray-600">
                         <input type="checkbox" name="active" value="1" @checked($department->active) class="rounded border-gray-300">

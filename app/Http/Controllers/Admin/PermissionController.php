@@ -33,9 +33,10 @@ class PermissionController extends Controller
 
         $people = Person::query()
             ->where('tenant_id', $tenantId)
+            ->with('department:id,name,short_name')
             ->orderBy('last_name')
             ->orderBy('first_name')
-            ->get(['id', 'first_name', 'last_name', 'active', 'permission_template_id']);
+            ->get(['id', 'first_name', 'last_name', 'active', 'permission_template_id', 'department_id']);
 
         $permissions = Permission::query()->orderBy('key')->get();
 
@@ -57,7 +58,7 @@ class PermissionController extends Controller
                 $people = $people->sortByDesc(fn (Person $person) => $person->permission_template_id === $selectedTemplate->id)->values();
             }
         } elseif ($request->filled('person')) {
-            $selectedPerson = Person::query()->where('tenant_id', $tenantId)->find($request->query('person'));
+            $selectedPerson = Person::query()->where('tenant_id', $tenantId)->with('department:id,name,short_name')->find($request->query('person'));
         }
 
         return view('admin.rechte.index', [

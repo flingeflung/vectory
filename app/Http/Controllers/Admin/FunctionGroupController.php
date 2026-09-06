@@ -28,8 +28,9 @@ class FunctionGroupController extends Controller
 
         $groups = FunctionGroup::query()->where('tenant_id', $tenantId)->orderBy('name')->get();
         $people = Person::query()->where('tenant_id', $tenantId)
+            ->with('department:id,name,short_name')
             ->orderBy('last_name')->orderBy('first_name')
-            ->get(['id', 'first_name', 'last_name', 'active']);
+            ->get(['id', 'first_name', 'last_name', 'active', 'department_id']);
 
         $selectedGroup = null;
         $selectedPerson = null;
@@ -49,7 +50,7 @@ class FunctionGroupController extends Controller
                 $people = $people->sortByDesc(fn (Person $person) => $groupMemberIds->contains($person->id))->values();
             }
         } elseif ($request->filled('person')) {
-            $selectedPerson = Person::query()->where('tenant_id', $tenantId)->find($request->query('person'));
+            $selectedPerson = Person::query()->where('tenant_id', $tenantId)->with('department:id,name,short_name')->find($request->query('person'));
             if ($selectedPerson) {
                 $personGroupIds = $selectedPerson->functionGroups()->pluck('function_groups.id');
             }

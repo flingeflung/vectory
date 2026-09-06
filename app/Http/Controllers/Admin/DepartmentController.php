@@ -30,6 +30,7 @@ class DepartmentController extends Controller
         Department::query()->create([
             'tenant_id' => $request->user()->tenant_id,
             'name' => $name,
+            'short_name' => $this->shortNameFromRequest($request),
         ]);
 
         return redirect()->route('admin.departments');
@@ -42,9 +43,20 @@ class DepartmentController extends Controller
         $name = trim((string) $request->string('name'));
         abort_if($name === '', 422);
 
-        $department->update(['name' => $name, 'active' => $request->boolean('active')]);
+        $department->update([
+            'name' => $name,
+            'short_name' => $this->shortNameFromRequest($request),
+            'active' => $request->boolean('active'),
+        ]);
 
         return redirect()->route('admin.departments');
+    }
+
+    private function shortNameFromRequest(Request $request): ?string
+    {
+        $shortName = mb_substr(trim((string) $request->string('short_name')), 0, 10);
+
+        return $shortName === '' ? null : $shortName;
     }
 
     public function destroy(Request $request, Department $department): RedirectResponse

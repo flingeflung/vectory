@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['tenant_id', 'legacy_id', 'name', 'sort', 'active'])]
+#[Fillable(['tenant_id', 'legacy_id', 'name', 'short_name', 'sort', 'active'])]
 class Department extends Model
 {
     use BelongsToTenant;

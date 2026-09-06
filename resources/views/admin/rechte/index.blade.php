@@ -8,7 +8,19 @@
              getrennte Boxen mit je eigenem fixen Header, nur die Listen
              selbst scrollen - so bleibt "+ Neu" bzw. Suche/Toggle immer
              sichtbar, egal wie lang die jeweilige Liste ist. --}}
-        <div x-data="{ search: '', showInactive: false, newSet: false, dirty: false }" class="flex w-72 shrink-0 flex-col gap-3">
+        <div
+            x-data="{
+                search: '',
+                showInactive: false,
+                newSet: false,
+                dirty: false,
+                peopleData: @js($people->map(fn ($person) => ['id' => $person->id, 'name' => mb_strtolower($person->fullName()), 'active' => $person->active])),
+                get visibleCount() {
+                    return this.peopleData.filter(p => (this.showInactive || p.active || p.id === {{ $selectedPerson?->id ?? 'null' }}) && (!this.search || p.name.includes(this.search.toLowerCase()))).length;
+                },
+            }"
+            class="flex w-72 shrink-0 flex-col gap-3"
+        >
             {{-- Rechte-Sets: bewusst etwas höher als nötig (Wunsch: mehr auf
                  einen Blick) und per Drag&Drop sortierbar (x-sort, gleiches
                  Muster wie beim Dashboard-Kachel-Layout) - rein visuelle
@@ -21,7 +33,7 @@
                         + {{ __('Neu') }}
                     </button>
                 </div>
-                <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm">
+                <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => $el.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' }))">
                     <form x-show="newSet" x-cloak method="POST" action="{{ route('admin.rechte.sets.store') }}" class="mb-2 space-y-1.5 rounded border border-gray-200 p-2">
                         <select name="base_id" class="w-full rounded-md border-gray-300 text-xs" required>
                             <option value="">{{ __('Auf Basis von…') }}</option>
@@ -54,6 +66,7 @@
                                 <span x-sort:handle class="cursor-move px-1 text-gray-300 hover:text-gray-500" title="{{ __('Verschieben') }}">⠿</span>
                                 <a
                                     href="{{ route('admin.rechte', ['set' => $template->id]) }}"
+                                    @if ($selectedTemplate?->id === $template->id) data-selected @endif
                                     class="flex-1 py-1 {{ $selectedTemplate?->id === $template->id ? 'font-medium text-indigo-700' : 'text-gray-700' }}"
                                 >
                                     {{ $template->name }}
@@ -78,6 +91,7 @@
                         <input type="checkbox" x-model="showInactive" class="rounded border-gray-300">
                         {{ __('Inaktive Personen zeigen') }}
                     </label>
+                    <div class="text-xs text-gray-400" x-text="visibleCount + ' ' + (visibleCount === 1 ? {{ \Illuminate\Support\Js::from(__('Person gefunden')) }} : {{ \Illuminate\Support\Js::from(__('Personen gefunden')) }})"></div>
 
                     @if ($selectedTemplate)
                         <button
@@ -91,7 +105,7 @@
                         </button>
                     @endif
                 </div>
-                <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm">
+                <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => $el.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' }))">
                 @if ($selectedTemplate)
                     {{-- Bulk-Zuordnung: nur unzugeordnete Personen sind hier
                          anklickbar (leer). Wer schon einem Set angehört -
@@ -126,7 +140,7 @@
                                     href="{{ route('admin.rechte', ['person' => $person->id]) }}"
                                     class="flex-1 {{ $person->active ? 'text-gray-700 hover:underline' : 'text-gray-400 hover:underline' }}"
                                 >
-                                    {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }}
+                                    {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }} <x-department-tag :person="$person" />
                                 </a>
                             </div>
                         @endforeach
@@ -135,10 +149,11 @@
                     @foreach ($people as $person)
                         <a
                             href="{{ route('admin.rechte', ['person' => $person->id]) }}"
+                            @if ($selectedPerson?->id === $person->id) data-selected @endif
                             x-show="(showInactive || {{ $person->active || $selectedPerson?->id === $person->id ? 'true' : 'false' }}) && (!search || {{ \Illuminate\Support\Js::from(mb_strtolower($person->fullName())) }}.includes(search.toLowerCase()))"
                             class="block rounded px-2 py-1 {{ $selectedPerson?->id === $person->id ? 'bg-indigo-50 font-medium text-indigo-700' : ($person->active ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-400 hover:bg-gray-50') }}"
                         >
-                            {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }}
+                            {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }} <x-department-tag :person="$person" />
                         </a>
                     @endforeach
                 @endif
@@ -215,7 +230,7 @@
                         <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm">
                             @forelse ($templatePeople as $person)
                                 <div class="px-1 py-1 {{ $person->active ? 'text-gray-700' : 'text-gray-400' }}">
-                                    {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }}
+                                    {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }} <x-department-tag :person="$person" />
                                 </div>
                             @empty
                                 <div class="px-1 py-1 text-gray-400">{{ __('Niemand.') }}</div>
@@ -253,7 +268,7 @@
                 </div>
             @elseif ($selectedPerson)
                 <div class="shrink-0 border-b border-gray-100 p-3 text-sm font-medium text-gray-900">
-                    {{ $selectedPerson->fullName() }}
+                    {{ $selectedPerson->fullName() }} <x-department-tag :person="$selectedPerson" />
                 </div>
 
                 <form method="POST" action="{{ route('admin.rechte.personen.update', $selectedPerson) }}" class="flex-1 min-h-0 overflow-y-auto p-3">
