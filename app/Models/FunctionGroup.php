@@ -27,4 +27,9 @@ class FunctionGroup extends Model
     {
         return $this->belongsToMany(Person::class, 'function_group_member')->orderBy('sort');
     }
+
+    public function workflowSteps(): BelongsToMany
+    {
+        return $this->belongsToMany(WorkflowStep::class, 'workflow_step_function_group');
+    }
 }

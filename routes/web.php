@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\BusinessUnitController;
 use App\Http\Controllers\Admin\CompanyController;
 use App\Http\Controllers\Admin\DepartmentController;
+use App\Http\Controllers\Admin\FunctionGroupController;
 use App\Http\Controllers\Admin\LegacyRoleController;
 use App\Http\Controllers\Admin\PermissionController as AdminPermissionController;
 use App\Http\Controllers\Admin\PersonController as AdminPersonController;
@@ -73,6 +74,13 @@ Route::middleware(['auth', 'verified', 'can:access-admin'])->prefix('admin')->na
     Route::post('/rollen', [LegacyRoleController::class, 'store'])->name('legacy-roles.store');
     Route::post('/rollen/{legacyRole}', [LegacyRoleController::class, 'update'])->name('legacy-roles.update');
     Route::delete('/rollen/{legacyRole}', [LegacyRoleController::class, 'destroy'])->name('legacy-roles.destroy');
+
+    Route::get('/funktionsgruppen', [FunctionGroupController::class, 'index'])->name('function-groups');
+    Route::post('/funktionsgruppen', [FunctionGroupController::class, 'store'])->name('function-groups.store');
+    Route::post('/funktionsgruppen/{group}', [FunctionGroupController::class, 'update'])->name('function-groups.update');
+    Route::delete('/funktionsgruppen/{group}', [FunctionGroupController::class, 'destroy'])->name('function-groups.destroy');
+    Route::post('/funktionsgruppen/{group}/mitglieder', [FunctionGroupController::class, 'updateMembers'])->name('function-groups.members.update');
+    Route::post('/funktionsgruppen/personen/{person}', [FunctionGroupController::class, 'updatePersonGroups'])->name('function-groups.personen.update');
 
     Route::get('/firmen', [CompanyController::class, 'index'])->name('companies');
     Route::post('/firmen', [CompanyController::class, 'store'])->name('companies.store');
