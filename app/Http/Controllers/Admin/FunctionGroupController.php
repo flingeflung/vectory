@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Department;
 use App\Models\FunctionGroup;
 use App\Models\Person;
 use Illuminate\Http\RedirectResponse;
@@ -32,6 +33,8 @@ class FunctionGroupController extends Controller
             ->orderBy('last_name')->orderBy('first_name')
             ->get(['id', 'first_name', 'last_name', 'active', 'department_id']);
 
+        $departments = Department::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('name')->pluck('name');
+
         $selectedGroup = null;
         $selectedPerson = null;
         $groupMemberIds = collect();
@@ -59,6 +62,7 @@ class FunctionGroupController extends Controller
         return view('admin.function-groups.index', [
             'groups' => $groups,
             'people' => $people,
+            'departments' => $departments,
             'selectedGroup' => $selectedGroup,
             'selectedPerson' => $selectedPerson,
             'groupMemberIds' => $groupMemberIds,

@@ -54,14 +54,19 @@
             Set / Funktionsgruppen-Mitglieder), deren Zustand beim
             Neu-Rendern verloren ginge. Voraussetzung pro Zeile:
             data-person-row, data-department-name, data-sort-index (Server-
-            Reihenfolge, für "zurück zu alphabetisch").
+            Reihenfolge, für "zurück zu alphabetisch"). Optional eine Liste
+            ALLER Abteilungsnamen (dritter Parameter) - auch Abteilungen
+            ohne aktuell zugeordnete Person bekommen dann eine Überschrift
+            + "keine Person zugeordnet"-Hinweis, statt einfach zu fehlen
+            (Ralfs Anforderung: auf einen Blick sehen, welche Abteilung
+            noch niemanden hat).
         --}}
         <script>
-            window.applyPersonGrouping = function (root, mode) {
+            window.applyPersonGrouping = function (root, mode, allDepartments = []) {
                 if (!root) {
                     return;
                 }
-                root.querySelectorAll('[data-group-header]').forEach((el) => el.remove());
+                root.querySelectorAll('[data-group-header], [data-group-empty]').forEach((el) => el.remove());
 
                 const items = [...root.querySelectorAll('[data-person-row]')];
                 if (items.length === 0) {
@@ -83,6 +88,13 @@
                     }
                     groups.get(dept).push(item);
                 });
+                // Auch Abteilungen ohne aktuell zugeordnete (bzw. gerade
+                // sichtbare) Person als leere Gruppe mit aufnehmen.
+                allDepartments.forEach((dept) => {
+                    if (!groups.has(dept)) {
+                        groups.set(dept, []);
+                    }
+                });
                 const deptNames = [...groups.keys()].sort((a, b) => {
                     if (a === '' || b === '') {
                         return a === b ? 0 : (a === '' ? 1 : -1);
@@ -95,7 +107,17 @@
                     header.className = 'px-2 pt-3 pb-1 text-xs font-semibold text-gray-400 first:pt-1';
                     header.textContent = '– ' + (dept || {{ \Illuminate\Support\Js::from(__('Ohne Abteilung')) }}) + ' –';
                     parent.appendChild(header);
-                    groups.get(dept).sort(byOriginalOrder).forEach((item) => parent.appendChild(item));
+
+                    const groupItems = groups.get(dept);
+                    if (groupItems.length === 0) {
+                        const empty = document.createElement('div');
+                        empty.setAttribute('data-group-empty', '');
+                        empty.className = 'px-2 py-1 text-xs italic text-gray-300';
+                        empty.textContent = {{ \Illuminate\Support\Js::from(__('– keine Person zugeordnet –')) }};
+                        parent.appendChild(empty);
+                        return;
+                    }
+                    groupItems.sort(byOriginalOrder).forEach((item) => parent.appendChild(item));
                 });
             };
         </script>

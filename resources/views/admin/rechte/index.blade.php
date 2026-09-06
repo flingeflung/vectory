@@ -15,12 +15,13 @@
                 newSet: false,
                 dirty: false,
                 sortMode: 'alpha',
+                allDepartments: @js($departments),
                 peopleData: @js($people->map(fn ($person) => ['id' => $person->id, 'name' => mb_strtolower($person->fullName()), 'active' => $person->active])),
                 get visibleCount() {
                     return this.peopleData.filter(p => (this.showInactive || p.active || p.id === {{ $selectedPerson?->id ?? 'null' }}) && (!this.search || p.name.includes(this.search.toLowerCase()))).length;
                 },
                 applyGrouping() {
-                    window.applyPersonGrouping(this.$refs.personList, this.sortMode);
+                    window.applyPersonGrouping(this.$refs.personList, this.sortMode, this.allDepartments);
                 },
             }"
             class="flex w-72 shrink-0 flex-col gap-3"

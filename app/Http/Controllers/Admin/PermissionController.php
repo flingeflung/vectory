@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Department;
 use App\Models\Permission;
 use App\Models\PermissionTemplate;
 use App\Models\Person;
@@ -38,6 +39,8 @@ class PermissionController extends Controller
             ->orderBy('first_name')
             ->get(['id', 'first_name', 'last_name', 'active', 'permission_template_id', 'department_id']);
 
+        $departments = Department::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('name')->pluck('name');
+
         $permissions = Permission::query()->orderBy('key')->get();
 
         $selectedTemplate = null;
@@ -64,6 +67,7 @@ class PermissionController extends Controller
         return view('admin.rechte.index', [
             'templates' => $templates,
             'people' => $people,
+            'departments' => $departments,
             'permissions' => $permissions,
             'selectedTemplate' => $selectedTemplate,
             'selectedPerson' => $selectedPerson,
