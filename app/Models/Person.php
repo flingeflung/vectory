@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
-    'tenant_id', 'legacy_id', 'first_name', 'last_name', 'email',
+    'tenant_id', 'legacy_id', 'first_name', 'last_name', 'short_name', 'email',
     'company_id', 'department_id', 'business_unit_id', 'legacy_role_id', 'permission_template_id',
     'last_login_at', 'start_date', 'end_date', 'remarks', 'language', 'sort', 'active',
 ])]

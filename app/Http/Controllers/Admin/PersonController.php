@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\BusinessUnit;
 use App\Models\Company;
 use App\Models\Department;
+use App\Models\LegacyRole;
 use App\Models\PermissionTemplate;
 use App\Models\Person;
 use App\Models\User;
@@ -17,11 +18,13 @@ use Illuminate\View\View;
 
 /**
  * Personenverwaltung - angelehnt an Viettos personen.php: Liste mit Filtern
- * links, Stammdaten-Bearbeitung rechts. Rollen-Rechte selbst werden bewusst
- * NICHT hier verwaltet, sondern bleiben in der Rechte-Verwaltung (Rechte-Set
- * je Person) - keine doppelte Pflegestelle für dieselbe Sache. Firma/
- * Abteilung/Geschäftsbereich hier vorerst nur als Auswahl, deren eigene
- * Verwaltung (Neuanlage) kommt als Schritt 2.
+ * links, Stammdaten-Bearbeitung rechts. Rechte selbst werden bewusst NICHT
+ * hier verwaltet, sondern bleiben in der Rechte-Verwaltung (Rechte-Set je
+ * Person) - keine doppelte Pflegestelle für dieselbe Sache. "Rolle" hier ist
+ * die importierte Vietto-Rolle (LegacyRole, fachliche Funktion wie TR/PM-PT),
+ * eine andere Achse als das Rechte-Set. Firma/Abteilung/Geschäftsbereich hier
+ * vorerst nur als Auswahl, deren eigene Verwaltung (Neuanlage) kommt als
+ * Schritt 2.
  */
 class PersonController extends Controller
 {
@@ -49,9 +52,18 @@ class PersonController extends Controller
         if ($request->filled('permission_template_id')) {
             $query->where('permission_template_id', $request->integer('permission_template_id'));
         }
+        if ($request->filled('legacy_role_id')) {
+            $query->where('legacy_role_id', $request->integer('legacy_role_id'));
+        }
+        if ($request->filled('typ')) {
+            // "Typ" ist rein abgeleitet aus dem Vorhandensein eines
+            // User-Accounts (Login-User vs. Kontaktperson) - kein eigenes
+            // Feld, damit es nie mit der Realität auseinanderlaufen kann.
+            $request->input('typ') === 'login' ? $query->has('user') : $query->doesntHave('user');
+        }
 
         $people = $query
-            ->with(['company', 'department', 'businessUnit', 'permissionTemplate', 'user'])
+            ->with(['company', 'department', 'businessUnit', 'permissionTemplate', 'legacyRole', 'user'])
             ->orderBy('last_name')
             ->orderBy('first_name')
             ->get();
@@ -62,6 +74,7 @@ class PersonController extends Controller
             'departments' => Department::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('sort')->orderBy('name')->get(),
             'businessUnits' => BusinessUnit::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('sort')->orderBy('name')->get(),
             'permissionTemplates' => PermissionTemplate::query()->where('tenant_id', $tenantId)->orderBy('sort')->get(),
+            'legacyRoles' => LegacyRole::query()->where('tenant_id', $tenantId)->orderBy('sort')->orderBy('name')->get(),
         ]);
     }
 
@@ -91,6 +104,7 @@ class PersonController extends Controller
             'companies' => Company::query()->where('tenant_id', $tenantId)->orderBy('sort')->orderBy('name')->get(),
             'departments' => Department::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('sort')->orderBy('name')->get(),
             'businessUnits' => BusinessUnit::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('sort')->orderBy('name')->get(),
+            'legacyRoles' => LegacyRole::query()->where('tenant_id', $tenantId)->orderBy('sort')->orderBy('name')->get(),
         ]);
     }
 
@@ -101,10 +115,12 @@ class PersonController extends Controller
         $validated = $request->validate([
             'first_name' => ['nullable', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
+            'short_name' => ['nullable', 'string', 'max:20'],
             'email' => ['nullable', 'email', 'max:255'],
             'company_id' => ['nullable', 'integer', Rule::exists('companies', 'id')->where('tenant_id', $person->tenant_id)],
             'department_id' => ['nullable', 'integer', Rule::exists('departments', 'id')->where('tenant_id', $person->tenant_id)],
             'business_unit_id' => ['nullable', 'integer', Rule::exists('business_units', 'id')->where('tenant_id', $person->tenant_id)],
+            'legacy_role_id' => ['nullable', 'integer', Rule::exists('legacy_roles', 'id')->where('tenant_id', $person->tenant_id)],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date'],
             'remarks' => ['nullable', 'string'],

@@ -41,16 +41,28 @@
                     <input type="text" name="first_name" value="{{ old('first_name', $person->first_name) }}" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                 </div>
                 <div>
+                    <label class="block text-xs text-gray-500">{{ __('Kürzel') }}</label>
+                    <input type="text" name="short_name" value="{{ old('short_name', $person->short_name) }}" maxlength="20" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                </div>
+                <div>
                     <label class="block text-xs text-gray-500">{{ __('E-Mail') }}</label>
                     <input type="email" name="email" value="{{ old('email', $person->email) }}" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                 </div>
-                <div></div>
                 <div>
                     <label class="block text-xs text-gray-500">{{ __('Firma') }}</label>
                     <select name="company_id" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                         <option value="">{{ __('– nicht zugewiesen –') }}</option>
                         @foreach ($companies as $company)
                             <option value="{{ $company->id }}" @selected($person->company_id === $company->id)>{{ $company->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500">{{ __('Rolle') }}</label>
+                    <select name="legacy_role_id" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                        <option value="">{{ __('– nicht zugewiesen –') }}</option>
+                        @foreach ($legacyRoles as $role)
+                            <option value="{{ $role->id }}" @selected($person->legacy_role_id === $role->id)>{{ $role->name }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -92,10 +104,6 @@
                 <input type="checkbox" name="active" value="1" @checked($person->active) class="rounded border-gray-300">
                 {{ __('Aktiv') }}
             </label>
-
-            @if ($person->legacyRole)
-                <div class="text-xs text-gray-400">{{ __('Importierte Vietto-Rolle (nur Referenz)') }}: {{ $person->legacyRole->name }}</div>
-            @endif
 
             <button type="submit" class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
                 {{ __('Speichern') }}

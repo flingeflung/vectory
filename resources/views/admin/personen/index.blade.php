@@ -48,6 +48,23 @@
                         @endforeach
                     </select>
                 </div>
+                <div>
+                    <label class="block text-xs text-gray-500">{{ __('Rolle') }}</label>
+                    <select name="legacy_role_id" class="mt-0.5 rounded-md border-gray-300 text-sm">
+                        <option value="">{{ __('– Alle –') }}</option>
+                        @foreach ($legacyRoles as $role)
+                            <option value="{{ $role->id }}" @selected(request('legacy_role_id') == $role->id)>{{ $role->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500">{{ __('Typ') }}</label>
+                    <select name="typ" class="mt-0.5 rounded-md border-gray-300 text-sm">
+                        <option value="">{{ __('– Alle –') }}</option>
+                        <option value="login" @selected(request('typ') === 'login')>{{ __('Login-User') }}</option>
+                        <option value="kontakt" @selected(request('typ') === 'kontakt')>{{ __('Kontaktperson') }}</option>
+                    </select>
+                </div>
                 <label class="flex items-center gap-1.5 pb-1.5 text-xs text-gray-600">
                     <input type="checkbox" name="show_inactive" value="1" @checked(request()->boolean('show_inactive')) class="rounded border-gray-300">
                     {{ __('Inaktive zeigen') }}
@@ -55,7 +72,7 @@
                 <button type="submit" class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
                     {{ __('Filtern') }}
                 </button>
-                @if (request()->anyFilled(['search', 'company_id', 'department_id', 'business_unit_id', 'permission_template_id']) || request()->boolean('show_inactive'))
+                @if (request()->anyFilled(['search', 'company_id', 'department_id', 'business_unit_id', 'permission_template_id', 'legacy_role_id', 'typ']) || request()->boolean('show_inactive'))
                     <a href="{{ route('admin.personen') }}" class="pb-1.5 text-xs text-gray-500 hover:text-gray-700">{{ __('Zurücksetzen') }}</a>
                 @endif
             </form>
@@ -73,12 +90,14 @@
                 <thead class="sticky top-0 bg-white text-xs text-gray-500">
                     <tr>
                         <th class="px-3 py-2 text-left">{{ __('Name') }}</th>
+                        <th class="px-3 py-2 text-left">{{ __('Kürzel') }}</th>
+                        <th class="px-3 py-2 text-left">{{ __('Typ') }}</th>
                         <th class="px-3 py-2 text-left">{{ __('Firma') }}</th>
+                        <th class="px-3 py-2 text-left">{{ __('Rolle') }}</th>
                         <th class="px-3 py-2 text-left">{{ __('Abteilung') }}</th>
                         <th class="px-3 py-2 text-left">{{ __('Geschäftsbereich') }}</th>
                         <th class="px-3 py-2 text-left">{{ __('Rechte-Set') }}</th>
                         <th class="px-3 py-2 text-left">{{ __('E-Mail') }}</th>
-                        <th class="px-3 py-2 text-left">{{ __('Login') }}</th>
                         <th class="px-3 py-2 text-left">{{ __('Letzter Login') }}</th>
                     </tr>
                 </thead>
@@ -90,17 +109,19 @@
                                     {{ $person->fullName() }}
                                 </a>{{ ! $person->active ? ' [i]' : '' }}
                             </td>
+                            <td class="px-3 py-2 text-gray-600" title="{{ $person->fullName() }}">{{ $person->short_name ?? '–' }}</td>
+                            <td class="px-3 py-2 text-gray-600">{{ $person->user ? __('Login-User') : __('Kontaktperson') }}</td>
                             <td class="px-3 py-2 text-gray-600">{{ $person->company?->name ?? '–' }}</td>
+                            <td class="px-3 py-2 text-gray-600">{{ $person->legacyRole?->name ?? '–' }}</td>
                             <td class="px-3 py-2 text-gray-600">{{ $person->department?->name ?? '–' }}</td>
                             <td class="px-3 py-2 text-gray-600">{{ $person->businessUnit?->name ?? '–' }}</td>
                             <td class="px-3 py-2 text-gray-600">{{ $person->permissionTemplate?->name ?? '–' }}</td>
                             <td class="px-3 py-2 text-gray-600">{{ $person->email ?? '–' }}</td>
-                            <td class="px-3 py-2 text-gray-600">{{ $person->user ? __('Ja') : __('Nein') }}</td>
                             <td class="px-3 py-2 text-gray-600">{{ $person->last_login_at?->format('d.m.Y H:i') ?? '–' }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="px-3 py-6 text-center text-gray-400">{{ __('Keine Personen gefunden.') }}</td>
+                            <td colspan="10" class="px-3 py-6 text-center text-gray-400">{{ __('Keine Personen gefunden.') }}</td>
                         </tr>
                     @endforelse
                 </tbody>
