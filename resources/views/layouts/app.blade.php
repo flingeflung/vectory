@@ -55,6 +55,126 @@
             </div>
         </x-modal>
 
+        {{--
+            Global Personen-Detail-Overlay: von der Personenverwaltung per
+            Namensklick (x-person-link) öffenbar - gleiches Grundmuster wie
+            project-overlay oben, aber einfacher (kein Vor/Zurück-Blättern,
+            nicht draggable/resizable - dafür kein Bedarf hier).
+        --}}
+        <x-modal name="person-overlay" max-width="2xl" :dirty-check="'personOverlayIsDirty'">
+            <div class="flex max-h-[85vh] flex-col">
+                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+                    <h3 id="person-overlay-title" class="text-sm font-semibold text-gray-900">{{ __('Person') }}</h3>
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'person-overlay' }))"
+                        class="text-gray-400 hover:text-gray-600"
+                        aria-label="{{ __('Schließen') }}"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="person-overlay-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
+                    {{ __('Lädt…') }}
+                </div>
+            </div>
+        </x-modal>
+
+        <script>
+            (function () {
+                const body = () => document.getElementById('person-overlay-body');
+                const title = () => document.getElementById('person-overlay-title');
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                let savedSnapshot = null;
+
+                const serializeForms = () => Array.from(body().querySelectorAll('form')).map((form) => new URLSearchParams(new FormData(form)).toString()).join('|');
+
+                const snapshot = () => {
+                    savedSnapshot = serializeForms();
+                };
+
+                window.personOverlayIsDirty = () => {
+                    const current = serializeForms();
+                    return current !== null && current !== savedSnapshot;
+                };
+
+                window.addEventListener('open-person', async (event) => {
+                    const { id, name } = event.detail;
+                    if (!id) {
+                        return;
+                    }
+
+                    title().textContent = name || {{ \Illuminate\Support\Js::from(__('Person')) }};
+                    body().innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
+                    window.dispatchEvent(new CustomEvent('open-modal', { detail: 'person-overlay' }));
+
+                    body().innerHTML = await fetch('/admin/personen/' + id, {
+                        headers: { 'X-Overlay': '1' },
+                    }).then((r) => r.text());
+                    savedSnapshot = null;
+                    snapshot();
+                });
+
+                // Event-Delegation: die Formulare werden erst nach dem Öffnen per fetch eingefügt.
+                document.addEventListener('submit', async (event) => {
+                    if (!body() || !body().contains(event.target)) {
+                        return;
+                    }
+
+                    event.preventDefault();
+
+                    const formData = new FormData(event.target);
+                    const response = await fetch(event.target.action, {
+                        method: 'POST',
+                        headers: { 'X-Overlay': '1', 'X-CSRF-TOKEN': csrfToken },
+                        body: formData,
+                    });
+                    body().innerHTML = await response.text();
+                    snapshot();
+                    window.refreshPersonenListInBackground?.();
+                });
+
+                // Speichern im Overlay ändert Daten, die im Hintergrund als
+                // Tabelle sichtbar sind - ohne das hier stünde dort bis zum
+                // nächsten manuellen Reload der alte Stand.
+                window.refreshPersonenListInBackground = async function refreshPersonenListInBackground() {
+                    const current = document.getElementById('personen-content');
+                    if (!current) {
+                        return;
+                    }
+
+                    const html = await fetch(window.location.href).then((r) => r.text());
+                    const fresh = new DOMParser().parseFromString(html, 'text/html').getElementById('personen-content');
+                    if (fresh) {
+                        current.innerHTML = fresh.innerHTML;
+                    }
+                };
+
+                // Kürzel-Vorschlag aus Vor-/Nachname (Vorname-Initial + erste
+                // zwei Buchstaben Nachname, z.B. "Ralf Geyer" -> "RGy") - nur
+                // solange das Feld noch leer ist, überschreibt also nie eine
+                // manuelle Eingabe. Global (nicht Overlay-Closure), weil das
+                // Feld auch auf der normalen Vollseite (nicht nur im Overlay)
+                // vorkommt.
+                window.suggestPersonShortName = function () {
+                    const first = document.getElementById('person-first-name');
+                    const last = document.getElementById('person-last-name');
+                    const short = document.getElementById('person-short-name');
+                    if (!first || !last || !short || short.value.trim() !== '') {
+                        return;
+                    }
+                    const f = first.value.trim();
+                    const l = last.value.trim();
+                    if (!f || !l) {
+                        return;
+                    }
+                    short.value = f.charAt(0).toUpperCase() + l.charAt(0).toUpperCase() + (l.charAt(1) || '').toLowerCase();
+                };
+            })();
+        </script>
+
         {{-- Global Favoriten-Overlay: über den Sidebar-Button erreichbar. --}}
         <x-modal name="favorites" max-width="md">
             <div class="p-4">

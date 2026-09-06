@@ -5,7 +5,7 @@
 
     {{-- Kopf fix (Filter + Neue Person), nur die Tabelle scrollt - siehe
          CLAUDE.md-Konvention "Boxen mit Kopf-/Fußbereich + Liste". --}}
-    <div class="flex flex-1 min-h-0 flex-col rounded-lg border border-gray-200 bg-white">
+    <div id="personen-content" class="flex flex-1 min-h-0 flex-col rounded-lg border border-gray-200 bg-white">
         <div class="shrink-0 flex flex-wrap items-end gap-3 border-b border-gray-100 p-3">
             <form method="GET" action="{{ route('admin.personen') }}" class="flex flex-1 flex-wrap items-end gap-3">
                 <div>
@@ -105,9 +105,7 @@
                     @forelse ($people as $person)
                         <tr class="hover:bg-gray-50">
                             <td class="px-3 py-2 {{ $person->active ? '' : 'text-gray-400' }}">
-                                <a href="{{ route('admin.personen.edit', $person) }}" class="text-indigo-700 hover:underline">
-                                    {{ $person->fullName() }}
-                                </a>{{ ! $person->active ? ' [i]' : '' }}
+                                <x-person-link :person="$person" />{{ ! $person->active ? ' [i]' : '' }}
                             </td>
                             <td class="px-3 py-2 text-gray-600" title="{{ $person->fullName() }}">{{ $person->short_name ?? '–' }}</td>
                             <td class="px-3 py-2 text-gray-600">{{ $person->user ? __('Login-User') : __('Kontaktperson') }}</td>
