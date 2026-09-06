@@ -20,7 +20,7 @@ class Setting extends Model
     public const DEFINITIONS = [
         'project_path' => [
             'label' => 'Projektpfad',
-            'description' => 'Basisverzeichnis, unter dem für jedes Projekt ein Dateiordner mit der festen Unterordner-Struktur (Kommunikation, Grafikerstellung, Lektorat, ...) angelegt wird.',
+            'description' => 'Basisverzeichnis für Vectory-Projektdateien.',
             'default' => '',
         ],
     ];

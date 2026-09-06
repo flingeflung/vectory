@@ -27,16 +27,24 @@ class ConfigController extends Controller
 
     public function update(Request $request): RedirectResponse
     {
-        $values = $request->array('values');
+        $validated = $request->validate(
+            [
+                'values' => ['array'],
+                'values.*' => ['nullable', 'string', 'max:500'],
+            ],
+            attributes: collect(Setting::DEFINITIONS)
+                ->mapWithKeys(fn ($definition, $key) => ["values.$key" => $definition['label']])
+                ->all(),
+        );
 
-        foreach (Setting::DEFINITIONS as $key => $definition) {
-            if (! array_key_exists($key, $values)) {
+        foreach (array_keys(Setting::DEFINITIONS) as $key) {
+            if (! array_key_exists($key, $validated['values'] ?? [])) {
                 continue;
             }
 
             Setting::query()->updateOrCreate(
                 ['tenant_id' => $request->user()->tenant_id, 'key' => $key],
-                ['value' => trim((string) $values[$key])],
+                ['value' => trim((string) $validated['values'][$key])],
             );
         }
 
