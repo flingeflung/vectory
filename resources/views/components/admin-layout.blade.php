@@ -35,6 +35,14 @@
                 >
                     {{ __('Konfig') }}
                 </a>
+                @can('access-superadmin')
+                    <a
+                        href="{{ route('admin.superadmin') }}"
+                        class="pb-2 {{ request()->routeIs('admin.superadmin') ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700' }}"
+                    >
+                        {{ __('Superadmin') }}
+                    </a>
+                @endcan
             </div>
 
             <div class="flex flex-1 min-h-0 flex-col">

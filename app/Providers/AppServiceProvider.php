@@ -46,5 +46,9 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Gate::define('access-admin', fn (User $user) => in_array($user->role, ['admin', 'super_admin'], true));
+
+        // Installationsweite Einstellungen (Superadmin-Reiter) - bewusst
+        // strenger als access-admin, normale Admins sehen den Reiter nicht.
+        Gate::define('access-superadmin', fn (User $user) => $user->role === 'super_admin');
     }
 }
