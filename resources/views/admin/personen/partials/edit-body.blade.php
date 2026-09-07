@@ -78,10 +78,19 @@
                     @case('password-reset')
                         {{ __('Passwort gesetzt.') }}
                         @break
+                    @case('role-updated')
+                        {{ __('Rolle geändert.') }}
+                        @break
                     @default
                         {{ __('Gespeichert.') }}
                 @endswitch
             </x-flash-message>
+        @endif
+
+        @if ($isProtectedSuperAdmin)
+            <div class="mb-3 shrink-0 rounded bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                {{ __('Dies ist ein Super-Admin-Konto. Nur ein Super-Admin darf es bearbeiten.') }}
+            </div>
         @endif
 
         @if ($errors->any())
@@ -96,6 +105,7 @@
 
         <div class="{{ $isOverlay ? '' : 'max-w-2xl' }} space-y-4">
             <form method="POST" action="{{ route('admin.personen.update', $person) }}" class="space-y-4 rounded-lg border border-gray-200 bg-white p-4">
+                <fieldset @disabled($isProtectedSuperAdmin) class="space-y-4">
                 <div>
                     <label class="block text-xs text-gray-500">{{ __('ID') }}</label>
                     <input type="text" value="{{ $person->id }}" disabled class="mt-0.5 w-20 rounded-md border-gray-300 bg-gray-50 text-sm text-gray-500">
@@ -200,9 +210,10 @@
                     <input type="checkbox" name="active" value="1" @checked($person->active) class="rounded border-gray-300">
                     {{ __('Aktiv') }}
                 </label>
+                </fieldset>
 
                 @csrf
-                <button type="submit" class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
+                <button type="submit" @disabled($isProtectedSuperAdmin) class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50">
                     {{ __('Speichern') }}
                 </button>
             </form>
@@ -259,6 +270,38 @@
                     </form>
                 @endif
             </div>
+
+            @if ($actingUserIsSuperAdmin && $person->user)
+                <div class="rounded-lg border border-gray-200 bg-white p-4">
+                    <div class="mb-2 text-xs font-semibold text-gray-500">{{ __('Rolle') }}</div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-700">
+                            {{ __('Aktuell') }}:
+                            <span class="font-medium">{{ $person->user->role === 'super_admin' ? __('Super-Admin') : ($person->user->role === 'admin' ? __('Admin') : __('User')) }}</span>
+                        </span>
+                        <form
+                            method="POST"
+                            action="{{ route('admin.personen.role.update', $person) }}"
+                            x-data="{ async confirmAndSubmit(e) { if (await window.confirmDialog({
+                                title: {{ \Illuminate\Support\Js::from(__('Rolle ändern')) }},
+                                message: {{ \Illuminate\Support\Js::from($person->user->role === 'super_admin' ? __('Super-Admin-Rechte wirklich entziehen?') : __('Diese Person wirklich zum Super-Admin machen?')) }},
+                                confirmLabel: {{ \Illuminate\Support\Js::from($person->user->role === 'super_admin' ? __('Rechte entziehen') : __('Zum Super-Admin machen')) }},
+                                cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
+                            })) { e.target.submit(); } } }"
+                            @submit.prevent="confirmAndSubmit($event)"
+                        >
+                            @csrf
+                            <input type="hidden" name="super_admin" value="{{ $person->user->role === 'super_admin' ? '0' : '1' }}">
+                            <button
+                                type="submit"
+                                class="rounded-md border border-gray-300 px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                            >
+                                {{ $person->user->role === 'super_admin' ? __('Super-Admin-Rechte entziehen') : __('Zum Super-Admin machen') }}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            @endif
 
             @if ($multiTenantEnabled)
                 <div class="rounded-lg border border-gray-200 bg-white p-4" x-data="{ dirty: false }">

@@ -100,6 +100,7 @@ class PersonController extends Controller
     public function update(Request $request, Person $person): RedirectResponse|Response
     {
         abort_unless($person->tenant_id === CurrentTenant::id(), 404);
+        $this->abortIfProtectedFromEditing($request, $person);
 
         $isOverlay = $this->isOverlayRequest($request);
 
@@ -153,6 +154,7 @@ class PersonController extends Controller
     public function createLogin(Request $request, Person $person): RedirectResponse|Response
     {
         abort_unless($person->tenant_id === CurrentTenant::id(), 404);
+        $this->abortIfProtectedFromEditing($request, $person);
         abort_if($person->user, 422);
 
         $isOverlay = $this->isOverlayRequest($request);
@@ -196,6 +198,7 @@ class PersonController extends Controller
     public function resetPassword(Request $request, Person $person): RedirectResponse|Response
     {
         abort_unless($person->tenant_id === CurrentTenant::id(), 404);
+        $this->abortIfProtectedFromEditing($request, $person);
         abort_unless($person->user, 404);
 
         $isOverlay = $this->isOverlayRequest($request);
@@ -231,6 +234,7 @@ class PersonController extends Controller
     public function updateTenantAccess(Request $request, Person $person): RedirectResponse|Response
     {
         abort_unless($person->tenant_id === CurrentTenant::id(), 404);
+        $this->abortIfProtectedFromEditing($request, $person);
         abort_unless(SystemSetting::multiTenantEnabled(), 403);
 
         $tenantIds = collect($request->array('tenant_ids'))
@@ -250,6 +254,57 @@ class PersonController extends Controller
         }
 
         return redirect()->route('admin.personen.edit', $person)->with('status', 'tenant-access-updated');
+    }
+
+    /**
+     * Nur ein Super-Admin darf einer anderen Person Super-Admin-Rechte
+     * geben oder wieder entziehen (Ralf: "als Superadmin sollte ich
+     * weitere Personen in diesen erhabenen Stand erheben können"). Beim
+     * Zurückstufen fällt die Rolle auf das zugewiesene Rechte-Set zurück
+     * (oder "user", falls keins zugewiesen ist) - nie blind auf "admin",
+     * das wäre eine unbeabsichtigte Rechteausweitung ohne passendes Set
+     * (siehe Ralfs eigenes alte Konto, das genau in dieser Falle war).
+     * Der letzte verbliebene Super-Admin kann nicht zurückgestuft werden.
+     */
+    public function updateRole(Request $request, Person $person): RedirectResponse|Response
+    {
+        abort_unless($person->tenant_id === CurrentTenant::id(), 404);
+        abort_unless($request->user()->role === 'super_admin', 403);
+        abort_unless($person->user, 404);
+
+        $makeSuperAdmin = $request->boolean('super_admin');
+
+        if (! $makeSuperAdmin && $person->user->role === 'super_admin') {
+            $remainingSuperAdmins = User::query()->where('role', 'super_admin')->where('id', '!=', $person->user->id)->exists();
+            abort_unless($remainingSuperAdmins, 422, __('Der letzte verbliebene Super-Admin kann nicht zurückgestuft werden.'));
+        }
+
+        $person->user->update(['role' => $makeSuperAdmin ? 'super_admin' : ($person->permissionTemplate?->role ?? 'user')]);
+
+        $isOverlay = $this->isOverlayRequest($request);
+
+        if ($isOverlay) {
+            $request->session()->flash('status', 'role-updated');
+
+            return response()->view('admin.personen.partials.edit-body', [...$this->editData($request, $person), 'overlay' => true]);
+        }
+
+        return redirect()->route('admin.personen.edit', $person)->with('status', 'role-updated');
+    }
+
+    /**
+     * Ein Super-Admin-Konto darf nur von einem anderen Super-Admin
+     * bearbeitet werden - ein normaler Admin sieht es (Personenliste/
+     * -Overlay), darf es aber nicht ändern (Ralf: "sollte ich vielleicht
+     * sehen, aber nicht ändern dürfen"). Schützt vor versehentlicher oder
+     * böswilliger Einmischung eines untergeordneten Admins.
+     */
+    private function abortIfProtectedFromEditing(Request $request, Person $person): void
+    {
+        abort_if(
+            $person->user?->role === 'super_admin' && $request->user()->role !== 'super_admin',
+            403
+        );
     }
 
     /**
@@ -275,6 +330,8 @@ class PersonController extends Controller
             'legacyRoles' => LegacyRole::query()->where('tenant_id', $tenantId)->orderBy('name')->get(),
             'multiTenantEnabled' => $multiTenantEnabled,
             'otherTenants' => $multiTenantEnabled ? Tenant::query()->where('id', '!=', $tenantId)->orderBy('name')->get() : collect(),
+            'actingUserIsSuperAdmin' => $request->user()->role === 'super_admin',
+            'isProtectedSuperAdmin' => $person->user?->role === 'super_admin' && $request->user()->role !== 'super_admin',
             'filters' => $filters,
             'previousPerson' => $this->adjacentPerson($filters, $person, 'previous', $tenantId),
             'nextPerson' => $this->adjacentPerson($filters, $person, 'next', $tenantId),
