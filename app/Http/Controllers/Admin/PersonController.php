@@ -336,8 +336,8 @@ class PersonController extends Controller
             'otherTenants' => $multiTenantEnabled ? Tenant::query()->where('id', '!=', $tenantId)->orderBy('name')->get() : collect(),
             'actingUserIsSuperAdmin' => $request->user()->role === 'super_admin',
             'filters' => $filters,
-            'previousPerson' => $this->adjacentPerson($filters, $person, 'previous', $tenantId),
-            'nextPerson' => $this->adjacentPerson($filters, $person, 'next', $tenantId),
+            'previousPerson' => $this->adjacentPerson($request, $filters, $person, 'previous', $tenantId),
+            'nextPerson' => $this->adjacentPerson($request, $filters, $person, 'next', $tenantId),
         ];
     }
 
@@ -396,12 +396,22 @@ class PersonController extends Controller
      * Personenliste sortiert immer fix nach Nachname/Vorname, id als
      * dritte Ebene bricht Gleichstände (gleicher Name) eindeutig auf.
      */
-    private function adjacentPerson(array $filters, Person $current, string $way, int $tenantId): ?Person
+    /**
+     * Beim Blättern (< >) im Overlay nie auf ein Super-Admin-Konto landen,
+     * das der aktuelle Nutzer eh nicht öffnen dürfte (siehe
+     * abortIfProtectedFromEditing()) - sonst käme dieselbe hässliche
+     * 403-Antwort in der Overlay-Modal wie beim direkten Anklicken in der
+     * Liste, nur über einen anderen Weg dorthin.
+     */
+    private function adjacentPerson(Request $request, array $filters, Person $current, string $way, int $tenantId): ?Person
     {
         $direction = $way === 'next' ? 'asc' : 'desc';
         $operator = $direction === 'asc' ? '>' : '<';
 
         return $this->filteredPeopleQuery($filters, $tenantId)
+            ->when($request->user()->role !== 'super_admin', function (Builder $query) {
+                $query->whereDoesntHave('user', fn (Builder $query) => $query->where('role', 'super_admin'));
+            })
             ->where(function (Builder $query) use ($operator, $current) {
                 $query->where('last_name', $operator, $current->last_name)
                     ->orWhere(function (Builder $query) use ($operator, $current) {

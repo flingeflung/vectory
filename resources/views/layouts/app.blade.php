@@ -425,6 +425,19 @@
                     const response = await fetch('/admin/personen/' + id + query, {
                         headers: { 'X-Overlay': '1' },
                     });
+                    // Fallback, falls doch mal ein Zugriff verweigert wird (z.B.
+                    // zwei Tabs offen, Rolle wurde gerade eben erst geändert) -
+                    // sonst landet die rohe, unformatierte Server-Antwort im
+                    // Overlay (siehe Ralfs Screenshot "Dein Ernst???"). Die
+                    // Personenliste selbst verhindert das schon serverseitig
+                    // und blendet den Link gar nicht erst ein, das hier ist nur
+                    // ein Sicherheitsnetz.
+                    if (!response.ok) {
+                        window.dispatchEvent(new CustomEvent('close-modal', { detail: 'person-overlay' }));
+                        await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Kein Zugriff auf diese Person.')) }});
+                        hideLoading();
+                        return;
+                    }
                     body().innerHTML = await response.text();
                     hideLoading();
                     savedSnapshot = null;

@@ -7,16 +7,24 @@
         ungespeichert geändert sind, statt nur das Haupt-Formular zu prüfen
         (Ralfs Bug-Report: Kundenname geändert, nicht gespeichert, Reiter
         gewechselt, keine Abfrage).
+
+        Stolperfalle, die den ersten Versuch kaputt gemacht hat: ein normales
+        <script> HIER (im Seiteninhalt) läuft VOR dem <script> weiter unten in
+        layouts/app.blade.php, das window.adminPageIsDirty auf den Standardwert
+        (() => false) setzt - die Reihenfolge im DOM entscheidet bei normalen
+        Scripts, nicht die Position im Blade-Code. Der Standardwert hätte also
+        die Zuweisung hier sofort wieder überschrieben. x-init läuft dagegen erst,
+        wenn Alpine die Seite initialisiert - garantiert NACH allen normalen
+        <script>-Tags der Seite, deshalb hier statt in einem <script>.
     --}}
     <script>
         window.__configDirtyForms = new Set();
-        window.adminPageIsDirty = () => window.__configDirtyForms.size > 0;
     </script>
     <div class="max-w-2xl">
         <div class="rounded-lg border border-gray-200 bg-white p-4">
             <div
                 x-data="{ dirty: false, show: false }"
-                x-init="@if (session('status') === 'config-updated') show = true; setTimeout(() => show = false, 2000) @endif"
+                x-init="window.adminPageIsDirty = () => window.__configDirtyForms.size > 0; @if (session('status') === 'config-updated') show = true; setTimeout(() => show = false, 2000) @endif"
             >
                 <form method="POST" action="{{ route('admin.config.update') }}" @input="dirty = true; window.__configDirtyForms.add($el)" class="space-y-5">
                     @csrf
