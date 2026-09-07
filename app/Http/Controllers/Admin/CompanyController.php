@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use App\Support\CurrentTenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -20,7 +21,7 @@ class CompanyController extends Controller
     public function index(Request $request): View
     {
         $companies = Company::query()
-            ->where('tenant_id', $request->user()->tenant_id)
+            ->where('tenant_id', CurrentTenant::id())
             ->withCount('people')
             ->orderBy('name')
             ->get();
@@ -34,7 +35,7 @@ class CompanyController extends Controller
         abort_if($name === '', 422);
 
         Company::query()->create([
-            'tenant_id' => $request->user()->tenant_id,
+            'tenant_id' => CurrentTenant::id(),
             'name' => $name,
             'short_name' => trim((string) $request->string('short_name')) ?: mb_substr($name, 0, 20),
         ]);
@@ -44,7 +45,7 @@ class CompanyController extends Controller
 
     public function update(Request $request, Company $company): RedirectResponse
     {
-        abort_unless($company->tenant_id === $request->user()->tenant_id, 404);
+        abort_unless($company->tenant_id === CurrentTenant::id(), 404);
 
         $name = trim((string) $request->string('name'));
         abort_if($name === '', 422);
@@ -64,7 +65,7 @@ class CompanyController extends Controller
      */
     public function destroy(Request $request, Company $company): RedirectResponse
     {
-        abort_unless($company->tenant_id === $request->user()->tenant_id, 404);
+        abort_unless($company->tenant_id === CurrentTenant::id(), 404);
 
         if ($company->people()->exists()) {
             $reassignTo = $request->filled('reassign_to')

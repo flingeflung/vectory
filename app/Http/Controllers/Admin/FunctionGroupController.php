@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Department;
 use App\Models\FunctionGroup;
 use App\Models\Person;
+use App\Support\CurrentTenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,7 +26,7 @@ class FunctionGroupController extends Controller
 {
     public function index(Request $request): View
     {
-        $tenantId = $request->user()->tenant_id;
+        $tenantId = CurrentTenant::id();
 
         $groups = FunctionGroup::query()->where('tenant_id', $tenantId)->orderBy('name')->get();
         $people = Person::query()->where('tenant_id', $tenantId)
@@ -73,7 +74,7 @@ class FunctionGroupController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $tenantId = $request->user()->tenant_id;
+        $tenantId = CurrentTenant::id();
         $name = trim((string) $request->string('name'));
         $shortName = trim((string) $request->string('short_name'));
         abort_if($name === '' || $shortName === '', 422);
@@ -89,7 +90,7 @@ class FunctionGroupController extends Controller
 
     public function update(Request $request, FunctionGroup $group): RedirectResponse
     {
-        abort_unless($group->tenant_id === $request->user()->tenant_id, 404);
+        abort_unless($group->tenant_id === CurrentTenant::id(), 404);
 
         $name = trim((string) $request->string('name'));
         $shortName = trim((string) $request->string('short_name'));
@@ -115,7 +116,7 @@ class FunctionGroupController extends Controller
      */
     public function destroy(Request $request, FunctionGroup $group): RedirectResponse
     {
-        abort_unless($group->tenant_id === $request->user()->tenant_id, 404);
+        abort_unless($group->tenant_id === CurrentTenant::id(), 404);
 
         $usage = $this->usageCounts($group);
         abort_if(array_sum($usage) > 0, 422);
@@ -127,7 +128,7 @@ class FunctionGroupController extends Controller
 
     public function updateMembers(Request $request, FunctionGroup $group): RedirectResponse
     {
-        abort_unless($group->tenant_id === $request->user()->tenant_id, 404);
+        abort_unless($group->tenant_id === CurrentTenant::id(), 404);
 
         $personIds = collect($request->array('person_ids'))->map(fn ($id) => (int) $id);
         $validIds = Person::query()->where('tenant_id', $group->tenant_id)->whereIn('id', $personIds)->pluck('id');
@@ -142,7 +143,7 @@ class FunctionGroupController extends Controller
 
     public function updatePersonGroups(Request $request, Person $person): RedirectResponse
     {
-        abort_unless($person->tenant_id === $request->user()->tenant_id, 404);
+        abort_unless($person->tenant_id === CurrentTenant::id(), 404);
 
         $groupIds = collect($request->array('function_group_ids'))->map(fn ($id) => (int) $id);
         $validIds = FunctionGroup::query()->where('tenant_id', $person->tenant_id)->whereIn('id', $groupIds)->pluck('id');

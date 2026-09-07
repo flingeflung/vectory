@@ -12,6 +12,7 @@ use App\Models\Person;
 use App\Models\SystemSetting;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Support\CurrentTenant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -41,7 +42,7 @@ class PersonController extends Controller
 
     public function index(Request $request): View
     {
-        $tenantId = $request->user()->tenant_id;
+        $tenantId = CurrentTenant::id();
         $filters = $this->filtersFromRequest($request);
 
         $people = $this->filteredPeopleQuery($filters, $tenantId)
@@ -71,7 +72,7 @@ class PersonController extends Controller
     public function store(Request $request): RedirectResponse|JsonResponse
     {
         $person = Person::query()->create([
-            'tenant_id' => $request->user()->tenant_id,
+            'tenant_id' => CurrentTenant::id(),
             'first_name' => '',
             'last_name' => __('Neue Person'),
         ]);
@@ -85,7 +86,7 @@ class PersonController extends Controller
 
     public function edit(Request $request, Person $person): View|Response
     {
-        abort_unless($person->tenant_id === $request->user()->tenant_id, 404);
+        abort_unless($person->tenant_id === CurrentTenant::id(), 404);
 
         $data = $this->editData($request, $person);
 
@@ -98,7 +99,7 @@ class PersonController extends Controller
 
     public function update(Request $request, Person $person): RedirectResponse|Response
     {
-        abort_unless($person->tenant_id === $request->user()->tenant_id, 404);
+        abort_unless($person->tenant_id === CurrentTenant::id(), 404);
 
         $isOverlay = $this->isOverlayRequest($request);
 
@@ -151,7 +152,7 @@ class PersonController extends Controller
      */
     public function createLogin(Request $request, Person $person): RedirectResponse|Response
     {
-        abort_unless($person->tenant_id === $request->user()->tenant_id, 404);
+        abort_unless($person->tenant_id === CurrentTenant::id(), 404);
         abort_if($person->user, 422);
 
         $isOverlay = $this->isOverlayRequest($request);
@@ -194,7 +195,7 @@ class PersonController extends Controller
 
     public function resetPassword(Request $request, Person $person): RedirectResponse|Response
     {
-        abort_unless($person->tenant_id === $request->user()->tenant_id, 404);
+        abort_unless($person->tenant_id === CurrentTenant::id(), 404);
         abort_unless($person->user, 404);
 
         $isOverlay = $this->isOverlayRequest($request);
@@ -229,7 +230,7 @@ class PersonController extends Controller
      */
     public function updateTenantAccess(Request $request, Person $person): RedirectResponse|Response
     {
-        abort_unless($person->tenant_id === $request->user()->tenant_id, 404);
+        abort_unless($person->tenant_id === CurrentTenant::id(), 404);
         abort_unless(SystemSetting::multiTenantEnabled(), 403);
 
         $tenantIds = collect($request->array('tenant_ids'))
@@ -256,7 +257,7 @@ class PersonController extends Controller
      */
     private function editData(Request $request, Person $person): array
     {
-        $tenantId = $request->user()->tenant_id;
+        $tenantId = CurrentTenant::id();
         // Nur aus der Query-String gelesen (nicht $request->all()) - beim
         // Speichern (POST) trägt die Action-URL bewusst keine Filter mehr
         // mit (genau wie beim Projekt-Overlay), Vor/Zurück wirkt danach

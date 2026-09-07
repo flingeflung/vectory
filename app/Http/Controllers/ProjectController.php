@@ -17,6 +17,7 @@ use App\Models\ProjectWorkflowStep;
 use App\Models\Workflow;
 use App\Models\WorkflowStep;
 use App\Services\ProjectDirectoryLocator;
+use App\Support\CurrentTenant;
 use App\Support\ProjectColumnCatalog;
 use App\Support\ProjectFilterCatalog;
 use Illuminate\Database\Eloquent\Builder;
@@ -98,13 +99,13 @@ class ProjectController extends Controller
             'sort' => $sort,
             'direction' => $direction,
             'filters' => $filters,
-            'filterFields' => ProjectFilterCatalog::available($user->tenant_id),
+            'filterFields' => ProjectFilterCatalog::available(CurrentTenant::id()),
             'activeFilterFields' => $activeFilterFields,
-            'filterChips' => ProjectFilterCatalog::describeFilters($filters, $user->tenant_id),
+            'filterChips' => ProjectFilterCatalog::describeFilters($filters, CurrentTenant::id()),
             'totalCount' => Project::query()->count(),
             'favoriteProjectIds' => Favorite::where('user_id', $user->id)->pluck('project_id')->all(),
             'graphicOrderSummaries' => $graphicOrderSummaries,
-            'directoryStatuses' => $this->directoryLocator->statusesForProjects($projects->getCollection(), $user->tenant_id),
+            'directoryStatuses' => $this->directoryLocator->statusesForProjects($projects->getCollection(), CurrentTenant::id()),
         ]);
     }
 
@@ -418,7 +419,7 @@ class ProjectController extends Controller
             return ['schnellsuche' => $quickSearch];
         }
 
-        $available = array_column(ProjectFilterCatalog::available($request->user()->tenant_id), null, 'key');
+        $available = array_column(ProjectFilterCatalog::available(CurrentTenant::id()), null, 'key');
         $raw = $request->query('filter', []);
         $filters = [];
 

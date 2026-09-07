@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\LegacyRole;
+use App\Support\CurrentTenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -17,7 +18,7 @@ class LegacyRoleController extends Controller
 {
     public function index(Request $request): View
     {
-        $legacyRoles = LegacyRole::query()->where('tenant_id', $request->user()->tenant_id)
+        $legacyRoles = LegacyRole::query()->where('tenant_id', CurrentTenant::id())
             ->withCount('people')->orderBy('name')->get();
 
         return view('admin.legacy-roles.partials.manage-body', ['legacyRoles' => $legacyRoles]);
@@ -29,7 +30,7 @@ class LegacyRoleController extends Controller
         abort_if($name === '', 422);
 
         LegacyRole::query()->create([
-            'tenant_id' => $request->user()->tenant_id,
+            'tenant_id' => CurrentTenant::id(),
             'name' => $name,
         ]);
 
@@ -38,7 +39,7 @@ class LegacyRoleController extends Controller
 
     public function update(Request $request, LegacyRole $legacyRole): RedirectResponse
     {
-        abort_unless($legacyRole->tenant_id === $request->user()->tenant_id, 404);
+        abort_unless($legacyRole->tenant_id === CurrentTenant::id(), 404);
 
         $name = trim((string) $request->string('name'));
         abort_if($name === '', 422);
@@ -50,7 +51,7 @@ class LegacyRoleController extends Controller
 
     public function destroy(Request $request, LegacyRole $legacyRole): RedirectResponse
     {
-        abort_unless($legacyRole->tenant_id === $request->user()->tenant_id, 404);
+        abort_unless($legacyRole->tenant_id === CurrentTenant::id(), 404);
 
         if ($legacyRole->people()->exists()) {
             $reassignTo = $request->filled('reassign_to')

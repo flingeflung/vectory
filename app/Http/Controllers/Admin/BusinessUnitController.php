@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\BusinessUnit;
+use App\Support\CurrentTenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -18,7 +19,7 @@ class BusinessUnitController extends Controller
     public function index(Request $request): View
     {
         $businessUnits = BusinessUnit::query()
-            ->where('tenant_id', $request->user()->tenant_id)
+            ->where('tenant_id', CurrentTenant::id())
             ->withCount('people')
             ->orderBy('name')
             ->get();
@@ -32,7 +33,7 @@ class BusinessUnitController extends Controller
         abort_if($name === '', 422);
 
         BusinessUnit::query()->create([
-            'tenant_id' => $request->user()->tenant_id,
+            'tenant_id' => CurrentTenant::id(),
             'name' => $name,
         ]);
 
@@ -41,7 +42,7 @@ class BusinessUnitController extends Controller
 
     public function update(Request $request, BusinessUnit $businessUnit): RedirectResponse
     {
-        abort_unless($businessUnit->tenant_id === $request->user()->tenant_id, 404);
+        abort_unless($businessUnit->tenant_id === CurrentTenant::id(), 404);
 
         $name = trim((string) $request->string('name'));
         abort_if($name === '', 422);
@@ -53,7 +54,7 @@ class BusinessUnitController extends Controller
 
     public function destroy(Request $request, BusinessUnit $businessUnit): RedirectResponse
     {
-        abort_unless($businessUnit->tenant_id === $request->user()->tenant_id, 404);
+        abort_unless($businessUnit->tenant_id === CurrentTenant::id(), 404);
 
         if ($businessUnit->people()->exists()) {
             $reassignTo = $request->filled('reassign_to')

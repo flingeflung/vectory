@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use App\Models\SystemSetting;
 use App\Models\Tenant;
+use App\Support\CurrentTenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -14,7 +15,7 @@ class ConfigController extends Controller
 {
     public function index(Request $request): View
     {
-        $existing = Setting::query()->where('tenant_id', $request->user()->tenant_id)
+        $existing = Setting::query()->where('tenant_id', CurrentTenant::id())
             ->get()->keyBy('key');
 
         $settings = collect(Setting::DEFINITIONS)->map(fn ($definition, $key) => [
@@ -49,7 +50,7 @@ class ConfigController extends Controller
             }
 
             Setting::query()->updateOrCreate(
-                ['tenant_id' => $request->user()->tenant_id, 'key' => $key],
+                ['tenant_id' => CurrentTenant::id(), 'key' => $key],
                 ['value' => trim((string) $validated['values'][$key])],
             );
         }

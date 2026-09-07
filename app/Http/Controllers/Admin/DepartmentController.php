@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Department;
+use App\Support\CurrentTenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -16,7 +17,7 @@ class DepartmentController extends Controller
 {
     public function index(Request $request): View
     {
-        $departments = Department::query()->where('tenant_id', $request->user()->tenant_id)
+        $departments = Department::query()->where('tenant_id', CurrentTenant::id())
             ->withCount('people')->orderBy('name')->get();
 
         return view('admin.departments.partials.manage-body', ['departments' => $departments]);
@@ -28,7 +29,7 @@ class DepartmentController extends Controller
         abort_if($name === '', 422);
 
         Department::query()->create([
-            'tenant_id' => $request->user()->tenant_id,
+            'tenant_id' => CurrentTenant::id(),
             'name' => $name,
             'short_name' => $this->shortNameFromRequest($request),
         ]);
@@ -38,7 +39,7 @@ class DepartmentController extends Controller
 
     public function update(Request $request, Department $department): RedirectResponse
     {
-        abort_unless($department->tenant_id === $request->user()->tenant_id, 404);
+        abort_unless($department->tenant_id === CurrentTenant::id(), 404);
 
         $name = trim((string) $request->string('name'));
         abort_if($name === '', 422);
@@ -61,7 +62,7 @@ class DepartmentController extends Controller
 
     public function destroy(Request $request, Department $department): RedirectResponse
     {
-        abort_unless($department->tenant_id === $request->user()->tenant_id, 404);
+        abort_unless($department->tenant_id === CurrentTenant::id(), 404);
 
         if ($department->people()->exists()) {
             $reassignTo = $request->filled('reassign_to')

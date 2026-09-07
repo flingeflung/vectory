@@ -7,6 +7,7 @@ use App\Models\Department;
 use App\Models\Permission;
 use App\Models\PermissionTemplate;
 use App\Models\Person;
+use App\Support\CurrentTenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -22,15 +23,9 @@ class PermissionController extends Controller
 {
     public function index(Request $request): View
     {
-        $tenantId = $request->user()->tenant_id;
+        $tenantId = CurrentTenant::id();
 
         $templates = PermissionTemplate::query()->where('tenant_id', $tenantId)->orderBy('sort')->get();
-        if ($request->user()->role !== 'super_admin') {
-            // Admin-Sets bleiben Super-Admin vorbehalten - ein normaler
-            // Admin bekommt sie hier gar nicht erst zu sehen (siehe auch
-            // assignTemplate()/update()/destroy() unten, dieselbe Regel).
-            $templates = $templates->where('role', '!=', 'admin')->values();
-        }
 
         $people = Person::query()
             ->where('tenant_id', $tenantId)
@@ -82,10 +77,8 @@ class PermissionController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $tenantId = $request->user()->tenant_id;
+        $tenantId = CurrentTenant::id();
         $base = PermissionTemplate::query()->where('tenant_id', $tenantId)->findOrFail($request->integer('base_id'));
-
-        abort_if($base->role === 'admin' && $request->user()->role !== 'super_admin', 403);
 
         $name = trim((string) $request->string('name'));
         abort_if($name === '', 422);
@@ -109,8 +102,7 @@ class PermissionController extends Controller
      */
     public function update(Request $request, PermissionTemplate $template): RedirectResponse
     {
-        abort_unless($template->tenant_id === $request->user()->tenant_id, 404);
-        abort_if($template->role === 'admin' && $request->user()->role !== 'super_admin', 403);
+        abort_unless($template->tenant_id === CurrentTenant::id(), 404);
 
         $name = trim((string) $request->string('name'));
         abort_if($name === '', 422);
@@ -128,8 +120,7 @@ class PermissionController extends Controller
      */
     public function destroy(Request $request, PermissionTemplate $template): RedirectResponse
     {
-        abort_unless($template->tenant_id === $request->user()->tenant_id, 404);
-        abort_if($template->role === 'admin' && $request->user()->role !== 'super_admin', 403);
+        abort_unless($template->tenant_id === CurrentTenant::id(), 404);
 
         if ($template->people()->exists()) {
             $reassignTo = PermissionTemplate::query()
@@ -139,7 +130,7 @@ class PermissionController extends Controller
 
             abort_if($reassignTo === null, 422);
 
-            $template->people->each(fn (Person $person) => $this->assignTemplate($request, $person, $reassignTo));
+            $template->people->each(fn (Person $person) => $this->assignTemplate($person, $reassignTo));
         }
 
         $template->delete();
@@ -153,11 +144,11 @@ class PermissionController extends Controller
      */
     public function assignPerson(Request $request, Person $person): RedirectResponse
     {
-        abort_unless($person->tenant_id === $request->user()->tenant_id, 404);
+        abort_unless($person->tenant_id === CurrentTenant::id(), 404);
 
         $template = PermissionTemplate::query()->where('tenant_id', $person->tenant_id)->findOrFail($request->integer('permission_template_id'));
 
-        $this->assignTemplate($request, $person, $template);
+        $this->assignTemplate($person, $template);
 
         return redirect()->route('admin.rechte', ['person' => $person->id])->with('status', 'rechte-updated');
     }
@@ -171,8 +162,7 @@ class PermissionController extends Controller
      */
     public function assignPeopleToTemplate(Request $request, PermissionTemplate $template): RedirectResponse
     {
-        abort_unless($template->tenant_id === $request->user()->tenant_id, 404);
-        abort_if($template->role === 'admin' && $request->user()->role !== 'super_admin', 403);
+        abort_unless($template->tenant_id === CurrentTenant::id(), 404);
 
         $personIds = collect($request->array('person_ids'))->map(fn ($id) => (int) $id);
 
@@ -181,7 +171,7 @@ class PermissionController extends Controller
             ->whereIn('id', $personIds)
             ->whereNull('permission_template_id')
             ->get()
-            ->each(fn (Person $person) => $this->assignTemplate($request, $person, $template));
+            ->each(fn (Person $person) => $this->assignTemplate($person, $template));
 
         return redirect()->route('admin.rechte', ['set' => $template->id])->with('status', 'rechte-updated');
     }
@@ -193,7 +183,7 @@ class PermissionController extends Controller
      */
     public function reorderSets(Request $request): RedirectResponse
     {
-        $tenantId = $request->user()->tenant_id;
+        $tenantId = CurrentTenant::id();
 
         collect($request->array('sets'))->values()->each(function (string $id, int $index) use ($tenantId) {
             PermissionTemplate::query()->where('tenant_id', $tenantId)->where('id', (int) $id)->update(['sort' => $index]);
@@ -203,15 +193,16 @@ class PermissionController extends Controller
     }
 
     /**
-     * Wer Admin wird (oder ein bestehender Admin ein anderes Set bekommt),
-     * bleibt Super-Admin vorbehalten - dieselbe Regel wie beim Anlegen/
-     * Bearbeiten eines Admin-Sets oben.
+     * Wer Admin wird, entscheidet jeder Admin innerhalb des eigenen
+     * Mandanten selbst - kein Super-Admin-Vorbehalt mehr (Ralf: als DL-
+     * Admin will er nicht bei jeder Rechtevergabe an eigenes Personal den
+     * Super-Admin fragen müssen, und wer bei ihm Admin-Rechte hat, geht
+     * den Software-Anbieter nichts an). Die Route selbst bleibt ohnehin
+     * hinter access-admin - nur echte Admins/Super-Admins kommen überhaupt
+     * hierher.
      */
-    private function assignTemplate(Request $request, Person $person, PermissionTemplate $template): void
+    private function assignTemplate(Person $person, PermissionTemplate $template): void
     {
-        $touchesAdminTier = $template->role === 'admin' || $person->permissionTemplate?->role === 'admin';
-        abort_if($touchesAdminTier && $request->user()->role !== 'super_admin', 403);
-
         $person->update(['permission_template_id' => $template->id]);
 
         if ($person->user) {
