@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\LegacyRoleController;
 use App\Http\Controllers\Admin\PermissionController as AdminPermissionController;
 use App\Http\Controllers\Admin\PersonController as AdminPersonController;
 use App\Http\Controllers\Admin\SuperAdminController;
+use App\Http\Controllers\Admin\TenantController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DisplayFilterController;
 use App\Http\Controllers\FavoriteController;
@@ -107,6 +108,9 @@ Route::middleware(['auth', 'verified', 'can:access-admin'])->prefix('admin')->na
 Route::middleware(['auth', 'verified', 'can:access-superadmin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/superadmin', [SuperAdminController::class, 'index'])->name('superadmin');
     Route::post('/superadmin', [SuperAdminController::class, 'update'])->name('superadmin.update');
+
+    Route::post('/kunden', [TenantController::class, 'store'])->name('kunden.store');
+    Route::post('/kunden/{tenant}', [TenantController::class, 'update'])->name('kunden.update');
 });
 
 Route::middleware(['auth', 'verified'])->prefix('projekte/anzeigefilter')->name('projekte.anzeigefilter.')->group(function () {

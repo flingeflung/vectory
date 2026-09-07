@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\SystemSetting;
+use App\Models\Tenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -14,6 +15,7 @@ class SuperAdminController extends Controller
     {
         return view('admin.superadmin.index', [
             'multiTenantEnabled' => SystemSetting::multiTenantEnabled(),
+            'tenants' => Tenant::query()->orderBy('name')->get(),
         ]);
     }
 
