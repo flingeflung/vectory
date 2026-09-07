@@ -87,12 +87,6 @@
             </x-flash-message>
         @endif
 
-        @if ($isProtectedSuperAdmin)
-            <div class="mb-3 shrink-0 rounded bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                {{ __('Dies ist ein Super-Admin-Konto. Nur ein Super-Admin darf es bearbeiten.') }}
-            </div>
-        @endif
-
         @if ($errors->any())
             <div class="mb-3 shrink-0 rounded bg-red-50 px-3 py-2 text-sm text-red-700">
                 <ul class="list-inside list-disc">
@@ -105,7 +99,6 @@
 
         <div class="{{ $isOverlay ? '' : 'max-w-2xl' }} space-y-4">
             <form method="POST" action="{{ route('admin.personen.update', $person) }}" class="space-y-4 rounded-lg border border-gray-200 bg-white p-4">
-                <fieldset @disabled($isProtectedSuperAdmin) class="space-y-4">
                 <div>
                     <label class="block text-xs text-gray-500">{{ __('ID') }}</label>
                     <input type="text" value="{{ $person->id }}" disabled class="mt-0.5 w-20 rounded-md border-gray-300 bg-gray-50 text-sm text-gray-500">
@@ -210,10 +203,9 @@
                     <input type="checkbox" name="active" value="1" @checked($person->active) class="rounded border-gray-300">
                     {{ __('Aktiv') }}
                 </label>
-                </fieldset>
 
                 @csrf
-                <button type="submit" @disabled($isProtectedSuperAdmin) class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50">
+                <button type="submit" class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
                     {{ __('Speichern') }}
                 </button>
             </form>

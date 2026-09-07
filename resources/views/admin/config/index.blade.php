@@ -1,12 +1,24 @@
 <x-admin-layout>
+    {{--
+        Sicherheitsabfrage bei Reiter-/Sidebar-Wechsel (window.navigateOrConfirm,
+        siehe layouts/app.blade.php) prüft global window.adminPageIsDirty(). Diese
+        Seite hat MEHRERE unabhängige Formulare (Haupt-Einstellungen + je eine
+        Zeile pro Kunde) - ein gemeinsames Set sammelt, welche davon gerade
+        ungespeichert geändert sind, statt nur das Haupt-Formular zu prüfen
+        (Ralfs Bug-Report: Kundenname geändert, nicht gespeichert, Reiter
+        gewechselt, keine Abfrage).
+    --}}
+    <script>
+        window.__configDirtyForms = new Set();
+        window.adminPageIsDirty = () => window.__configDirtyForms.size > 0;
+    </script>
     <div class="max-w-2xl">
         <div class="rounded-lg border border-gray-200 bg-white p-4">
             <div
                 x-data="{ dirty: false, show: false }"
                 x-init="@if (session('status') === 'config-updated') show = true; setTimeout(() => show = false, 2000) @endif"
-                x-effect="window.adminPageIsDirty = () => dirty"
             >
-                <form method="POST" action="{{ route('admin.config.update') }}" @input="dirty = true" class="space-y-5">
+                <form method="POST" action="{{ route('admin.config.update') }}" @input="dirty = true; window.__configDirtyForms.add($el)" class="space-y-5">
                     @csrf
 
                     @foreach ($settings as $setting)
@@ -43,7 +55,7 @@
                 <div class="mb-3 text-sm font-semibold text-gray-900">{{ __('Kunden verwalten') }}</div>
                 <p class="mb-3 text-xs text-gray-400">{{ __('Jeder Kunde ist ein eigener, vollständig getrennter Mandant. Fürs Erste nur der Name - weitere Angaben (Ansprechpartner, Projektpfad usw.) kommen bei Bedarf dazu.') }}</p>
 
-                <form method="POST" action="{{ route('admin.kunden.store') }}" class="flex items-end gap-2 rounded-md border border-gray-200 p-2">
+                <form method="POST" action="{{ route('admin.kunden.store') }}" @input="window.__configDirtyForms.add($el)" class="flex items-end gap-2 rounded-md border border-gray-200 p-2">
                     @csrf
                     <div class="flex-1">
                         <label class="block text-xs text-gray-500">{{ __('Name') }}</label>
@@ -61,7 +73,7 @@
                                 method="POST"
                                 action="{{ route('admin.kunden.update', $tenant) }}"
                                 x-data="{ dirty: false }"
-                                @input="dirty = true"
+                                @input="dirty = true; window.__configDirtyForms.add($el)"
                                 class="flex items-end gap-2"
                             >
                                 @csrf

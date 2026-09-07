@@ -87,6 +87,7 @@ class PersonController extends Controller
     public function edit(Request $request, Person $person): View|Response
     {
         abort_unless($person->tenant_id === CurrentTenant::id(), 404);
+        $this->abortIfProtectedFromEditing($request, $person);
 
         $data = $this->editData($request, $person);
 
@@ -294,10 +295,13 @@ class PersonController extends Controller
 
     /**
      * Ein Super-Admin-Konto darf nur von einem anderen Super-Admin
-     * bearbeitet werden - ein normaler Admin sieht es (Personenliste/
-     * -Overlay), darf es aber nicht ändern (Ralf: "sollte ich vielleicht
-     * sehen, aber nicht ändern dürfen"). Schützt vor versehentlicher oder
-     * böswilliger Einmischung eines untergeordneten Admins.
+     * eingesehen und bearbeitet werden - ein normaler Admin sieht es noch
+     * in der Personenliste (Name/Zeile), aber das Detail-Overlay bleibt
+     * gesperrt (Ralf zunächst: "sollte ich vielleicht sehen, aber nicht
+     * ändern dürfen", dann korrigiert: "Sperre doch einfach den Zugriff
+     * auf die Personendetails" - einfacher als einzelne Felder zu
+     * deaktivieren). Schützt vor versehentlicher oder böswilliger
+     * Einmischung eines untergeordneten Admins.
      */
     private function abortIfProtectedFromEditing(Request $request, Person $person): void
     {
@@ -331,7 +335,6 @@ class PersonController extends Controller
             'multiTenantEnabled' => $multiTenantEnabled,
             'otherTenants' => $multiTenantEnabled ? Tenant::query()->where('id', '!=', $tenantId)->orderBy('name')->get() : collect(),
             'actingUserIsSuperAdmin' => $request->user()->role === 'super_admin',
-            'isProtectedSuperAdmin' => $person->user?->role === 'super_admin' && $request->user()->role !== 'super_admin',
             'filters' => $filters,
             'previousPerson' => $this->adjacentPerson($filters, $person, 'previous', $tenantId),
             'nextPerson' => $this->adjacentPerson($filters, $person, 'next', $tenantId),
