@@ -20,6 +20,7 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectDirectoryController;
 use App\Http\Controllers\ProjectWorkflowStepController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\TenantSwitchController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -112,6 +113,10 @@ Route::middleware(['auth', 'verified', 'can:access-admin'])->prefix('admin')->na
 Route::middleware(['auth', 'verified', 'can:access-superadmin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/superadmin', [SuperAdminController::class, 'index'])->name('superadmin');
     Route::post('/superadmin', [SuperAdminController::class, 'update'])->name('superadmin.update');
+});
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::post('/mandant-wechseln', [TenantSwitchController::class, 'update'])->name('mandant.wechseln');
 });
 
 Route::middleware(['auth', 'verified'])->prefix('projekte/anzeigefilter')->name('projekte.anzeigefilter.')->group(function () {

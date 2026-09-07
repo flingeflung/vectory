@@ -6,6 +6,7 @@ use App\Models\SystemSetting;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Zentrale (einzige) Stelle im Code, die "welcher Mandant ist gerade aktiv"
@@ -48,13 +49,27 @@ class CurrentTenant
         return $user->tenant_id;
     }
 
+    /**
+     * Bewusst eine rohe DB-Abfrage statt der Person::accessibleTenants()-
+     * Eloquent-Relation: die würde über Persons BelongsToTenant-Scope
+     * laufen, der wiederum CurrentTenant::id() aufruft - Endlosschleife,
+     * während wir hier gerade erst herausfinden wollen, welcher Mandant
+     * überhaupt aktiv ist.
+     */
     public static function userCanAccess(User $user, int $tenantId): bool
     {
         if ($user->tenant_id === $tenantId) {
             return true;
         }
 
-        return $user->person?->accessibleTenants()->where('tenants.id', $tenantId)->exists() ?? false;
+        if (! $user->person_id) {
+            return false;
+        }
+
+        return DB::table('person_tenant')
+            ->where('person_id', $user->person_id)
+            ->where('tenant_id', $tenantId)
+            ->exists();
     }
 
     public static function switchTo(int $tenantId): void
@@ -69,5 +84,37 @@ class CurrentTenant
     public static function forget(): void
     {
         session()->forget(self::SESSION_KEY);
+    }
+
+    public static function current(): ?Tenant
+    {
+        $id = self::id();
+
+        return $id ? Tenant::find($id) : null;
+    }
+
+    /**
+     * Für den Umschalter in der Kopfzeile: eigener Heimat-Mandant + alle
+     * zusätzlich gewährten Kunden (siehe Person::accessibleTenants()).
+     * Leer, wenn Mandantenfähigkeit aus ist - der Umschalter bleibt dann
+     * komplett unsichtbar.
+     *
+     * @return \Illuminate\Support\Collection<int, Tenant>
+     */
+    public static function availableTenants(): \Illuminate\Support\Collection
+    {
+        $user = Auth::user();
+
+        if (! $user || ! SystemSetting::multiTenantEnabled()) {
+            return collect();
+        }
+
+        $extraIds = $user->person_id
+            ? DB::table('person_tenant')->where('person_id', $user->person_id)->pluck('tenant_id')
+            : collect();
+
+        $ids = collect([$user->tenant_id])->merge($extraIds)->unique();
+
+        return Tenant::query()->whereIn('id', $ids)->orderBy('name')->get();
     }
 }
