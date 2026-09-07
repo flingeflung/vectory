@@ -273,7 +273,8 @@
 
             @if ($actingUserIsSuperAdmin && $person->user)
                 <div class="rounded-lg border border-gray-200 bg-white p-4">
-                    <div class="mb-2 text-xs font-semibold text-gray-500">{{ __('Rolle') }}</div>
+                    <div class="mb-2 text-xs font-semibold text-gray-500">{{ __('Systemrolle') }}</div>
+                    <p class="mb-2 text-xs text-gray-400">{{ __('Nicht zu verwechseln mit der fachlichen "Rolle" oben (TR/PM-PT/...) - hier geht es um Admin-/Super-Admin-Zugriff auf Vectory selbst.') }}</p>
                     <div class="flex items-center justify-between">
                         <span class="text-sm text-gray-700">
                             {{ __('Aktuell') }}:
