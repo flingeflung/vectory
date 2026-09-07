@@ -2,11 +2,10 @@
     {{--
         Sicherheitsabfrage bei Reiter-/Sidebar-Wechsel (window.navigateOrConfirm,
         siehe layouts/app.blade.php) prüft global window.adminPageIsDirty(). Diese
-        Seite hat MEHRERE unabhängige Formulare (Haupt-Einstellungen + je eine
+        Seite kann mehrere unabhängige Formulare haben (Kunden verwalten: je eine
         Zeile pro Kunde) - ein gemeinsames Set sammelt, welche davon gerade
-        ungespeichert geändert sind, statt nur das Haupt-Formular zu prüfen
-        (Ralfs Bug-Report: Kundenname geändert, nicht gespeichert, Reiter
-        gewechselt, keine Abfrage).
+        ungespeichert geändert sind (Ralfs Bug-Report: Kundenname geändert, nicht
+        gespeichert, Reiter gewechselt, keine Abfrage).
 
         Stolperfalle, die den ersten Versuch kaputt gemacht hat: ein normales
         <script> HIER (im Seiteninhalt) läuft VOR dem <script> weiter unten in
@@ -20,58 +19,98 @@
     <script>
         window.__configDirtyForms = new Set();
     </script>
-    <div class="max-w-2xl">
-        <div class="rounded-lg border border-gray-200 bg-white p-4">
-            <div
-                x-data="{ dirty: false, show: false }"
-                x-init="window.adminPageIsDirty = () => window.__configDirtyForms.size > 0; @if (session('status') === 'config-updated') show = true; setTimeout(() => show = false, 2000) @endif"
-            >
-                <form method="POST" action="{{ route('admin.config.update') }}" @input="dirty = true; window.__configDirtyForms.add($el)" class="space-y-5">
-                    @csrf
+    <div class="max-w-2xl" x-data x-init="window.adminPageIsDirty = () => window.__configDirtyForms.size > 0">
+        @if ($settings->isNotEmpty())
+            <div class="rounded-lg border border-gray-200 bg-white p-4">
+                <div
+                    x-data="{ dirty: false, show: false }"
+                    x-init="@if (session('status') === 'config-updated') show = true; setTimeout(() => show = false, 2000) @endif"
+                >
+                    <form method="POST" action="{{ route('admin.config.update') }}" @input="dirty = true; window.__configDirtyForms.add($el)" class="space-y-5">
+                        @csrf
 
-                    @foreach ($settings as $setting)
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">{{ $setting['label'] }}</label>
-                            <input
-                                type="text"
-                                name="values[{{ $setting['key'] }}]"
-                                value="{{ old('values.'.$setting['key'], $setting['value']) }}"
-                                class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        @foreach ($settings as $setting)
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">{{ $setting['label'] }}</label>
+                                <input
+                                    type="text"
+                                    name="values[{{ $setting['key'] }}]"
+                                    value="{{ old('values.'.$setting['key'], $setting['value']) }}"
+                                    class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                >
+                                <p class="mt-1 text-xs text-gray-400">{{ $setting['description'] }}</p>
+                                <x-input-error :messages="$errors->get('values.'.$setting['key'])" class="mt-1" />
+                            </div>
+                        @endforeach
+
+                        <div class="flex items-center gap-4">
+                            <button
+                                type="submit"
+                                x-show="dirty"
+                                x-cloak
+                                class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
                             >
-                            <p class="mt-1 text-xs text-gray-400">{{ $setting['description'] }}</p>
-                            <x-input-error :messages="$errors->get('values.'.$setting['key'])" class="mt-1" />
+                                {{ __('Speichern') }}
+                            </button>
+                            <p x-show="show" x-cloak x-transition class="text-sm text-green-600">{{ __('Gespeichert.') }}</p>
                         </div>
-                    @endforeach
-
-                    <div class="flex items-center gap-4">
-                        <button
-                            type="submit"
-                            x-show="dirty"
-                            x-cloak
-                            class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
-                        >
-                            {{ __('Speichern') }}
-                        </button>
-                        <p x-show="show" x-cloak x-transition class="text-sm text-green-600">{{ __('Gespeichert.') }}</p>
-                    </div>
-                </form>
+                    </form>
+                </div>
             </div>
-        </div>
+        @endif
+
+        @unless ($multiTenantEnabled)
+            {{-- Ohne Mandantenfähigkeit gibt's nur den einen Mandanten - der
+                 Projektpfad wird hier direkt gepflegt, statt in einer
+                 "Kunden verwalten"-Liste (die es in diesem Modus nicht gibt). --}}
+            <div class="{{ $settings->isNotEmpty() ? 'mt-6 ' : '' }}rounded-lg border border-gray-200 bg-white p-4">
+                <div
+                    x-data="{ dirty: false, show: false }"
+                    x-init="@if (session('status') === 'config-updated') show = true; setTimeout(() => show = false, 2000) @endif"
+                >
+                    <form method="POST" action="{{ route('admin.kunden.update', $currentTenant) }}" @input="dirty = true; window.__configDirtyForms.add($el)" class="space-y-2">
+                        @csrf
+                        <input type="hidden" name="name" value="{{ $currentTenant->name }}">
+                        <label class="block text-sm font-medium text-gray-700">{{ __('Projektpfad') }}</label>
+                        <input
+                            type="text"
+                            name="project_path"
+                            value="{{ old('project_path', $currentTenant->project_path) }}"
+                            class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        >
+                        <p class="text-xs text-gray-400">{{ __('Basisverzeichnis für Vectory-Projektdateien.') }}</p>
+
+                        <div class="flex items-center gap-4 pt-2">
+                            <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
+                                {{ __('Speichern') }}
+                            </button>
+                            <p x-show="show" x-cloak x-transition class="text-sm text-green-600">{{ __('Gespeichert.') }}</p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        @endunless
 
         @if ($multiTenantEnabled)
-            <div class="mt-6 rounded-lg border border-gray-200 bg-white p-4">
+            <div class="{{ $settings->isNotEmpty() ? 'mt-6 ' : '' }}rounded-lg border border-gray-200 bg-white p-4">
                 <div class="mb-3 text-sm font-semibold text-gray-900">{{ __('Kunden verwalten') }}</div>
-                <p class="mb-3 text-xs text-gray-400">{{ __('Jeder Kunde ist ein eigener, vollständig getrennter Mandant. Fürs Erste nur der Name - weitere Angaben (Ansprechpartner, Projektpfad usw.) kommen bei Bedarf dazu.') }}</p>
+                <p class="mb-3 text-xs text-gray-400">{{ __('Jeder Kunde ist ein eigener, vollständig getrennter Mandant, mit eigenem Projektpfad - die Projektverzeichnisse können sehr groß werden, ein eigener Server pro Kunde ist möglich.') }}</p>
 
-                <form method="POST" action="{{ route('admin.kunden.store') }}" @input="window.__configDirtyForms.add($el)" class="flex items-end gap-2 rounded-md border border-gray-200 p-2">
+                <form method="POST" action="{{ route('admin.kunden.store') }}" @input="window.__configDirtyForms.add($el)" class="space-y-2 rounded-md border border-gray-200 p-2">
                     @csrf
-                    <div class="flex-1">
+                    <div>
                         <label class="block text-xs text-gray-500">{{ __('Name') }}</label>
                         <input type="text" name="name" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                     </div>
-                    <button type="submit" class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
-                        {{ __('Anlegen') }}
-                    </button>
+                    <div>
+                        <label class="block text-xs text-gray-500">{{ __('Projektpfad') }}</label>
+                        <input type="text" name="project_path" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                    </div>
+                    <div class="flex justify-end">
+                        <button type="submit" class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
+                            {{ __('Anlegen') }}
+                        </button>
+                    </div>
                 </form>
 
                 <div class="mt-3 space-y-2">
@@ -82,15 +121,22 @@
                                 action="{{ route('admin.kunden.update', $tenant) }}"
                                 x-data="{ dirty: false }"
                                 @input="dirty = true; window.__configDirtyForms.add($el)"
-                                class="flex items-end gap-2"
+                                class="space-y-2"
                             >
                                 @csrf
-                                <div class="flex-1">
-                                    <input type="text" name="name" value="{{ $tenant->name }}" required class="w-full rounded-md border-gray-300 text-sm">
+                                <div>
+                                    <label class="block text-xs text-gray-500">{{ __('Name') }}</label>
+                                    <input type="text" name="name" value="{{ $tenant->name }}" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                                 </div>
-                                <button type="submit" x-show="dirty" x-cloak class="rounded-md border border-gray-300 px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
-                                    {{ __('Speichern') }}
-                                </button>
+                                <div>
+                                    <label class="block text-xs text-gray-500">{{ __('Projektpfad') }}</label>
+                                    <input type="text" name="project_path" value="{{ $tenant->project_path }}" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                                </div>
+                                <div class="flex justify-end">
+                                    <button type="submit" x-show="dirty" x-cloak class="rounded-md border border-gray-300 px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                                        {{ __('Speichern') }}
+                                    </button>
+                                </div>
                             </form>
 
                             @unless ($tenant->hasData())

@@ -3,17 +3,21 @@
 namespace App\Services;
 
 use App\Models\Project;
-use App\Models\Setting;
+use App\Models\Tenant;
 
 /**
  * Findet/erstellt/listet das Dateisystem-Verzeichnis eines Projekts, analog
  * zu Viettos get_real_dirname()/get_pnpfad()/create_pndirs() (siehe
  * D:\htdocs\vietto\includes\incl_functions.php). Ordnername = "<PN>_<sani-
- * tisierter Titel>" unter dem in Admin > Konfig hinterlegten "Projektpfad"
- * (mandantenbezogen), archivierte Projekte liegen zusätzlich unterhalb von
- * "_Archiv". Die PN-Zuordnung wird NICHT in der DB gespeichert, sondern -
- * wie in Vietto - live per Verzeichnis-Präfix (erste 6 Zeichen) ermittelt,
- * damit ein manuell umbenannter Ordner nicht die Verknüpfung verliert.
+ * tisierter Titel>" unter dem Projektpfad des jeweiligen Mandanten
+ * (Tenant.project_path - bewusst direkt am Mandanten statt im generischen
+ * Setting-Store, siehe Ralf: "Die Projektverzeichnisse könnten sich im
+ * Terrabyte-Bereich bewegen, da macht es Sinn, verschiedene Server pro
+ * Kunde angeben zu können"), archivierte Projekte liegen zusätzlich
+ * unterhalb von "_Archiv". Die PN-Zuordnung wird NICHT in der DB
+ * gespeichert, sondern - wie in Vietto - live per Verzeichnis-Präfix
+ * (erste 6 Zeichen) ermittelt, damit ein manuell umbenannter Ordner nicht
+ * die Verknüpfung verliert.
  */
 class ProjectDirectoryLocator
 {
@@ -51,7 +55,7 @@ class ProjectDirectoryLocator
 
     public function basePath(int $tenantId): ?string
     {
-        $value = Setting::query()->where('tenant_id', $tenantId)->where('key', 'project_path')->value('value');
+        $value = Tenant::query()->where('id', $tenantId)->value('project_path');
 
         return $value !== null && trim($value) !== '' ? rtrim($value, '\\/') : null;
     }

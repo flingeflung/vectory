@@ -17,11 +17,11 @@ class Setting extends Model
 {
     use BelongsToTenant;
 
-    public const DEFINITIONS = [
-        'project_path' => [
-            'label' => 'Projektpfad',
-            'description' => 'Basisverzeichnis für Vectory-Projektdateien.',
-            'default' => '',
-        ],
-    ];
+    /**
+     * Aktuell leer - "Projektpfad" ist auf Tenant.project_path umgezogen
+     * (siehe Migration 2026_09_07_103706), weil er pro Kunde statt pro
+     * Konfig-Seiten-Aufruf gesetzt werden muss. Bleibt als Mechanismus für
+     * künftige, wirklich mandantenweite Einstellungen bestehen.
+     */
+    public const DEFINITIONS = [];
 }

@@ -25,10 +25,16 @@ class ConfigController extends Controller
             'value' => $existing->get($key)?->value ?? $definition['default'],
         ])->values();
 
+        $multiTenantEnabled = SystemSetting::multiTenantEnabled();
+
         return view('admin.config.index', [
             'settings' => $settings,
-            'multiTenantEnabled' => SystemSetting::multiTenantEnabled(),
-            'tenants' => SystemSetting::multiTenantEnabled() ? Tenant::query()->orderBy('name')->get() : collect(),
+            'multiTenantEnabled' => $multiTenantEnabled,
+            'tenants' => $multiTenantEnabled ? Tenant::query()->orderBy('name')->get() : collect(),
+            // Ohne Mandantenfähigkeit gibt's keine "Kunden verwalten"-Liste -
+            // der Projektpfad des einzigen Mandanten braucht trotzdem eine
+            // Stelle zum Bearbeiten (siehe TenantController::update()).
+            'currentTenant' => $multiTenantEnabled ? null : Tenant::query()->find(CurrentTenant::id()),
         ]);
     }
 
