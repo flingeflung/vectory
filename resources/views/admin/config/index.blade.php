@@ -4,6 +4,7 @@
             <div
                 x-data="{ dirty: false, show: false }"
                 x-init="@if (session('status') === 'config-updated') show = true; setTimeout(() => show = false, 2000) @endif"
+                x-effect="window.adminPageIsDirty = () => dirty"
             >
                 <form method="POST" action="{{ route('admin.config.update') }}" @input="dirty = true" class="space-y-5">
                     @csrf
@@ -55,21 +56,40 @@
 
                 <div class="mt-3 space-y-2">
                     @forelse ($tenants as $tenant)
-                        <form
-                            method="POST"
-                            action="{{ route('admin.kunden.update', $tenant) }}"
-                            x-data="{ dirty: false }"
-                            @input="dirty = true"
-                            class="flex items-end gap-2 rounded-md border border-gray-200 p-2"
-                        >
-                            @csrf
-                            <div class="flex-1">
-                                <input type="text" name="name" value="{{ $tenant->name }}" required class="w-full rounded-md border-gray-300 text-sm">
-                            </div>
-                            <button type="submit" x-show="dirty" x-cloak class="rounded-md border border-gray-300 px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
-                                {{ __('Speichern') }}
-                            </button>
-                        </form>
+                        <div class="rounded-md border border-gray-200 p-2">
+                            <form
+                                method="POST"
+                                action="{{ route('admin.kunden.update', $tenant) }}"
+                                x-data="{ dirty: false }"
+                                @input="dirty = true"
+                                class="flex items-end gap-2"
+                            >
+                                @csrf
+                                <div class="flex-1">
+                                    <input type="text" name="name" value="{{ $tenant->name }}" required class="w-full rounded-md border-gray-300 text-sm">
+                                </div>
+                                <button type="submit" x-show="dirty" x-cloak class="rounded-md border border-gray-300 px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                                    {{ __('Speichern') }}
+                                </button>
+                            </form>
+
+                            @unless ($tenant->hasData())
+                                <div x-data="{ confirming: false }" class="mt-2">
+                                    <div x-show="!confirming" class="flex justify-end">
+                                        <button type="button" @click="confirming = true" class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50">
+                                            {{ __('Löschen') }}
+                                        </button>
+                                    </div>
+                                    <form x-show="confirming" x-cloak method="POST" action="{{ route('admin.kunden.destroy', $tenant) }}" class="flex items-center justify-end gap-2">
+                                        @csrf
+                                        @method('DELETE')
+                                        <span class="text-xs text-gray-400">{{ __('Dieser Kunde hat noch keine Daten und kann gefahrlos gelöscht werden.') }}</span>
+                                        <button type="button" @click="confirming = false" class="rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">{{ __('Abbrechen') }}</button>
+                                        <button type="submit" class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50">{{ __('Endgültig löschen') }}</button>
+                                    </form>
+                                </div>
+                            @endunless
+                        </div>
                     @empty
                         <div class="text-sm text-gray-400">{{ __('Noch keine Kunden angelegt.') }}</div>
                     @endforelse
