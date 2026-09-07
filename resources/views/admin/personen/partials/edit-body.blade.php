@@ -259,6 +259,35 @@
                     </form>
                 @endif
             </div>
+
+            @if ($multiTenantEnabled)
+                <div class="rounded-lg border border-gray-200 bg-white p-4" x-data="{ dirty: false }">
+                    <div class="mb-2 text-xs font-semibold text-gray-500">{{ __('Kundenzugriff') }}</div>
+                    <p class="mb-2 text-xs text-gray-400">{{ __('Zusätzliche Kunden, auf die diese Person umschalten darf (neben ihrem eigenen Mandanten).') }}</p>
+                    <form method="POST" action="{{ route('admin.personen.tenant-access.update', $person) }}" @input="dirty = true" class="space-y-2">
+                        @csrf
+                        @forelse ($otherTenants as $tenant)
+                            <label class="flex items-center gap-2 text-sm text-gray-700">
+                                <input
+                                    type="checkbox"
+                                    name="tenant_ids[]"
+                                    value="{{ $tenant->id }}"
+                                    @checked($person->accessibleTenants->contains('id', $tenant->id))
+                                    class="rounded border-gray-300"
+                                >
+                                {{ $tenant->name }}
+                            </label>
+                        @empty
+                            <div class="text-sm text-gray-400">{{ __('Noch keine weiteren Kunden angelegt.') }}</div>
+                        @endforelse
+                        @if ($otherTenants->isNotEmpty())
+                            <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
+                                {{ __('Speichern') }}
+                            </button>
+                        @endif
+                    </form>
+                </div>
+            @endif
         </div>
     </div>
 </div>

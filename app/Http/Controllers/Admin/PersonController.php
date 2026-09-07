@@ -9,6 +9,8 @@ use App\Models\Department;
 use App\Models\LegacyRole;
 use App\Models\PermissionTemplate;
 use App\Models\Person;
+use App\Models\SystemSetting;
+use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -221,6 +223,35 @@ class PersonController extends Controller
     }
 
     /**
+     * Zugriff auf zusätzliche Kunden-Mandanten (Umschalter-Vorarbeit,
+     * Mandantenfähigkeit) - separates Formular/eigene Box im Overlay,
+     * analog zu createLogin()/resetPassword() oben.
+     */
+    public function updateTenantAccess(Request $request, Person $person): RedirectResponse|Response
+    {
+        abort_unless($person->tenant_id === $request->user()->tenant_id, 404);
+        abort_unless(SystemSetting::multiTenantEnabled(), 403);
+
+        $tenantIds = collect($request->array('tenant_ids'))
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id !== $person->tenant_id)
+            ->unique()
+            ->values();
+
+        $person->accessibleTenants()->sync($tenantIds);
+
+        $isOverlay = $this->isOverlayRequest($request);
+
+        if ($isOverlay) {
+            $request->session()->flash('status', 'tenant-access-updated');
+
+            return response()->view('admin.personen.partials.edit-body', [...$this->editData($request, $person), 'overlay' => true]);
+        }
+
+        return redirect()->route('admin.personen.edit', $person)->with('status', 'tenant-access-updated');
+    }
+
+    /**
      * @return array{person: Person, companies: \Illuminate\Support\Collection, departments: \Illuminate\Support\Collection, businessUnits: \Illuminate\Support\Collection, legacyRoles: \Illuminate\Support\Collection, filters: array, previousPerson: ?Person, nextPerson: ?Person}
      */
     private function editData(Request $request, Person $person): array
@@ -233,12 +264,16 @@ class PersonController extends Controller
         // geöffnet wird.
         $filters = $this->filtersFromRequest($request);
 
+        $multiTenantEnabled = SystemSetting::multiTenantEnabled();
+
         return [
-            'person' => $person->fresh(['company', 'department', 'businessUnit', 'permissionTemplate', 'legacyRole', 'user']),
+            'person' => $person->fresh(['company', 'department', 'businessUnit', 'permissionTemplate', 'legacyRole', 'user', 'accessibleTenants']),
             'companies' => Company::query()->where('tenant_id', $tenantId)->orderBy('name')->get(),
             'departments' => Department::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('name')->get(),
             'businessUnits' => BusinessUnit::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('name')->get(),
             'legacyRoles' => LegacyRole::query()->where('tenant_id', $tenantId)->orderBy('name')->get(),
+            'multiTenantEnabled' => $multiTenantEnabled,
+            'otherTenants' => $multiTenantEnabled ? Tenant::query()->where('id', '!=', $tenantId)->orderBy('name')->get() : collect(),
             'filters' => $filters,
             'previousPerson' => $this->adjacentPerson($filters, $person, 'previous', $tenantId),
             'nextPerson' => $this->adjacentPerson($filters, $person, 'next', $tenantId),

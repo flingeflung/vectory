@@ -97,4 +97,14 @@ class Person extends Model
     {
         return $this->permissionTemplate?->permissions()->where('key', $key)->exists() ?? false;
     }
+
+    /**
+     * Zusätzliche Kunden-Mandanten, auf die diese Person umschalten darf -
+     * neben ihrem eigenen Heimat-Mandanten (tenant_id). Nur relevant, wenn
+     * Mandantenfähigkeit aktiv ist (siehe SystemSetting).
+     */
+    public function accessibleTenants(): BelongsToMany
+    {
+        return $this->belongsToMany(Tenant::class);
+    }
 }

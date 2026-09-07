@@ -100,6 +100,7 @@ Route::middleware(['auth', 'verified', 'can:access-admin'])->prefix('admin')->na
     Route::post('/personen/{person}', [AdminPersonController::class, 'update'])->name('personen.update');
     Route::post('/personen/{person}/login', [AdminPersonController::class, 'createLogin'])->name('personen.login.store');
     Route::post('/personen/{person}/passwort', [AdminPersonController::class, 'resetPassword'])->name('personen.password.reset');
+    Route::post('/personen/{person}/kunden', [AdminPersonController::class, 'updateTenantAccess'])->name('personen.tenant-access.update');
 
     Route::get('/konfig', [ConfigController::class, 'index'])->name('config');
     Route::post('/konfig', [ConfigController::class, 'update'])->name('config.update');
