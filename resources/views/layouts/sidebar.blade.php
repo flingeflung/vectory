@@ -146,12 +146,14 @@
 
     <nav class="flex-1 overflow-y-auto px-2 py-2 space-y-1">
         <a
+            onclick="return window.navigateOrConfirm(event)"
             href="{{ route('dashboard') }}"
             class="flex items-center px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('dashboard') ? 'bg-sidebar-active text-sidebar-active-content' : 'text-sidebar-content hover:bg-sidebar-hover hover:text-sidebar-content-hover' }}"
         >
             {{ __('Startseite') }}
         </a>
         <a
+            onclick="return window.navigateOrConfirm(event)"
             href="{{ route('projekte') }}"
             class="flex items-center px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('projekte') ? 'bg-sidebar-active text-sidebar-active-content' : 'text-sidebar-content hover:bg-sidebar-hover hover:text-sidebar-content-hover' }}"
         >
@@ -166,12 +168,14 @@
             {{ __('Favoriten') }}
         </button>
         <a
+            onclick="return window.navigateOrConfirm(event)"
             href="{{ route('aufgaben') }}"
             class="flex items-center px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('aufgaben') ? 'bg-sidebar-active text-sidebar-active-content' : 'text-sidebar-content hover:bg-sidebar-hover hover:text-sidebar-content-hover' }}"
         >
             {{ __('Aufgaben') }}
         </a>
         <a
+            onclick="return window.navigateOrConfirm(event)"
             href="{{ route('illustrationen') }}"
             class="flex items-center px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('illustrationen') ? 'bg-sidebar-active text-sidebar-active-content' : 'text-sidebar-content hover:bg-sidebar-hover hover:text-sidebar-content-hover' }}"
         >
@@ -182,6 +186,7 @@
             <div class="my-2 border-t border-gray-100"></div>
 
             <a
+                onclick="return window.navigateOrConfirm(event)"
                 href="{{ route('admin.personen') }}"
                 class="flex items-center px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.*') ? 'bg-sidebar-active text-sidebar-active-content' : 'text-sidebar-content hover:bg-sidebar-hover hover:text-sidebar-content-hover' }}"
             >

@@ -64,6 +64,39 @@
         </script>
 
         {{--
+            Dieselbe Sicherheitsabfrage, aber für normale Seiten (kein
+            Overlay) mit einem Speichern-Formular - z.B. Admin > Konfig.
+            Dort greift requestClose() aus modal.blade.php gar nicht (ist ja
+            kein Modal), ein Klick auf einen anderen Admin-Reiter navigiert
+            bisher stillschweigend weg und verwirft ungespeicherte Eingaben
+            (Ralfs Bug-Report). Jede Seite mit eigenem Dirty-Zustand
+            überschreibt window.adminPageIsDirty selbst (siehe admin/config/
+            index.blade.php) - Standard ist "nicht dirty", damit Seiten ohne
+            eigenes Formular nichts extra tun müssen.
+        --}}
+        <script>
+            window.adminPageIsDirty = () => false;
+
+            window.navigateOrConfirm = async function (event) {
+                if (!window.adminPageIsDirty()) {
+                    return true;
+                }
+                event.preventDefault();
+                // event.currentTarget wird nach dem await ungueltig (Event-
+                // Objekt ist nur waehrend der synchronen Dispatch-Phase
+                // gueltig) - Ziel-URL vorher sichern, sonst schlaegt der
+                // Sprung nach "Verwerfen" bestaetigen still fehl.
+                const targetHref = event.currentTarget.href;
+                const discard = await window.confirmDialog({{ \Illuminate\Support\Js::from(__('Es gibt ungespeicherte Änderungen. Trotzdem verwerfen?')) }});
+                if (discard) {
+                    window.adminPageIsDirty = () => false;
+                    window.location.href = targetHref;
+                }
+                return false;
+            };
+        </script>
+
+        {{--
             Personen-Liste (Rechte-/Funktionsgruppen-Verwaltung, ggf. weitere
             künftig) wahlweise alphabetisch oder nach Abteilung gruppiert
             anzeigen - Ralfs Anforderung für mehr Übersichtlichkeit. Sortiert
