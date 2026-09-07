@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Models\SystemSetting;
+use App\Models\Tenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -22,7 +24,11 @@ class ConfigController extends Controller
             'value' => $existing->get($key)?->value ?? $definition['default'],
         ])->values();
 
-        return view('admin.config.index', ['settings' => $settings]);
+        return view('admin.config.index', [
+            'settings' => $settings,
+            'multiTenantEnabled' => SystemSetting::multiTenantEnabled(),
+            'tenants' => SystemSetting::multiTenantEnabled() ? Tenant::query()->orderBy('name')->get() : collect(),
+        ]);
     }
 
     public function update(Request $request): RedirectResponse

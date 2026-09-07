@@ -103,14 +103,14 @@ Route::middleware(['auth', 'verified', 'can:access-admin'])->prefix('admin')->na
 
     Route::get('/konfig', [ConfigController::class, 'index'])->name('config');
     Route::post('/konfig', [ConfigController::class, 'update'])->name('config.update');
+
+    Route::post('/kunden', [TenantController::class, 'store'])->name('kunden.store');
+    Route::post('/kunden/{tenant}', [TenantController::class, 'update'])->name('kunden.update');
 });
 
 Route::middleware(['auth', 'verified', 'can:access-superadmin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/superadmin', [SuperAdminController::class, 'index'])->name('superadmin');
     Route::post('/superadmin', [SuperAdminController::class, 'update'])->name('superadmin.update');
-
-    Route::post('/kunden', [TenantController::class, 'store'])->name('kunden.store');
-    Route::post('/kunden/{tenant}', [TenantController::class, 'update'])->name('kunden.update');
 });
 
 Route::middleware(['auth', 'verified'])->prefix('projekte/anzeigefilter')->name('projekte.anzeigefilter.')->group(function () {
