@@ -202,7 +202,7 @@
                         >
                     @endif
                     @forelse ($steps as $step)
-                        <div x-sort:item="{{ $step->id }}" x-data="{ rowDirty: false, expanded: false }" class="rounded-md border border-gray-200 p-2">
+                        <div x-sort:item="{{ $step->id }}" x-data="{ rowDirty: false, expanded: false, sendEmail: {{ \Illuminate\Support\Js::from($step->send_email) }} }" class="rounded-md border border-gray-200 p-2">
                             <form method="POST" action="{{ route('admin.workflows.schritte.update', $step) }}" data-row-form class="space-y-2" @input="rowDirty = true; window.__workflowsDirtyForms.add($el)" @submit="rowDirty = false; window.__workflowsDirtyForms.delete($el)">
                                 @csrf
                                 <div class="flex items-center gap-2">
@@ -259,7 +259,7 @@
                                         </div>
 
                                         <div class="col-span-2 flex flex-wrap gap-x-4 gap-y-1">
-                                            <label class="inline-flex items-center gap-1"><input type="checkbox" name="send_email" value="1" @checked($step->send_email) class="rounded border-gray-300"> {{ __('E-Mail beim Aktivieren senden') }}</label>
+                                            <label class="inline-flex items-center gap-1"><input type="checkbox" name="send_email" value="1" x-model="sendEmail" class="rounded border-gray-300"> {{ __('E-Mail beim Aktivieren senden') }}</label>
                                             <label class="inline-flex items-center gap-1"><input type="checkbox" name="show_in_translation" value="1" @checked($step->show_in_translation) class="rounded border-gray-300"> {{ __('In Übersetzungsansicht zeigen') }}</label>
                                         </div>
 
@@ -286,9 +286,12 @@
                                             <label class="block text-gray-500">{{ __('Beschreibung') }}</label>
                                             <textarea name="description" rows="2" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">{{ $step->description }}</textarea>
                                         </div>
-                                        <div class="col-span-2">
-                                            <label class="block text-gray-500">{{ __('E-Mail-Text') }}</label>
-                                            <textarea name="email_text" rows="2" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">{{ $step->email_text }}</textarea>
+                                        <div class="col-span-2" :class="{ 'opacity-40': !sendEmail }">
+                                            <label class="block text-gray-500">
+                                                {{ __('E-Mail-Text') }}
+                                                <span x-show="!sendEmail" class="font-normal">{{ __('(nur relevant, wenn oben angehakt)') }}</span>
+                                            </label>
+                                            <textarea name="email_text" rows="2" :disabled="!sendEmail" class="mt-0.5 w-full rounded-md border-gray-300 text-xs disabled:bg-gray-100">{{ $step->email_text }}</textarea>
                                         </div>
                                     </div>
                                 </template>
