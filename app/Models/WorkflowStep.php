@@ -40,6 +40,11 @@ class WorkflowStep extends Model
      */
     public const SPECIAL_BUTTONS = [
         'wfs_grafik' => 'Grafikauftrag',
+        'wfs_freigabe' => 'Freigabe',
+        // Noch ohne Funktion dahinter (Ralf: "brauchen wir auch, bitte
+        // schon mal vorsehen") - taucht in der Projekt-Detailansicht
+        // aktuell nirgends auf, nur in dieser Auswahlliste wählbar.
+        'check_wfs_publizieren' => 'Info-Mail (noch ohne Funktion)',
     ];
 
     protected function casts(): array

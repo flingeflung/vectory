@@ -35,6 +35,35 @@ class ProjectWorkflowStepController extends Controller
     }
 
     /**
+     * "Freigabe erteilen/zurücknehmen" - Sonderbutton js_function=wfs_freigabe
+     * (Vietto: wffkt_getbuttontag(), case "wfs_freigabe"). Nutzt milestone_done_at
+     * (Vietto: blnMSdone) als einfaches Gesetzt/Ungesetzt-Flag, kein eigenes
+     * "wer hat freigegeben"-Feld - hatte Vietto an dieser Stelle auch nicht.
+     * Nur am aktuell aktiven Schritt bedienbar (gleiche Einschränkung wie in
+     * Vietto: dort nur ein reiner Status-Text ohne Button, wenn nicht
+     * iscurrentwfs).
+     */
+    public function toggleFreigabe(Request $request, Project $project, ProjectWorkflowStep $projectWorkflowStep): JsonResponse
+    {
+        abort_unless($projectWorkflowStep->project_id === $project->id, 404);
+        abort_unless($request->user()->can('workflow_step.activate'), 403);
+        abort_unless($projectWorkflowStep->is_current, 422);
+
+        $granted = $projectWorkflowStep->milestone_done_at === null;
+        $projectWorkflowStep->update(['milestone_done_at' => $granted ? now() : null]);
+
+        Activity::log(
+            $project,
+            ActivityType::WorkflowStepActivated,
+            $granted
+                ? __('Freigabe für ":title" erteilt.', ['title' => $projectWorkflowStep->workflowStep->title])
+                : __('Freigabe für ":title" zurückgenommen.', ['title' => $projectWorkflowStep->workflowStep->title])
+        );
+
+        return response()->json(['milestone_done_at' => $projectWorkflowStep->milestone_done_at?->toIso8601String()]);
+    }
+
+    /**
      * Bestätigungs-Dialog vor dem Aktivieren eines Schritts (Empfänger,
      * E-Mail-Optionen) - eigenständiges globales Modal (siehe
      * layouts/app.blade.php), lädt seinen Inhalt selbst per fetch(), analog

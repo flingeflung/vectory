@@ -681,6 +681,32 @@
                                         {{ __('Illustrationsauftrag') }}
                                     </button>
                                 </div>
+                            @elseif ($step->js_function === 'wfs_freigabe')
+                                <div
+                                    x-data="{ granted: {{ \Illuminate\Support\Js::from($pws->milestone_done_at !== null) }}, saving: false }"
+                                    class="w-40 shrink-0 rounded-md border px-3 py-2 text-xs"
+                                    :class="granted ? 'border-green-300 bg-green-50' : 'border-gray-300'"
+                                    @click.stop
+                                >
+                                    <div class="font-medium text-gray-900">{{ $step->milestone_title ?: __('Freigabe') }}</div>
+                                    @if ($pws->is_current && auth()->user()->can('workflow_step.activate'))
+                                        <button
+                                            type="button"
+                                            :disabled="saving"
+                                            @click="
+                                                saving = true;
+                                                fetch({{ \Illuminate\Support\Js::from(route('projekte.workflow-steps.freigabe', [$project, $pws])) }}, {
+                                                    method: 'PATCH',
+                                                    headers: { 'X-CSRF-TOKEN': {{ \Illuminate\Support\Js::from(csrf_token()) }} },
+                                                }).then(r => r.json()).then(data => { granted = data.milestone_done_at !== null; }).finally(() => saving = false);
+                                            "
+                                            class="mt-1 rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                                            x-text="granted ? {{ \Illuminate\Support\Js::from(__('Freigabe zurücknehmen')) }} : {{ \Illuminate\Support\Js::from(__('Freigabe erteilen')) }}"
+                                        ></button>
+                                    @else
+                                        <div class="mt-1" :class="granted ? 'text-green-800' : 'text-gray-500'" x-text="granted ? {{ \Illuminate\Support\Js::from(__('Freigabe erteilt')) }} : {{ \Illuminate\Support\Js::from(__('Noch keine Freigabe')) }}"></div>
+                                    @endif
+                                </div>
                             @endif
                             </div>
                             @unless ($loop->last)
