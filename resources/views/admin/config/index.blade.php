@@ -58,14 +58,6 @@
                 >
                     {{ __('Rollen') }}
                 </button>
-                {{-- Platzhalter, noch ohne Funktion (Ralf: "dann haben wir
-                     das als Platzhalter") - es gibt für diese drei Kataloge
-                     noch keine eigene Verwaltung, siehe Rollout-Pfad-
-                     Artifact ("bekannte Lücke"). Bewusst sichtbar deaktiviert
-                     statt anklickbar-aber-wirkungslos. --}}
-                <button type="button" disabled title="{{ __('Noch nicht verfügbar') }}" class="cursor-not-allowed rounded-md border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-400">
-                    {{ __('Workflows') }}
-                </button>
             </div>
         </div>
 
