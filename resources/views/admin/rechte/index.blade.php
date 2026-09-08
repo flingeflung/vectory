@@ -10,12 +10,18 @@
              sichtbar, egal wie lang die jeweilige Liste ist. --}}
         <div
             x-data="{
-                search: '',
-                showInactive: false,
+                // Aus der Query-String initialisiert und bei jeder Navigation
+                // wieder mitgegeben (siehe navUrl()) - sonst springt beim
+                // Klick auf eine Person/ein Set (echte Seitennavigation, kein
+                // Overlay hier) Sortierung/Filter wieder auf den Standard
+                // zurück (Ralfs Bug-Report: 'springt wieder auf A-Z und zeigt
+                // alle Personen an').
+                search: {{ \Illuminate\Support\Js::from(request('suche', '')) }},
+                showInactive: {{ request()->boolean('inaktive') ? 'true' : 'false' }},
                 newSet: false,
                 dirty: false,
-                sortMode: 'alpha',
-                departmentFilter: '',
+                sortMode: {{ \Illuminate\Support\Js::from(request('sort', 'alpha')) }},
+                departmentFilter: {{ \Illuminate\Support\Js::from(request('abteilung', '')) }},
                 allDepartments: @js($departments),
                 peopleData: @js($people->map(fn ($person) => ['id' => $person->id, 'name' => mb_strtolower($person->fullName()), 'active' => $person->active, 'department' => $person->department?->name ?? ''])),
                 get visibleCount() {
@@ -24,6 +30,15 @@
                 applyGrouping() {
                     const mode = this.departmentFilter ? 'alpha' : this.sortMode;
                     window.applyPersonGrouping(this.$refs.personList, mode, this.allDepartments);
+                },
+                navUrl(params) {
+                    const url = new URL({{ \Illuminate\Support\Js::from(route('admin.rechte')) }}, window.location.origin);
+                    Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
+                    if (this.sortMode !== 'alpha') url.searchParams.set('sort', this.sortMode);
+                    if (this.departmentFilter) url.searchParams.set('abteilung', this.departmentFilter);
+                    if (this.search) url.searchParams.set('suche', this.search);
+                    if (this.showInactive) url.searchParams.set('inaktive', '1');
+                    return url.pathname + url.search;
                 },
             }"
             class="flex w-72 shrink-0 flex-col gap-3"
@@ -36,13 +51,13 @@
             <div class="flex h-64 shrink-0 flex-col rounded-lg border border-gray-200 bg-white">
                 <div class="shrink-0 flex items-center justify-between border-b border-gray-100 p-2">
                     <span class="text-xs font-semibold text-gray-500">{{ __('Rechte-Sets') }}</span>
-                    <button type="button" @click="newSet = !newSet" class="text-xs text-indigo-600 hover:text-indigo-800">
+                    <button type="button" @click="newSet = !newSet; if (newSet) $nextTick(() => $refs.newSetBase.focus())" class="text-xs text-indigo-600 hover:text-indigo-800">
                         + {{ __('Neu') }}
                     </button>
                 </div>
                 <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => $el.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' }))">
                     <form x-show="newSet" x-cloak method="POST" action="{{ route('admin.rechte.sets.store') }}" class="mb-2 space-y-1.5 rounded border border-gray-200 p-2">
-                        <select name="base_id" class="w-full rounded-md border-gray-300 text-xs" required>
+                        <select name="base_id" x-ref="newSetBase" class="w-full rounded-md border-gray-300 text-xs" required>
                             <option value="">{{ __('Auf Basis von…') }}</option>
                             @foreach ($templates as $template)
                                 <option value="{{ $template->id }}">{{ $template->name }}</option>
@@ -72,7 +87,7 @@
                             <div x-sort:item="{{ $template->id }}" class="flex items-center gap-1 rounded {{ $selectedTemplate?->id === $template->id ? 'bg-indigo-50' : 'hover:bg-gray-50' }}">
                                 <span x-sort:handle class="cursor-move px-1 text-gray-300 hover:text-gray-500" title="{{ __('Verschieben') }}">⠿</span>
                                 <a
-                                    href="{{ route('admin.rechte', ['set' => $template->id]) }}"
+                                    :href="navUrl({ set: {{ $template->id }} })"
                                     @if ($selectedTemplate?->id === $template->id) data-selected @endif
                                     class="flex-1 py-1 {{ $selectedTemplate?->id === $template->id ? 'font-medium text-indigo-700' : 'text-gray-700' }}"
                                 >
@@ -174,7 +189,7 @@
                                     @disabled($isAssigned)
                                 >
                                 <a
-                                    href="{{ route('admin.rechte', ['person' => $person->id]) }}"
+                                    :href="navUrl({ person: {{ $person->id }} })"
                                     class="flex-1 {{ $person->active ? 'text-gray-700 hover:underline' : 'text-gray-400 hover:underline' }}"
                                 >
                                     {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }} <x-department-tag :person="$person" />
@@ -185,7 +200,7 @@
                 @else
                     @foreach ($people as $person)
                         <a
-                            href="{{ route('admin.rechte', ['person' => $person->id]) }}"
+                            :href="navUrl({ person: {{ $person->id }} })"
                             @if ($selectedPerson?->id === $person->id) data-selected @endif
                             data-person-row
                             data-department-name="{{ $person->department?->name }}"
@@ -276,33 +291,26 @@
                                 <div class="px-1 py-1 text-gray-400">{{ __('Niemand.') }}</div>
                             @endforelse
                         </div>
-                        <div class="shrink-0 border-t border-gray-100 p-3">
-                            <form
-                                method="POST"
-                                action="{{ route('admin.rechte.sets.destroy', $selectedTemplate) }}"
-                                class="space-y-1.5"
-                                x-data="{ async confirmAndSubmit(e) { if (await window.confirmDialog({ title: '{{ __('Set löschen') }}', message: '{{ __('Set wirklich löschen?') }}', confirmLabel: '{{ __('Löschen') }}' })) { e.target.submit(); } } }"
-                                @submit.prevent="confirmAndSubmit($event)"
-                            >
-                                @if ($templatePeople->isNotEmpty())
-                                    <div class="text-xs text-gray-400">
-                                        {{ __('Zum Löschen eines Sets müssen die zugewiesenen Personen in ein anderes Set übernommen werden.') }}
-                                    </div>
-                                    <select name="reassign_to" class="w-full rounded-md border-gray-300 text-xs" required>
-                                        <option value="">{{ __('Personen übernehmen in…') }}</option>
-                                        @foreach ($templates as $template)
-                                            @if ($template->id !== $selectedTemplate->id)
-                                                <option value="{{ $template->id }}">{{ $template->name }}</option>
-                                            @endif
-                                        @endforeach
-                                    </select>
-                                @endif
+                        <div class="shrink-0 border-t border-gray-100 p-3" x-data="{}">
+                            <form method="POST" action="{{ route('admin.rechte.sets.destroy', $selectedTemplate) }}" x-ref="deleteForm" class="hidden">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="w-full rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50">
-                                    {{ __('Set löschen') }}
-                                </button>
+                                <input type="hidden" name="reassign_to" value="">
                             </form>
+                            <button
+                                type="button"
+                                @click="window.deleteWithConfirm($refs.deleteForm, {
+                                    title: {{ \Illuminate\Support\Js::from(__('Set löschen')) }},
+                                    message: {{ \Illuminate\Support\Js::from($templatePeople->isNotEmpty() ? __('Zum Löschen muss jede zugewiesene Person in ein anderes Set übernommen werden.') : __('Dieses Set wirklich löschen?')) }},
+                                    confirmLabel: {{ \Illuminate\Support\Js::from(__('Löschen')) }},
+                                    reassignOptions: @js($templatePeople->isNotEmpty() ? $templates->where('id', '!=', $selectedTemplate->id)->map(fn ($template) => ['value' => (string) $template->id, 'label' => $template->name])->values() : []),
+                                    reassignPlaceholder: {{ \Illuminate\Support\Js::from(__('Personen übernehmen in…')) }},
+                                    reassignRequired: {{ $templatePeople->isNotEmpty() ? 'true' : 'false' }},
+                                })"
+                                class="w-full rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                            >
+                                {{ __('Set löschen') }}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -311,24 +319,52 @@
                     {{ $selectedPerson->fullName() }} <x-department-tag :person="$selectedPerson" />
                 </div>
 
-                <form method="POST" action="{{ route('admin.rechte.personen.update', $selectedPerson) }}" class="flex-1 min-h-0 overflow-y-auto p-3">
-                    @csrf
-                    <div class="mb-3 text-xs text-gray-500">{{ __('Rechte-Set auswählen - bestimmt die Rechte dieser Person vollständig.') }}</div>
-                    <div class="space-y-1">
-                        @foreach ($templates as $template)
-                            <label class="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-gray-50">
-                                <input type="radio" name="permission_template_id" value="{{ $template->id }}" @checked($selectedPerson->permission_template_id === $template->id)>
-                                <span class="text-sm text-gray-700">{{ $template->name }}</span>
-                            </label>
-                        @endforeach
+                @if ($selectedPersonIsHomeTenant)
+                    <form method="POST" action="{{ route('admin.rechte.personen.update', $selectedPerson) }}" class="flex-1 min-h-0 overflow-y-auto p-3">
+                        @csrf
+                        <div class="mb-3 text-xs text-gray-500">{{ __('Rechte-Set auswählen - bestimmt die Rechte dieser Person vollständig.') }}</div>
+                        <div class="space-y-1">
+                            @foreach ($templates as $template)
+                                <label class="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-gray-50">
+                                    <input type="radio" name="permission_template_id" value="{{ $template->id }}" @checked($selectedPerson->permission_template_id === $template->id)>
+                                    <span class="text-sm text-gray-700">{{ $template->name }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                        <button type="submit" class="mt-3 rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
+                            {{ __('Speichern') }}
+                        </button>
+                    </form>
+                @else
+                    <div class="flex-1 min-h-0 overflow-y-auto p-3">
+                        <div class="text-xs text-gray-500">
+                            {{ __('Diese Person ist bei einem anderen Kunden zuhause und nur per Kundenzugriff-Freigabe hier sichtbar. Ihr Rechte-Set gilt für die ganze Person, nicht nur für diesen Kunden, und kann deshalb nur bei ihrem Heimat-Kunden geändert werden.') }}
+                        </div>
+                        <div class="mt-3 text-sm text-gray-700">
+                            {{ __('Aktuelles Rechte-Set') }}: <span class="font-medium">{{ $selectedPerson->permissionTemplate?->name ?? __('– nicht zugewiesen –') }}</span>
+                        </div>
                     </div>
-                    <button type="submit" class="mt-3 rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
-                        {{ __('Speichern') }}
-                    </button>
-                </form>
+                @endif
             @else
-                <div class="flex flex-1 items-center justify-center text-sm text-gray-400">
-                    {{ __('Links ein Rechte-Set oder eine Person auswählen.') }}
+                {{-- Nur-Lese-Übersicht des Rechte-Katalogs, solange nichts
+                     ausgewählt ist - Ralf: die leere "links was anklicken"-
+                     Fläche irritierte ("haben wir nicht schon Rechte
+                     angelegt? Wo sind die?"). Ohne Häkchen/Set-Bezug, nur
+                     als Bestätigung "es gibt sie". --}}
+                <div class="shrink-0 border-b border-gray-100 p-3">
+                    <div class="text-sm font-medium text-gray-900">{{ __('Rechte-Katalog') }}</div>
+                    <p class="text-xs text-gray-400">{{ __('Wähle links ein Rechte-Set oder eine Person aus, um Rechte zuzuordnen.') }}</p>
+                </div>
+                <div class="flex-1 min-h-0 overflow-y-auto">
+                    <table class="min-w-full divide-y divide-gray-100 text-sm">
+                        <tbody class="divide-y divide-gray-100">
+                            @foreach ($permissions as $permission)
+                                <tr>
+                                    <td class="px-3 py-2 text-gray-700" title="{{ $permission->key }}">{{ $permission->label }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
                 </div>
             @endif
         </div>

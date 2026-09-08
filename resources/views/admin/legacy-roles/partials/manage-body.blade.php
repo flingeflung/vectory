@@ -1,10 +1,18 @@
-<div class="space-y-3">
-    <form method="POST" action="{{ route('admin.legacy-roles.store') }}" class="flex items-end gap-2 rounded-md border border-gray-200 p-2">
+<div class="space-y-3" x-data="{ creating: false }">
+    <div x-show="!creating">
+        <button type="button" @click="creating = true; $nextTick(() => $refs.newName.focus())" class="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            + {{ __('Rolle anlegen') }}
+        </button>
+    </div>
+    <form x-show="creating" x-cloak method="POST" action="{{ route('admin.legacy-roles.store') }}" class="flex items-end gap-2 rounded-md border border-gray-200 p-2">
         @csrf
         <div class="flex-1">
             <label class="block text-xs text-gray-500">{{ __('Name') }}</label>
-            <input type="text" name="name" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+            <input type="text" name="name" x-ref="newName" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
         </div>
+        <button type="button" @click="creating = false" class="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            {{ __('Abbrechen') }}
+        </button>
         <button type="submit" class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
             {{ __('Anlegen') }}
         </button>
@@ -12,7 +20,7 @@
 
     <div class="max-h-80 space-y-2 overflow-y-auto">
         @forelse ($legacyRoles as $legacyRole)
-            <div class="rounded-md border border-gray-200 p-2">
+            <div class="rounded-md border border-gray-200 p-2" x-data="{}">
                 <form data-row-form x-data="{ dirty: false }" @input="dirty = true" method="POST" action="{{ route('admin.legacy-roles.update', $legacyRole) }}" class="flex items-end gap-2">
                     @csrf
                     <div class="flex-1">
@@ -24,42 +32,22 @@
                     </button>
                 </form>
 
-                <div x-data="{ confirming: false }" class="mt-2">
-                    <div x-show="!confirming" class="flex justify-end">
-                        <button type="button" @click="confirming = true" class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50">
-                            {{ __('Löschen') }}
-                        </button>
-                    </div>
-                    <form x-show="confirming" x-cloak method="POST" action="{{ route('admin.legacy-roles.destroy', $legacyRole) }}" class="space-y-1.5">
-                        @csrf
-                        @method('DELETE')
-                        @if ($legacyRole->people_count > 0)
-                            <div class="text-xs text-gray-400">
-                                {{ trans_choice(
-                                    'Wenn die Rolle gelöscht wird, ohne die damit verknüpfte Person einer anderen Rolle zuzuweisen, wird ihre Rollenzuweisung auf „– nicht zugewiesen –“ geändert.|Wenn die Rolle gelöscht wird, ohne die damit verknüpften :count Personen einer anderen Rolle zuzuweisen, wird ihre Rollenzuweisung auf „– nicht zugewiesen –“ geändert.',
-                                    $legacyRole->people_count,
-                                    ['count' => $legacyRole->people_count]
-                                ) }}
-                            </div>
-                            <div class="flex items-center justify-end gap-2">
-                                <select name="reassign_to" class="rounded-md border-gray-300 text-xs">
-                                    <option value="">{{ __('– nicht zugewiesen –') }}</option>
-                                    @foreach ($legacyRoles as $target)
-                                        @if ($target->id !== $legacyRole->id)
-                                            <option value="{{ $target->id }}">{{ $target->name }}</option>
-                                        @endif
-                                    @endforeach
-                                </select>
-                                <button type="button" @click="confirming = false" class="rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">{{ __('Abbrechen') }}</button>
-                                <button type="submit" class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50">{{ __('Endgültig löschen') }}</button>
-                            </div>
-                        @else
-                            <div class="flex justify-end gap-2">
-                                <button type="button" @click="confirming = false" class="rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">{{ __('Abbrechen') }}</button>
-                                <button type="submit" class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50">{{ __('Löschen') }}</button>
-                            </div>
-                        @endif
-                    </form>
+                <form method="POST" action="{{ route('admin.legacy-roles.destroy', $legacyRole) }}" x-ref="deleteForm" class="hidden">
+                    @csrf
+                    @method('DELETE')
+                    <input type="hidden" name="reassign_to" value="">
+                </form>
+                <div class="mt-2 flex justify-end">
+                    <button
+                        type="button"
+                        @click="window.deleteWithConfirm($refs.deleteForm, {
+                            message: {{ \Illuminate\Support\Js::from($legacyRole->people_count > 0 ? trans_choice('Wird bereits von :count Person verwendet.|Wird bereits von :count Personen verwendet.', $legacyRole->people_count, ['count' => $legacyRole->people_count]).' '.__('Ohne Umhängen wird die Rollenzuweisung auf „– nicht zugewiesen –“ gesetzt.') : __('Diese Rolle wirklich endgültig löschen?')) }},
+                            reassignOptions: @js($legacyRole->people_count > 0 ? $legacyRoles->where('id', '!=', $legacyRole->id)->map(fn ($target) => ['value' => (string) $target->id, 'label' => $target->name])->values() : []),
+                        })"
+                        class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                    >
+                        {{ __('Löschen') }}
+                    </button>
                 </div>
             </div>
         @empty

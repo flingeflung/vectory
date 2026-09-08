@@ -12,12 +12,19 @@
              "Minor confirmed decisions" im Roadmap-Memory. --}}
         <div
             x-data="{
-                search: '',
-                showInactive: false,
+                // Aus der Query-String initialisiert und bei jeder Navigation
+                // wieder mitgegeben (siehe navUrl()) - sonst springt beim
+                // Klick auf eine Person/Gruppe (echte Seitennavigation, kein
+                // Overlay hier) Sortierung/Filter wieder auf den Standard
+                // zurück (gleicher Bug wie in der Rechte-Verwaltung, Ralfs
+                // Bug-Report dort: 'springt wieder auf A-Z und zeigt alle
+                // Personen an').
+                search: {{ \Illuminate\Support\Js::from(request('suche', '')) }},
+                showInactive: {{ request()->boolean('inaktive') ? 'true' : 'false' }},
                 newGroup: false,
                 dirty: false,
-                sortMode: 'alpha',
-                departmentFilter: '',
+                sortMode: {{ \Illuminate\Support\Js::from(request('sort', 'alpha')) }},
+                departmentFilter: {{ \Illuminate\Support\Js::from(request('abteilung', '')) }},
                 allDepartments: @js($departments),
                 peopleData: @js($people->map(fn ($person) => ['id' => $person->id, 'name' => mb_strtolower($person->fullName()), 'active' => $person->active, 'department' => $person->department?->name ?? ''])),
                 get visibleCount() {
@@ -27,19 +34,28 @@
                     const mode = this.departmentFilter ? 'alpha' : this.sortMode;
                     window.applyPersonGrouping(this.$refs.personList, mode, this.allDepartments);
                 },
+                navUrl(params) {
+                    const url = new URL({{ \Illuminate\Support\Js::from(route('admin.function-groups')) }}, window.location.origin);
+                    Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
+                    if (this.sortMode !== 'alpha') url.searchParams.set('sort', this.sortMode);
+                    if (this.departmentFilter) url.searchParams.set('abteilung', this.departmentFilter);
+                    if (this.search) url.searchParams.set('suche', this.search);
+                    if (this.showInactive) url.searchParams.set('inaktive', '1');
+                    return url.pathname + url.search;
+                },
             }"
             class="flex w-72 shrink-0 flex-col gap-3"
         >
             <div class="flex h-64 shrink-0 flex-col rounded-lg border border-gray-200 bg-white">
                 <div class="shrink-0 flex items-center justify-between border-b border-gray-100 p-2">
                     <span class="text-xs font-semibold text-gray-500">{{ __('Funktionsgruppen') }}</span>
-                    <button type="button" @click="newGroup = !newGroup" class="text-xs text-indigo-600 hover:text-indigo-800">
+                    <button type="button" @click="newGroup = !newGroup; if (newGroup) $nextTick(() => $refs.newGroupName.focus())" class="text-xs text-indigo-600 hover:text-indigo-800">
                         + {{ __('Neu') }}
                     </button>
                 </div>
                 <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => $el.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' }))">
                     <form x-show="newGroup" x-cloak method="POST" action="{{ route('admin.function-groups.store') }}" class="mb-2 flex gap-1.5 rounded border border-gray-200 p-2">
-                        <input type="text" name="name" placeholder="{{ __('Name') }}" class="w-full min-w-0 flex-1 rounded-md border-gray-300 text-xs" required>
+                        <input type="text" name="name" x-ref="newGroupName" placeholder="{{ __('Name') }}" class="w-full min-w-0 flex-1 rounded-md border-gray-300 text-xs" required>
                         <input type="text" name="short_name" placeholder="{{ __('Kürzel') }}" maxlength="20" class="w-16 shrink-0 rounded-md border-gray-300 text-xs" required>
                         @csrf
                         <button type="submit" class="shrink-0 rounded-md bg-gray-800 px-2 py-1 text-xs font-medium text-white hover:bg-gray-700">
@@ -49,7 +65,7 @@
 
                     @foreach ($groups as $group)
                         <a
-                            href="{{ route('admin.function-groups', ['gruppe' => $group->id]) }}"
+                            :href="navUrl({ gruppe: {{ $group->id }} })"
                             @if ($selectedGroup?->id === $group->id) data-selected @endif
                             class="flex items-center gap-1.5 rounded px-2 py-1 {{ $selectedGroup?->id === $group->id ? 'bg-indigo-50 font-medium text-indigo-700' : ($group->active ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-400 hover:bg-gray-50') }}"
                         >
@@ -145,7 +161,7 @@
                                     @checked($groupMemberIds->contains($person->id))
                                 >
                                 <a
-                                    href="{{ route('admin.function-groups', ['person' => $person->id]) }}"
+                                    :href="navUrl({ person: {{ $person->id }} })"
                                     class="flex-1 {{ $person->active ? 'text-gray-700 hover:underline' : 'text-gray-400 hover:underline' }}"
                                 >
                                     {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }} <x-department-tag :person="$person" />
@@ -156,7 +172,7 @@
                 @else
                     @foreach ($people as $person)
                         <a
-                            href="{{ route('admin.function-groups', ['person' => $person->id]) }}"
+                            :href="navUrl({ person: {{ $person->id }} })"
                             @if ($selectedPerson?->id === $person->id) data-selected @endif
                             data-person-row
                             data-department-name="{{ $person->department?->name }}"
@@ -220,18 +236,18 @@
                             {{ __('Wird noch in Projekten/Workflow-Schritten verwendet und kann daher nicht gelöscht werden - stattdessen oben deaktivieren.') }}
                         </div>
                     @else
-                        <div x-data="{ confirming: false }">
-                            <div x-show="!confirming" class="flex justify-end">
-                                <button type="button" @click="confirming = true" class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50">
-                                    {{ __('Löschen') }}
-                                </button>
-                            </div>
-                            <form x-show="confirming" x-cloak method="POST" action="{{ route('admin.function-groups.destroy', $selectedGroup) }}" class="flex items-center justify-end gap-2">
+                        <div x-data="{}" class="flex justify-end">
+                            <form method="POST" action="{{ route('admin.function-groups.destroy', $selectedGroup) }}" x-ref="deleteForm" class="hidden">
                                 @csrf
                                 @method('DELETE')
-                                <button type="button" @click="confirming = false" class="rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">{{ __('Abbrechen') }}</button>
-                                <button type="submit" class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50">{{ __('Endgültig löschen') }}</button>
                             </form>
+                            <button
+                                type="button"
+                                @click="window.deleteWithConfirm($refs.deleteForm, { message: {{ \Illuminate\Support\Js::from(__('Diese Funktionsgruppe wirklich endgültig löschen?')) }} })"
+                                class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                            >
+                                {{ __('Löschen') }}
+                            </button>
                         </div>
                     @endif
                 </div>
