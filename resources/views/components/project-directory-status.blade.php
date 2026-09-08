@@ -42,8 +42,13 @@
                     <img src="{{ asset('images/directory-status/show_directory0.png') }}" alt="" class="h-4 w-auto">
                 </button>
             @else
-                <span title="{{ __('Kein Projektverzeichnis vorhanden.') }}">
-                    <img src="{{ asset('images/directory-status/show_directory0.png') }}" alt="" class="h-4 w-auto">
+                {{-- Anders als der Button oben (Detailansicht) hier bewusst
+                     nicht klickbar - Anlegen geht nur aus den Projektdetails
+                     heraus. Sichtbar abgeblasst, damit nicht wie ein
+                     Button aussieht, der nichts tut (Ralf: "gleiche Buttons
+                     = selbe Funktionalität"). --}}
+                <span title="{{ __('Kein Projektverzeichnis vorhanden - Anlegen nur in den Projektdetails möglich.') }}" class="opacity-30">
+                    <img src="{{ asset('images/directory-status/show_directory0.png') }}" alt="" class="h-4 w-auto grayscale">
                 </span>
             @endif
         @break
