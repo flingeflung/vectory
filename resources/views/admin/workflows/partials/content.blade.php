@@ -57,7 +57,7 @@
                                         <span class="text-xs text-gray-400">{{ $workflow->steps_count }}</span>
                                     </span>
                                     @if ($workflow->supersededBy)
-                                        <span class="text-xs text-gray-400">{{ __('ersetzt durch: :name', ['name' => $workflow->supersededBy->name]) }}</span>
+                                        <span class="text-xs text-gray-400">{{ __('ersetzt durch: :name (#:id)', ['name' => $workflow->supersededBy->name, 'id' => $workflow->supersededBy->id]) }}</span>
                                     @endif
                                 </a>
                             </div>
@@ -346,7 +346,7 @@
                             <span class="ml-1 text-xs text-gray-300">– {{ trans_choice(':count Schritt|:count Schritte', $workflow->steps_count, ['count' => $workflow->steps_count]) }}</span>
                         </div>
                         @if ($workflow->supersededBy)
-                            <div class="pl-3 text-xs text-gray-400">{{ __('ersetzt durch: :name', ['name' => $workflow->supersededBy->name]) }}</div>
+                            <div class="pl-3 text-xs text-gray-400">{{ __('ersetzt durch: :name (#:id)', ['name' => $workflow->supersededBy->name, 'id' => $workflow->supersededBy->id]) }}</div>
                         @endif
                     </div>
                 @empty
