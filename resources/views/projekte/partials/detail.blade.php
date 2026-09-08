@@ -521,8 +521,14 @@
                     // Alte/andere Workflow-Generationen können noch Schritt-Zeilen für
                     // dieses Projekt haben (siehe Kommentar bei der Zuweisungslogik) -
                     // hier nur die Schritte des AKTUELL zugewiesenen Workflows zeigen.
+                    // is_active=false (Vietto: blnIsActiveWFS) markiert einen Schritt
+                    // bewusst als "nur Termin, kein WFS" - für die (noch nicht gebaute)
+                    // Terminberechnung gedacht, kein echter Prozessschritt zum
+                    // Aktivieren (Ralfs Bug-Report: "Markteinführung" erschien trotz
+                    // is_active=false als normale Aktivieren-Box, betraf real 7251
+                    // bestehende Projekt-Schritt-Zeilen, u.a. "Druck"/"Markteinführung").
                     $currentSteps = $project->projectWorkflowSteps
-                        ->filter(fn ($pws) => $pws->workflowStep && $pws->workflowStep->workflow_id === $project->workflow_id)
+                        ->filter(fn ($pws) => $pws->workflowStep && $pws->workflowStep->workflow_id === $project->workflow_id && $pws->workflowStep->is_active)
                         ->sortBy('sort')
                         ->values();
                 @endphp
