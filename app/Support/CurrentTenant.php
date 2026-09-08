@@ -46,6 +46,17 @@ class CurrentTenant
             return (int) $sessionTenantId;
         }
 
+        // Frischer Login (Session noch leer, z.B. nach dem Einloggen) -
+        // zuletzt aktiven Kunden aus der DB wiederherstellen, statt immer
+        // beim Heimat-Mandanten zu starten (Ralfs Bug-Report: startet nach
+        // dem Einloggen immer mit Sanitär statt dem zuletzt genutzten
+        // Kunden - die Session allein überlebt einen Login nicht).
+        if ($user->last_active_tenant_id && self::userCanAccess($user, $user->last_active_tenant_id)) {
+            session([self::SESSION_KEY => $user->last_active_tenant_id]);
+
+            return $user->last_active_tenant_id;
+        }
+
         return $user->tenant_id;
     }
 
@@ -79,6 +90,7 @@ class CurrentTenant
         abort_unless($user && self::userCanAccess($user, $tenantId), 403);
 
         session([self::SESSION_KEY => $tenantId]);
+        $user->update(['last_active_tenant_id' => $tenantId]);
     }
 
     public static function forget(): void
