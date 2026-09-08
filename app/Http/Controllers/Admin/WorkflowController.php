@@ -49,7 +49,10 @@ class WorkflowController extends Controller
             $isPublished = $selectedWorkflow->isPublished();
         }
 
-        $functionGroups = FunctionGroup::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('sort')->get(['id', 'name']);
+        // Alphabetisch statt nach sort - Funktionsgruppen werden überall
+        // alphabetisch gelistet (siehe FunctionGroupController), sort ist
+        // dort bewusst kein Sortierkriterium (kein D&D für diese Liste).
+        $functionGroups = FunctionGroup::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('name')->get(['id', 'name']);
 
         $data = [
             'workflows' => $workflows,
