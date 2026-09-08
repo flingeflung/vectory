@@ -286,12 +286,9 @@
                                             <label class="block text-gray-500">{{ __('Beschreibung') }}</label>
                                             <textarea name="description" rows="2" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">{{ $step->description }}</textarea>
                                         </div>
-                                        <div class="col-span-2" :class="{ 'opacity-40': !sendEmail }">
-                                            <label class="block text-gray-500">
-                                                {{ __('E-Mail-Text') }}
-                                                <span x-show="!sendEmail" class="font-normal">{{ __('(nur relevant, wenn oben angehakt)') }}</span>
-                                            </label>
-                                            <textarea name="email_text" rows="2" :disabled="!sendEmail" class="mt-0.5 w-full rounded-md border-gray-300 text-xs disabled:bg-gray-100">{{ $step->email_text }}</textarea>
+                                        <div class="col-span-2" x-show="sendEmail">
+                                            <label class="block text-gray-500">{{ __('E-Mail-Text') }}</label>
+                                            <textarea name="email_text" rows="2" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">{{ $step->email_text }}</textarea>
                                         </div>
                                     </div>
                                 </template>
