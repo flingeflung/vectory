@@ -11,12 +11,14 @@ enum ActivityCategory: string
 {
     case Workflow = 'workflow';
     case Illustration = 'illustration';
+    case General = 'general';
 
     public function label(): string
     {
         return match ($this) {
             self::Workflow => __('Workflow'),
             self::Illustration => __('Illustration'),
+            self::General => __('Allgemein'),
         };
     }
 
@@ -31,6 +33,7 @@ enum ActivityCategory: string
         return match ($this) {
             self::Workflow => 'bg-blue-500',
             self::Illustration => 'bg-purple-500',
+            self::General => 'bg-gray-500',
         };
     }
 }
