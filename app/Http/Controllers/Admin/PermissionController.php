@@ -27,14 +27,32 @@ class PermissionController extends Controller
 
         $templates = PermissionTemplate::query()->where('tenant_id', $tenantId)->orderBy('sort')->get();
 
+        // withoutGlobalScope + visibleInTenant: zeigt auch DL-eigene
+        // Mitarbeiter mit Kundenzugriff-Freigabe für diesen Kunden (gleiche
+        // Lücke wie eben bei Funktionsgruppen, Ralf: "Bei den Rechten
+        // stehen auch nur die beiden PM"). Das tatsächliche ZUWEISEN eines
+        // Rechte-Sets bleibt trotzdem auf den Heimat-Mandanten beschränkt
+        // (siehe assignPerson()) - das Set bestimmt die Rechte app-weit,
+        // nicht nur für den gerade aktiven Kunden.
         $people = Person::query()
-            ->where('tenant_id', $tenantId)
-            ->with('department:id,name,short_name')
+            ->withoutGlobalScope('tenant')
+            ->visibleInTenant($tenantId)
+            ->visibleToRole($request->user()->role)
+            ->with(['department' => fn ($query) => $query->withoutGlobalScope('tenant')])
             ->orderBy('last_name')
             ->orderBy('first_name')
             ->get(['id', 'first_name', 'last_name', 'active', 'permission_template_id', 'department_id']);
 
-        $departments = Department::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('name')->pluck('name');
+        // Katalog des aktiven Kunden PLUS Kataloge etwaiger freigegebener
+        // Personen (Person::visibleTenantIds) - siehe FunctionGroupController
+        // für dieselbe Begründung/denselben Bug-Report (leeres Dropdown bei
+        // einem frischen Kunden ohne Personen, obwohl der Katalog existiert).
+        $departments = Department::query()
+            ->withoutGlobalScope('tenant')
+            ->whereIn('tenant_id', Person::visibleTenantIds($tenantId))
+            ->where('active', true)
+            ->orderBy('name')
+            ->pluck('name');
 
         $permissions = Permission::query()->orderBy('key')->get();
 
@@ -56,7 +74,9 @@ class PermissionController extends Controller
                 $people = $people->sortByDesc(fn (Person $person) => $person->permission_template_id === $selectedTemplate->id)->values();
             }
         } elseif ($request->filled('person')) {
-            $selectedPerson = Person::query()->where('tenant_id', $tenantId)->with('department:id,name,short_name')->find($request->query('person'));
+            $selectedPerson = Person::query()->withoutGlobalScope('tenant')->visibleInTenant($tenantId)
+                ->with(['department' => fn ($query) => $query->withoutGlobalScope('tenant')])
+                ->find($request->query('person'));
         }
 
         return view('admin.rechte.index', [
@@ -66,6 +86,11 @@ class PermissionController extends Controller
             'permissions' => $permissions,
             'selectedTemplate' => $selectedTemplate,
             'selectedPerson' => $selectedPerson,
+            // Das Rechte-Set einer per Kundenzugriff sichtbaren Person kann
+            // hier nur ANGEZEIGT, nicht geändert werden - es bestimmt ihre
+            // Rechte app-weit, nicht nur für diesen Kunden (siehe
+            // assignPerson()).
+            'selectedPersonIsHomeTenant' => $selectedPerson?->tenant_id === $tenantId,
             'grantedPermissionIds' => $grantedPermissionIds,
             'templatePeople' => $templatePeople,
         ]);

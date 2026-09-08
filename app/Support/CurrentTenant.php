@@ -58,7 +58,7 @@ class CurrentTenant
      */
     public static function userCanAccess(User $user, int $tenantId): bool
     {
-        if ($user->tenant_id === $tenantId || $user->role === 'super_admin') {
+        if ($user->tenant_id === $tenantId || in_array($user->role, ['admin', 'super_admin'], true)) {
             return true;
         }
 
@@ -95,12 +95,11 @@ class CurrentTenant
 
     /**
      * Für den Umschalter in der Kopfzeile: eigener Heimat-Mandant + alle
-     * zusätzlich gewährten Kunden (siehe person_tenant). Super-Admin sieht
-     * (wie überall sonst in der App, siehe Gate::before) automatisch ALLE
-     * Mandanten - braucht keine einzelnen Freigaben, entspricht dem
-     * Rollenmodell ("Super-Admin - alles, mandantenübergreifend").
-     * Leer, wenn Mandantenfähigkeit aus ist - der Umschalter bleibt dann
-     * komplett unsichtbar.
+     * zusätzlich gewährten Kunden (siehe person_tenant). Admin und
+     * Super-Admin sehen automatisch ALLE Mandanten - braucht keine
+     * einzelnen Freigaben (Ralf: "als Admin brauche ich Zugriff auf alle
+     * Kunden meiner DL-Firma"). Leer, wenn Mandantenfähigkeit aus ist - der
+     * Umschalter bleibt dann komplett unsichtbar.
      *
      * @return \Illuminate\Support\Collection<int, Tenant>
      */
@@ -112,7 +111,7 @@ class CurrentTenant
             return collect();
         }
 
-        if ($user->role === 'super_admin') {
+        if (in_array($user->role, ['admin', 'super_admin'], true)) {
             return Tenant::query()->orderBy('name')->get();
         }
 

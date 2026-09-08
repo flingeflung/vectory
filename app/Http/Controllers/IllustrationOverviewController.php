@@ -43,6 +43,7 @@ class IllustrationOverviewController extends Controller
         $statuses = GraphicOrderStatus::query()->orderBy('sort')->get();
         $illustrationPersons = FunctionGroup::query()
             ->where('legacy_id', 5)
+            ->with(['members' => fn ($query) => $query->visibleToRole($user->role)])
             ->first()
             ?->members
             ->sortBy(fn (Person $person) => $person->fullName())
@@ -117,6 +118,7 @@ class IllustrationOverviewController extends Controller
 
         $initiatorOptions = Person::query()
             ->whereIn('id', GraphicOrder::query()->whereNotNull('initiated_by_person_id')->distinct()->pluck('initiated_by_person_id'))
+            ->visibleToRole($user->role)
             ->orderBy('last_name')
             ->orderBy('first_name')
             ->get();

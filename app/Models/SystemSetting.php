@@ -29,4 +29,20 @@ class SystemSetting extends Model
     {
         return static::get(self::MULTI_TENANT_ENABLED, '0') === '1';
     }
+
+    /**
+     * "Firma" (die Person-Markierung, Company-Modell) heißt je nach Kontext
+     * anders - bei Mandantenfähigkeit sind das Subunternehmer des DL, ohne
+     * Mandantenfähigkeit die Dienstleisterfirmen, für die eine Person
+     * arbeitet (Ralf: "Firma und Kunde beißt sich ein wenig").
+     */
+    public static function companyLabel(): string
+    {
+        return self::multiTenantEnabled() ? 'Subunternehmer' : 'Dienstleisterfirma';
+    }
+
+    public static function companyLabelPlural(): string
+    {
+        return self::multiTenantEnabled() ? 'Subunternehmer' : 'Dienstleisterfirmen';
+    }
 }

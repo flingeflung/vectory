@@ -29,12 +29,32 @@ class FunctionGroupController extends Controller
         $tenantId = CurrentTenant::id();
 
         $groups = FunctionGroup::query()->where('tenant_id', $tenantId)->orderBy('name')->get();
-        $people = Person::query()->where('tenant_id', $tenantId)
-            ->with('department:id,name,short_name')
+        // withoutGlobalScope + visibleInTenant: zeigt auch DL-eigene
+        // Mitarbeiter mit Kundenzugriff-Freigabe für diesen Kunden, nicht
+        // nur dessen Heimat-Personen (Ralf: "Ich bin in der Maschinen AG.
+        // Ich kann hier gar keine TR der Fktgrp zuweisen" - eigene TR-Leute
+        // fehlten, weil ihr Heimat-Mandant ein anderer ist).
+        $people = Person::query()->withoutGlobalScope('tenant')->visibleInTenant($tenantId)
+            ->visibleToRole($request->user()->role)
+            ->with([
+                'department' => fn ($query) => $query->withoutGlobalScope('tenant'),
+            ])
             ->orderBy('last_name')->orderBy('first_name')
             ->get(['id', 'first_name', 'last_name', 'active', 'department_id']);
 
-        $departments = Department::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('name')->pluck('name');
+        // Katalog des aktiven Kunden PLUS Kataloge etwaiger freigegebener
+        // Personen (Person::visibleTenantIds) - NICHT aus den gerade
+        // angezeigten Personen abgeleitet, das war zu kurz gedacht: bei
+        // einem frischen Kunden ohne Personen wäre die Liste dann leer,
+        // obwohl der Katalog längst existiert (Ralfs Bug-Report: Abteilung
+        // angelegt, Dropdown trotzdem leer, weil noch niemand zugeordnet
+        // war).
+        $departments = Department::query()
+            ->withoutGlobalScope('tenant')
+            ->whereIn('tenant_id', Person::visibleTenantIds($tenantId))
+            ->where('active', true)
+            ->orderBy('name')
+            ->pluck('name');
 
         $selectedGroup = null;
         $selectedPerson = null;
@@ -45,7 +65,14 @@ class FunctionGroupController extends Controller
         if ($request->filled('gruppe')) {
             $selectedGroup = $groups->firstWhere('id', (int) $request->query('gruppe'));
             if ($selectedGroup) {
-                $groupMemberIds = $selectedGroup->members()->pluck('people.id');
+                // withoutGlobalScope('tenant'): members() ist eine Relation
+                // zu Person, würde sonst per Kundenzugriff freigegebene
+                // Mitglieder (anderer Heimat-Mandant) rausfiltern - die
+                // Checkbox hätte dann trotz gespeicherter Mitgliedschaft
+                // "nicht angehakt" angezeigt (Ralfs Bug-Report: "speichert
+                // nicht" - hat tatsächlich gespeichert, nur die Anzeige war
+                // falsch).
+                $groupMemberIds = $selectedGroup->members()->withoutGlobalScope('tenant')->pluck('people.id');
                 $usage = $this->usageCounts($selectedGroup);
 
                 // Mitglieder zuerst (alphabetisch), danach der Rest
@@ -54,7 +81,9 @@ class FunctionGroupController extends Controller
                 $people = $people->sortByDesc(fn (Person $person) => $groupMemberIds->contains($person->id))->values();
             }
         } elseif ($request->filled('person')) {
-            $selectedPerson = Person::query()->where('tenant_id', $tenantId)->with('department:id,name,short_name')->find($request->query('person'));
+            $selectedPerson = Person::query()->withoutGlobalScope('tenant')->visibleInTenant($tenantId)
+                ->with(['department' => fn ($query) => $query->withoutGlobalScope('tenant')])
+                ->find($request->query('person'));
             if ($selectedPerson) {
                 $personGroupIds = $selectedPerson->functionGroups()->pluck('function_groups.id');
             }
@@ -131,7 +160,12 @@ class FunctionGroupController extends Controller
         abort_unless($group->tenant_id === CurrentTenant::id(), 404);
 
         $personIds = collect($request->array('person_ids'))->map(fn ($id) => (int) $id);
-        $validIds = Person::query()->where('tenant_id', $group->tenant_id)->whereIn('id', $personIds)->pluck('id');
+        // withoutGlobalScope + visibleInTenant statt striktem tenant_id-
+        // Vergleich: sonst würden per Kundenzugriff freigegebene DL-
+        // Mitarbeiter beim Speichern stillschweigend wieder rausfallen
+        // (angehakt, aber nicht übernommen) - gleicher Bug wie bei der
+        // Personenliste vorher, hier nur noch nicht gefixt gewesen.
+        $validIds = Person::query()->withoutGlobalScope('tenant')->visibleInTenant($group->tenant_id)->whereIn('id', $personIds)->pluck('id');
 
         // function_group_member.tenant_id ist NOT NULL ohne Default - sync()
         // füllt Pivot-Spalten sonst nicht automatisch, deshalb explizit je

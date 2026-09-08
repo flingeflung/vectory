@@ -106,7 +106,22 @@
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('Nachname') }}</label>
-                        <input type="text" id="person-last-name" name="last_name" value="{{ old('last_name', $person->last_name) }}" required oninput="window.suggestPersonShortName?.()" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                        <input
+                            type="text"
+                            id="person-last-name"
+                            name="last_name"
+                            value="{{ old('last_name', $person->last_name) }}"
+                            required
+                            oninput="window.suggestPersonShortName?.()"
+                            {{-- Direkt beim Anlegen ist last_name mit dem Platzhalter "Neue
+                                 Person" vorbelegt (siehe PersonController::store()) - Ralf
+                                 musste den bisher immer erst manuell rauslöschen. Markierung
+                                 hier, tatsächliches Markieren/Fokussieren übernimmt JS (siehe
+                                 layouts/app.blade.php loadPerson() fürs Overlay, Script unten
+                                 für den Vollseiten-Fallback ohne Overlay-Kontext). --}}
+                            data-select-on-load="{{ $person->first_name === '' && $person->last_name === __('Neue Person') ? '1' : '0' }}"
+                            class="mt-0.5 w-full rounded-md border-gray-300 text-sm"
+                        >
                     </div>
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('Vorname') }}</label>
@@ -120,16 +135,24 @@
                         <label class="block text-xs text-gray-500">{{ __('E-Mail') }}</label>
                         <input type="email" name="email" value="{{ old('email', $person->email) }}" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                     </div>
+                    @if ($multiTenantEnabled)
+                        <div>
+                            <label class="block text-xs text-gray-500">{{ __('Kunde') }}</label>
+                            <div class="mt-0.5 w-full rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-sm text-gray-600" title="{{ $person->tenant?->name }}">
+                                {{ $person->tenant?->short_name ?? $person->tenant?->name ?? '–' }}
+                            </div>
+                        </div>
+                    @endif
                     <div>
                         <div class="flex items-center justify-between">
-                            <label class="block text-xs text-gray-500">{{ __('Firma') }}</label>
+                            <label class="block text-xs text-gray-500">{{ \App\Models\SystemSetting::companyLabel() }}</label>
                             <button
                                 type="button"
                                 onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'company-manager' }))"
                                 class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
                             >{{ __('verwalten') }}</button>
                         </div>
-                        <select name="company_id" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                        <select id="person-company-id" name="company_id" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                             <option value="">{{ __('– nicht zugewiesen –') }}</option>
                             @foreach ($companies as $company)
                                 <option value="{{ $company->id }}" @selected($person->company_id === $company->id)>{{ $company->name }}</option>
@@ -145,7 +168,7 @@
                                 class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
                             >{{ __('verwalten') }}</button>
                         </div>
-                        <select name="legacy_role_id" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                        <select id="person-legacy-role-id" name="legacy_role_id" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                             <option value="">{{ __('– nicht zugewiesen –') }}</option>
                             @foreach ($legacyRoles as $role)
                                 <option value="{{ $role->id }}" @selected($person->legacy_role_id === $role->id)>{{ $role->name }}</option>
@@ -161,7 +184,7 @@
                                 class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
                             >{{ __('verwalten') }}</button>
                         </div>
-                        <select name="department_id" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                        <select id="person-department-id" name="department_id" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                             <option value="">{{ __('– nicht zugewiesen –') }}</option>
                             @foreach ($departments as $department)
                                 <option value="{{ $department->id }}" @selected($person->department_id === $department->id)>{{ $department->name }}</option>
@@ -177,7 +200,7 @@
                                 class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
                             >{{ __('verwalten') }}</button>
                         </div>
-                        <select name="business_unit_id" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                        <select id="person-business-unit-id" name="business_unit_id" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                             <option value="">{{ __('– nicht zugewiesen –') }}</option>
                             @foreach ($businessUnits as $unit)
                                 <option value="{{ $unit->id }}" @selected($person->business_unit_id === $unit->id)>{{ $unit->name }}</option>
@@ -205,9 +228,18 @@
                 </label>
 
                 @csrf
-                <button type="submit" class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
-                    {{ __('Speichern') }}
-                </button>
+                {{-- Sticky statt fest am Ende: das Formular hier ist oft länger
+                     als der sichtbare Bereich (Ralf: Speichern-Button "nicht im
+                     Standard-Sichtbereich"). Bleibt beim Scrollen durch DIESES
+                     Formular am unteren Rand kleben, verschwindet aber wieder
+                     normal, sobald man weiter zu den Boxen darunter
+                     (Rechte-Set, Login-Zugang, ...) scrollt - kein separates
+                     Fixed-Footer-Layout nötig, das den Rest umbauen würde. --}}
+                <div class="sticky bottom-0 -mx-4 -mb-4 rounded-b-lg border-t border-gray-200 bg-white px-4 py-3">
+                    <button type="submit" class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
+                        {{ __('Speichern') }}
+                    </button>
+                </div>
             </form>
 
             <div class="rounded-lg border border-gray-200 bg-white p-4">
@@ -324,6 +356,41 @@
                     </form>
                 </div>
             @endif
+
+            @unless ($person->hasData())
+                <div x-data="{ confirming: false }" class="rounded-lg border border-gray-200 bg-white p-4">
+                    <div x-show="!confirming" class="flex justify-end">
+                        <button type="button" @click="confirming = true" class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50">
+                            {{ __('Person löschen') }}
+                        </button>
+                    </div>
+                    <form x-show="confirming" x-cloak data-delete-form method="POST" action="{{ route('admin.personen.destroy', $person) }}" class="flex items-center justify-between gap-2">
+                        @csrf
+                        @method('DELETE')
+                        <span class="text-xs text-gray-400">{{ __('Diese Person hat noch keine Daten (Projekte, Aufgaben, Login) und kann gefahrlos gelöscht werden.') }}</span>
+                        <div class="flex shrink-0 items-center gap-2">
+                            <button type="button" @click="confirming = false" class="rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">{{ __('Abbrechen') }}</button>
+                            <button type="submit" class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50">{{ __('Endgültig löschen') }}</button>
+                        </div>
+                    </form>
+                </div>
+            @endunless
         </div>
     </div>
 </div>
+
+@unless ($isOverlay)
+    {{-- Overlay-Fall wird in layouts/app.blade.php (loadPerson()) erledigt -
+         dieses <script> läuft nur bei echtem Seitenaufruf, nicht wenn dieses
+         Partial per fetch()/innerHTML in den Overlay eingesetzt wird
+         (eingefügte <script>-Tags sind dann inert). --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var lastNameInput = document.getElementById('person-last-name');
+            if (lastNameInput && lastNameInput.dataset.selectOnLoad === '1') {
+                lastNameInput.focus();
+                lastNameInput.select();
+            }
+        });
+    </script>
+@endunless

@@ -42,6 +42,13 @@
         </div>
 
         <x-confirm-dialog />
+        <x-delete-confirm-dialog />
+
+        @if (session('error'))
+            <script>
+                window.addEventListener('DOMContentLoaded', () => window.notifyDialog({{ \Illuminate\Support\Js::from(session('error')) }}, {{ \Illuminate\Support\Js::from(__('Geht nicht')) }}));
+            </script>
+        @endif
 
         {{--
             Sicherheitsabfrage bei ungespeicherten Änderungen greift bisher
@@ -442,6 +449,16 @@
                     hideLoading();
                     savedSnapshot = null;
                     snapshot();
+
+                    // Direkt nach dem Anlegen ist der Nachname mit "Neue
+                    // Person" vorbelegt (siehe PersonController::store()) -
+                    // markiert, damit der erste Tastendruck ihn direkt
+                    // ersetzt, statt ihn erst manuell rauslöschen zu müssen.
+                    const lastNameInput = body().querySelector('#person-last-name');
+                    if (lastNameInput?.dataset.selectOnLoad === '1') {
+                        lastNameInput.focus();
+                        lastNameInput.select();
+                    }
                 };
 
                 window.addEventListener('open-person', async (event) => {
@@ -456,15 +473,43 @@
                     await loadPerson(currentPersonId, currentPersonFilters);
                 });
 
-                // Von der Firmen-Verwaltung (o.ä. Unterbereiche) aufgerufen,
-                // wenn die dort verwaltete Liste sich geändert haben könnte -
-                // lädt das gerade offene Personen-Overlay neu, damit z.B. ein
-                // umbenannter Firmenname sofort im Firma-Dropdown auftaucht.
-                window.reopenCurrentPersonOverlay = async function reopenCurrentPersonOverlay() {
+                // Von der Firmen-/Abteilungs-/Geschäftsbereichs-/Rollen-
+                // Verwaltung aufgerufen, wenn deren Liste sich geändert haben
+                // könnte - tauscht im offenen Personen-Overlay GEZIELT NUR die
+                // <option>-Liste des betroffenen Pulldowns aus (per ID, siehe
+                // edit-body.blade.php), nicht das ganze Overlay neu laden.
+                // Ralfs Bug-Report: Rolle angelegt und im Pulldown ausgewählt,
+                // noch nicht gespeichert, dann Abteilung angelegt - die volle
+                // Neuladung hätte danach auch die ungespeicherte Rollen-Auswahl
+                // wieder auf den (noch alten) Datenbank-Stand zurückgesetzt.
+                window.refreshPersonOverlaySelect = async function refreshPersonOverlaySelect(selectId) {
                     if (currentPersonId === null) {
                         return;
                     }
-                    await loadPerson(currentPersonId, currentPersonFilters);
+                    const liveSelect = body()?.querySelector('#' + selectId);
+                    if (!liveSelect) {
+                        return;
+                    }
+
+                    const params = new URLSearchParams();
+                    Object.entries(currentPersonFilters || {}).forEach(([key, value]) => {
+                        if (value !== null && value !== undefined && value !== '') {
+                            params.append(key, value);
+                        }
+                    });
+                    const query = params.toString() ? '?' + params.toString() : '';
+
+                    const html = await fetch('/admin/personen/' + currentPersonId + query, {
+                        headers: { 'X-Overlay': '1' },
+                    }).then((r) => r.text());
+                    const freshSelect = new DOMParser().parseFromString(html, 'text/html').getElementById(selectId);
+                    if (!freshSelect) {
+                        return;
+                    }
+
+                    const currentValue = liveSelect.value;
+                    liveSelect.innerHTML = freshSelect.innerHTML;
+                    liveSelect.value = currentValue;
                 };
 
                 // Event-Delegation: die Formulare werden erst nach dem Öffnen per fetch eingefügt.
@@ -475,6 +520,8 @@
 
                     event.preventDefault();
                     showLoading();
+
+                    const isDelete = event.target.hasAttribute('data-delete-form');
 
                     // Aktuelle Filter als Query-String an die Speichern-URL
                     // anhängen - sonst sieht der Server bei diesem POST keine
@@ -498,6 +545,22 @@
                         headers: { 'X-Overlay': '1', 'X-CSRF-TOKEN': csrfToken },
                         body: formData,
                     });
+
+                    // Löschen liefert keinen neuen Overlay-Inhalt (die Person
+                    // gibt's ja nicht mehr) - Overlay schließen + Liste
+                    // dahinter aktualisieren, statt body() zu befüllen.
+                    if (isDelete) {
+                        hideLoading();
+                        if (!response.ok) {
+                            await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Löschen nicht möglich - die Person hat bereits Daten.')) }});
+                            return;
+                        }
+                        snapshot();
+                        window.dispatchEvent(new CustomEvent('close-modal', { detail: 'person-overlay' }));
+                        window.refreshPersonenListInBackground?.();
+                        return;
+                    }
+
                     body().innerHTML = await response.text();
                     hideLoading();
                     snapshot();
@@ -557,7 +620,7 @@
         <x-modal name="company-manager" max-width="lg" :dirty-check="'companyManagerIsDirty'">
             <div class="flex max-h-[80vh] flex-col">
                 <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
-                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Firmen verwalten') }}</h3>
+                    <h3 class="text-sm font-semibold text-gray-900">{{ \App\Models\SystemSetting::companyLabelPlural() }} {{ __('verwalten') }}</h3>
                     <button
                         type="button"
                         onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'company-manager' }))"
@@ -618,10 +681,7 @@
                         return;
                     }
                     wasOpened = false;
-                    // Zurück im Personen-Overlay den Firma-Vorschlag aktuell
-                    // halten - einfach neu laden statt gezielt nur die
-                    // <option>-Liste auszutauschen.
-                    window.reopenCurrentPersonOverlay?.();
+                    window.refreshPersonOverlaySelect?.('person-company-id');
                     window.refreshPersonenFiltersInBackground?.();
                 });
 
@@ -712,7 +772,7 @@
                         return;
                     }
                     wasOpened = false;
-                    window.reopenCurrentPersonOverlay?.();
+                    window.refreshPersonOverlaySelect?.('person-department-id');
                     window.refreshPersonenFiltersInBackground?.();
                 });
 
@@ -802,7 +862,7 @@
                         return;
                     }
                     wasOpened = false;
-                    window.reopenCurrentPersonOverlay?.();
+                    window.refreshPersonOverlaySelect?.('person-business-unit-id');
                     window.refreshPersonenFiltersInBackground?.();
                 });
 
@@ -892,7 +952,7 @@
                         return;
                     }
                     wasOpened = false;
-                    window.reopenCurrentPersonOverlay?.();
+                    window.refreshPersonOverlaySelect?.('person-legacy-role-id');
                     window.refreshPersonenFiltersInBackground?.();
                 });
 
@@ -1214,6 +1274,135 @@
                         snapshot();
                         window.refreshUnderlyingProject(currentProjectId);
                     }
+                });
+            })();
+        </script>
+
+        {{--
+            Projekt neu anlegen - gleiches Fetch-Muster wie
+            activate-workflow-step direkt darunter: Inhalt (u.a. die live
+            vorgeschlagene PN) wird erst beim Öffnen nachgeladen.
+        --}}
+        <x-modal name="project-create" max-width="md">
+            <div class="flex max-h-[85vh] flex-col">
+                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Neues Projekt') }}</h3>
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-create' }))"
+                        class="text-gray-400 hover:text-gray-600"
+                        aria-label="{{ __('Schließen') }}"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="project-create-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
+                    {{ __('Lädt…') }}
+                </div>
+            </div>
+        </x-modal>
+
+        <script>
+            (function () {
+                const createBody = () => document.getElementById('project-create-body');
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
+                window.openProjectCreate = async () => {
+                    createBody().innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
+                    window.dispatchEvent(new CustomEvent('open-modal', { detail: 'project-create' }));
+                    createBody().innerHTML = await fetch({{ \Illuminate\Support\Js::from(route('projekte.create-form')) }}).then((r) => r.text());
+                    // Natives autofocus greift hier nicht - das Formular wird
+                    // erst NACH dem Laden per innerHTML eingefügt (gleiches
+                    // Prinzip wie beim "Neue Person"-Fokus, siehe loadPerson()
+                    // weiter oben).
+                    document.getElementById('project-create-title')?.focus();
+                };
+
+                document.addEventListener('submit', async (event) => {
+                    if (!createBody() || !createBody().contains(event.target)) {
+                        return;
+                    }
+
+                    event.preventDefault();
+
+                    const response = await fetch(event.target.action, {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': csrfToken },
+                        body: new FormData(event.target),
+                    });
+
+                    if (!response.ok) {
+                        return;
+                    }
+
+                    const data = await response.json();
+                    window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-create' }));
+                    window.dispatchEvent(new CustomEvent('open-project', { detail: { id: data.id } }));
+                });
+            })();
+        </script>
+
+        {{--
+            Projektanfrage - für Nutzer ohne project.create (siehe
+            "+ Neues Projekt"/"Projekt anfragen"-Button auf der
+            Projektübersicht). Verschickt nur eine Mail, legt kein Projekt
+            an - schließt sich nach dem Versand einfach wieder.
+        --}}
+        <x-modal name="project-request" max-width="md">
+            <div class="flex max-h-[85vh] flex-col">
+                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Projektanfrage an die TR') }}</h3>
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-request' }))"
+                        class="text-gray-400 hover:text-gray-600"
+                        aria-label="{{ __('Schließen') }}"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="project-request-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
+                    {{ __('Lädt…') }}
+                </div>
+            </div>
+        </x-modal>
+
+        <script>
+            (function () {
+                const requestBody = () => document.getElementById('project-request-body');
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
+                window.openProjectRequest = async () => {
+                    requestBody().innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
+                    window.dispatchEvent(new CustomEvent('open-modal', { detail: 'project-request' }));
+                    requestBody().innerHTML = await fetch({{ \Illuminate\Support\Js::from(route('projekte.request-form')) }}).then((r) => r.text());
+                    document.getElementById('project-request-title')?.focus();
+                };
+
+                document.addEventListener('submit', async (event) => {
+                    if (!requestBody() || !requestBody().contains(event.target)) {
+                        return;
+                    }
+
+                    event.preventDefault();
+
+                    const response = await fetch(event.target.action, {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': csrfToken },
+                        body: new FormData(event.target),
+                    });
+
+                    if (!response.ok) {
+                        await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Anfrage konnte nicht verschickt werden - ist für diesen Kunden eine Info-E-Mail hinterlegt (Admin > Konfig)?')) }});
+                        return;
+                    }
+
+                    window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-request' }));
+                    await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Anfrage verschickt.')) }});
                 });
             })();
         </script>

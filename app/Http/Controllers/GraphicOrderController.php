@@ -104,6 +104,7 @@ class GraphicOrderController extends Controller
             'illustrationPersons' => FunctionGroup::query()
                 ->where('tenant_id', $project->tenant_id)
                 ->where('legacy_id', 5)
+                ->with(['members' => fn ($query) => $query->visibleToRole(auth()->user()->role)])
                 ->first()
                 ?->members
                 ->sortBy(fn (Person $person) => $person->fullName())

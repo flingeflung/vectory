@@ -4,9 +4,11 @@ namespace App\Providers;
 
 use App\Mail\Transport\FileLogTransport;
 use App\Models\Permission;
+use App\Models\Person;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -50,5 +52,15 @@ class AppServiceProvider extends ServiceProvider
         // Installationsweite Einstellungen (Superadmin-Reiter) - bewusst
         // strenger als access-admin, normale Admins sehen den Reiter nicht.
         Gate::define('access-superadmin', fn (User $user) => $user->role === 'super_admin');
+
+        // {person}-Routenbindung ohne den automatischen Tenant-Scope: eine
+        // per Kundenzugriff freigegebene Person (siehe person_tenant) gehört
+        // einem ANDEREN Mandanten als dem aktiven Kunden - mit dem Scope
+        // würde die Bindung sie schon vor jedem Controller-Code mit 404
+        // aussortieren. Die eigentliche Zugriffsprüfung bleibt explizit in
+        // den Controllern (PersonController::personVisibleInCurrentTenant()
+        // ist bewusst lockerer als PermissionController/FunctionGroupController,
+        // die weiterhin strikt auf den aktiven Mandanten prüfen).
+        Route::bind('person', fn ($value) => Person::withoutGlobalScope('tenant')->findOrFail($value));
     }
 }

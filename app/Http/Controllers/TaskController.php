@@ -146,6 +146,7 @@ class TaskController extends Controller
 
         $people = Person::query()
             ->whereIn('id', $pairs->pluck('person_id')->unique())
+            ->visibleToRole(auth()->user()->role)
             ->when(! $includeInactive, fn ($query) => $query->where('active', true))
             ->get()
             ->keyBy('id');

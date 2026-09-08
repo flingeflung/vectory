@@ -38,26 +38,63 @@ class PersonController extends Controller
     /**
      * @var list<string>
      */
-    private const FILTER_KEYS = ['search', 'company_id', 'department_id', 'business_unit_id', 'permission_template_id', 'legacy_role_id', 'typ', 'show_inactive'];
+    private const FILTER_KEYS = ['search', 'company_id', 'department_id', 'business_unit_id', 'permission_template_id', 'legacy_role_id', 'typ', 'show_inactive', 'tenant_id'];
 
     public function index(Request $request): View
     {
         $tenantId = CurrentTenant::id();
         $filters = $this->filtersFromRequest($request);
 
-        $people = $this->filteredPeopleQuery($filters, $tenantId)
-            ->with(['company', 'department', 'businessUnit', 'permissionTemplate', 'legacyRole', 'user'])
+        // Kunden-Filter (Wert "all" = alle Kunden, eine konkrete ID = genau
+        // dieser Kunde) nur für Admin/Super-Admin bei aktiver
+        // Mandantenfähigkeit (Ralf: Kollege ruft an, "Herr XY hat
+        // angerufen" - ohne das müsste man jeden Kunden einzeln
+        // durchklicken, um eine Person wiederzufinden). Hier zusätzlich
+        // gegen Missbrauch über die Query-String abgesichert, nicht nur in
+        // der Oberfläche versteckt.
+        $canSearchAllTenants = SystemSetting::multiTenantEnabled() && in_array($request->user()->role, ['admin', 'super_admin'], true);
+        if (! $canSearchAllTenants) {
+            unset($filters['tenant_id']);
+        }
+
+        $people = $this->filteredPeopleQuery($filters, $tenantId, $request->user()->role)
+            ->with([
+                // withoutGlobalScope('tenant'): eine über Kundenzugriff oder
+                // "Alle Kunden durchsuchen" eingeblendete Person (siehe
+                // filteredPeopleQuery) gehört meist einem ANDEREN Mandanten -
+                // ohne das hier würde deren eigene Firma/Abteilung/... durch
+                // deren eigenen Tenant-Scope rausgefiltert und leer angezeigt.
+                'company' => fn ($query) => $query->withoutGlobalScope('tenant'),
+                'department' => fn ($query) => $query->withoutGlobalScope('tenant'),
+                'businessUnit' => fn ($query) => $query->withoutGlobalScope('tenant'),
+                'permissionTemplate' => fn ($query) => $query->withoutGlobalScope('tenant'),
+                'legacyRole' => fn ($query) => $query->withoutGlobalScope('tenant'),
+                'tenant',
+                'user',
+            ])
             ->orderBy('last_name')
             ->orderBy('first_name')
             ->get();
 
+        // Nicht nur der Katalog DIESES Kunden - eine per Kundenzugriff
+        // freigegebene Person hat ihre Firma/Abteilung/GB/ihr Rechte-Set
+        // beim eigenen Heimat-Mandanten, der stünde sonst nicht zur
+        // Auswahl (Ralfs Bug-Report bei Funktionsgruppen, gleiche Ursache
+        // hier). Bewusst aus den GRUNDSÄTZLICH sichtbaren Mandanten
+        // abgeleitet (nicht aus der schon gefilterten Personenliste) -
+        // sonst würden die Dropdowns beim Filtern unerwartet schrumpfen.
+        $visibleTenantIds = Person::visibleTenantIds($tenantId);
+
         return view('admin.personen.index', [
             'people' => $people,
-            'companies' => Company::query()->where('tenant_id', $tenantId)->orderBy('name')->get(),
-            'departments' => Department::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('name')->get(),
-            'businessUnits' => BusinessUnit::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('name')->get(),
-            'permissionTemplates' => PermissionTemplate::query()->where('tenant_id', $tenantId)->orderBy('sort')->get(),
-            'legacyRoles' => LegacyRole::query()->where('tenant_id', $tenantId)->orderBy('name')->get(),
+            'companies' => Company::query()->withoutGlobalScope('tenant')->whereIn('tenant_id', $visibleTenantIds)->orderBy('name')->get(),
+            'departments' => Department::query()->withoutGlobalScope('tenant')->whereIn('tenant_id', $visibleTenantIds)->where('active', true)->orderBy('name')->get(),
+            'businessUnits' => BusinessUnit::query()->withoutGlobalScope('tenant')->whereIn('tenant_id', $visibleTenantIds)->where('active', true)->orderBy('name')->get(),
+            'permissionTemplates' => PermissionTemplate::query()->withoutGlobalScope('tenant')->whereIn('tenant_id', $visibleTenantIds)->orderBy('sort')->get(),
+            'legacyRoles' => LegacyRole::query()->withoutGlobalScope('tenant')->whereIn('tenant_id', $visibleTenantIds)->orderBy('name')->get(),
+            'multiTenantEnabled' => SystemSetting::multiTenantEnabled(),
+            'canSearchAllTenants' => $canSearchAllTenants,
+            'tenants' => $canSearchAllTenants ? Tenant::query()->orderBy('name')->get() : collect(),
             'filters' => $filters,
         ]);
     }
@@ -86,7 +123,7 @@ class PersonController extends Controller
 
     public function edit(Request $request, Person $person): View|Response
     {
-        abort_unless($person->tenant_id === CurrentTenant::id(), 404);
+        abort_unless($this->personVisibleInCurrentTenant($request, $person), 404);
         $this->abortIfProtectedFromEditing($request, $person);
 
         $data = $this->editData($request, $person);
@@ -100,7 +137,7 @@ class PersonController extends Controller
 
     public function update(Request $request, Person $person): RedirectResponse|Response
     {
-        abort_unless($person->tenant_id === CurrentTenant::id(), 404);
+        abort_unless($this->personVisibleInCurrentTenant($request, $person), 404);
         $this->abortIfProtectedFromEditing($request, $person);
 
         $isOverlay = $this->isOverlayRequest($request);
@@ -154,7 +191,7 @@ class PersonController extends Controller
      */
     public function createLogin(Request $request, Person $person): RedirectResponse|Response
     {
-        abort_unless($person->tenant_id === CurrentTenant::id(), 404);
+        abort_unless($this->personVisibleInCurrentTenant($request, $person), 404);
         $this->abortIfProtectedFromEditing($request, $person);
         abort_if($person->user, 422);
 
@@ -198,7 +235,7 @@ class PersonController extends Controller
 
     public function resetPassword(Request $request, Person $person): RedirectResponse|Response
     {
-        abort_unless($person->tenant_id === CurrentTenant::id(), 404);
+        abort_unless($this->personVisibleInCurrentTenant($request, $person), 404);
         $this->abortIfProtectedFromEditing($request, $person);
         abort_unless($person->user, 404);
 
@@ -234,7 +271,7 @@ class PersonController extends Controller
      */
     public function updateTenantAccess(Request $request, Person $person): RedirectResponse|Response
     {
-        abort_unless($person->tenant_id === CurrentTenant::id(), 404);
+        abort_unless($this->personVisibleInCurrentTenant($request, $person), 404);
         $this->abortIfProtectedFromEditing($request, $person);
         abort_unless(SystemSetting::multiTenantEnabled(), 403);
 
@@ -258,6 +295,28 @@ class PersonController extends Controller
     }
 
     /**
+     * Löschen nur, solange die Person noch keine "echten" Daten hat (siehe
+     * Person::hasData()) - sonst bleibt nur "inaktiv setzen". Ralf: aus
+     * Versehen unter dem falschen Kunden angelegt, sofort bemerkt - "ich
+     * kann sie dann nur inaktiv setzen und sie bleibt auf ewig als Leiche
+     * rumliegen".
+     */
+    public function destroy(Request $request, Person $person): RedirectResponse|Response
+    {
+        abort_unless($this->personVisibleInCurrentTenant($request, $person), 404);
+        $this->abortIfProtectedFromEditing($request, $person);
+        abort_if($person->hasData(), 422, __('Diese Person hat bereits Daten und kann nicht gelöscht werden.'));
+
+        $person->delete();
+
+        if ($this->isOverlayRequest($request)) {
+            return response()->noContent();
+        }
+
+        return redirect()->route('admin.personen')->with('status', 'person-deleted');
+    }
+
+    /**
      * Nur ein Super-Admin darf einer anderen Person Super-Admin-Rechte
      * geben oder wieder entziehen (Ralf: "als Superadmin sollte ich
      * weitere Personen in diesen erhabenen Stand erheben können"). Beim
@@ -269,7 +328,7 @@ class PersonController extends Controller
      */
     public function updateRole(Request $request, Person $person): RedirectResponse|Response
     {
-        abort_unless($person->tenant_id === CurrentTenant::id(), 404);
+        abort_unless($this->personVisibleInCurrentTenant($request, $person), 404);
         abort_unless($request->user()->role === 'super_admin', 403);
         abort_unless($person->user, 404);
 
@@ -316,7 +375,14 @@ class PersonController extends Controller
      */
     private function editData(Request $request, Person $person): array
     {
+        // Für die Liste/das Blättern zählt der AKTIVE Kunde (Kontext, in dem
+        // gerade geblättert wird) - für die eigenen Stammdaten der Person
+        // (Firma/Abteilung/Geschäftsbereich/Rolle, Kundenzugriff) zählt ihr
+        // eigener Heimat-Mandant, der bei einer über Kundenzugriff
+        // eingeblendeten Person vom aktiven Kunden abweichen kann (siehe
+        // filteredPeopleQuery/personVisibleInCurrentTenant).
         $tenantId = CurrentTenant::id();
+        $personTenantId = $person->tenant_id;
         // Nur aus der Query-String gelesen (nicht $request->all()) - beim
         // Speichern (POST) trägt die Action-URL bewusst keine Filter mehr
         // mit (genau wie beim Projekt-Overlay), Vor/Zurück wirkt danach
@@ -325,15 +391,23 @@ class PersonController extends Controller
         $filters = $this->filtersFromRequest($request);
 
         $multiTenantEnabled = SystemSetting::multiTenantEnabled();
+        $withoutTenantScope = fn ($query) => $query->withoutGlobalScope('tenant');
 
         return [
-            'person' => $person->fresh(['company', 'department', 'businessUnit', 'permissionTemplate', 'legacyRole', 'user', 'accessibleTenants']),
-            'companies' => Company::query()->where('tenant_id', $tenantId)->orderBy('name')->get(),
-            'departments' => Department::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('name')->get(),
-            'businessUnits' => BusinessUnit::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('name')->get(),
-            'legacyRoles' => LegacyRole::query()->where('tenant_id', $tenantId)->orderBy('name')->get(),
+            'person' => $person->fresh([
+                'company' => $withoutTenantScope,
+                'department' => $withoutTenantScope,
+                'businessUnit' => $withoutTenantScope,
+                'permissionTemplate' => $withoutTenantScope,
+                'legacyRole' => $withoutTenantScope,
+                'user', 'accessibleTenants', 'tenant',
+            ]),
+            'companies' => Company::query()->where('tenant_id', $personTenantId)->orderBy('name')->get(),
+            'departments' => Department::query()->where('tenant_id', $personTenantId)->where('active', true)->orderBy('name')->get(),
+            'businessUnits' => BusinessUnit::query()->where('tenant_id', $personTenantId)->where('active', true)->orderBy('name')->get(),
+            'legacyRoles' => LegacyRole::query()->where('tenant_id', $personTenantId)->orderBy('name')->get(),
             'multiTenantEnabled' => $multiTenantEnabled,
-            'otherTenants' => $multiTenantEnabled ? Tenant::query()->where('id', '!=', $tenantId)->orderBy('name')->get() : collect(),
+            'otherTenants' => $multiTenantEnabled ? Tenant::query()->where('id', '!=', $personTenantId)->orderBy('name')->get() : collect(),
             'actingUserIsSuperAdmin' => $request->user()->role === 'super_admin',
             'filters' => $filters,
             'previousPerson' => $this->adjacentPerson($request, $filters, $person, 'previous', $tenantId),
@@ -355,9 +429,39 @@ class PersonController extends Controller
             ->all();
     }
 
-    private function filteredPeopleQuery(array $filters, int $tenantId): Builder
+    /**
+     * Drei unterscheidbare Bedeutungen des Kunden-Filters (Ralf: "gehört zu
+     * Firma XY" ist etwas GRUNDSÄTZLICH anderes als "kann zum
+     * Kundenbereich wechseln + dort Projektmitglied werden" - beides
+     * gemischt in einem Filter zu haben, wäre irreführend):
+     * - kein Filter (Standard): Heimat-Personen DES AKTIVEN Kunden PLUS
+     *   Personen mit Kundenzugriff-Freigabe dafür (siehe person_tenant) -
+     *   "wer steht mir hier zur Verfügung" (Kunden-PM + freigeschaltete
+     *   eigene TR).
+     * - eine konkrete Kunden-ID: NUR dessen Heimat-Personen, reine
+     *   Mitgliedschaft ("gehört zu Kunde X"), keine Freigabe-Personen -
+     *   exakt wie Firma/Abteilung/GB.
+     * - "all": keine Einschränkung, alle Kunden (Namenssuche über alle
+     *   hinweg, z.B. "wer war das nochmal am Telefon").
+     * Braucht withoutGlobalScope('tenant'), weil BelongsToTenant sonst
+     * automatisch UND tenant_id = aktiver Kunde an jede Abfrage hängt und
+     * Personen anderer Mandanten wieder rausfiltern würde. Super-Admin-
+     * Konten sind für alle Logins unterhalb der Superadmin-Rolle komplett
+     * ausgeblendet (siehe Person::scopeVisibleToRole()), nicht nur gesperrt.
+     */
+    private function filteredPeopleQuery(array $filters, int $tenantId, string $viewerRole): Builder
     {
-        $query = Person::query()->where('tenant_id', $tenantId);
+        $query = Person::query()->withoutGlobalScope('tenant')->visibleToRole($viewerRole);
+
+        $tenantFilter = $filters['tenant_id'] ?? null;
+
+        if ($tenantFilter === 'all') {
+            // keine Einschränkung
+        } elseif ($tenantFilter !== null) {
+            $query->where('tenant_id', (int) $tenantFilter);
+        } else {
+            $query->visibleInTenant($tenantId);
+        }
 
         if (! empty($filters['search'])) {
             $query->where('last_name', 'like', '%'.$filters['search'].'%');
@@ -395,23 +499,16 @@ class PersonController extends Controller
      * ohne dessen Komplexität für wählbare Sortier-Spalten: die
      * Personenliste sortiert immer fix nach Nachname/Vorname, id als
      * dritte Ebene bricht Gleichstände (gleicher Name) eindeutig auf.
-     */
-    /**
-     * Beim Blättern (< >) im Overlay nie auf ein Super-Admin-Konto landen,
-     * das der aktuelle Nutzer eh nicht öffnen dürfte (siehe
-     * abortIfProtectedFromEditing()) - sonst käme dieselbe hässliche
-     * 403-Antwort in der Overlay-Modal wie beim direkten Anklicken in der
-     * Liste, nur über einen anderen Weg dorthin.
+     * filteredPeopleQuery() blendet Super-Admin-Konten für alle Logins
+     * unterhalb der Superadmin-Rolle bereits aus - landet man beim
+     * Blättern also nie auf einem.
      */
     private function adjacentPerson(Request $request, array $filters, Person $current, string $way, int $tenantId): ?Person
     {
         $direction = $way === 'next' ? 'asc' : 'desc';
         $operator = $direction === 'asc' ? '>' : '<';
 
-        return $this->filteredPeopleQuery($filters, $tenantId)
-            ->when($request->user()->role !== 'super_admin', function (Builder $query) {
-                $query->whereDoesntHave('user', fn (Builder $query) => $query->where('role', 'super_admin'));
-            })
+        return $this->filteredPeopleQuery($filters, $tenantId, $request->user()->role)
             ->where(function (Builder $query) use ($operator, $current) {
                 $query->where('last_name', $operator, $current->last_name)
                     ->orWhere(function (Builder $query) use ($operator, $current) {
@@ -428,6 +525,26 @@ class PersonController extends Controller
             ->orderBy('first_name', $direction)
             ->orderBy('id', $direction)
             ->first();
+    }
+
+    /**
+     * Eine Person ist erreichbar, wenn sie im aktiven Kunden zuhause ist
+     * ODER dafür per Kundenzugriff freigegeben wurde (siehe
+     * filteredPeopleQuery/updateTenantAccess) - Ralf: "die Mitarbeiter
+     * meiner Firma, für die der Kunde freigegeben ist" sollen beim Kunden
+     * auftauchen und dort auch geöffnet werden können. Admin/Super-Admin
+     * dürfen zusätzlich JEDE Person öffnen, unabhängig vom aktiven Kunden -
+     * sie könnten ohnehin zu jedem Kunden umschalten (siehe CurrentTenant),
+     * das erspart den Umweg über "Alle Kunden durchsuchen" + Kunde erst
+     * wechseln, nur um eine gefundene Person zu öffnen.
+     */
+    private function personVisibleInCurrentTenant(Request $request, Person $person): bool
+    {
+        if (in_array($request->user()->role, ['admin', 'super_admin'], true)) {
+            return true;
+        }
+
+        return $person->isVisibleInTenant(CurrentTenant::id());
     }
 
     private function isOverlayRequest(Request $request): bool

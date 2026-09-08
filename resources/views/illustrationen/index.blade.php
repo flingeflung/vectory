@@ -133,7 +133,7 @@
                                 <th class="sticky top-0 z-10 bg-gray-50 px-2 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('Termin') }}</th>
                                 <th class="sticky top-0 z-10 bg-gray-50 px-2 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('Auftrag von') }}</th>
                                 <th class="sticky top-0 z-10 bg-gray-50 px-2 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('Illustrator') }}</th>
-                                <th class="sticky top-0 z-10 bg-gray-50 px-2 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('Firma') }}</th>
+                                <th class="sticky top-0 z-10 bg-gray-50 px-2 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ \App\Models\SystemSetting::companyLabel() }}</th>
                                 <th class="sticky top-0 z-10 bg-gray-50 px-2 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('erledigt') }}</th>
                                 <th class="sticky top-0 right-0 z-20 bg-gray-50 px-2 py-3 text-left font-medium text-gray-500 whitespace-nowrap"></th>
                             </tr>

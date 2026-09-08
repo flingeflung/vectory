@@ -1,6 +1,8 @@
 <x-admin-layout>
     @if (session('status'))
-        <x-flash-message class="mb-3 shrink-0 px-3 py-2 text-sm">{{ __('Gespeichert.') }}</x-flash-message>
+        <x-flash-message class="mb-3 shrink-0 px-3 py-2 text-sm">
+            {{ session('status') === 'person-deleted' ? __('Person gelöscht.') : __('Gespeichert.') }}
+        </x-flash-message>
     @endif
 
     {{-- Kopf fix (Filter + Neue Person), nur die Tabelle scrollt - siehe
@@ -18,10 +20,22 @@
                         class="mt-0.5 rounded-md border-gray-300 text-sm"
                     >
                 </div>
+                @if ($canSearchAllTenants)
+                    <div>
+                        <label class="block text-xs text-gray-500">{{ __('Kunde') }}</label>
+                        <select name="tenant_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-sm">
+                            <option value="all" @selected(request('tenant_id') === 'all')>{{ __('– Alle –') }}</option>
+                            <option value="" @selected(! request()->filled('tenant_id'))>{{ __('Aktiver Kunde (+ Zugriff)') }}</option>
+                            @foreach ($tenants as $tenant)
+                                <option value="{{ $tenant->id }}" @selected(request('tenant_id') == $tenant->id)>{{ $tenant->short_name ?? $tenant->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endif
                 <div>
                     <div class="flex items-center gap-1">
-                        <label class="block text-xs text-gray-500">{{ __('Firma') }}</label>
-                        <x-manage-lookup-button modal="company-manager" :title="__('Firmen verwalten')" />
+                        <label class="block text-xs text-gray-500">{{ \App\Models\SystemSetting::companyLabel() }}</label>
+                        <x-manage-lookup-button modal="company-manager" :title="\App\Models\SystemSetting::companyLabelPlural().' verwalten'" />
                     </div>
                     <select id="filter-company_id" name="company_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-sm">
                         <option value="">{{ __('– Alle –') }}</option>
@@ -92,7 +106,7 @@
                     <input type="checkbox" name="show_inactive" value="1" @checked(request()->boolean('show_inactive')) onchange="this.form.submit()" class="rounded border-gray-300">
                     {{ __('Inaktive zeigen') }}
                 </label>
-                @if (request()->anyFilled(['search', 'company_id', 'department_id', 'business_unit_id', 'permission_template_id', 'legacy_role_id', 'typ']) || request()->boolean('show_inactive'))
+                @if (request()->anyFilled(['search', 'company_id', 'department_id', 'business_unit_id', 'permission_template_id', 'legacy_role_id', 'typ', 'tenant_id']) || request()->boolean('show_inactive'))
                     <a href="{{ route('admin.personen') }}" class="mb-1.5 inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200">{{ __('Filter zurücksetzen') }}</a>
                 @endif
             </form>
@@ -129,7 +143,10 @@
                         <th class="px-3 py-2 text-left">{{ __('Name') }}</th>
                         <th class="px-3 py-2 text-left">{{ __('Kürzel') }}</th>
                         <th class="px-3 py-2 text-left">{{ __('Typ') }}</th>
-                        <th class="px-3 py-2 text-left">{{ __('Firma') }}</th>
+                        @if ($multiTenantEnabled)
+                            <th class="px-3 py-2 text-left">{{ __('Kunde') }}</th>
+                        @endif
+                        <th class="px-3 py-2 text-left">{{ \App\Models\SystemSetting::companyLabel() }}</th>
                         <th class="px-3 py-2 text-left">{{ __('Rolle') }}</th>
                         <th class="px-3 py-2 text-left">{{ __('Abteilung') }}</th>
                         <th class="px-3 py-2 text-left">{{ __('Geschäftsbereich') }}</th>
@@ -146,6 +163,9 @@
                             </td>
                             <td class="px-3 py-2 text-gray-600" title="{{ $person->fullName() }}">{{ $person->short_name ?? '–' }}</td>
                             <td class="px-3 py-2 text-gray-600">{{ $person->user ? __('Login-User') : __('Kontaktperson') }}</td>
+                            @if ($multiTenantEnabled)
+                                <td class="px-3 py-2 text-gray-600" title="{{ $person->tenant?->name }}">{{ $person->tenant?->short_name ?? $person->tenant?->name ?? '–' }}</td>
+                            @endif
                             <td class="px-3 py-2 text-gray-600">{{ $person->company?->name ?? '–' }}</td>
                             <td class="px-3 py-2 text-gray-600">{{ $person->legacyRole?->name ?? '–' }}</td>
                             <td class="px-3 py-2 text-gray-600">{{ $person->department?->name ?? '–' }}</td>
@@ -156,7 +176,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10" class="px-3 py-6 text-center text-gray-400">{{ __('Keine Personen gefunden.') }}</td>
+                            <td colspan="{{ $multiTenantEnabled ? 11 : 10 }}" class="px-3 py-6 text-center text-gray-400">{{ __('Keine Personen gefunden.') }}</td>
                         </tr>
                     @endforelse
                 </tbody>

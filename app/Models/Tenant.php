@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
-#[Fillable(['name', 'project_path'])]
+#[Fillable(['name', 'short_name', 'project_path', 'notification_email'])]
 class Tenant extends Model
 {
     /**

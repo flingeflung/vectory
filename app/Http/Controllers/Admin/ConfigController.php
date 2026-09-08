@@ -30,10 +30,14 @@ class ConfigController extends Controller
         return view('admin.config.index', [
             'settings' => $settings,
             'multiTenantEnabled' => $multiTenantEnabled,
-            'tenants' => $multiTenantEnabled ? Tenant::query()->orderBy('name')->get() : collect(),
             // Ohne Mandantenfähigkeit gibt's keine "Kunden verwalten"-Liste -
             // der Projektpfad des einzigen Mandanten braucht trotzdem eine
             // Stelle zum Bearbeiten (siehe TenantController::update()).
+            // Bei aktiver MF ist "Kunden verwalten" auf den eigenen
+            // Admin-Tab "Kunden" umgezogen (siehe TenantController::index())
+            // - bei 100+ echten Kunden eine andere Größenordnung als die
+            // Konfig des aktiven Kunden (Ralf: "oben die 4 Buttons und
+            // drunter die vielen Kunden").
             'currentTenant' => $multiTenantEnabled ? null : Tenant::query()->find(CurrentTenant::id()),
         ]);
     }

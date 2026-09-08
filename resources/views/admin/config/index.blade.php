@@ -20,6 +20,55 @@
         window.__configDirtyForms = new Set();
     </script>
     <div class="max-w-2xl" x-data x-init="window.adminPageIsDirty = () => window.__configDirtyForms.size > 0">
+        {{-- Direkter Einstiegspunkt für die vier "klitzekleinen" Verwalten-
+             Overlays - bisher nur über "verwalten" neben dem jeweiligen Feld
+             im Personen-Overlay erreichbar. Ralf: "direkten Zugangspunkt...
+             im Admin-Bereich", aber explizit KEINE eigenen Admin-Tabs dafür
+             (hatte er bei den Geschäftsbereichen schon mal als "völlig
+             übertrieben" verworfen) - deshalb hier nur Buttons, die
+             dieselben globalen Modals öffnen, kein neuer Verwaltungscode. --}}
+        <div class="mb-6 rounded-lg border border-gray-200 bg-white p-4">
+            <div class="mb-3 text-sm font-semibold text-gray-900">{{ __('Stammdaten verwalten') }}</div>
+            <div class="flex flex-wrap gap-2">
+                <button
+                    type="button"
+                    onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'company-manager' }))"
+                    class="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                    {{ \App\Models\SystemSetting::companyLabelPlural() }}
+                </button>
+                <button
+                    type="button"
+                    onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'department-manager' }))"
+                    class="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                    {{ __('Abteilungen') }}
+                </button>
+                <button
+                    type="button"
+                    onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'business-unit-manager' }))"
+                    class="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                    {{ __('Geschäftsbereiche') }}
+                </button>
+                <button
+                    type="button"
+                    onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'legacy-role-manager' }))"
+                    class="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                    {{ __('Rollen') }}
+                </button>
+                {{-- Platzhalter, noch ohne Funktion (Ralf: "dann haben wir
+                     das als Platzhalter") - es gibt für diese drei Kataloge
+                     noch keine eigene Verwaltung, siehe Rollout-Pfad-
+                     Artifact ("bekannte Lücke"). Bewusst sichtbar deaktiviert
+                     statt anklickbar-aber-wirkungslos. --}}
+                <button type="button" disabled title="{{ __('Noch nicht verfügbar') }}" class="cursor-not-allowed rounded-md border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-400">
+                    {{ __('Workflows') }}
+                </button>
+            </div>
+        </div>
+
         @if ($settings->isNotEmpty())
             <div class="rounded-lg border border-gray-200 bg-white p-4">
                 <div
@@ -80,6 +129,15 @@
                         >
                         <p class="text-xs text-gray-400">{{ __('Basisverzeichnis für Vectory-Projektdateien.') }}</p>
 
+                        <label class="block text-sm font-medium text-gray-700">{{ __('Info-E-Mail') }}</label>
+                        <input
+                            type="email"
+                            name="notification_email"
+                            value="{{ old('notification_email', $currentTenant->notification_email) }}"
+                            class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        >
+                        <p class="text-xs text-gray-400">{{ __('Ziel für von Vectory verschickte Mails, z.B. Projektanfragen.') }}</p>
+
                         <div class="flex items-center gap-4 pt-2">
                             <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
                                 {{ __('Speichern') }}
@@ -90,77 +148,5 @@
                 </div>
             </div>
         @endunless
-
-        @if ($multiTenantEnabled)
-            <div class="{{ $settings->isNotEmpty() ? 'mt-6 ' : '' }}rounded-lg border border-gray-200 bg-white p-4">
-                <div class="mb-3 text-sm font-semibold text-gray-900">{{ __('Kunden verwalten') }}</div>
-                <p class="mb-3 text-xs text-gray-400">{{ __('Jeder Kunde ist ein eigener, vollständig getrennter Mandant, mit eigenem Projektpfad - die Projektverzeichnisse können sehr groß werden, ein eigener Server pro Kunde ist möglich.') }}</p>
-
-                <form method="POST" action="{{ route('admin.kunden.store') }}" @input="window.__configDirtyForms.add($el)" class="space-y-2 rounded-md border border-gray-200 p-2">
-                    @csrf
-                    <div>
-                        <label class="block text-xs text-gray-500">{{ __('Name') }}</label>
-                        <input type="text" name="name" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-gray-500">{{ __('Projektpfad') }}</label>
-                        <input type="text" name="project_path" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
-                    </div>
-                    <div class="flex justify-end">
-                        <button type="submit" class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
-                            {{ __('Anlegen') }}
-                        </button>
-                    </div>
-                </form>
-
-                <div class="mt-3 space-y-2">
-                    @forelse ($tenants as $tenant)
-                        <div class="rounded-md border border-gray-200 p-2">
-                            <form
-                                method="POST"
-                                action="{{ route('admin.kunden.update', $tenant) }}"
-                                x-data="{ dirty: false }"
-                                @input="dirty = true; window.__configDirtyForms.add($el)"
-                                class="space-y-2"
-                            >
-                                @csrf
-                                <div>
-                                    <label class="block text-xs text-gray-500">{{ __('Name') }}</label>
-                                    <input type="text" name="name" value="{{ $tenant->name }}" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-gray-500">{{ __('Projektpfad') }}</label>
-                                    <input type="text" name="project_path" value="{{ $tenant->project_path }}" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
-                                </div>
-                                <div class="flex justify-end">
-                                    <button type="submit" x-show="dirty" x-cloak class="rounded-md border border-gray-300 px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
-                                        {{ __('Speichern') }}
-                                    </button>
-                                </div>
-                            </form>
-
-                            @unless ($tenant->hasData())
-                                <div x-data="{ confirming: false }" class="mt-2">
-                                    <div x-show="!confirming" class="flex justify-end">
-                                        <button type="button" @click="confirming = true" class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50">
-                                            {{ __('Löschen') }}
-                                        </button>
-                                    </div>
-                                    <form x-show="confirming" x-cloak method="POST" action="{{ route('admin.kunden.destroy', $tenant) }}" class="flex items-center justify-end gap-2">
-                                        @csrf
-                                        @method('DELETE')
-                                        <span class="text-xs text-gray-400">{{ __('Dieser Kunde hat noch keine Daten und kann gefahrlos gelöscht werden.') }}</span>
-                                        <button type="button" @click="confirming = false" class="rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">{{ __('Abbrechen') }}</button>
-                                        <button type="submit" class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50">{{ __('Endgültig löschen') }}</button>
-                                    </form>
-                                </div>
-                            @endunless
-                        </div>
-                    @empty
-                        <div class="text-sm text-gray-400">{{ __('Noch keine Kunden angelegt.') }}</div>
-                    @endforelse
-                </div>
-            </div>
-        @endif
     </div>
 </x-admin-layout>

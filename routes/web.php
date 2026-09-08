@@ -5,9 +5,11 @@ use App\Http\Controllers\Admin\CompanyController;
 use App\Http\Controllers\Admin\ConfigController;
 use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\FunctionGroupController;
+use App\Http\Controllers\Admin\MarketController;
 use App\Http\Controllers\Admin\LegacyRoleController;
 use App\Http\Controllers\Admin\PermissionController as AdminPermissionController;
 use App\Http\Controllers\Admin\PersonController as AdminPersonController;
+use App\Http\Controllers\Admin\ProjectTypeController;
 use App\Http\Controllers\Admin\SuperAdminController;
 use App\Http\Controllers\Admin\TenantController;
 use App\Http\Controllers\DashboardController;
@@ -19,6 +21,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectDirectoryController;
 use App\Http\Controllers\ProjectWorkflowStepController;
+use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TenantSwitchController;
 use Illuminate\Support\Facades\Route;
@@ -36,6 +39,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/projekte', [ProjectController::class, 'index'])->name('projekte');
     Route::get('/schnellsuche', [ProjectController::class, 'quickSearch'])->name('projekte.schnellsuche');
+    // Vor /projekte/{project} registriert - sonst würde "neu" als Projekt-ID interpretiert.
+    Route::get('/projekte/neu', [ProjectController::class, 'createForm'])->name('projekte.create-form');
+    Route::post('/projekte', [ProjectController::class, 'store'])->name('projekte.store');
+    Route::get('/projekte/anfrage', [ProjectController::class, 'requestForm'])->name('projekte.request-form');
+    Route::post('/projekte/anfrage', [ProjectController::class, 'submitRequest'])->name('projekte.request-submit');
     Route::get('/projekte/{project}', [ProjectController::class, 'show'])->name('projekte.show');
     Route::patch('/projekte/{project}', [ProjectController::class, 'update'])->name('projekte.update');
     Route::post('/projekte/{project}/favorite', [FavoriteController::class, 'toggle'])->name('projekte.favorite');
@@ -90,6 +98,24 @@ Route::middleware(['auth', 'verified', 'can:access-admin'])->prefix('admin')->na
     Route::post('/funktionsgruppen/{group}/mitglieder', [FunctionGroupController::class, 'updateMembers'])->name('function-groups.members.update');
     Route::post('/funktionsgruppen/personen/{person}', [FunctionGroupController::class, 'updatePersonGroups'])->name('function-groups.personen.update');
 
+    Route::get('/maerkte', [MarketController::class, 'index'])->name('maerkte');
+    Route::post('/maerkte/gruppen', [MarketController::class, 'setsStore'])->name('maerkte.gruppen.store');
+    Route::post('/maerkte/gruppen/{set}', [MarketController::class, 'setsUpdate'])->name('maerkte.gruppen.update');
+    Route::delete('/maerkte/gruppen/{set}', [MarketController::class, 'setsDestroy'])->name('maerkte.gruppen.destroy');
+    Route::post('/maerkte/gruppen/{set}/mitglieder', [MarketController::class, 'setsMembersUpdate'])->name('maerkte.gruppen.mitglieder.update');
+
+    Route::get('/projektkategorien', [ProjectTypeController::class, 'index'])->name('projektkategorien');
+    Route::post('/projektkategorien', [ProjectTypeController::class, 'mainStore'])->name('projektkategorien.store');
+    // Feste Pfade (reorder/arten) vor den {category}/{sub}-Wildcards registriert -
+    // sonst würden sie als ID interpretiert (404, schon mal passiert).
+    Route::post('/projektkategorien/reorder', [ProjectTypeController::class, 'reorderMain'])->name('projektkategorien.reorder');
+    Route::post('/projektkategorien/arten', [ProjectTypeController::class, 'subStore'])->name('projektkategorien.arten.store');
+    Route::post('/projektkategorien/arten/reorder', [ProjectTypeController::class, 'reorderSub'])->name('projektkategorien.arten.reorder');
+    Route::post('/projektkategorien/arten/{sub}', [ProjectTypeController::class, 'subUpdate'])->name('projektkategorien.arten.update');
+    Route::delete('/projektkategorien/arten/{sub}', [ProjectTypeController::class, 'subDestroy'])->name('projektkategorien.arten.destroy');
+    Route::post('/projektkategorien/{category}', [ProjectTypeController::class, 'mainUpdate'])->name('projektkategorien.update');
+    Route::delete('/projektkategorien/{category}', [ProjectTypeController::class, 'mainDestroy'])->name('projektkategorien.destroy');
+
     Route::get('/firmen', [CompanyController::class, 'index'])->name('companies');
     Route::post('/firmen', [CompanyController::class, 'store'])->name('companies.store');
     Route::post('/firmen/{company}', [CompanyController::class, 'update'])->name('companies.update');
@@ -103,10 +129,12 @@ Route::middleware(['auth', 'verified', 'can:access-admin'])->prefix('admin')->na
     Route::post('/personen/{person}/passwort', [AdminPersonController::class, 'resetPassword'])->name('personen.password.reset');
     Route::post('/personen/{person}/kunden', [AdminPersonController::class, 'updateTenantAccess'])->name('personen.tenant-access.update');
     Route::post('/personen/{person}/rolle', [AdminPersonController::class, 'updateRole'])->name('personen.role.update');
+    Route::delete('/personen/{person}', [AdminPersonController::class, 'destroy'])->name('personen.destroy');
 
     Route::get('/konfig', [ConfigController::class, 'index'])->name('config');
     Route::post('/konfig', [ConfigController::class, 'update'])->name('config.update');
 
+    Route::get('/kunden', [TenantController::class, 'index'])->name('kunden');
     Route::post('/kunden', [TenantController::class, 'store'])->name('kunden.store');
     Route::post('/kunden/{tenant}', [TenantController::class, 'update'])->name('kunden.update');
     Route::delete('/kunden/{tenant}', [TenantController::class, 'destroy'])->name('kunden.destroy');
@@ -132,6 +160,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::get('/einstellungen', [SettingsController::class, 'index'])->name('settings');
+    Route::post('/einstellungen', [SettingsController::class, 'update'])->name('settings.update');
 });
 
 require __DIR__.'/auth.php';
