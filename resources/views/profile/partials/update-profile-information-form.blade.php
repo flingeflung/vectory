@@ -16,8 +16,13 @@
     <form method="post" action="{{ route('profile.update') }}" class="mt-6 space-y-6">
         <div>
             <x-input-label for="name" :value="__('Name')" />
-            <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="old('name', $user->name)" required autofocus autocomplete="name" />
-            <x-input-error class="mt-2" :messages="$errors->get('name')" />
+            @if ($user->person)
+                <x-text-input id="name" type="text" class="mt-1 block w-full bg-gray-50 text-gray-500" :value="$user->person->fullName()" disabled />
+                <p class="mt-1 text-xs text-gray-400">{{ __('Wird über die Personenverwaltung gepflegt.') }}</p>
+            @else
+                <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="old('name', $user->name)" required autofocus autocomplete="name" />
+                <x-input-error class="mt-2" :messages="$errors->get('name')" />
+            @endif
         </div>
 
         <div>

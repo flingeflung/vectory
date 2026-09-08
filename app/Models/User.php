@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'username', 'email', 'password', 'tenant_id', 'person_id', 'role'])]
+#[Fillable(['name', 'username', 'email', 'password', 'tenant_id', 'person_id', 'role', 'hide_discarded_projects_on_reset'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -22,9 +22,21 @@ class User extends Authenticatable
         return $this->belongsTo(Tenant::class);
     }
 
+    /**
+     * withoutGlobalScope('tenant'): die EIGENE Person eines Users muss
+     * immer auflösbar sein, unabhängig davon, welcher Kunde gerade aktiv
+     * ist - sonst würde z.B. Gate::before() (AppServiceProvider,
+     * $user->person?->hasPermission()) für JEDE Rechteprüfung fälschlich
+     * "nein" liefern, sobald man einen Kunden ansieht, der nicht der
+     * eigene Heimat-Mandant ist (Ralfs Bug-Report: "+Neues Projekt"-Button
+     * nur bei einem bestimmten Kunden sichtbar). Person::BelongsToTenant
+     * filtert sonst automatisch auf CurrentTenant::id() - hier bewusst
+     * NICHT gewollt, das ist die eigene Identität, keine Personenliste
+     * eines fremden Mandanten.
+     */
     public function person(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
-        return $this->belongsTo(Person::class);
+        return $this->belongsTo(Person::class)->withoutGlobalScope('tenant');
     }
 
     /**
@@ -37,6 +49,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'hide_discarded_projects_on_reset' => 'boolean',
         ];
     }
 }

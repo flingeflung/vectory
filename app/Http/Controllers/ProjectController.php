@@ -7,24 +7,30 @@ use App\Models\FunctionGroup;
 use App\Models\Market;
 use App\Models\MarketSet;
 use App\Enums\ActivityType;
+use App\Mail\ProjectRequestMail;
 use App\Models\Activity;
 use App\Models\Favorite;
 use App\Models\Project;
 use App\Models\ProjectPerson;
 use App\Models\RecentlyViewedProject;
+use App\Models\Tenant;
 use App\Models\ProjectTypeSub;
 use App\Models\ProjectWorkflowStep;
 use App\Models\Workflow;
 use App\Models\WorkflowStep;
 use App\Services\ProjectDirectoryLocator;
+use App\Services\ProjectNumberAllocator;
 use App\Support\CurrentTenant;
 use App\Support\ProjectColumnCatalog;
 use App\Support\ProjectFilterCatalog;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -42,7 +48,10 @@ class ProjectController extends Controller
 
     private const BOOL_FIELDS = ['archived'];
 
-    public function __construct(private readonly ProjectDirectoryLocator $directoryLocator) {}
+    public function __construct(
+        private readonly ProjectDirectoryLocator $directoryLocator,
+        private readonly ProjectNumberAllocator $numberAllocator,
+    ) {}
 
     public function index(Request $request): View
     {
@@ -66,6 +75,21 @@ class ProjectController extends Controller
             // bewusst ungefilterten Liste (sort/direction/page gesetzt, aber kein Filter)
             // soll dagegen NICHT plötzlich einen alten Filter wiederbeleben.
             $filters = ProjectFilterCatalog::persistedFiltersFor($user);
+        }
+
+        // Persönliche Einstellung (Ralf, 2026-09-09; Vietto-Vorbild
+        // voreinst_projektfilter_verworfene): ohne eigene Status-Auswahl
+        // werden verworfene Projekte (status=3) nie mitgezeigt, alle
+        // anderen Status schon. Bewusst ECHTER Filter (landet in $filters
+        // selbst, nicht nur in der Query) - soll im Projektfilter-Dialog
+        // als aktives, sichtbares/änderbares Feld erscheinen (Ralf:
+        // "Status immer anzeigen" heißt auch, dass man ihn sieht, nicht
+        // nur dass er im Hintergrund wirkt). Greift nicht, wenn schon
+        // irgendein Status-Filter aktiv ist, das soll nicht überstimmt
+        // werden. Bewusst NACH dem persist-Block, damit dieser Standard
+        // nie versehentlich als "vom Nutzer gewählt" gespeichert wird.
+        if (empty($filters['status']) && $user->hide_discarded_projects_on_reset) {
+            $filters['status'] = [0, 1, 2];
         }
 
         $allColumns = ProjectColumnCatalog::effectiveFor($user);
@@ -165,6 +189,138 @@ class ProjectController extends Controller
             ->groupBy('project_id')
             ->get()
             ->keyBy('project_id');
+    }
+
+    /**
+     * Inhalt des "Projekt anlegen"-Modals (Fetch-Muster wie
+     * activate-workflow-step) - zeigt die live vorgeschlagene PN (reine
+     * Anzeige, keine Reservierung, siehe ProjectNumberAllocator) und die
+     * "mich als Beteiligten eintragen"-Checkbox nur, wenn der anlegende
+     * Nutzer überhaupt eine Person mit Funktionsgruppen-Mitgliedschaft ist.
+     */
+    public function createForm(Request $request): View
+    {
+        abort_unless($request->user()->can('project.create'), 403);
+
+        $tenantId = CurrentTenant::id();
+        $year = (int) now()->format('y');
+
+        // Projektbeteiligung hängt im Datenmodell immer an einer
+        // Funktionsgruppen-Rolle (siehe store()) - die Checkbox nur zeigen,
+        // wenn der Ersteller in DIESEM Kunden überhaupt einer Gruppe
+        // angehört, sonst würde sie angehakt trotzdem nichts bewirken (Ralfs
+        // Bug-Report: Projekt bei einem Kunden angelegt, bei dem er in
+        // keiner Funktionsgruppe ist - Checkbox tat scheinbar nichts).
+        return view('projekte.partials.create-body', [
+            'suggestedPn' => $this->numberAllocator->nextFreePn($year, $tenantId),
+            'canAddCreatorAsParticipant' => $request->user()->person?->functionGroups()->exists() ?? false,
+        ]);
+    }
+
+    /**
+     * Legt ein neues, leeres Projekt an - bewusst kein Assistent/Kopieren-
+     * Modus wie Vietto (siehe Roadmap-Entscheidung), nur Titel + PN + (auf
+     * Wunsch) Ersteller als Projektbeteiligter. Workflow/Markt/Projektart
+     * werden bewusst NICHT hier gesetzt, sondern erst danach in den
+     * Projektdetails - genau wie bei einem frischen Vietto-Projekt auch.
+     */
+    public function store(Request $request): JsonResponse
+    {
+        abort_unless($request->user()->can('project.create'), 403);
+
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+        ]);
+
+        $tenantId = CurrentTenant::id();
+        $year = (int) now()->format('y');
+        $addAsParticipant = $request->boolean('add_as_participant');
+        $creator = $request->user()->person;
+
+        $project = DB::transaction(function () use ($validated, $tenantId, $year, $addAsParticipant, $creator) {
+            // Zeilen-Lock auf den Mandanten als Mutex - serialisiert
+            // gleichzeitiges Anlegen für denselben Kunden, damit zwei
+            // Nutzer nie dieselbe PN vorgeschlagen bekommen UND zugewiesen
+            // erhalten (die Live-Vorschau im Dialog selbst ist bewusst
+            // unlocked, siehe ProjectNumberAllocator-Docblock).
+            Tenant::query()->where('id', $tenantId)->lockForUpdate()->first();
+
+            $project = Project::query()->create([
+                'tenant_id' => $tenantId,
+                'source_pn' => $this->numberAllocator->nextFreePn($year, $tenantId),
+                'title' => trim($validated['title']),
+                'version' => 1,
+            ]);
+
+            Activity::log($project, ActivityType::ProjectCreated, __('Projekt neu angelegt.'));
+
+            if ($addAsParticipant && $creator) {
+                foreach ($creator->functionGroups as $functionGroup) {
+                    ProjectPerson::query()->create([
+                        'tenant_id' => $tenantId,
+                        'project_id' => $project->id,
+                        'function_group_id' => $functionGroup->id,
+                        'person_id' => $creator->id,
+                        'is_primary' => true,
+                    ]);
+                }
+            }
+
+            $basePath = $this->directoryLocator->basePath($tenantId);
+            if ($basePath !== null && is_dir($basePath)) {
+                $this->directoryLocator->create($basePath, $this->directoryLocator->suggestedFolderName($project));
+            }
+
+            return $project;
+        });
+
+        return response()->json(['id' => $project->id]);
+    }
+
+    /**
+     * Inhalt des "Projektanfrage"-Modals - für Nutzer ohne project.create,
+     * siehe Migration fix_project_create_and_add_project_request_permission.
+     */
+    public function requestForm(Request $request): View
+    {
+        abort_unless($request->user()->can('project.request'), 403);
+
+        return view('projekte.partials.request-body');
+    }
+
+    /**
+     * Verschickt die Projektanfrage als Mail an die für den aktiven Kunden
+     * hinterlegte Info-E-Mail (Admin > Konfig) - legt selbst KEIN Projekt
+     * an, das übernimmt die TR nach Rücksprache manuell über "Projekt neu
+     * anlegen". Ralf-Vorbild: Vietto verschickt genau so eine formlose
+     * Anfrage-Mail statt selbst einen Datensatz anzulegen.
+     */
+    public function submitRequest(Request $request): JsonResponse
+    {
+        abort_unless($request->user()->can('project.request'), 403);
+
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'model_or_system' => ['nullable', 'string', 'max:255'],
+            'due_date' => ['nullable', 'date'],
+            'remarks' => ['nullable', 'string'],
+        ]);
+
+        $requester = $request->user()->person;
+        abort_if($requester === null, 422, __('Ihr Konto ist keiner Person zugeordnet.'));
+
+        $tenant = Tenant::query()->where('id', CurrentTenant::id())->first();
+        abort_if($tenant?->notification_email === null, 422, __('Für diesen Kunden ist noch keine Info-E-Mail hinterlegt (Admin > Konfig).'));
+
+        Mail::to($tenant->notification_email)->send(new ProjectRequestMail(
+            $requester,
+            trim($validated['title']),
+            isset($validated['model_or_system']) ? trim($validated['model_or_system']) : null,
+            $validated['due_date'] ?? null,
+            isset($validated['remarks']) ? trim($validated['remarks']) : null,
+        ));
+
+        return response()->json(['sent' => true]);
     }
 
     /**
@@ -368,7 +524,7 @@ class ProjectController extends Controller
             'attributes' => $project->relevantAttributes(),
             'allMarkets' => Market::query()->where('tenant_id', $project->tenant_id)->orderBy('sort')->get(),
             'marketSets' => MarketSet::query()->where('tenant_id', $project->tenant_id)->with('markets:id')->orderBy('sort')->get(),
-            'allFunctionGroups' => FunctionGroup::query()->where('tenant_id', $project->tenant_id)->with('members')->orderBy('sort')->get(),
+            'allFunctionGroups' => FunctionGroup::query()->where('tenant_id', $project->tenant_id)->with(['members' => fn ($query) => $query->visibleToRole($request->user()->role)])->orderBy('sort')->get(),
             // Der aktuell zugewiesene Workflow muss immer in der Liste auftauchen, auch wenn er
             // inzwischen inaktiv/ersetzt ist - sonst würde ein Speichern ohne bewusste Auswahl
             // den Workflow fälschlich entfernen, weil kein <option> mehr dazu passt.
@@ -522,7 +678,7 @@ class ProjectController extends Controller
             }
 
             if ($key === 'project_type') {
-                $query->whereIn('project_type_sub', $value);
+                $query->whereIn('project_type_sub_id', $value);
 
                 continue;
             }
@@ -584,8 +740,8 @@ class ProjectController extends Controller
      * Feldkatalog der Schnellsuche (Dropdown UND "alle Treffer"-Liste,
      * orientiert an Viettos ajax_direktsuche.php): PN als Präfix, alles
      * andere als Teilstring. Projekt-Art wird über die Namen der
-     * zugehörigen ProjectTypeSub-Datensätze aufgelöst, da project_type_sub
-     * auf Project nur die legacy_id trägt, nicht den Namen selbst.
+     * zugehörigen ProjectTypeSub-Datensätze aufgelöst (project_type_sub_id
+     * auf Project trägt nur die ID, nicht den Namen selbst).
      *
      * Bemerkungen ist ein freier Fließtext - Teilstring-Suche darin trifft
      * bei kurzen Begriffen leicht rein zufällig (z.B. "test" in "könntest").
@@ -596,7 +752,7 @@ class ProjectController extends Controller
     {
         $typeIds = ProjectTypeSub::query()
             ->where('name', 'like', "%{$term}%")
-            ->pluck('legacy_id')
+            ->pluck('id')
             ->all();
 
         $query->where(function (Builder $query) use ($term, $typeIds, $includeRemarks) {
@@ -612,7 +768,7 @@ class ProjectController extends Controller
             }
 
             if (! empty($typeIds)) {
-                $query->orWhereIn('project_type_sub', $typeIds);
+                $query->orWhereIn('project_type_sub_id', $typeIds);
             }
         });
     }

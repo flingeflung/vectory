@@ -17,7 +17,12 @@ class ProfileUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
+            // Wer mit einer Person verknüpft ist, hat dort schon einen
+            // Namen (first_name/last_name) - das users.name-Feld würde
+            // sonst unabhängig davon auseinanderlaufen können (Ralf,
+            // 2026-09-09). Ohne Personenverknüpfung (z.B. Systemkonten)
+            // bleibt es das einzige Namensfeld, dann weiterhin Pflicht.
+            'name' => [$this->user()->person_id ? 'sometimes' : 'required', 'string', 'max:255'],
             'username' => [
                 'required',
                 'string',

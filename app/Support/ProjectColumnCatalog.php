@@ -86,8 +86,14 @@ class ProjectColumnCatalog
         $configByKey = collect($columns)->keyBy('key');
 
         return collect(self::available($user->tenant_id))
-            ->map(function (array $column) use ($configByKey) {
+            ->map(function (array $column) use ($configByKey, $user) {
                 $saved = $configByKey->get($column['key']);
+
+                // Wer verworfene Projekte beim Filter-Reset immer
+                // ausblenden lässt, muss auch immer sehen können, welche
+                // Status überhaupt (noch) gezeigt werden - die Spalte darf
+                // dann nicht abwählbar sein (Ralf, 2026-09-09).
+                $forcedVisible = $column['key'] === 'status' && $user->hide_discarded_projects_on_reset;
 
                 return [
                     'key' => $column['key'],
@@ -97,7 +103,7 @@ class ProjectColumnCatalog
                     'type_icon' => $column['type_icon'] ?? false,
                     'graphic_summary' => $column['graphic_summary'] ?? false,
                     'progress' => $column['progress'] ?? false,
-                    'visible' => $saved['visible'] ?? false,
+                    'visible' => $forcedVisible || ($saved['visible'] ?? false),
                     'show_long_text' => $saved['long_text'] ?? false,
                     'short_length' => $saved['short_length'] ?? self::DEFAULT_SHORT_LENGTH,
                 ];

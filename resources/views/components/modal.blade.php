@@ -188,9 +188,11 @@ $storageKey = "vectory-modal-size-{$name}";
         x-show="show"
         class="fixed inset-0 transform transition-all"
         x-on:click="requestClose()"
-        x-transition:enter="ease-out duration-300"
-        x-transition:enter-start="opacity-0"
-        x-transition:enter-end="opacity-100"
+        @if (! $show)
+            x-transition:enter="ease-out duration-300"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+        @endif
         x-transition:leave="ease-in duration-200"
         x-transition:leave-start="opacity-100"
         x-transition:leave-end="opacity-0"
@@ -200,15 +202,18 @@ $storageKey = "vectory-modal-size-{$name}";
 
     <div
         x-show="show"
+        x-cloak
         x-ref="box"
         data-modal-box
         x-on:mousedown="$event.target.closest('[data-drag-handle]') && startDrag($event)"
         :class="(dragPos ? '' : 'sm:mx-auto') + (dragging ? ' select-none' : '') + (resizable ? ' resize' : '')"
         :style="`${(dragging || resizing) ? 'transition: none;' : ''}${dragPos ? `position: fixed; left: ${dragPos.x}px; top: ${dragPos.y}px; width: ${dragBox.width}px; margin: 0;` : ''}${resizable && dragBox ? `height: ${dragBox.height}px;` : ''}{{ $heightStyle }}{{ $resizable ? 'min-width: 480px; min-height: 320px; max-width: 95vw; max-height: 92vh;' : '' }}`"
         class="mb-6 bg-white rounded-lg {{ $boxOverflowClass }} shadow-xl transform transition-all {{ $resizable ? '' : 'sm:w-full '.$maxWidth }}"
-        x-transition:enter="ease-out duration-300"
-        x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-        x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+        @if (! $show)
+            x-transition:enter="ease-out duration-300"
+            x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+            x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+        @endif
         x-transition:leave="ease-in duration-200"
         x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
         x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"

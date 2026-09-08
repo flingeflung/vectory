@@ -8,6 +8,24 @@
     <div class="h-full flex flex-col p-4 sm:p-6 lg:p-8">
         <div id="projekte-content" class="w-full max-w-7xl mx-auto flex flex-1 min-h-0 flex-col">
             <div class="mb-3 flex shrink-0 items-center gap-2">
+                @if (auth()->user()->can('project.create'))
+                    <button
+                        type="button"
+                        onclick="window.openProjectCreate()"
+                        class="inline-flex items-center rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
+                    >
+                        + {{ __('Neues Projekt') }}
+                    </button>
+                @elseif (auth()->user()->can('project.request'))
+                    <button
+                        type="button"
+                        onclick="window.openProjectRequest()"
+                        class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                        {{ __('Projekt anfragen') }}
+                    </button>
+                @endif
+
                 <button
                     type="button"
                     x-data
@@ -219,7 +237,7 @@
         @include('projekte.partials.anzeigefilter-form')
     </x-modal>
 
-    <x-modal name="projektfilter" max-width="xl" :dirty-check="'projektfilterIsDirty'">
+    <x-modal name="projektfilter" max-width="xl" :show="request()->boolean('reopen_filter')" :dirty-check="'projektfilterIsDirty'">
         @include('projekte.partials.projektfilter-form')
     </x-modal>
 

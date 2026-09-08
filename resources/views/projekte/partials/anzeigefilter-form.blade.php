@@ -11,6 +11,11 @@
             'longTextCapable' => $c['long_text'],
             'longText' => $c['show_long_text'],
             'shortLength' => $c['short_length'],
+            // Bei aktiver Einstellung "verworfene Projekte ausblenden"
+            // muss die Status-Spalte sichtbar bleiben, sonst sieht man
+            // nicht mehr, welche Status überhaupt (noch) gezeigt werden -
+            // siehe ProjectColumnCatalog::effectiveFor().
+            'locked' => $c['key'] === 'status' && auth()->user()->hide_discarded_projects_on_reset,
         ])->values()) }},
         markAll(value) {
             this.items.forEach(item => item.visible = value);
@@ -108,8 +113,11 @@
                         class="flex items-center gap-3 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm cursor-move"
                     >
                         <span x-sort:handle class="text-gray-300">⠿</span>
-                        <input type="checkbox" x-model="item.visible" class="rounded border-gray-300 text-indigo-600">
+                        <input type="checkbox" x-model="item.visible" :disabled="item.locked" class="rounded border-gray-300 text-indigo-600">
                         <span class="flex-1" x-text="item.label"></span>
+                        <template x-if="item.locked">
+                            <span class="text-xs text-gray-400">{{ __('immer sichtbar (Einstellungen)') }}</span>
+                        </template>
                         <template x-if="item.longTextCapable">
                             <label class="flex items-center gap-1 text-xs text-gray-500">
                                 <input type="checkbox" x-model="item.longText" class="rounded border-gray-300 text-indigo-600">
