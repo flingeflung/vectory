@@ -6,7 +6,7 @@ use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 
-#[Fillable(['tenant_id', 'legacy_id', 'country_iso', 'country_name', 'country_short_name', 'language_code', 'language_name', 'no_translation', 'sort'])]
+#[Fillable(['tenant_id', 'legacy_id', 'country_id', 'language_id', 'country_iso', 'country_name', 'country_short_name', 'language_code', 'language_name', 'no_translation', 'sort'])]
 class Market extends Model
 {
     use BelongsToTenant;
