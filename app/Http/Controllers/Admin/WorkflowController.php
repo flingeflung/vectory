@@ -22,12 +22,20 @@ use Illuminate\View\View;
  * 1. Projekt-Zuweisung bleibt ein Verweis, keine Kopie (project_workflow_
  *    steps referenziert weiterhin live workflow_steps für Titel/Text/
  *    Funktionsgruppe) - siehe Ralf-Diskussion, Redaktionssysteme-Vergleich.
- * 2. Genau deshalb ist ein Workflow, sobald er "publiziert" ist (mind.
- *    einmal einem Projekt zugewiesen wurde, Workflow::isPublished()),
- *    inhaltlich EINGEFROREN - keine Bearbeitung mehr, nur noch "Neue
- *    Version erstellen" (Kopie + supersededBy) oder Aktiv/Inaktiv. Ein
- *    unbenutzter Entwurf bleibt dagegen frei bearbeitbar UND löschbar,
- *    ohne die "zig Schablonen wegen Kleinigkeiten"-Sorge auszulösen.
+ * 2. Ein Workflow ist inhaltlich EINGEFROREN, sobald er bewusst über
+ *    publish() veröffentlicht wurde (Workflow::isPublished(), explizites
+ *    published_at-Flag) - keine Bearbeitung mehr, nur noch "Neue Version
+ *    erstellen" (Kopie + supersededBy) oder Aktiv/Inaktiv.
+ *
+ *    WICHTIG, Ralfs konkreter Bug-Report: das Sperren war ZUERST an die
+ *    reine Nutzung durch ein Projekt gekoppelt (isPublished() = "irgendein
+ *    Projekt hat schon zugewiesen") - das sperrte einen Workflow aber
+ *    schon beim ersten TEST-Zuweisen, genau während man ihn noch
+ *    ausprobiert/korrigiert. Jetzt bleibt ein Entwurf beliebig oft
+ *    testweise einem Projekt zuweisbar UND frei bearbeitbar (auch die
+ *    Test-Zuweisung bleibt live verknüpft, siehe Punkt 1 - Änderungen
+ *    wirken sich sofort auf das Test-Projekt aus, genau das will man beim
+ *    Testen), bis man ihn bewusst veröffentlicht.
  */
 class WorkflowController extends Controller
 {
@@ -97,7 +105,7 @@ class WorkflowController extends Controller
         $workflowId = $request->integer('workflow_id');
 
         $workflow = Workflow::query()->where('tenant_id', $tenantId)->findOrFail($workflowId);
-        abort_if($workflow->isPublished(), 422, 'Dieser Workflow ist bereits im Einsatz und kann nicht mehr geändert werden. Bitte erst eine neue Version erstellen.');
+        abort_if($workflow->isPublished(), 422, 'Dieser Workflow wurde bereits veröffentlicht und kann nicht mehr geändert werden. Bitte erst eine neue Version erstellen.');
 
         collect($request->array('steps'))->values()->each(function (string $id, int $index) use ($tenantId) {
             WorkflowStep::query()->where('tenant_id', $tenantId)->where('id', (int) $id)->update(['sort' => $index]);
@@ -127,7 +135,7 @@ class WorkflowController extends Controller
         // Projekte. Inhaltliche Änderungen (Name etc.) sind ab Publikation
         // gesperrt, siehe Klassen-Docblock.
         if ($request->has('name')) {
-            abort_if($workflow->isPublished(), 422, 'Dieser Workflow ist bereits im Einsatz und kann nicht mehr geändert werden. Bitte erst eine neue Version erstellen.');
+            abort_if($workflow->isPublished(), 422, 'Dieser Workflow wurde bereits veröffentlicht und kann nicht mehr geändert werden. Bitte erst eine neue Version erstellen.');
             $workflow->update($this->validatedWorkflow($request));
         }
 
@@ -145,11 +153,27 @@ class WorkflowController extends Controller
     public function destroy(Workflow $workflow): RedirectResponse
     {
         abort_unless($workflow->tenant_id === CurrentTenant::id(), 404);
-        abort_if($workflow->isPublished(), 422, 'Dieser Workflow ist bereits im Einsatz und kann nicht mehr gelöscht werden.');
+        abort_if($workflow->isPublished(), 422, 'Dieser Workflow wurde bereits veröffentlicht und kann nicht mehr gelöscht werden.');
 
         $workflow->delete();
 
         return redirect()->route('admin.workflows')->with('status', 'workflows-updated');
+    }
+
+    /**
+     * Bewusster "Freigabe"-Schritt (Ralfs Redaktionsprinzip: nicht
+     * automatisch beim ersten Benutzen sperren, siehe Klassen-Docblock) -
+     * ab hier ist der Workflow eingefroren, nur noch "Neue Version
+     * erstellen" oder Aktiv/Inaktiv möglich.
+     */
+    public function publish(Workflow $workflow): RedirectResponse
+    {
+        abort_unless($workflow->tenant_id === CurrentTenant::id(), 404);
+        abort_if($workflow->isPublished(), 422, 'Dieser Workflow wurde bereits veröffentlicht.');
+
+        $workflow->update(['published_at' => now()]);
+
+        return redirect()->route('admin.workflows', ['workflow' => $workflow->id])->with('status', 'workflows-updated');
     }
 
     /**
@@ -219,7 +243,7 @@ class WorkflowController extends Controller
     {
         $tenantId = CurrentTenant::id();
         $workflow = Workflow::query()->where('tenant_id', $tenantId)->findOrFail($request->integer('workflow_id'));
-        abort_if($workflow->isPublished(), 422, 'Dieser Workflow ist bereits im Einsatz und kann nicht mehr geändert werden. Bitte erst eine neue Version erstellen.');
+        abort_if($workflow->isPublished(), 422, 'Dieser Workflow wurde bereits veröffentlicht und kann nicht mehr geändert werden. Bitte erst eine neue Version erstellen.');
 
         $title = trim((string) $request->string('title'));
         abort_if($title === '', 422);
@@ -241,7 +265,7 @@ class WorkflowController extends Controller
         abort_unless($step->tenant_id === CurrentTenant::id(), 404);
 
         $workflow = $step->workflow;
-        abort_if($workflow->isPublished(), 422, 'Dieser Workflow ist bereits im Einsatz und kann nicht mehr geändert werden. Bitte erst eine neue Version erstellen.');
+        abort_if($workflow->isPublished(), 422, 'Dieser Workflow wurde bereits veröffentlicht und kann nicht mehr geändert werden. Bitte erst eine neue Version erstellen.');
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -290,7 +314,7 @@ class WorkflowController extends Controller
         abort_unless($step->tenant_id === CurrentTenant::id(), 404);
 
         $workflow = $step->workflow;
-        abort_if($workflow->isPublished(), 422, 'Dieser Workflow ist bereits im Einsatz und kann nicht mehr geändert werden. Bitte erst eine neue Version erstellen.');
+        abort_if($workflow->isPublished(), 422, 'Dieser Workflow wurde bereits veröffentlicht und kann nicht mehr geändert werden. Bitte erst eine neue Version erstellen.');
 
         $workflowId = $step->workflow_id;
         $step->delete();

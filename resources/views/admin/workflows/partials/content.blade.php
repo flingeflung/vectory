@@ -53,7 +53,12 @@
                                     class="flex flex-1 flex-col py-1 pr-2 {{ $selectedWorkflow?->id === $workflow->id ? 'font-medium text-indigo-700' : ($workflow->active ? 'text-gray-700' : 'text-gray-400') }}"
                                 >
                                     <span class="flex items-center justify-between">
-                                        <span>{{ $workflow->name }}{{ ! $workflow->active ? ' [i]' : '' }}</span>
+                                        <span>
+                                            {{ $workflow->name }}{{ ! $workflow->active ? ' [i]' : '' }}
+                                            @unless ($workflow->published_at)
+                                                <span class="rounded bg-amber-100 px-1 py-0.5 text-xs font-normal text-amber-700">{{ __('Entwurf') }}</span>
+                                            @endunless
+                                        </span>
                                         <span class="text-xs text-gray-400">{{ $workflow->steps_count }}</span>
                                     </span>
                                     @if ($workflow->supersededBy)
@@ -95,7 +100,7 @@
                         </form>
                     </div>
                     <div class="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                        {{ __('Dieser Workflow wurde bereits mindestens einem Projekt zugewiesen und ist deshalb eingefroren - Inhalte lassen sich nicht mehr ändern. Für Anpassungen bitte eine neue Version erstellen; bestehende Projekte bleiben unverändert auf dieser Version.') }}
+                        {{ __('Dieser Workflow wurde am :date veröffentlicht und ist deshalb eingefroren - Inhalte lassen sich nicht mehr ändern. Für Anpassungen bitte eine neue Version erstellen; bestehende Projekte bleiben unverändert auf dieser Version.', ['date' => $selectedWorkflow->published_at->format('d.m.Y')]) }}
                     </div>
                     <div x-data class="mt-2 flex justify-end">
                         <form method="POST" action="{{ route('admin.workflows.new-version', $selectedWorkflow) }}" x-ref="newVersionForm" class="hidden">
@@ -161,7 +166,7 @@
                         <button type="submit" x-show="dirty" x-cloak class="shrink-0 rounded-md bg-gray-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700">{{ __('Speichern') }}</button>
                     </div>
                     <textarea name="description" rows="2" placeholder="{{ __('Beschreibung') }}" class="w-full rounded-md border-gray-300 text-sm">{{ $selectedWorkflow->description }}</textarea>
-                    <p class="text-xs text-gray-400">{{ __('Entwurf - noch keinem Projekt zugewiesen, deshalb frei bearbeitbar. Sobald der Workflow genutzt wird, sind Änderungen nur noch über eine neue Version möglich.') }}</p>
+                    <p class="text-xs text-gray-400">{{ __('Entwurf - frei bearbeitbar und beliebig oft zum Testen einem Projekt zuweisbar. Bleibt so, bis du ihn veröffentlichst.') }}</p>
                 </form>
 
                 <div class="flex-1 min-h-0 overflow-y-auto p-3 space-y-2" x-data="{ newStep: false }">
@@ -315,21 +320,39 @@
                 </div>
 
                 <div class="shrink-0 border-t border-gray-100 p-3">
-                    <div x-data class="flex items-center justify-end gap-2">
-                        <span class="text-xs text-gray-400">{{ __('Entwurf, noch unbenutzt - kann gefahrlos gelöscht werden.') }}</span>
-                        <form method="POST" action="{{ route('admin.workflows.destroy', $selectedWorkflow) }}" x-ref="deleteWorkflowForm" class="hidden">
-                            @csrf
-                            @method('DELETE')
-                        </form>
-                        <button
-                            type="button"
-                            @click="window.deleteWithConfirm($refs.deleteWorkflowForm, {
-                                message: {{ \Illuminate\Support\Js::from(__('Diesen Workflow inklusive aller Schritte wirklich endgültig löschen?')) }},
-                            })"
-                            class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
-                        >
-                            {{ __('Workflow löschen') }}
-                        </button>
+                    <div x-data="{
+                        async publish() {
+                            if (await window.confirmDialog({
+                                title: {{ \Illuminate\Support\Js::from(__('Workflow veröffentlichen')) }},
+                                message: {{ \Illuminate\Support\Js::from(__('Danach lassen sich Name und Schritte nicht mehr ändern, nur noch über eine neue Version. Wirklich veröffentlichen?')) }},
+                                confirmLabel: {{ \Illuminate\Support\Js::from(__('Veröffentlichen')) }},
+                            })) {
+                                $refs.publishForm.submit();
+                            }
+                        },
+                    }" class="flex items-center justify-between gap-2">
+                        <span class="text-xs text-gray-400">{{ __('Entwurf - kann jederzeit gelöscht werden (auch eventuelle Test-Zuweisungen gehen dabei verloren).') }}</span>
+                        <div class="flex items-center gap-2">
+                            <form method="POST" action="{{ route('admin.workflows.destroy', $selectedWorkflow) }}" x-ref="deleteWorkflowForm" class="hidden">
+                                @csrf
+                                @method('DELETE')
+                            </form>
+                            <button
+                                type="button"
+                                @click="window.deleteWithConfirm($refs.deleteWorkflowForm, {
+                                    message: {{ \Illuminate\Support\Js::from(__('Diesen Workflow inklusive aller Schritte wirklich endgültig löschen?')) }},
+                                })"
+                                class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                            >
+                                {{ __('Workflow löschen') }}
+                            </button>
+                            <form method="POST" action="{{ route('admin.workflows.publish', $selectedWorkflow) }}" x-ref="publishForm" class="hidden">
+                                @csrf
+                            </form>
+                            <button type="button" @click="publish()" class="rounded-md bg-gray-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700">
+                                {{ __('Veröffentlichen') }}
+                            </button>
+                        </div>
                     </div>
                 </div>
             @endif
