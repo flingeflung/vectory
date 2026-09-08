@@ -8,13 +8,14 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Casts\Attribute as CastsAttribute;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 
 #[Fillable([
     'tenant_id', 'source_pn', 'title', 'codename', 'initiator', 'system_model',
-    'construction_year', 'project_type_main', 'project_type_sub', 'version',
+    'construction_year', 'project_type_main', 'project_type_sub', 'project_type_main_id', 'project_type_sub_id', 'version',
     'status', 'archived', 'localization', 'publication_date', 'start_date', 'end_date', 'remarks',
     'attributes', 'workflow_id',
 ])]
@@ -70,22 +71,31 @@ class Project extends Model
     }
 
     /**
-     * Klartext-Projektart (aus project_types aufgelöst). Statisch pro
-     * Mandant im Request gecacht, damit eine Tabellenseite (25 Zeilen)
-     * nicht 25x dieselbe kleine Lookup-Tabelle abfragt.
+     * Echte Zuordnung zur Projektart - anders als project_type_sub (roher
+     * Vietto-Legacy-Code, siehe unten) ein echter Fremdschlüssel, der auch
+     * für nicht aus Vietto stammende Arten funktioniert. project_type_sub
+     * selbst bleibt unverändert bestehen (wird noch für
+     * attribute_project_type/relevantAttributes() gebraucht).
+     */
+    public function projectTypeSub(): BelongsTo
+    {
+        // main mitladen - für die zweizeilige Icon-Darstellung
+        // (Kategorie: Art) in Übersicht/Dashboard-Kacheln, sonst N+1.
+        return $this->belongsTo(ProjectTypeSub::class, 'project_type_sub_id')->with('main');
+    }
+
+    public function projectTypeMain(): BelongsTo
+    {
+        return $this->belongsTo(ProjectTypeMain::class, 'project_type_main_id');
+    }
+
+    /**
+     * Klartext-Projektart.
      */
     protected function projectTypeLabel(): CastsAttribute
     {
         return CastsAttribute::make(
-            get: function () {
-                if ($this->project_type_sub === null) {
-                    return null;
-                }
-
-                $type = self::projectTypeLookup($this->tenant_id)[$this->project_type_sub] ?? null;
-
-                return $type?->name ?? (string) $this->project_type_sub;
-            },
+            get: fn () => $this->projectTypeSub?->name,
         );
     }
 
@@ -97,13 +107,7 @@ class Project extends Model
     protected function attributeSectionColor(): CastsAttribute
     {
         return CastsAttribute::make(
-            get: function () {
-                $type = $this->project_type_sub !== null
-                    ? self::projectTypeLookup($this->tenant_id)[$this->project_type_sub] ?? null
-                    : null;
-
-                return $type?->color ?? '#f90';
-            },
+            get: fn () => $this->projectTypeSub?->color ?? '#f90',
         );
     }
 
@@ -114,30 +118,8 @@ class Project extends Model
     protected function projectTypeSubModel(): CastsAttribute
     {
         return CastsAttribute::make(
-            get: fn () => $this->project_type_sub !== null
-                ? self::projectTypeLookup($this->tenant_id)[$this->project_type_sub] ?? null
-                : null,
+            get: fn () => $this->projectTypeSub,
         );
-    }
-
-    /**
-     * @return array<int, ProjectTypeSub>
-     */
-    private static function projectTypeLookup(int $tenantId): array
-    {
-        static $cache = [];
-
-        if (! isset($cache[$tenantId])) {
-            $cache[$tenantId] = ProjectTypeSub::query()
-                ->where('tenant_id', $tenantId)
-                ->whereNotNull('legacy_id')
-                ->with('main')
-                ->get()
-                ->keyBy('legacy_id')
-                ->all();
-        }
-
-        return $cache[$tenantId];
     }
 
     public function graphicOrders(): HasMany

@@ -168,7 +168,7 @@ class ProjectFilterCatalog
             ->map(fn (ProjectTypeMain $main) => [
                 'label' => $main->name,
                 'options' => $main->subs->map(fn ($sub) => [
-                    'value' => $sub->legacy_id,
+                    'value' => $sub->id,
                     'label' => $sub->name,
                 ])->all(),
             ])

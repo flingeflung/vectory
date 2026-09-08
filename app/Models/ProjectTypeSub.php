@@ -8,10 +8,17 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
-#[Fillable(['tenant_id', 'project_type_main_id', 'legacy_id', 'name', 'color', 'symbol', 'sort'])]
+#[Fillable(['tenant_id', 'project_type_main_id', 'legacy_id', 'name', 'active', 'color', 'symbol', 'sort'])]
 class ProjectTypeSub extends Model
 {
     use BelongsToTenant;
+
+    protected function casts(): array
+    {
+        return [
+            'active' => 'boolean',
+        ];
+    }
 
     public function main(): BelongsTo
     {
