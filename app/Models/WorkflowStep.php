@@ -39,7 +39,7 @@ class WorkflowStep extends Model
      * Vietto nie wirklich verdrahtet (siehe wffkt_getbuttontag()).
      */
     public const SPECIAL_BUTTONS = [
-        'wfs_grafik' => 'Grafikauftrag',
+        'wfs_grafik' => 'Illustrationsauftrag',
         'wfs_freigabe' => 'Freigabe',
         // Noch ohne Funktion dahinter (Ralf: "brauchen wir auch, bitte
         // schon mal vorsehen") - taucht in der Projekt-Detailansicht
