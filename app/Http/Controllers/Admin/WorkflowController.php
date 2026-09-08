@@ -273,7 +273,15 @@ class WorkflowController extends Controller
             'milestone_title' => ['nullable', 'string', 'max:255'],
             'duration_days' => ['nullable', 'integer', 'min:0'],
             'js_function' => ['nullable', 'string', Rule::in(array_keys(WorkflowStep::SPECIAL_BUTTONS))],
-            'lifecycle_status' => ['required', 'integer', 'between:1,4'],
+            // Nicht "required": das Feld steckt im einklappbaren
+            // Details-Bereich (x-if="expanded") und fehlt deshalb im Request,
+            // wenn eine Zeile gespeichert wird, ohne "Details" vorher
+            // aufgeklappt zu haben - war "required" gesetzt, schlug die
+            // Validierung dann still fehl (fetch() prüft den Response-Status
+            // nicht) und die AJAX-Vorschau tat nur so, als sei gespeichert
+            // (Ralfs Bug-Report: Haken sah gesetzt aus, verschwand aber beim
+            // Verlassen der Seite wieder).
+            'lifecycle_status' => ['nullable', 'integer', 'between:1,4'],
             'description' => ['nullable', 'string'],
             'email_text' => ['nullable', 'string'],
         ]);
@@ -281,7 +289,12 @@ class WorkflowController extends Controller
         $step->update([
             ...$validated,
             'duration_days' => $validated['duration_days'] ?? 0,
-            'js_function' => $validated['js_function'] ?: null,
+            'lifecycle_status' => $validated['lifecycle_status'] ?? $step->lifecycle_status,
+            // ?? statt ?: - js_function fehlt im Request komplett, wenn die
+            // Zeile ohne aufgeklappte "Details" gespeichert wird, ?: würde
+            // dann (anders als ??) trotzdem zuerst zugreifen und einen
+            // "Undefined array key"-Fehler werfen.
+            'js_function' => ($validated['js_function'] ?? '') ?: null,
             'is_active' => $request->boolean('is_active'),
             'is_start' => $request->boolean('is_start'),
             'is_end' => $request->boolean('is_end'),

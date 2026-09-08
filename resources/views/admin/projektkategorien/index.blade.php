@@ -54,11 +54,17 @@
                 event.preventDefault();
 
                 const formData = new FormData(event.target);
-                await fetch(event.target.action, {
+                const response = await fetch(event.target.action, {
                     method: 'POST',
                     headers: { 'X-CSRF-TOKEN': csrfToken },
                     body: formData,
                 });
+
+                if (!response.ok) {
+                    await window.reloadManageListPreservingEdits(container(), window.location.href, { 'X-Overlay': '1' });
+                    await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Speichern fehlgeschlagen. Bitte Eingaben prüfen.')) }});
+                    return;
+                }
 
                 await window.reloadManageListPreservingEdits(container(), window.location.href, { 'X-Overlay': '1' });
                 window.showManageSavedToast('projektkategorien-toast');

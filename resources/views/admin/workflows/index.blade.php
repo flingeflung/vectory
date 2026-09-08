@@ -40,11 +40,23 @@
                 event.preventDefault();
 
                 const formData = new FormData(event.target);
-                await fetch(event.target.action, {
+                const response = await fetch(event.target.action, {
                     method: 'POST',
                     headers: { 'X-CSRF-TOKEN': csrfToken },
                     body: formData,
                 });
+
+                // Fehlschlag NICHT stillschweigend so aussehen lassen wie
+                // ein Erfolg - reloadManageListPreservingEdits() würde sonst
+                // die (nicht gespeicherten) DOM-Werte einfach über den
+                // unveränderten Server-Stand "restaurieren", das sieht dann
+                // aus wie gespeichert, ist es aber nicht (konkreter Ralf-Bug:
+                // Pflichtfeld im eingeklappten Bereich fehlte im Request).
+                if (!response.ok) {
+                    await window.reloadManageListPreservingEdits(container(), window.location.href, { 'X-Overlay': '1' });
+                    await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Speichern fehlgeschlagen. Bitte Eingaben prüfen.')) }});
+                    return;
+                }
 
                 await window.reloadManageListPreservingEdits(container(), window.location.href, { 'X-Overlay': '1' });
                 window.showManageSavedToast('workflows-toast');
