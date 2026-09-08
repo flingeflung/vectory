@@ -64,10 +64,7 @@
                     return !this.search || text.toLowerCase().includes(this.search.toLowerCase());
                 },
             }"
-            x-init="
-                window.adminPageIsDirty = () => dirty;
-                window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
-            "
+            x-init="window.adminPageIsDirty = () => dirty;"
             class="flex flex-1 min-h-0 flex-col rounded-lg border border-gray-200 bg-white"
         >
             <div class="shrink-0 flex items-center justify-between gap-3 border-b border-gray-100 p-3">

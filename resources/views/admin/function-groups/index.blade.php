@@ -44,6 +44,7 @@
                     return url.pathname + url.search;
                 },
             }"
+            x-init="window.adminPageIsDirty = () => dirty;"
             class="flex w-72 shrink-0 flex-col gap-3"
         >
             <div class="flex h-64 shrink-0 flex-col rounded-lg border border-gray-200 bg-white">
@@ -142,7 +143,6 @@
                         action="{{ route('admin.function-groups.members.update', $selectedGroup) }}"
                         @change="dirty = true"
                         @submit="dirty = false"
-                        x-init="window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } })"
                     >
                         @csrf
                         @foreach ($people as $person)

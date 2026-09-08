@@ -140,10 +140,7 @@
                 {{-- Entwurf: voll editierbar. --}}
                 <div
                     x-data="{}"
-                    x-init="
-                        window.adminPageIsDirty = () => window.__workflowsDirtyForms.size > 0;
-                        window.addEventListener('beforeunload', (e) => { if (window.__workflowsDirtyForms.size > 0) { e.preventDefault(); e.returnValue = ''; } });
-                    "
+                    x-init="window.adminPageIsDirty = () => window.__workflowsDirtyForms.size > 0;"
                     class="flex flex-1 min-h-0 flex-col"
                 >
                 <form
