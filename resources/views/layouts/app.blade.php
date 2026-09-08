@@ -240,11 +240,11 @@
             die sollen nach dem Neuladen normal zurückgesetzt werden).
         --}}
         <script>
-            window.reloadManageListPreservingEdits = async function (body, url) {
+            window.reloadManageListPreservingEdits = async function (body, url, headers = {}) {
                 const snapshot = new Map();
                 body.querySelectorAll('form[data-row-form]').forEach((form) => {
                     const values = {};
-                    form.querySelectorAll('input[type="text"], input[type="checkbox"]').forEach((input) => {
+                    form.querySelectorAll('input[type="text"], input[type="checkbox"], select').forEach((input) => {
                         values[input.name] = input.type === 'checkbox' ? input.checked : input.value;
                     });
                     snapshot.set(form.action, values);
@@ -260,7 +260,7 @@
                 const innerListBefore = body.querySelector('.overflow-y-auto');
                 const innerScrollTop = innerListBefore ? innerListBefore.scrollTop : null;
 
-                body.innerHTML = await fetch(url).then((r) => r.text());
+                body.innerHTML = await fetch(url, { headers }).then((r) => r.text());
 
                 body.scrollTop = scrollTop;
                 const innerListAfter = body.querySelector('.overflow-y-auto');
@@ -285,7 +285,7 @@
                     if (!values) {
                         return;
                     }
-                    form.querySelectorAll('input[type="text"], input[type="checkbox"]').forEach((input) => {
+                    form.querySelectorAll('input[type="text"], input[type="checkbox"], select').forEach((input) => {
                         if (!(input.name in values)) {
                             return;
                         }

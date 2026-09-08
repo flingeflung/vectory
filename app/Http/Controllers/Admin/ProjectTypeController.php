@@ -8,6 +8,7 @@ use App\Models\ProjectTypeSub;
 use App\Support\CurrentTenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -25,7 +26,7 @@ use Illuminate\View\View;
  */
 class ProjectTypeController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): View|Response
     {
         $tenantId = CurrentTenant::id();
 
@@ -43,13 +44,31 @@ class ProjectTypeController extends Controller
             $selectedCategory = $categories->firstWhere('id', (int) $request->query('kategorie'));
         }
 
-        return view('admin.projektkategorien.index', [
+        $data = [
             'categories' => $categories,
             'allSubs' => $allSubs,
             'usageBySub' => $usageBySub,
             'usageByMain' => $usageByMain,
             'selectedCategory' => $selectedCategory,
-        ]);
+        ];
+
+        // Kategorie-Umbenennen und Art-Zeilen-Speichern laufen client-seitig
+        // per fetch() + reloadManageListPreservingEdits() (siehe
+        // projektkategorien/index.blade.php), damit ein Speichern nicht
+        // ungespeicherte Eingaben in anderen Zeilen wegwischt (voller
+        // Seiten-Reload würde das). Der Reload holt sich hierüber nur das
+        // Inhalts-Partial statt der kompletten Seite - gleiches Muster wie
+        // ProjectController::show() fürs Projekt-Overlay.
+        if ($this->isOverlayRequest($request)) {
+            return response()->view('admin.projektkategorien.partials.content', $data);
+        }
+
+        return view('admin.projektkategorien.index', $data);
+    }
+
+    private function isOverlayRequest(Request $request): bool
+    {
+        return $request->header('X-Overlay') === '1';
     }
 
     public function reorderMain(Request $request): RedirectResponse
