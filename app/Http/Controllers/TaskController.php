@@ -8,6 +8,7 @@ use App\Models\Person;
 use App\Models\Task;
 use App\Models\TaskVisibility;
 use App\Models\User;
+use App\Support\CurrentTenant;
 use App\Support\ProjectColumnCatalog;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -145,7 +146,9 @@ class TaskController extends Controller
             ->get();
 
         $people = Person::query()
+            ->withoutGlobalScope('tenant')
             ->whereIn('id', $pairs->pluck('person_id')->unique())
+            ->visibleInTenant(CurrentTenant::id())
             ->visibleToRole(auth()->user()->role)
             ->when(! $includeInactive, fn ($query) => $query->where('active', true))
             ->get()

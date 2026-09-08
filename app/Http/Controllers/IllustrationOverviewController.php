@@ -7,6 +7,7 @@ use App\Models\GraphicOrder;
 use App\Models\GraphicOrderStatus;
 use App\Models\Person;
 use App\Models\User;
+use App\Support\CurrentTenant;
 use App\Support\ProjectColumnCatalog;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -43,7 +44,9 @@ class IllustrationOverviewController extends Controller
         $statuses = GraphicOrderStatus::query()->orderBy('sort')->get();
         $illustrationPersons = FunctionGroup::query()
             ->where('legacy_id', 5)
-            ->with(['members' => fn ($query) => $query->visibleToRole($user->role)])
+            ->with(['members' => fn ($query) => $query->withoutGlobalScope('tenant')
+                ->visibleInTenant(CurrentTenant::id())
+                ->visibleToRole($user->role)])
             ->first()
             ?->members
             ->sortBy(fn (Person $person) => $person->fullName())
@@ -117,7 +120,9 @@ class IllustrationOverviewController extends Controller
             ->get();
 
         $initiatorOptions = Person::query()
+            ->withoutGlobalScope('tenant')
             ->whereIn('id', GraphicOrder::query()->whereNotNull('initiated_by_person_id')->distinct()->pluck('initiated_by_person_id'))
+            ->visibleInTenant(CurrentTenant::id())
             ->visibleToRole($user->role)
             ->orderBy('last_name')
             ->orderBy('first_name')

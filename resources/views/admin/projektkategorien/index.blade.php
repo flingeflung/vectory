@@ -32,7 +32,7 @@
             <div class="flex flex-1 min-h-0 flex-col rounded-lg border border-gray-200 bg-white" x-data="{ newCategory: false }">
                 <div class="shrink-0 flex items-center justify-between border-b border-gray-100 p-2">
                     <span class="text-xs font-semibold text-gray-500">{{ __('Projektkategorien') }}</span>
-                    <button type="button" @click="newCategory = !newCategory; if (newCategory) $nextTick(() => $refs.newCategoryName.focus())" class="text-xs text-indigo-600 hover:text-indigo-800">
+                    <button type="button" @click="newCategory = !newCategory; if (newCategory) $nextTick(() => $refs.newCategoryName.focus())" class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200">
                         + {{ __('Neu') }}
                     </button>
                 </div>
@@ -121,7 +121,7 @@
                 >
                     <div class="flex items-center justify-between">
                         <div class="text-xs font-semibold text-gray-500">{{ __('Projektarten') }}</div>
-                        <button type="button" @click="newArt = !newArt; if (newArt) $nextTick(() => $refs.newArtName.focus())" class="text-xs text-indigo-600 hover:text-indigo-800">
+                        <button type="button" @click="newArt = !newArt; if (newArt) $nextTick(() => $refs.newArtName.focus())" class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200">
                             + {{ __('Neu') }}
                         </button>
                     </div>

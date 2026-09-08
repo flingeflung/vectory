@@ -115,7 +115,7 @@
             <div class="{{ $settings->isNotEmpty() ? 'mt-6 ' : '' }}rounded-lg border border-gray-200 bg-white p-4">
                 <div
                     x-data="{ dirty: false, show: false }"
-                    x-init="@if (session('status') === 'config-updated') show = true; setTimeout(() => show = false, 2000) @endif"
+                    x-init="@if (session('status') === 'tenant-updated') show = true; setTimeout(() => show = false, 2000) @endif"
                 >
                     <form method="POST" action="{{ route('admin.kunden.update', $currentTenant) }}" @input="dirty = true; window.__configDirtyForms.add($el)" class="space-y-2">
                         @csrf

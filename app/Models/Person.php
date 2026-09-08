@@ -132,7 +132,13 @@ class Person extends Model
     public function scopeVisibleInTenant(Builder $query, int $tenantId): Builder
     {
         return $query->where(function (Builder $query) use ($tenantId) {
-            $query->where('tenant_id', $tenantId)
+            // 'people.tenant_id' explizit qualifiziert: bei Aufruf über eine
+            // BelongsToMany-Relation mit einer Pivot-Tabelle, die selbst
+            // eine tenant_id-Spalte hat (z.B. function_group_member), wäre
+            // "tenant_id" sonst mehrdeutig (SQLSTATE 23000/1052) - fand sich
+            // beim Ausrollen dieses Scopes auf die Illustrator-/Aufgaben-
+            // Personenlisten, die genau über so eine Pivot-Relation laufen.
+            $query->where('people.tenant_id', $tenantId)
                 ->orWhereHas('accessibleTenants', fn (Builder $query) => $query->where('tenants.id', $tenantId));
         });
     }

@@ -10,6 +10,7 @@ use App\Models\GraphicOrderStatus;
 use App\Models\Person;
 use App\Models\Project;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Illuminate\Validation\Rule;
 
@@ -65,7 +66,10 @@ class GraphicOrderController extends Controller
 
         $validated = $request->validate([
             'graphic_order_status_id' => ['required', 'integer', Rule::exists('graphic_order_statuses', 'id')->where('tenant_id', $project->tenant_id)],
-            'illustrator_person_id' => ['nullable', 'integer', Rule::exists('people', 'id')->where('tenant_id', $project->tenant_id)],
+            'illustrator_person_id' => ['nullable', 'integer', Rule::exists('people', 'id')->where(
+                fn ($query) => $query->where('tenant_id', $project->tenant_id)
+                    ->orWhereIn('id', DB::table('person_tenant')->where('tenant_id', $project->tenant_id)->pluck('person_id'))
+            )],
             'image_count' => ['nullable', 'integer', 'min:0'],
             'due_date' => ['nullable', 'date'],
         ]);
@@ -104,7 +108,9 @@ class GraphicOrderController extends Controller
             'illustrationPersons' => FunctionGroup::query()
                 ->where('tenant_id', $project->tenant_id)
                 ->where('legacy_id', 5)
-                ->with(['members' => fn ($query) => $query->visibleToRole(auth()->user()->role)])
+                ->with(['members' => fn ($query) => $query->withoutGlobalScope('tenant')
+                    ->visibleInTenant($project->tenant_id)
+                    ->visibleToRole(auth()->user()->role)])
                 ->first()
                 ?->members
                 ->sortBy(fn (Person $person) => $person->fullName())

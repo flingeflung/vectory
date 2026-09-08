@@ -1,4 +1,8 @@
 <x-admin-layout>
+    @if (session('status') === 'tenant-updated')
+        <x-flash-message class="mb-3 px-3 py-2 text-sm">{{ __('Gespeichert.') }}</x-flash-message>
+    @endif
+
     {{-- Gleiches Dirty-Tracking-Muster wie die Konfig-Seite (mehrere
          unabhängige Formulare, je eine Zeile pro Kunde) - siehe dortiger
          Kommentar für die x-init-vs-Script-Stolperfalle. --}}
@@ -68,7 +72,7 @@
 
             <div class="mt-3 space-y-2">
                 @forelse ($tenants as $tenant)
-                    <div class="rounded-md border border-gray-200 p-2">
+                    <div class="rounded-md border border-gray-200 p-2" x-data="{}">
                         <form
                             method="POST"
                             action="{{ route('admin.kunden.update', $tenant) }}"
@@ -103,19 +107,21 @@
                         </form>
 
                         @unless ($tenant->hasData())
-                            <div x-data="{ confirming: false }" class="mt-2">
-                                <div x-show="!confirming" class="flex justify-end">
-                                    <button type="button" @click="confirming = true" class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50">
-                                        {{ __('Löschen') }}
-                                    </button>
-                                </div>
-                                <form x-show="confirming" x-cloak method="POST" action="{{ route('admin.kunden.destroy', $tenant) }}" class="flex items-center justify-end gap-2">
-                                    @csrf
-                                    @method('DELETE')
-                                    <span class="text-xs text-gray-400">{{ __('Dieser Kunde hat noch keine Daten und kann gefahrlos gelöscht werden.') }}</span>
-                                    <button type="button" @click="confirming = false" class="rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">{{ __('Abbrechen') }}</button>
-                                    <button type="submit" class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50">{{ __('Endgültig löschen') }}</button>
-                                </form>
+                            <form method="POST" action="{{ route('admin.kunden.destroy', $tenant) }}" x-ref="deleteForm" class="hidden">
+                                @csrf
+                                @method('DELETE')
+                                <input type="hidden" name="reassign_to" value="">
+                            </form>
+                            <div class="mt-2 flex justify-end">
+                                <button
+                                    type="button"
+                                    @click="window.deleteWithConfirm($refs.deleteForm, {
+                                        message: {{ \Illuminate\Support\Js::from(__('Dieser Kunde hat noch keine Daten und kann gefahrlos gelöscht werden.')) }},
+                                    })"
+                                    class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                                >
+                                    {{ __('Löschen') }}
+                                </button>
                             </div>
                         @endunless
                     </div>

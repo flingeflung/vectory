@@ -95,7 +95,7 @@ class TenantController extends Controller
             'notification_email' => $this->normalizedNotificationEmail($request),
         ]);
 
-        return redirect()->back();
+        return redirect()->back()->with('status', 'tenant-updated');
     }
 
     /**

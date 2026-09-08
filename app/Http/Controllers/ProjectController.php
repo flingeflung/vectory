@@ -368,7 +368,10 @@ class ProjectController extends Controller
             'markets.*' => ['integer', Rule::exists('markets', 'id')->where('tenant_id', $project->tenant_id)],
             'project_people' => ['array'],
             'project_people.*' => ['array'],
-            'project_people.*.*' => ['integer', Rule::exists('people', 'id')->where('tenant_id', $project->tenant_id)],
+            'project_people.*.*' => ['integer', Rule::exists('people', 'id')->where(
+                fn ($query) => $query->where('tenant_id', $project->tenant_id)
+                    ->orWhereIn('id', DB::table('person_tenant')->where('tenant_id', $project->tenant_id)->pluck('person_id'))
+            )],
             'project_people_primary' => ['array'],
             'project_people_primary.*' => ['nullable', 'integer'],
             'attributes' => ['array'],
@@ -524,7 +527,9 @@ class ProjectController extends Controller
             'attributes' => $project->relevantAttributes(),
             'allMarkets' => Market::query()->where('tenant_id', $project->tenant_id)->orderBy('sort')->get(),
             'marketSets' => MarketSet::query()->where('tenant_id', $project->tenant_id)->with('markets:id')->orderBy('sort')->get(),
-            'allFunctionGroups' => FunctionGroup::query()->where('tenant_id', $project->tenant_id)->with(['members' => fn ($query) => $query->visibleToRole($request->user()->role)])->orderBy('sort')->get(),
+            'allFunctionGroups' => FunctionGroup::query()->where('tenant_id', $project->tenant_id)->with(['members' => fn ($query) => $query->withoutGlobalScope('tenant')
+                ->visibleInTenant($project->tenant_id)
+                ->visibleToRole($request->user()->role)])->orderBy('sort')->get(),
             // Der aktuell zugewiesene Workflow muss immer in der Liste auftauchen, auch wenn er
             // inzwischen inaktiv/ersetzt ist - sonst würde ein Speichern ohne bewusste Auswahl
             // den Workflow fälschlich entfernen, weil kein <option> mehr dazu passt.
