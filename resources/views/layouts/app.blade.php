@@ -1397,7 +1397,7 @@
                     });
 
                     if (!response.ok) {
-                        await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Anfrage konnte nicht verschickt werden - ist für diesen Kunden eine Info-E-Mail hinterlegt (Admin > Stammdaten)?')) }});
+                        await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Anfrage konnte nicht verschickt werden - ist für diesen Kunden eine Info-E-Mail hinterlegt (:location)?', ['location' => \App\Models\SystemSetting::tenantConfigLocation()])) }});
                         return;
                     }
 
@@ -1540,7 +1540,7 @@
                     <form id="project-directory-create-form">
                         <label class="block text-xs text-gray-500">{{ __('Ordnername') }}</label>
                         <input id="project-directory-create-name" type="text" required maxlength="200" class="mt-0.5 block w-full rounded-md border-gray-300 text-sm">
-                        <p class="mt-1 text-xs text-gray-400">{{ __('Wird unter dem in Admin > Stammdaten hinterlegten Projektpfad angelegt, inklusive der festen Unterordner-Struktur.') }}</p>
+                        <p class="mt-1 text-xs text-gray-400">{{ __('Wird unter dem in :location hinterlegten Projektpfad angelegt, inklusive der festen Unterordner-Struktur.', ['location' => \App\Models\SystemSetting::tenantConfigLocation()]) }}</p>
                         <div id="project-directory-create-error" class="mt-1 text-xs text-red-600" hidden>{{ __('Anlegen fehlgeschlagen. Existiert der Ordner eventuell schon?') }}</div>
                         <div class="mt-3 flex items-center justify-end gap-2">
                             <div id="project-directory-create-toast" x-data="{ show: false }" x-show="show" x-cloak x-transition.opacity class="rounded bg-green-50 px-3 py-1.5 text-xs text-green-700">

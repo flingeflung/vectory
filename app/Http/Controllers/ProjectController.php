@@ -13,6 +13,7 @@ use App\Models\Favorite;
 use App\Models\Project;
 use App\Models\ProjectPerson;
 use App\Models\RecentlyViewedProject;
+use App\Models\SystemSetting;
 use App\Models\Tenant;
 use App\Models\ProjectTypeSub;
 use App\Models\ProjectWorkflowStep;
@@ -290,7 +291,9 @@ class ProjectController extends Controller
 
     /**
      * Verschickt die Projektanfrage als Mail an die für den aktiven Kunden
-     * hinterlegte Info-E-Mail (Admin > Stammdaten) - legt selbst KEIN Projekt
+     * hinterlegte Info-E-Mail (Admin > Stammdaten oder Admin > Kunden, je
+     * nach Mandantenfähigkeit, siehe SystemSetting::tenantConfigLocation())
+     * - legt selbst KEIN Projekt
      * an, das übernimmt die TR nach Rücksprache manuell über "Projekt neu
      * anlegen". Ralf-Vorbild: Vietto verschickt genau so eine formlose
      * Anfrage-Mail statt selbst einen Datensatz anzulegen.
@@ -310,7 +313,7 @@ class ProjectController extends Controller
         abort_if($requester === null, 422, __('Ihr Konto ist keiner Person zugeordnet.'));
 
         $tenant = Tenant::query()->where('id', CurrentTenant::id())->first();
-        abort_if($tenant?->notification_email === null, 422, __('Für diesen Kunden ist noch keine Info-E-Mail hinterlegt (Admin > Stammdaten).'));
+        abort_if($tenant?->notification_email === null, 422, __('Für diesen Kunden ist noch keine Info-E-Mail hinterlegt (:location).', ['location' => SystemSetting::tenantConfigLocation()]));
 
         Mail::to($tenant->notification_email)->send(new ProjectRequestMail(
             $requester,

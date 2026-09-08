@@ -45,4 +45,19 @@ class SystemSetting extends Model
     {
         return self::multiTenantEnabled() ? 'Subunternehmer' : 'Dienstleisterfirmen';
     }
+
+    /**
+     * Wo Projektpfad/Info-E-Mail (beide pro Kunde, siehe Tenant-Modell)
+     * gerade gepflegt werden - bei aktiver Mandantenfähigkeit pro Kunde in
+     * der Kundenverwaltung, sonst zentral auf der Stammdaten-Seite (siehe
+     * ConfigController/TenantController). Ralf bemerkte einen Hinweistext
+     * mit fest "Admin > Stammdaten" verdrahtet - stimmte nur ohne
+     * Mandantenfähigkeit, beide Stellen existieren echt parallel je nach
+     * MF-Status, das muss der Text selbst unterscheiden statt eine feste
+     * Stelle zu nennen.
+     */
+    public static function tenantConfigLocation(): string
+    {
+        return self::multiTenantEnabled() ? 'Admin > Kunden' : 'Admin > Stammdaten';
+    }
 }
