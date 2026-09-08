@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\LegacyRoleController;
 use App\Http\Controllers\Admin\PermissionController as AdminPermissionController;
 use App\Http\Controllers\Admin\PersonController as AdminPersonController;
 use App\Http\Controllers\Admin\ProjectTypeController;
+use App\Http\Controllers\Admin\WorkflowController;
 use App\Http\Controllers\Admin\SuperAdminController;
 use App\Http\Controllers\Admin\TenantController;
 use App\Http\Controllers\DashboardController;
@@ -115,6 +116,19 @@ Route::middleware(['auth', 'verified', 'can:access-admin'])->prefix('admin')->na
     Route::delete('/projektkategorien/arten/{sub}', [ProjectTypeController::class, 'subDestroy'])->name('projektkategorien.arten.destroy');
     Route::post('/projektkategorien/{category}', [ProjectTypeController::class, 'mainUpdate'])->name('projektkategorien.update');
     Route::delete('/projektkategorien/{category}', [ProjectTypeController::class, 'mainDestroy'])->name('projektkategorien.destroy');
+
+    Route::get('/workflows', [WorkflowController::class, 'index'])->name('workflows');
+    Route::post('/workflows', [WorkflowController::class, 'store'])->name('workflows.store');
+    // Feste Pfade (reorder/schritte) vor den {workflow}/{step}-Wildcards registriert -
+    // sonst würden sie als ID interpretiert (404, gleiche Falle wie bei Projektkategorien).
+    Route::post('/workflows/reorder', [WorkflowController::class, 'reorder'])->name('workflows.reorder');
+    Route::post('/workflows/schritte', [WorkflowController::class, 'stepStore'])->name('workflows.schritte.store');
+    Route::post('/workflows/schritte/reorder', [WorkflowController::class, 'stepReorder'])->name('workflows.schritte.reorder');
+    Route::post('/workflows/schritte/{step}', [WorkflowController::class, 'stepUpdate'])->name('workflows.schritte.update');
+    Route::delete('/workflows/schritte/{step}', [WorkflowController::class, 'stepDestroy'])->name('workflows.schritte.destroy');
+    Route::post('/workflows/{workflow}/neue-version', [WorkflowController::class, 'newVersion'])->name('workflows.new-version');
+    Route::post('/workflows/{workflow}', [WorkflowController::class, 'update'])->name('workflows.update');
+    Route::delete('/workflows/{workflow}', [WorkflowController::class, 'destroy'])->name('workflows.destroy');
 
     Route::get('/firmen', [CompanyController::class, 'index'])->name('companies');
     Route::post('/firmen', [CompanyController::class, 'store'])->name('companies.store');

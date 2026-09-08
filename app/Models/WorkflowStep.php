@@ -30,6 +30,18 @@ class WorkflowStep extends Model
         4 => '#cccccc',
     ];
 
+    /**
+     * Feste Auswahlliste statt Freitext für js_function - jeder Eintrag
+     * braucht eigenen, handgebauten Code dahinter (siehe Vietto-Analyse:
+     * dort 7 fest einprogrammierte Funktionen, nie admin-konfigurierbar).
+     * Neue Sonderfunktionen kommen erst rein, wenn sie tatsächlich gebaut
+     * sind - js_function_param wird bewusst nicht mit angeboten, war in
+     * Vietto nie wirklich verdrahtet (siehe wffkt_getbuttontag()).
+     */
+    public const SPECIAL_BUTTONS = [
+        'wfs_grafik' => 'Grafikauftrag',
+    ];
+
     protected function casts(): array
     {
         return [

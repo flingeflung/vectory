@@ -48,6 +48,13 @@
                 </a>
                 <a
                     onclick="return window.navigateOrConfirm(event)"
+                    href="{{ route('admin.workflows') }}"
+                    class="pb-2 {{ request()->routeIs('admin.workflows*') ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700' }}"
+                >
+                    {{ __('Workflows') }}
+                </a>
+                <a
+                    onclick="return window.navigateOrConfirm(event)"
                     href="{{ route('admin.config') }}"
                     class="pb-2 {{ request()->routeIs('admin.config') ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700' }}"
                 >
