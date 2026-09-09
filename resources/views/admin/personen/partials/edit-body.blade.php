@@ -331,7 +331,7 @@
             @if ($multiTenantEnabled)
                 <div class="rounded-lg border border-gray-200 bg-white p-4" x-data="{ dirty: false }">
                     <div class="mb-2 text-xs font-semibold text-gray-500">{{ __('Kundenzugriff') }}</div>
-                    <p class="mb-2 text-xs text-gray-400">{{ __('Zusätzliche Kunden, auf die diese Person umschalten darf (neben ihrem eigenen Mandanten).') }}</p>
+                    <p class="mb-2 text-xs text-gray-400">{{ __('Zusätzliche Kunden, auf die diese Person umschalten darf (neben ihrem eigenen Mandanten). Ihr Rechte-Set bleibt dabei immer das ihres eigenen Mandanten – bei jedem freigegebenen Kunden gleich, unabhängig davon, welche Rechte-Sets dieser Kunde selbst definiert hat.') }}</p>
                     <form method="POST" action="{{ route('admin.personen.tenant-access.update', $person) }}" @input="dirty = true" class="space-y-2">
                         @csrf
                         @forelse ($otherTenants as $tenant)
