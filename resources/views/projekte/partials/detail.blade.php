@@ -559,7 +559,11 @@
                                 <div class="flex min-w-0 flex-1 items-start gap-2">
                                     <span class="shrink-0 text-lg font-semibold text-gray-400">{{ $loop->iteration }}</span>
                                     <div class="min-w-0 flex-1">
-                                        <div class="font-medium text-gray-900">{{ $step->title }}</div>
+                                        {{-- break-words: lange Titel ohne Leerzeichen (z.B.
+                                             "Anleitung/Korrekturexemplar") liefen sonst optisch
+                                             über den schmalen Container hinweg in die
+                                             Funktionsgruppen-Box (Ralf-Bug-Report). --}}
+                                        <div class="break-words font-medium text-gray-900">{{ $step->title }}</div>
                                         @if ($step->functionGroups->isNotEmpty())
                                             <div class="text-xs text-gray-600">{{ $step->functionGroups->pluck('short_name')->implode(', ') }}</div>
                                         @endif
