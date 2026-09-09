@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\GraphicOrderStatus;
 use App\Models\FunctionGroup;
 use App\Models\GraphicOrder;
-use App\Models\GraphicOrderStatus;
 use App\Models\Person;
 use App\Models\User;
 use App\Support\CurrentTenant;
@@ -41,7 +41,7 @@ class IllustrationOverviewController extends Controller
     public function index(Request $request): View
     {
         $user = $request->user();
-        $statuses = GraphicOrderStatus::query()->orderBy('sort')->get();
+        $statuses = collect(GraphicOrderStatus::cases());
         $illustrationPersons = FunctionGroup::query()
             ->where('legacy_id', 5)
             ->with(['members' => fn ($query) => $query->withoutGlobalScope('tenant')
@@ -68,7 +68,7 @@ class IllustrationOverviewController extends Controller
 
         $selectedStatuses = $filters['status'] !== null
             ? collect($filters['status'])->map(fn ($value) => (int) $value)->values()
-            : $statuses->pluck('id');
+            : $statuses->pluck('value');
         $selectedIllustrators = $filters['illustrator'] !== null
             ? collect($filters['illustrator'])->map(fn ($value) => $value === self::UNASSIGNED ? $value : (int) $value)->values()
             : collect([...$illustrationPersons->pluck('id'), self::UNASSIGNED]);
@@ -78,7 +78,7 @@ class IllustrationOverviewController extends Controller
         $search = (string) $filters['q'];
 
         $query = GraphicOrder::query()
-            ->with(['project', 'status', 'initiatedBy', 'illustrator.company'])
+            ->with(['project', 'initiatedBy', 'illustrator.company'])
             ->whereIn('graphic_order_status_id', $selectedStatuses->isEmpty() ? [0] : $selectedStatuses);
 
         $query->where(function (Builder $query) use ($selectedIllustrators) {

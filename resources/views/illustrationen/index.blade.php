@@ -21,8 +21,8 @@
                     <div class="max-h-56 space-y-1 overflow-y-auto">
                         @foreach ($statuses as $status)
                             <label class="flex items-center gap-1.5 text-gray-700">
-                                <input type="checkbox" name="status[]" value="{{ $status->id }}" class="rounded border-gray-300" @checked($selectedStatuses->contains($status->id))>
-                                {{ $status->name }}
+                                <input type="checkbox" name="status[]" value="{{ $status->value }}" class="rounded border-gray-300" @checked($selectedStatuses->contains($status->value))>
+                                {{ $status->label() }}
                             </label>
                         @endforeach
                     </div>
@@ -146,7 +146,7 @@
                                         <x-pn-link :project="$order->project" />
                                     </td>
                                     <td class="px-2 py-2 whitespace-nowrap text-gray-500">{{ $order->image_count }}</td>
-                                    <td class="px-2 py-2 whitespace-nowrap text-gray-500">{{ $order->status?->name }}</td>
+                                    <td class="px-2 py-2 whitespace-nowrap text-gray-500">{{ $order->status?->label() }}</td>
                                     <td class="px-2 py-2 max-w-[160px] text-gray-900">
                                         <span x-data="{ expanded: false }">
                                             <span x-show="!expanded" @click="expanded = true" class="cursor-pointer" title="{{ __('Klicken zum Erweitern') }}">

@@ -116,7 +116,7 @@ class Task extends Model
             ->where('source', TaskSource::GraphicOrder)
             ->delete();
 
-        if (! $graphicOrder->illustrator_person_id || ! $graphicOrder->status?->is_open) {
+        if (! $graphicOrder->illustrator_person_id || ! $graphicOrder->status?->isOpen()) {
             return;
         }
 

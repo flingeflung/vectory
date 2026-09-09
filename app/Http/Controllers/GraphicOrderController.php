@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ActivityType;
+use App\Enums\GraphicOrderStatus;
 use App\Models\Activity;
 use App\Models\FunctionGroup;
 use App\Models\GraphicOrder;
-use App\Models\GraphicOrderStatus;
 use App\Models\Person;
 use App\Models\Project;
 use Illuminate\Http\Request;
@@ -40,15 +40,10 @@ class GraphicOrderController extends Controller
             'due_date' => ['nullable', 'date'],
         ]);
 
-        $initialStatus = GraphicOrderStatus::query()
-            ->where('tenant_id', $project->tenant_id)
-            ->where('legacy_id', 1)
-            ->firstOrFail();
-
         $graphicOrder = GraphicOrder::create([
             'tenant_id' => $project->tenant_id,
             'project_id' => $project->id,
-            'graphic_order_status_id' => $initialStatus->id,
+            'graphic_order_status_id' => GraphicOrderStatus::NeuerAuftrag,
             'description' => $validated['description'],
             'image_count' => $validated['image_count'] ?? 0,
             'due_date' => $validated['due_date'] ?? null,
@@ -65,7 +60,7 @@ class GraphicOrderController extends Controller
         abort_unless($graphicOrder->project_id === $project->id, 404);
 
         $validated = $request->validate([
-            'graphic_order_status_id' => ['required', 'integer', Rule::exists('graphic_order_statuses', 'id')->where('tenant_id', $project->tenant_id)],
+            'graphic_order_status_id' => ['required', 'integer', Rule::in(array_column(GraphicOrderStatus::cases(), 'value'))],
             'illustrator_person_id' => ['nullable', 'integer', Rule::exists('people', 'id')->where(
                 fn ($query) => $query->where('tenant_id', $project->tenant_id)
                     ->orWhereIn('id', DB::table('person_tenant')->where('tenant_id', $project->tenant_id)->pluck('person_id'))
@@ -74,13 +69,13 @@ class GraphicOrderController extends Controller
             'due_date' => ['nullable', 'date'],
         ]);
 
-        $status = GraphicOrderStatus::findOrFail($validated['graphic_order_status_id']);
+        $status = GraphicOrderStatus::from((int) $validated['graphic_order_status_id']);
 
         $update = [
-            'graphic_order_status_id' => $status->id,
+            'graphic_order_status_id' => $status,
             'illustrator_person_id' => $validated['illustrator_person_id'] ?? null,
-            'done_at' => $status->is_open === false && ! $status->is_discarded ? now() : null,
-            'completed_by_person_id' => $status->is_open === false && ! $status->is_discarded ? $request->user()->person_id : null,
+            'done_at' => ! $status->isOpen() && ! $status->isDiscarded() ? now() : null,
+            'completed_by_person_id' => ! $status->isOpen() && ! $status->isDiscarded() ? $request->user()->person_id : null,
         ];
 
         // Termin/Anzahl Bilder nur änderbar mit eigenem Recht - Feldrechte
@@ -93,18 +88,18 @@ class GraphicOrderController extends Controller
 
         $graphicOrder->update($update);
 
-        Activity::log($project, ActivityType::GraphicOrderStatusChanged, __('Status für Illustrationsauftrag Illu-:id: :status', ['id' => $graphicOrder->id, 'status' => $status->name]));
+        Activity::log($project, ActivityType::GraphicOrderStatusChanged, __('Status für Illustrationsauftrag Illu-:id: :status', ['id' => $graphicOrder->id, 'status' => $status->label()]));
 
         return view('projekte.partials.illustration-orders-body', $this->viewData($project));
     }
 
     /**
-     * @return array{project: Project, illustrationPersons: \Illuminate\Support\Collection, graphicOrderStatuses: \Illuminate\Support\Collection}
+     * @return array{project: Project, illustrationPersons: \Illuminate\Support\Collection, graphicOrderStatuses: list<GraphicOrderStatus>}
      */
     private function viewData(Project $project): array
     {
         return [
-            'project' => $project->fresh()->loadMissing(['graphicOrders.status', 'graphicOrders.initiatedBy', 'graphicOrders.illustrator', 'graphicOrders.completedBy']),
+            'project' => $project->fresh()->loadMissing(['graphicOrders.initiatedBy', 'graphicOrders.illustrator', 'graphicOrders.completedBy']),
             'illustrationPersons' => FunctionGroup::query()
                 ->where('tenant_id', $project->tenant_id)
                 ->where('legacy_id', 5)
@@ -115,10 +110,7 @@ class GraphicOrderController extends Controller
                 ?->members
                 ->sortBy(fn (Person $person) => $person->fullName())
                 ->values() ?? collect(),
-            'graphicOrderStatuses' => GraphicOrderStatus::query()
-                ->where('tenant_id', $project->tenant_id)
-                ->orderBy('sort')
-                ->get(),
+            'graphicOrderStatuses' => GraphicOrderStatus::cases(),
         ];
     }
 }

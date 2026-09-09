@@ -669,9 +669,9 @@
                                     @php
                                         $illuOrders = $project->graphicOrders;
                                         $illuTotal = $illuOrders->count();
-                                        $illuOpen = $illuOrders->filter(fn ($o) => $o->status?->is_open)->count();
-                                        $illuDone = $illuOrders->filter(fn ($o) => $o->status && ! $o->status->is_open && ! $o->status->is_discarded)->count();
-                                        $illuDiscarded = $illuOrders->filter(fn ($o) => $o->status?->is_discarded)->count();
+                                        $illuOpen = $illuOrders->filter(fn ($o) => $o->status?->isOpen())->count();
+                                        $illuDone = $illuOrders->filter(fn ($o) => $o->status && ! $o->status->isOpen() && ! $o->status->isDiscarded())->count();
+                                        $illuDiscarded = $illuOrders->filter(fn ($o) => $o->status?->isDiscarded())->count();
                                         $illuAllClosed = $illuTotal > 0 && $illuOpen === 0;
                                     @endphp
                                     <div class="mt-2 flex items-center gap-2 border-t border-black/10 pt-2 text-xs" @click.stop>

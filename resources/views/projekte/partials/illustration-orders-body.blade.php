@@ -53,9 +53,9 @@
     @forelse ($orders as $order)
         @php
             $bgClass = 'bg-white';
-            if ($order->status?->is_discarded) {
+            if ($order->status?->isDiscarded()) {
                 $bgClass = 'bg-gray-50 text-gray-500';
-            } elseif ($order->status && ! $order->status->is_open) {
+            } elseif ($order->status && ! $order->status->isOpen()) {
                 $bgClass = 'bg-green-50';
             }
         @endphp
@@ -73,7 +73,7 @@
                     {{ __('Status ändern') }}
                 </button>
             </div>
-            <div class="mt-1">{{ __('Status') }}: {{ $order->status?->name }}</div>
+            <div class="mt-1">{{ __('Status') }}: {{ $order->status?->label() }}</div>
             <div>{{ __('Illustrator') }}: {{ $order->illustrator?->fullName() ?? '–' }}{{ $order->illustrator && ! $order->illustrator->active ? ' [i]' : '' }}</div>
             @if ($order->description)
                 <div class="mt-1 whitespace-pre-line text-gray-700">{{ $order->description }}</div>
@@ -104,7 +104,7 @@
                     <label class="text-xs text-gray-500">{{ __('Status') }}</label>
                     <select name="graphic_order_status_id" class="mt-0.5 rounded border-gray-300 py-1 text-xs">
                         @foreach ($graphicOrderStatuses as $status)
-                            <option value="{{ $status->id }}" @selected($status->id === $order->graphic_order_status_id)>{{ $status->name }}</option>
+                            <option value="{{ $status->value }}" @selected($status === $order->status)>{{ $status->label() }}</option>
                         @endforeach
                     </select>
                 </div>

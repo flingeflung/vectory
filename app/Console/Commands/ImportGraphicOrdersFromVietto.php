@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\GraphicOrderStatus;
 use App\Models\GraphicOrder;
-use App\Models\GraphicOrderStatus;
 use App\Models\Person;
 use App\Models\Project;
 use App\Models\Tenant;
@@ -11,22 +11,18 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Übernimmt Illustrationsaufträge aus Vietto (grafikerstellung/
- * grafikerstellung_status, rein lesend) inkl. Beschreibung, Frist, Ersteller
- * und zugewiesenem Illustrator. valIllustratorFirmaID wird bewusst nicht
- * übernommen (siehe GraphicOrder-Model).
+ * Übernimmt Illustrationsaufträge aus Vietto (grafikerstellung, rein
+ * lesend) inkl. Beschreibung, Frist, Ersteller und zugewiesenem
+ * Illustrator. valIllustratorFirmaID wird bewusst nicht übernommen (siehe
+ * GraphicOrder-Model). Status-Katalog ist fest verdrahtet (siehe
+ * App\Enums\GraphicOrderStatus) - Viettos valStatusID entspricht exakt
+ * unseren Enum-Werten, kein Mapping/Import nötig.
  */
 class ImportGraphicOrdersFromVietto extends Command
 {
     protected $signature = 'graphic-orders:import-from-vietto';
 
     protected $description = 'Grafikaufträge aus Vietto übernehmen';
-
-    /**
-     * Vietto markiert nur diesen einen Status als "verworfen" (zählt nicht
-     * als "hat einen Grafikauftrag" im Filter pf_grafikauftrag).
-     */
-    private const DISCARDED_LEGACY_ID = 8;
 
     public function handle(): int
     {
@@ -36,21 +32,6 @@ class ImportGraphicOrdersFromVietto extends Command
             $this->error('Kein Mandant vorhanden.');
 
             return self::FAILURE;
-        }
-
-        $statuses = DB::connection('vietto')->table('grafikerstellung_status')->orderBy('intSort')->get();
-
-        $statusMap = [];
-        foreach ($statuses as $status) {
-            $statusMap[$status->valID] = GraphicOrderStatus::updateOrCreate(
-                ['tenant_id' => $tenant->id, 'legacy_id' => $status->valID],
-                [
-                    'name' => $status->strGrafikstatus,
-                    'sort' => $status->intSort,
-                    'is_open' => (bool) $status->blnIsOffen,
-                    'is_discarded' => $status->valID == self::DISCARDED_LEGACY_ID,
-                ]
-            )->id;
         }
 
         $projectIds = Project::query()->where('tenant_id', $tenant->id)->pluck('id', 'source_pn');
@@ -70,8 +51,9 @@ class ImportGraphicOrdersFromVietto extends Command
 
         foreach ($orders as $order) {
             $projectId = $projectIds->get($order->strPN);
+            $status = GraphicOrderStatus::tryFrom((int) $order->valStatusID);
 
-            if (! $projectId || ! isset($statusMap[$order->valStatusID])) {
+            if (! $projectId || ! $status) {
                 $skipped++;
 
                 continue;
@@ -87,7 +69,7 @@ class ImportGraphicOrdersFromVietto extends Command
                 ['tenant_id' => $tenant->id, 'legacy_id' => $order->valID],
                 [
                     'project_id' => $projectId,
-                    'graphic_order_status_id' => $statusMap[$order->valStatusID],
+                    'graphic_order_status_id' => $status,
                     'image_count' => $order->intAnzBilder ?? 0,
                     'description' => $order->strBeschreibung ?: null,
                     'due_date' => $sanitizeDate($order->dtgFertigBis),
@@ -100,7 +82,7 @@ class ImportGraphicOrdersFromVietto extends Command
             $count++;
         }
 
-        $this->info(count($statusMap)." Status, {$count} Grafikaufträge importiert".($skipped ? ", {$skipped} übersprungen (kein passendes Projekt/Status)." : '.'));
+        $this->info("{$count} Grafikaufträge importiert".($skipped ? ", {$skipped} übersprungen (kein passendes Projekt/Status)." : '.'));
 
         return self::SUCCESS;
     }

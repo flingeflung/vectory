@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use App\Enums\GraphicOrderStatus;
 use App\Models\Concerns\BelongsToTenant;
 use App\Observers\GraphicOrderObserver;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -24,6 +26,7 @@ class GraphicOrder extends Model
         return [
             'due_date' => 'date',
             'done_at' => 'datetime',
+            'graphic_order_status_id' => GraphicOrderStatus::class,
         ];
     }
 
@@ -32,9 +35,13 @@ class GraphicOrder extends Model
         return $this->belongsTo(Project::class);
     }
 
-    public function status(): BelongsTo
+    /**
+     * Alias für graphic_order_status_id (enum-gecastet) - liest sich in
+     * Views natürlicher als der Spaltenname.
+     */
+    protected function status(): Attribute
     {
-        return $this->belongsTo(GraphicOrderStatus::class, 'graphic_order_status_id');
+        return Attribute::get(fn () => $this->graphic_order_status_id);
     }
 
     public function initiatedBy(): BelongsTo
