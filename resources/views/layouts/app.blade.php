@@ -1544,7 +1544,7 @@
             Tabelle bei jedem Schritt komplett neu rendert statt einzelner
             Werte.
         --}}
-        <x-modal name="project-schedule" max-width="2xl">
+        <x-modal name="project-schedule" max-width="5xl">
             <div class="flex max-h-[85vh] flex-col">
                 <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
                     <h3 class="text-sm font-semibold text-gray-900">{{ __('Termine berechnen') }}</h3>
