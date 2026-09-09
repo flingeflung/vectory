@@ -371,7 +371,7 @@
                                  Muster wie der Speichern-Button im
                                  Personen-Overlay (Ralf: "der Speichern-Button
                                  müsste schweben und immer sichtbar sein"). --}}
-                            <div class="sticky bottom-0 -mx-3 -mb-3 mt-2 flex items-center justify-between gap-2 border-t border-gray-200 bg-white px-3 py-2" x-show="dirty" x-cloak>
+                            <div class="sticky bottom-0 -mx-3 mt-2 flex items-center justify-between gap-2 border-t border-gray-200 bg-white px-3 py-2" x-show="dirty" x-cloak>
                                 @if ($isResubmit)
                                     <span class="text-xs text-red-600">{{ __('Bitte die rot markierten Felder korrigieren, dann erneut speichern.') }}</span>
                                 @else
