@@ -12,7 +12,7 @@
                     <button
                         type="button"
                         onclick="window.openProjectCreate()"
-                        class="inline-flex items-center rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
+                        class="inline-flex items-center rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover"
                     >
                         + {{ __('Neues Projekt') }}
                     </button>
@@ -20,7 +20,7 @@
                     <button
                         type="button"
                         onclick="window.openProjectRequest()"
-                        class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        class="inline-flex items-center rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
                     >
                         {{ __('Projekt anfragen') }}
                     </button>
@@ -30,7 +30,7 @@
                     type="button"
                     x-data
                     @click="$dispatch('open-modal', 'projektfilter')"
-                    class="inline-flex items-center rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-gray-50 {{ ! empty($filters) ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : 'border-gray-300 bg-white text-gray-700' }}"
+                    class="inline-flex items-center rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-btn-secondary-hover {{ ! empty($filters) ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : 'border-btn-secondary-border bg-btn-secondary text-gray-700' }}"
                 >
                     {{ __('Projektfilter') }}
                     @if (! empty($filters))
@@ -48,7 +48,7 @@
                     type="button"
                     x-data
                     @click="$dispatch('open-modal', 'anzeigefilter')"
-                    class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    class="inline-flex items-center rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
                 >
                     {{ __('Anzeigefilter') }}
                 </button>

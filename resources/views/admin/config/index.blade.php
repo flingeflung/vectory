@@ -33,28 +33,28 @@
                 <button
                     type="button"
                     onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'company-manager' }))"
-                    class="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    class="rounded-md border border-btn-secondary-border px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
                 >
                     {{ \App\Models\SystemSetting::companyLabelPlural() }}
                 </button>
                 <button
                     type="button"
                     onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'department-manager' }))"
-                    class="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    class="rounded-md border border-btn-secondary-border px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
                 >
                     {{ __('Abteilungen') }}
                 </button>
                 <button
                     type="button"
                     onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'business-unit-manager' }))"
-                    class="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    class="rounded-md border border-btn-secondary-border px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
                 >
                     {{ __('Geschäftsbereiche') }}
                 </button>
                 <button
                     type="button"
                     onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'legacy-role-manager' }))"
-                    class="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    class="rounded-md border border-btn-secondary-border px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
                 >
                     {{ __('Rollen') }}
                 </button>
@@ -89,7 +89,7 @@
                                 type="submit"
                                 x-show="dirty"
                                 x-cloak
-                                class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
+                                class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover"
                             >
                                 {{ __('Speichern') }}
                             </button>
@@ -131,7 +131,7 @@
                         <p class="text-xs text-gray-400">{{ __('Ziel für von Vectory verschickte Mails, z.B. Projektanfragen.') }}</p>
 
                         <div class="flex items-center gap-4 pt-2">
-                            <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
+                            <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">
                                 {{ __('Speichern') }}
                             </button>
                             <p x-show="show" x-cloak x-transition class="text-sm text-green-600">{{ __('Gespeichert.') }}</p>

@@ -149,7 +149,7 @@
                             <button
                                 type="button"
                                 onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'company-manager' }))"
-                                class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                                class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
                             >{{ __('verwalten') }}</button>
                         </div>
                         <select id="person-company-id" name="company_id" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
@@ -165,7 +165,7 @@
                             <button
                                 type="button"
                                 onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'legacy-role-manager' }))"
-                                class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                                class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
                             >{{ __('verwalten') }}</button>
                         </div>
                         <select id="person-legacy-role-id" name="legacy_role_id" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
@@ -181,7 +181,7 @@
                             <button
                                 type="button"
                                 onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'department-manager' }))"
-                                class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                                class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
                             >{{ __('verwalten') }}</button>
                         </div>
                         <select id="person-department-id" name="department_id" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
@@ -197,7 +197,7 @@
                             <button
                                 type="button"
                                 onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'business-unit-manager' }))"
-                                class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                                class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
                             >{{ __('verwalten') }}</button>
                         </div>
                         <select id="person-business-unit-id" name="business_unit_id" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
@@ -236,7 +236,7 @@
                      (Rechte-Set, Login-Zugang, ...) scrollt - kein separates
                      Fixed-Footer-Layout nötig, das den Rest umbauen würde. --}}
                 <div class="sticky bottom-0 -mx-4 -mb-4 rounded-b-lg border-t border-gray-200 bg-white px-4 py-3">
-                    <button type="submit" class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
+                    <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">
                         {{ __('Speichern') }}
                     </button>
                 </div>
@@ -248,7 +248,7 @@
                     {{ $person->permissionTemplate?->name ?? __('– nicht zugewiesen –') }}
                     <a
                         href="{{ route('admin.rechte', ['person' => $person->id]) }}"
-                        class="ml-2 inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                        class="ml-2 inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
                     >
                         {{ __('ändern') }}
                     </a>
@@ -268,7 +268,7 @@
                             <label class="block text-xs text-gray-500">{{ __('Neues Passwort') }}</label>
                             <input type="text" name="password" required minlength="4" class="mt-0.5 rounded-md border-gray-300 text-sm">
                         </div>
-                        <button type="submit" class="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">
                             {{ __('Speichern') }}
                         </button>
                     </form>
@@ -288,7 +288,7 @@
                             <label class="block text-xs text-gray-500">{{ __('Passwort') }}</label>
                             <input type="text" name="password" required minlength="4" class="mt-0.5 rounded-md border-gray-300 text-sm">
                         </div>
-                        <button type="submit" class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
+                        <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">
                             {{ __('Login-Zugang anlegen') }}
                         </button>
                     </form>
@@ -319,7 +319,7 @@
                             <input type="hidden" name="super_admin" value="{{ $person->user->role === 'super_admin' ? '0' : '1' }}">
                             <button
                                 type="submit"
-                                class="rounded-md border border-gray-300 px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                                class="rounded-md border border-btn-secondary-border px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
                             >
                                 {{ $person->user->role === 'super_admin' ? __('Super-Admin-Rechte entziehen') : __('Zum Super-Admin machen') }}
                             </button>
@@ -349,7 +349,7 @@
                             <div class="text-sm text-gray-400">{{ __('Noch keine weiteren Kunden angelegt.') }}</div>
                         @endforelse
                         @if ($otherTenants->isNotEmpty())
-                            <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
+                            <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">
                                 {{ __('Speichern') }}
                             </button>
                         @endif
@@ -369,7 +369,7 @@
                         @method('DELETE')
                         <span class="text-xs text-gray-400">{{ __('Diese Person hat noch keine Daten (Projekte, Aufgaben, Login) und kann gefahrlos gelöscht werden.') }}</span>
                         <div class="flex shrink-0 items-center gap-2">
-                            <button type="button" @click="confirming = false" class="rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">{{ __('Abbrechen') }}</button>
+                            <button type="button" @click="confirming = false" class="rounded-md border border-btn-secondary-border px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Abbrechen') }}</button>
                             <button type="submit" class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50">{{ __('Endgültig löschen') }}</button>
                         </div>
                     </form>

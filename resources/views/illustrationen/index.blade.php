@@ -26,7 +26,7 @@
                             </label>
                         @endforeach
                     </div>
-                    <button type="submit" class="mt-2 w-full rounded bg-gray-800 px-2 py-1 text-xs font-medium text-white hover:bg-gray-700">{{ __('Anwenden') }}</button>
+                    <button type="submit" class="mt-2 w-full rounded bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">{{ __('Anwenden') }}</button>
                 </x-filter-dropdown>
 
                 <x-filter-dropdown label="{{ __('Illustrator') }} ({{ $selectedIllustrators->count() }})">
@@ -64,7 +64,7 @@
                             {{ __('Inaktive auch anzeigen') }}
                         </label>
                     </div>
-                    <button type="submit" class="mt-2 w-full rounded bg-gray-800 px-2 py-1 text-xs font-medium text-white hover:bg-gray-700">{{ __('Anwenden') }}</button>
+                    <button type="submit" class="mt-2 w-full rounded bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">{{ __('Anwenden') }}</button>
                 </x-filter-dropdown>
 
                 @php $selectedInitiator = $initiatorOptions->firstWhere('id', (int) $initiatorId); @endphp
@@ -106,10 +106,10 @@
                 </label>
 
                 <div class="flex items-center gap-2">
-                    <button type="submit" class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200">
+                    <button type="submit" class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                         {{ __('Anwenden') }}
                     </button>
-                    <a href="{{ route('illustrationen', ['illustrationsfilter_submitted' => 1]) }}" class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200">
+                    <a href="{{ route('illustrationen', ['illustrationsfilter_submitted' => 1]) }}" class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                         {{ __('Filter zurücksetzen') }}
                     </a>
                 </div>
@@ -175,7 +175,7 @@
                                         <button
                                             type="button"
                                             @click="window.openIllustrationOrders({{ $order->project_id }})"
-                                            class="rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                                            class="rounded border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
                                         >
                                             {{ __('Ändern') }}
                                         </button>

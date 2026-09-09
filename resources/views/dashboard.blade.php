@@ -8,7 +8,7 @@
                 type="button"
                 x-data
                 @click="$dispatch('open-modal', 'kacheln-verwalten')"
-                class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                class="inline-flex items-center rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
             >
                 {{ __('Kacheln verwalten') }}
             </button>
@@ -113,7 +113,7 @@
                 @endforeach
 
                 <div class="flex justify-end pt-2">
-                    <button type="submit" class="rounded bg-gray-800 px-4 py-2 text-xs font-medium text-white hover:bg-gray-700">
+                    <button type="submit" class="rounded bg-btn-primary px-4 py-2 text-xs font-medium text-white hover:bg-btn-primary-hover">
                         {{ __('Speichern') }}
                     </button>
                 </div>

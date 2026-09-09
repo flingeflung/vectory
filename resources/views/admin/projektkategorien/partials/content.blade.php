@@ -14,7 +14,7 @@
         <div class="flex flex-1 min-h-0 flex-col rounded-lg border border-gray-200 bg-white" x-data="{ newCategory: false }">
             <div class="shrink-0 flex items-center justify-between border-b border-gray-100 p-2">
                 <span class="text-xs font-semibold text-gray-500">{{ __('Projektkategorien') }}</span>
-                <button type="button" @click="newCategory = !newCategory; if (newCategory) $nextTick(() => $refs.newCategoryName.focus())" class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200">
+                <button type="button" @click="newCategory = !newCategory; if (newCategory) $nextTick(() => $refs.newCategoryName.focus())" class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                     + {{ __('Neu') }}
                 </button>
             </div>
@@ -22,7 +22,7 @@
                 <form x-show="newCategory" x-cloak method="POST" action="{{ route('admin.projektkategorien.store') }}" class="mb-2 flex gap-1.5 rounded border border-gray-200 p-2">
                     <input type="text" name="name" x-ref="newCategoryName" placeholder="{{ __('Name') }}" class="w-full min-w-0 flex-1 rounded-md border-gray-300 text-xs" required>
                     @csrf
-                    <button type="submit" class="shrink-0 rounded-md bg-gray-800 px-2 py-1 text-xs font-medium text-white hover:bg-gray-700">
+                    <button type="submit" class="shrink-0 rounded-md bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
                         {{ __('Anlegen') }}
                     </button>
                 </form>
@@ -90,7 +90,7 @@
                         <input type="checkbox" name="active" value="1" @checked($selectedCategory->active) class="rounded border-gray-300">
                         {{ __('Aktiv') }}
                     </label>
-                    <button type="submit" x-show="dirty" x-cloak class="shrink-0 rounded-md bg-gray-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700">{{ __('Speichern') }}</button>
+                    <button type="submit" x-show="dirty" x-cloak class="shrink-0 rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
                 </div>
                 <p class="mt-1 text-xs text-gray-400">{{ __('Wenn eine Kategorie inaktiv ist, bleibt sie bei bestehenden Projekten sichtbar, ist aber für neue nicht mehr wählbar.') }}</p>
             </form>
@@ -101,7 +101,7 @@
             >
                 <div class="flex items-center justify-between">
                     <div class="text-xs font-semibold text-gray-500">{{ __('Projektarten') }}</div>
-                    <button type="button" @click="newArt = !newArt; if (newArt) $nextTick(() => $refs.newArtName.focus())" class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200">
+                    <button type="button" @click="newArt = !newArt; if (newArt) $nextTick(() => $refs.newArtName.focus())" class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                         + {{ __('Neu') }}
                     </button>
                 </div>
@@ -110,8 +110,8 @@
                     @csrf
                     <input type="hidden" name="project_type_main_id" value="{{ $selectedCategory->id }}">
                     <input type="text" name="name" x-ref="newArtName" placeholder="{{ __('Name') }}" required class="flex-1 rounded-md border-gray-300 text-sm">
-                    <button type="button" @click="newArt = false" class="rounded-md border border-gray-300 px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">{{ __('Abbrechen') }}</button>
-                    <button type="submit" class="rounded-md bg-gray-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700">{{ __('Anlegen') }}</button>
+                    <button type="button" @click="newArt = false" class="rounded-md border border-btn-secondary-border px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Abbrechen') }}</button>
+                    <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">{{ __('Anlegen') }}</button>
                 </form>
 
                 @if ($selectedCategory->subs->isNotEmpty())
@@ -155,7 +155,7 @@
                                 <input type="checkbox" name="active" value="1" @checked($sub->active) class="rounded border-gray-300">
                                 {{ __('Aktiv') }}
                             </label>
-                            <button type="submit" x-show="rowDirty" x-cloak class="shrink-0 rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                            <button type="submit" x-show="rowDirty" x-cloak class="shrink-0 rounded-md bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
                                 {{ __('Speichern') }}
                             </button>
                         </form>

@@ -68,7 +68,7 @@
                     >
                         @csrf
                         @method('delete')
-                        <button type="submit" class="rounded-md border border-gray-300 px-2 py-1.5 text-sm text-gray-500 hover:bg-gray-50" title="{{ __('Aktuelles Set löschen') }}">
+                        <button type="submit" class="rounded-md border border-btn-secondary-border px-2 py-1.5 text-sm text-gray-500 hover:bg-btn-secondary-hover" title="{{ __('Aktuelles Set löschen') }}">
                             🗑
                         </button>
                     </form>
@@ -160,11 +160,11 @@
                 type="submit"
                 form="anzeigefilter-form"
                 formaction="{{ route('projekte.anzeigefilter.sets.store') }}"
-                class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                class="inline-flex items-center rounded-md border border-btn-secondary-border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
             >
                 {{ __('Speichern unter') }}
             </button>
-            <button type="submit" form="anzeigefilter-form" class="inline-flex items-center rounded-md bg-gray-800 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700">
+            <button type="submit" form="anzeigefilter-form" class="inline-flex items-center rounded-md bg-btn-primary px-4 py-2 text-sm font-medium text-white hover:bg-btn-primary-hover">
                 {{ __('Speichern') }}
             </button>
         </div>

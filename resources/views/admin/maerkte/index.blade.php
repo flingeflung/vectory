@@ -20,7 +20,7 @@
             <div class="flex flex-1 min-h-0 flex-col rounded-lg border border-gray-200 bg-white" x-data="{ newSet: false }">
                 <div class="shrink-0 flex items-center justify-between border-b border-gray-100 p-2">
                     <span class="text-xs font-semibold text-gray-500">{{ __('Ländergruppen') }}</span>
-                    <button type="button" @click="newSet = !newSet; if (newSet) $nextTick(() => $refs.newSetName.focus())" class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200">
+                    <button type="button" @click="newSet = !newSet; if (newSet) $nextTick(() => $refs.newSetName.focus())" class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                         + {{ __('Neu') }}
                     </button>
                 </div>
@@ -28,7 +28,7 @@
                     <form x-show="newSet" x-cloak method="POST" action="{{ route('admin.maerkte.gruppen.store') }}" class="mb-2 flex gap-1.5 rounded border border-gray-200 p-2">
                         <input type="text" name="name" x-ref="newSetName" placeholder="{{ __('Name') }}" class="w-full min-w-0 flex-1 rounded-md border-gray-300 text-xs" required>
                         @csrf
-                        <button type="submit" class="shrink-0 rounded-md bg-gray-800 px-2 py-1 text-xs font-medium text-white hover:bg-gray-700">
+                        <button type="submit" class="shrink-0 rounded-md bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
                             {{ __('Anlegen') }}
                         </button>
                     </form>
@@ -94,7 +94,7 @@
                             form="country-language-form"
                             x-show="dirty"
                             x-cloak
-                            class="shrink-0 rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
+                            class="shrink-0 rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover"
                         >
                             {{ __('Speichern') }}
                         </button>

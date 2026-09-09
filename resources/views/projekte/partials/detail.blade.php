@@ -6,7 +6,7 @@
     // Gemeinsamer Button-Look fürs ganze Overlay: gefüllter grauer
     // Hintergrund grenzt Buttons klar von weißen Eingabefeldern ab
     // (die nur einen Rahmen haben).
-    $secondaryBtn = 'inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200';
+    $secondaryBtn = 'inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover';
     $secondaryBtnDisabled = 'inline-flex items-center rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-300 cursor-not-allowed';
 @endphp
 
@@ -298,7 +298,7 @@
                             </optgroup>
                         @endif
                     </select>
-                    <button type="button" x-show="selectedSet" x-cloak @click="applySet()" class="rounded bg-gray-800 px-2 py-1 text-xs font-medium text-white hover:bg-gray-700">
+                    <button type="button" x-show="selectedSet" x-cloak @click="applySet()" class="rounded bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
                         {{ __('Zuweisen') }}
                     </button>
                 </div>
@@ -649,7 +649,7 @@
                                                 <button
                                                     type="button"
                                                     @click.stop="window.openActivateWorkflowStep({{ $project->id }}, {{ $pws->id }})"
-                                                    class="mt-1 rounded border border-gray-300 bg-white px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                                                    class="mt-1 rounded border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
                                                 >
                                                     {{ __('Aktivieren') }}
                                                 </button>
@@ -691,7 +691,7 @@
                                         <button
                                             type="button"
                                             @click.stop="window.openIllustrationOrders({{ $project->id }})"
-                                            class="rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                                            class="rounded border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
                                         >
                                             {{ __('Illustrationsauftrag') }}
                                         </button>
@@ -729,7 +729,7 @@
                                                         headers: { 'X-CSRF-TOKEN': {{ \Illuminate\Support\Js::from(csrf_token()) }} },
                                                     }).then(r => r.json()).then(data => { granted = data.milestone_done_at !== null; }).finally(() => saving = false);
                                                 "
-                                                class="rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                                                class="rounded border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
                                                 x-text="granted ? {{ \Illuminate\Support\Js::from(__('Freigabe zurücknehmen')) }} : {{ \Illuminate\Support\Js::from(__('Freigabe erteilen')) }}"
                                             ></button>
                                         @else
@@ -796,7 +796,7 @@
                     x-transition:leave-start="opacity-100"
                     x-transition:leave-end="opacity-0"
                     onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-overlay' }))"
-                    class="rounded border border-gray-300 bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                    class="rounded border border-gray-300 bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
                 >
                     {{ __('Schließen') }}
                 </button>
@@ -808,10 +808,10 @@
                     x-transition:enter-end="opacity-100"
                     class="flex gap-2"
                 >
-                    <button type="submit" form="project-detail-form" class="rounded border border-gray-300 bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-200">
+                    <button type="submit" form="project-detail-form" class="rounded border border-gray-300 bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                         {{ __('Speichern') }}
                     </button>
-                    <button type="submit" form="project-detail-form" name="close_after_save" value="1" class="rounded bg-gray-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700">
+                    <button type="submit" form="project-detail-form" name="close_after_save" value="1" class="rounded bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
                         {{ __('Speichern und Schließen') }}
                     </button>
                 </div>
@@ -819,10 +819,10 @@
         </div>
     @else
         <div class="flex justify-end gap-2 pt-1">
-            <button type="submit" form="project-detail-form" class="rounded border border-gray-300 bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-200">
+            <button type="submit" form="project-detail-form" class="rounded border border-gray-300 bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                 {{ __('Speichern') }}
             </button>
-            <button type="submit" form="project-detail-form" name="close_after_save" value="1" class="rounded bg-gray-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700">
+            <button type="submit" form="project-detail-form" name="close_after_save" value="1" class="rounded bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
                 {{ __('Speichern und Schließen') }}
             </button>
         </div>

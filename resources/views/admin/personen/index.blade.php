@@ -107,7 +107,7 @@
                     {{ __('Inaktive zeigen') }}
                 </label>
                 @if (request()->anyFilled(['search', 'company_id', 'department_id', 'business_unit_id', 'permission_template_id', 'legacy_role_id', 'typ', 'tenant_id']) || request()->boolean('show_inactive'))
-                    <a href="{{ route('admin.personen') }}" class="mb-1.5 inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200">{{ __('Filter zurücksetzen') }}</a>
+                    <a href="{{ route('admin.personen') }}" class="mb-1.5 inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Filter zurücksetzen') }}</a>
                 @endif
             </form>
 
@@ -127,7 +127,7 @@
                 @submit.prevent="createAndOpen($event)"
             >
                 @csrf
-                <button type="submit" class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
+                <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">
                     + {{ __('Neue Person') }}
                 </button>
             </form>

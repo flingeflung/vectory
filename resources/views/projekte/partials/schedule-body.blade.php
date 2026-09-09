@@ -90,7 +90,7 @@
                             </td>
                             <td class="py-1.5 pr-2">
                                 @unless ($referenceStepId === $pws->id)
-                                    <button type="button" @click="apply({{ $pws->id }})" class="rounded border border-gray-300 px-1.5 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                                    <button type="button" @click="apply({{ $pws->id }})" class="rounded border border-btn-secondary-border px-1.5 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                                         {{ __('übernehmen') }}
                                     </button>
                                 @endunless
@@ -138,7 +138,7 @@
             <button
                 type="button"
                 :disabled="!reference"
-                :class="reference ? 'border-gray-300 text-gray-700 hover:bg-gray-50' : 'cursor-not-allowed border-gray-200 text-gray-300'"
+                :class="reference ? 'border-btn-secondary-border bg-btn-secondary text-gray-700 hover:bg-btn-secondary-hover' : 'cursor-not-allowed border-gray-200 text-gray-300'"
                 @click="recalculate()"
                 class="rounded border px-3 py-1.5 text-xs font-medium"
             >
@@ -147,7 +147,7 @@
             <p x-show="!reference" class="text-xs text-gray-400">{{ __('Referenz-Schritt (mit gültigem Termin und Dauer) markieren, um die Berechnung zu starten.') }}</p>
 
             @if ($hasProposal)
-                <button type="button" @click="applyAll()" class="rounded bg-gray-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700">
+                <button type="button" @click="applyAll()" class="rounded bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
                     {{ __('Alle übernehmen und schließen') }}
                 </button>
             @endif

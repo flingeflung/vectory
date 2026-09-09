@@ -25,7 +25,7 @@
                             type="submit"
                             x-show="dirty"
                             x-cloak
-                            class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
+                            class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover"
                         >
                             {{ __('Speichern') }}
                         </button>

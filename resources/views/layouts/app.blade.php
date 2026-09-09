@@ -1185,7 +1185,7 @@
                     <button
                         type="button"
                         onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'illustration-orders' }))"
-                        class="rounded border border-gray-300 bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                        class="rounded border border-gray-300 bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
                     >
                         {{ __('Schließen') }}
                     </button>
@@ -1613,7 +1613,7 @@
                             <div id="project-directory-create-toast" x-data="{ show: false }" x-show="show" x-cloak x-transition.opacity class="rounded bg-green-50 px-3 py-1.5 text-xs text-green-700">
                                 {{ __('Verzeichnis angelegt.') }}
                             </div>
-                            <button id="project-directory-create-submit" type="submit" class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50">
+                            <button id="project-directory-create-submit" type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover disabled:opacity-50">
                                 {{ __('Anlegen') }}
                             </button>
                         </div>

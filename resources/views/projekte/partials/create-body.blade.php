@@ -21,11 +21,11 @@
         <button
             type="button"
             onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-create' }))"
-            class="rounded border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+            class="rounded border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
         >
             {{ __('Abbrechen') }}
         </button>
-        <button type="submit" class="rounded bg-gray-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700">
+        <button type="submit" class="rounded bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
             {{ __('Anlegen') }}
         </button>
     </div>

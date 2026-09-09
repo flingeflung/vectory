@@ -104,7 +104,7 @@
                 <button
                     type="button"
                     @click="show = false; resolve(null)"
-                    class="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    class="rounded-md border border-btn-secondary-border px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
                     x-text="cancelLabel"
                 ></button>
                 <button

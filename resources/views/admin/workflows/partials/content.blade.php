@@ -14,7 +14,7 @@
         <div class="flex flex-1 min-h-0 flex-col rounded-lg border border-gray-200 bg-white" x-data="{ newWorkflow: false }">
             <div class="shrink-0 flex items-center justify-between border-b border-gray-100 p-2">
                 <span class="text-xs font-semibold text-gray-500">{{ __('Workflows') }}</span>
-                <button type="button" @click="newWorkflow = !newWorkflow; if (newWorkflow) $nextTick(() => $refs.newWorkflowName.focus())" class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200">
+                <button type="button" @click="newWorkflow = !newWorkflow; if (newWorkflow) $nextTick(() => $refs.newWorkflowName.focus())" class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                     + {{ __('Neu') }}
                 </button>
             </div>
@@ -22,7 +22,7 @@
                 <form x-show="newWorkflow" x-cloak method="POST" action="{{ route('admin.workflows.store') }}" class="mb-2 flex gap-1.5 rounded border border-gray-200 p-2">
                     <input type="text" name="name" x-ref="newWorkflowName" placeholder="{{ __('Name') }}" class="w-full min-w-0 flex-1 rounded-md border-gray-300 text-xs" required>
                     @csrf
-                    <button type="submit" class="shrink-0 rounded-md bg-gray-800 px-2 py-1 text-xs font-medium text-white hover:bg-gray-700">
+                    <button type="submit" class="shrink-0 rounded-md bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
                         {{ __('Anlegen') }}
                     </button>
                 </form>
@@ -112,7 +112,7 @@
                                 message: {{ \Illuminate\Support\Js::from(__('Legt eine Kopie dieses Workflows (inkl. aller Schritte) als neue, frei bearbeitbare Version an. Die bestehende Version bleibt für schon zugewiesene Projekte unverändert erhalten, wird aber für neue Projekte nicht mehr angeboten.')) }},
                                 confirmLabel: {{ \Illuminate\Support\Js::from(__('Neue Version erstellen')) }},
                             })"
-                            class="rounded-md bg-gray-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700"
+                            class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover"
                         >
                             {{ __('Neue Version erstellen') }}
                         </button>
@@ -160,7 +160,7 @@
                             <input type="checkbox" name="active" value="1" @checked($selectedWorkflow->active) class="rounded border-gray-300">
                             {{ __('Aktiv') }}
                         </label>
-                        <button type="submit" x-show="dirty" x-cloak class="shrink-0 rounded-md bg-gray-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700">{{ __('Speichern') }}</button>
+                        <button type="submit" x-show="dirty" x-cloak class="shrink-0 rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
                     </div>
                     <textarea name="description" rows="2" placeholder="{{ __('Beschreibung') }}" class="w-full rounded-md border-gray-300 text-sm">{{ $selectedWorkflow->description }}</textarea>
                     <p class="text-xs text-gray-400">{{ __('Entwurf - frei bearbeitbar und beliebig oft zum Testen einem Projekt zuweisbar. Bleibt so, bis du ihn veröffentlichst.') }}</p>
@@ -171,14 +171,14 @@
                         <div class="text-xs font-semibold text-gray-500">{{ __('Schritte') }}</div>
                         <div class="flex items-center gap-1">
                             @if ($steps->isNotEmpty())
-                                <button type="button" @click="window.dispatchEvent(new CustomEvent('workflow-steps-expand-all'))" class="inline-flex items-center rounded-md border border-gray-300 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                                <button type="button" @click="window.dispatchEvent(new CustomEvent('workflow-steps-expand-all'))" class="inline-flex items-center rounded-md border border-btn-secondary-border px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                                     {{ __('Alle ausklappen') }}
                                 </button>
-                                <button type="button" @click="window.dispatchEvent(new CustomEvent('workflow-steps-collapse-all'))" class="inline-flex items-center rounded-md border border-gray-300 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                                <button type="button" @click="window.dispatchEvent(new CustomEvent('workflow-steps-collapse-all'))" class="inline-flex items-center rounded-md border border-btn-secondary-border px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                                     {{ __('Alle einklappen') }}
                                 </button>
                             @endif
-                            <button type="button" @click="newStep = !newStep; if (newStep) $nextTick(() => $refs.newStepTitle.focus())" class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200">
+                            <button type="button" @click="newStep = !newStep; if (newStep) $nextTick(() => $refs.newStepTitle.focus())" class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                                 + {{ __('Neu') }}
                             </button>
                         </div>
@@ -188,8 +188,8 @@
                         @csrf
                         <input type="hidden" name="workflow_id" value="{{ $selectedWorkflow->id }}">
                         <input type="text" name="title" x-ref="newStepTitle" placeholder="{{ __('Titel') }}" required class="flex-1 rounded-md border-gray-300 text-sm">
-                        <button type="button" @click="newStep = false" class="rounded-md border border-gray-300 px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">{{ __('Abbrechen') }}</button>
-                        <button type="submit" class="rounded-md bg-gray-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700">{{ __('Anlegen') }}</button>
+                        <button type="button" @click="newStep = false" class="rounded-md border border-btn-secondary-border px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Abbrechen') }}</button>
+                        <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">{{ __('Anlegen') }}</button>
                     </form>
 
                     @if ($steps->isEmpty())
@@ -377,7 +377,7 @@
                                 @else
                                     <span></span>
                                 @endif
-                                <button type="submit" class="shrink-0 rounded-md bg-gray-800 px-4 py-1.5 text-xs font-medium text-white hover:bg-gray-700">
+                                <button type="submit" class="shrink-0 rounded-md bg-btn-primary px-4 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
                                     {{ __('Speichern') }}
                                 </button>
                             </div>
@@ -423,7 +423,7 @@
                             <form method="POST" action="{{ route('admin.workflows.publish', $selectedWorkflow) }}" x-ref="publishForm" class="hidden">
                                 @csrf
                             </form>
-                            <button type="button" @click="publish()" class="rounded-md bg-gray-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700">
+                            <button type="button" @click="publish()" class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
                                 {{ __('Veröffentlichen') }}
                             </button>
                         </div>

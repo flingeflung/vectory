@@ -4,7 +4,7 @@
         <button
             type="button"
             onclick="navigator.clipboard.writeText({{ \Illuminate\Support\Js::from($status['path']) }})"
-            class="shrink-0 rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+            class="shrink-0 rounded-md border border-btn-secondary-border px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
         >
             {{ __('Pfad kopieren') }}
         </button>

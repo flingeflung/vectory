@@ -69,14 +69,14 @@
                     type="button"
                     x-show="!alertOnly"
                     @click="show = false; resolve(false)"
-                    class="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    class="rounded-md border border-btn-secondary-border px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
                     x-text="cancelLabel"
                 ></button>
                 <button
                     type="button"
                     @click="show = false; resolve(true)"
                     class="rounded-md px-3 py-1.5 text-sm font-medium text-white"
-                    :class="alertOnly ? 'bg-gray-800 hover:bg-gray-700' : 'bg-red-600 hover:bg-red-700'"
+                    :class="alertOnly ? 'bg-btn-primary hover:bg-btn-primary-hover' : 'bg-red-600 hover:bg-red-700'"
                     x-text="confirmLabel"
                 ></button>
             </div>

@@ -165,7 +165,7 @@
             >
                 {{ __('Alle Filter zurücksetzen') }}
             </a>
-            <button type="submit" form="projektfilter-form" class="rounded bg-gray-800 px-4 py-2 text-xs font-medium text-white hover:bg-gray-700">
+            <button type="submit" form="projektfilter-form" class="rounded bg-btn-primary px-4 py-2 text-xs font-medium text-white hover:bg-btn-primary-hover">
                 {{ __('Filtern') }}
             </button>
         </div>

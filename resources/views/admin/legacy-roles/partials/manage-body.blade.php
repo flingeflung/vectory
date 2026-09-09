@@ -1,6 +1,6 @@
 <div class="space-y-3" x-data="{ creating: false }">
     <div x-show="!creating">
-        <button type="button" @click="creating = true; $nextTick(() => $refs.newName.focus())" class="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+        <button type="button" @click="creating = true; $nextTick(() => $refs.newName.focus())" class="rounded-md border border-btn-secondary-border px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover">
             + {{ __('Rolle anlegen') }}
         </button>
     </div>
@@ -10,10 +10,10 @@
             <label class="block text-xs text-gray-500">{{ __('Name') }}</label>
             <input type="text" name="name" x-ref="newName" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
         </div>
-        <button type="button" @click="creating = false" class="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+        <button type="button" @click="creating = false" class="rounded-md border border-btn-secondary-border px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover">
             {{ __('Abbrechen') }}
         </button>
-        <button type="submit" class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
+        <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">
             {{ __('Anlegen') }}
         </button>
     </form>
@@ -27,7 +27,7 @@
                         <label class="block text-xs text-gray-500">{{ __('Name') }}</label>
                         <input type="text" name="name" value="{{ $legacyRole->name }}" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                     </div>
-                    <button type="submit" x-show="dirty" x-cloak class="rounded-md border border-gray-300 px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                    <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-2 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
                         {{ __('Speichern') }}
                     </button>
                 </form>

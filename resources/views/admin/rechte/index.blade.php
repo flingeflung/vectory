@@ -66,7 +66,7 @@
                         </select>
                         <input type="text" name="name" placeholder="{{ __('Name des neuen Sets') }}" class="w-full rounded-md border-gray-300 text-xs" required>
                         @csrf
-                        <button type="submit" class="w-full rounded-md bg-gray-800 px-2 py-1 text-xs font-medium text-white hover:bg-gray-700">
+                        <button type="submit" class="w-full rounded-md bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
                             {{ __('Anlegen') }}
                         </button>
                     </form>
@@ -109,13 +109,13 @@
                             <button
                                 type="button"
                                 @click="sortMode = 'alpha'; applyGrouping()"
-                                :class="sortMode === 'alpha' ? 'bg-gray-800 text-white' : 'border border-gray-300 text-gray-600 hover:bg-gray-50'"
+                                :class="sortMode === 'alpha' ? 'bg-btn-primary text-white' : 'border border-btn-secondary-border bg-btn-secondary text-gray-600 hover:bg-btn-secondary-hover'"
                                 class="rounded px-1.5 py-0.5"
                             >{{ __('A–Z') }}</button>
                             <button
                                 type="button"
                                 @click="sortMode = 'department'; applyGrouping()"
-                                :class="sortMode === 'department' ? 'bg-gray-800 text-white' : 'border border-gray-300 text-gray-600 hover:bg-gray-50'"
+                                :class="sortMode === 'department' ? 'bg-btn-primary text-white' : 'border border-btn-secondary-border bg-btn-secondary text-gray-600 hover:bg-btn-secondary-hover'"
                                 class="rounded px-1.5 py-0.5"
                             >{{ __('Abteilung') }}</button>
                         </div>
@@ -149,7 +149,7 @@
                             form="bulk-assign-form"
                             x-show="dirty"
                             x-cloak
-                            class="w-full rounded-md bg-gray-800 px-2 py-1 text-xs font-medium text-white hover:bg-gray-700"
+                            class="w-full rounded-md bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover"
                         >
                             {{ __('Speichern') }}
                         </button>
@@ -275,7 +275,7 @@
                             </table>
                         </div>
                         <div class="shrink-0 border-t border-gray-100 p-3">
-                            <button type="submit" class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
+                            <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">
                                 {{ __('Speichern') }}
                             </button>
                         </div>
@@ -334,7 +334,7 @@
                                 </label>
                             @endforeach
                         </div>
-                        <button type="submit" class="mt-3 rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">
+                        <button type="submit" class="mt-3 rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">
                             {{ __('Speichern') }}
                         </button>
                     </form>

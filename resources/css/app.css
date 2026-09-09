@@ -26,4 +26,24 @@
     --color-sidebar-hover: #f3f4f6;
     --color-sidebar-active: #eff6ff;
     --color-sidebar-active-content: #0b2e4e;
+
+    /*
+     * Button-Farbthema ("Grau" - erstes von künftig mehreren wählbaren
+     * Themen, siehe Backlog Prio 3: Kunden sollen das auf ihre
+     * Unternehmensfarben umstellen können). Prio 1 = die eine
+     * Haupt-Aktion einer Ansicht (Speichern, Veröffentlichen, Anlegen).
+     * Prio 2 = alles andere Klickbare (Abbrechen, +Neu, Details, ...).
+     * Bewusst deutlich unterschiedlich (dunkel vs. hell gefüllt), damit
+     * die Haupt-Aktion auf den ersten Blick auffindbar ist UND sich ein
+     * Button nie mit einem Eingabefeld verwechseln lässt (beide waren
+     * zuvor teils identisch weiß/umrandet - Ralfs Bug-Report).
+     */
+    --color-btn-primary: #1f2937;
+    --color-btn-primary-hover: #374151;
+    --color-btn-primary-content: #ffffff;
+
+    --color-btn-secondary: #f3f4f6;
+    --color-btn-secondary-hover: #e5e7eb;
+    --color-btn-secondary-content: #374151;
+    --color-btn-secondary-border: #d1d5db;
 }

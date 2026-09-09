@@ -10,7 +10,7 @@
         type="button"
         x-show="!showNew"
         @click="showNew = true"
-        class="rounded border border-gray-300 bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
+        class="rounded border border-gray-300 bg-btn-secondary px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
     >
         {{ __('Neuer Auftrag') }}
     </button>
@@ -37,10 +37,10 @@
             </div>
         </div>
         <div class="flex gap-2">
-            <button type="submit" class="rounded bg-gray-800 px-2.5 py-1 text-xs font-medium text-white hover:bg-gray-700">
+            <button type="submit" class="rounded bg-btn-primary px-2.5 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
                 {{ __('Auftrag speichern') }}
             </button>
-            <button type="button" @click="showNew = false" class="rounded border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">
+            <button type="button" @click="showNew = false" class="rounded border border-btn-secondary-border bg-btn-secondary px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                 {{ __('Abbrechen') }}
             </button>
         </div>
@@ -68,7 +68,7 @@
                 <button
                     type="button"
                     @click="editing = !editing"
-                    class="shrink-0 rounded border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                    class="shrink-0 rounded border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
                 >
                     {{ __('Status ändern') }}
                 </button>
@@ -130,11 +130,11 @@
                 <button
                     type="button"
                     @click="illustrator = {{ \Illuminate\Support\Js::from((string) auth()->user()->person_id) }}"
-                    class="rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                    class="rounded border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
                 >
                     {{ __('Mir zuweisen') }}
                 </button>
-                <button type="submit" class="rounded bg-gray-800 px-2.5 py-1 text-xs font-medium text-white hover:bg-gray-700">
+                <button type="submit" class="rounded bg-btn-primary px-2.5 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
                     {{ __('Speichern') }}
                 </button>
             </form>
