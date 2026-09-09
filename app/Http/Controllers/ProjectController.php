@@ -435,7 +435,30 @@ class ProjectController extends Controller
         }
         $validated['attributes'] = $attributes;
 
+        // Publikationsdatum nur mit eigenem Recht änderbar (Ralf: "nur für
+        // TR, sie ist schließlich für das Publizieren zuständig") - Feld ist
+        // im Formular bei fehlendem Recht disabled, das hier ist die
+        // serverseitige Absicherung gegen einen manipulierten Request
+        // (gleiches Muster wie project.complete beim Statusfeld oben).
+        // Wichtig: request->has() statt validated[]-Zugriff, denn ein
+        // disabled-Feld fehlt im Request komplett (kein leerer String) -
+        // sonst würde jeder Speichervorgang ohne dieses Recht fälschlich
+        // als "Publikationsdatum geändert" erkannt, sobald bereits eines
+        // gesetzt ist. Nach Vietto-Vorbild wird jede tatsächliche Änderung
+        // protokolliert.
+        $publicationDateChanged = $request->has('publication_date')
+            && $validated['publication_date'] != $project->publication_date?->format('Y-m-d');
+        if ($publicationDateChanged) {
+            abort_unless($request->user()->can('project.publication_date.edit'), 403);
+        }
+
         $project->update($validated);
+
+        if ($publicationDateChanged) {
+            Activity::log($project, ActivityType::PublicationDateChanged, $project->publication_date
+                ? __('Publikationsdatum auf :date gesetzt.', ['date' => $project->publication_date->format('d.m.Y')])
+                : __('Publikationsdatum entfernt.'));
+        }
 
         // Beim (Neu-)Zuweisen eines Workflows die Schritt-Vorlagen einmalig
         // in projekteigene Instanzen kopieren. Schritte eines zuvor

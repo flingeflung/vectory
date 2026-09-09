@@ -25,6 +25,7 @@ enum ActivityType: string
     case WorkflowStepActivated = 'workflow_step_activated';
     case GraphicOrderStatusChanged = 'graphic_order_status_changed';
     case ProjectCreated = 'project_created';
+    case PublicationDateChanged = 'publication_date_changed';
 
     public function label(): string
     {
@@ -34,6 +35,7 @@ enum ActivityType: string
             self::WorkflowStepActivated => __('Workflow-Schritt aktiviert'),
             self::GraphicOrderStatusChanged => __('Illustrationsauftrag-Status geändert'),
             self::ProjectCreated => __('Projekt neu angelegt'),
+            self::PublicationDateChanged => __('Publikationsdatum geändert'),
         };
     }
 
@@ -42,7 +44,7 @@ enum ActivityType: string
         return match ($this) {
             self::WorkflowAssigned, self::WorkflowUnassigned, self::WorkflowStepActivated => ActivityCategory::Workflow,
             self::GraphicOrderStatusChanged => ActivityCategory::Illustration,
-            self::ProjectCreated => ActivityCategory::General,
+            self::ProjectCreated, self::PublicationDateChanged => ActivityCategory::General,
         };
     }
 }
