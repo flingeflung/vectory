@@ -155,7 +155,7 @@
     </form>
 
     <div class="flex items-center justify-between border-t border-gray-200 px-6 py-4">
-        <button type="button" @click="$dispatch('close-modal', 'projektfilter')" class="text-sm text-gray-600 hover:text-gray-900">
+        <button type="button" @click="$dispatch('close-modal', 'projektfilter')" class="rounded border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
             {{ __('Abbrechen') }}
         </button>
         <div class="flex items-center gap-3">
