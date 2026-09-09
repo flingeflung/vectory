@@ -33,28 +33,28 @@
                 <button
                     type="button"
                     onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'company-manager' }))"
-                    class="rounded-md border border-btn-secondary-border px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                    class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
                 >
                     {{ \App\Models\SystemSetting::companyLabelPlural() }}
                 </button>
                 <button
                     type="button"
                     onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'department-manager' }))"
-                    class="rounded-md border border-btn-secondary-border px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                    class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
                 >
                     {{ __('Abteilungen') }}
                 </button>
                 <button
                     type="button"
                     onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'business-unit-manager' }))"
-                    class="rounded-md border border-btn-secondary-border px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                    class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
                 >
                     {{ __('Geschäftsbereiche') }}
                 </button>
                 <button
                     type="button"
                     onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'legacy-role-manager' }))"
-                    class="rounded-md border border-btn-secondary-border px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                    class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
                 >
                     {{ __('Rollen') }}
                 </button>

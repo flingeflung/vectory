@@ -110,7 +110,7 @@
                     @csrf
                     <input type="hidden" name="project_type_main_id" value="{{ $selectedCategory->id }}">
                     <input type="text" name="name" x-ref="newArtName" placeholder="{{ __('Name') }}" required class="flex-1 rounded-md border-gray-300 text-sm">
-                    <button type="button" @click="newArt = false" class="rounded-md border border-btn-secondary-border px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Abbrechen') }}</button>
+                    <button type="button" @click="newArt = false" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Abbrechen') }}</button>
                     <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">{{ __('Anlegen') }}</button>
                 </form>
 

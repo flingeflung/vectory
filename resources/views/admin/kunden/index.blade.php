@@ -16,7 +16,7 @@
 
             <div x-data="{ creating: false }">
                 <div x-show="!creating">
-                    <button type="button" @click="creating = true; $nextTick(() => $refs.newTenantName.focus())" class="rounded-md border border-btn-secondary-border px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover">
+                    <button type="button" @click="creating = true; $nextTick(() => $refs.newTenantName.focus())" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover">
                         + {{ __('Neuer Kunde') }}
                     </button>
                 </div>
@@ -60,7 +60,7 @@
                         </div>
                     @endif
                     <div class="flex justify-end gap-2">
-                        <button type="button" @click="creating = false" class="rounded-md border border-btn-secondary-border px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover">
+                        <button type="button" @click="creating = false" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover">
                             {{ __('Abbrechen') }}
                         </button>
                         <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">

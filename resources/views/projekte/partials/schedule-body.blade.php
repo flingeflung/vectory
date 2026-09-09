@@ -90,7 +90,7 @@
                             </td>
                             <td class="py-1.5 pr-2">
                                 @unless ($referenceStepId === $pws->id)
-                                    <button type="button" @click="apply({{ $pws->id }})" class="rounded border border-btn-secondary-border px-1.5 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
+                                    <button type="button" @click="apply({{ $pws->id }})" class="rounded border border-btn-secondary-border bg-btn-secondary px-1.5 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                                         {{ __('übernehmen') }}
                                     </button>
                                 @endunless

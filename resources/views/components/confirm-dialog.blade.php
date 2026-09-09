@@ -69,7 +69,7 @@
                     type="button"
                     x-show="!alertOnly"
                     @click="show = false; resolve(false)"
-                    class="rounded-md border border-btn-secondary-border px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                    class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
                     x-text="cancelLabel"
                 ></button>
                 <button

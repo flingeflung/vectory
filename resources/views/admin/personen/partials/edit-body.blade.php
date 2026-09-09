@@ -319,7 +319,7 @@
                             <input type="hidden" name="super_admin" value="{{ $person->user->role === 'super_admin' ? '0' : '1' }}">
                             <button
                                 type="submit"
-                                class="rounded-md border border-btn-secondary-border px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                                class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
                             >
                                 {{ $person->user->role === 'super_admin' ? __('Super-Admin-Rechte entziehen') : __('Zum Super-Admin machen') }}
                             </button>
@@ -369,7 +369,7 @@
                         @method('DELETE')
                         <span class="text-xs text-gray-400">{{ __('Diese Person hat noch keine Daten (Projekte, Aufgaben, Login) und kann gefahrlos gelöscht werden.') }}</span>
                         <div class="flex shrink-0 items-center gap-2">
-                            <button type="button" @click="confirming = false" class="rounded-md border border-btn-secondary-border px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Abbrechen') }}</button>
+                            <button type="button" @click="confirming = false" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Abbrechen') }}</button>
                             <button type="submit" class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50">{{ __('Endgültig löschen') }}</button>
                         </div>
                     </form>
