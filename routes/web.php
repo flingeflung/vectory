@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\CompanyController;
 use App\Http\Controllers\Admin\ConfigController;
 use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\FunctionGroupController;
+use App\Http\Middleware\RememberLastAdminPage;
 use App\Http\Controllers\Admin\MarketController;
 use App\Http\Controllers\Admin\LegacyRoleController;
 use App\Http\Controllers\Admin\PermissionController as AdminPermissionController;
@@ -74,7 +75,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 });
 
-Route::middleware(['auth', 'verified', 'can:access-admin'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage::class])->prefix('admin')->name('admin.')->group(function () {
     Route::redirect('/', '/admin/personen')->name('index');
     Route::get('/rechte', [AdminPermissionController::class, 'index'])->name('rechte');
     Route::post('/rechte/sets', [AdminPermissionController::class, 'store'])->name('rechte.sets.store');
@@ -162,7 +163,7 @@ Route::middleware(['auth', 'verified', 'can:access-admin'])->prefix('admin')->na
     Route::delete('/kunden/{tenant}', [TenantController::class, 'destroy'])->name('kunden.destroy');
 });
 
-Route::middleware(['auth', 'verified', 'can:access-superadmin'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'verified', 'can:access-superadmin', RememberLastAdminPage::class])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/superadmin', [SuperAdminController::class, 'index'])->name('superadmin');
     Route::post('/superadmin', [SuperAdminController::class, 'update'])->name('superadmin.update');
 });

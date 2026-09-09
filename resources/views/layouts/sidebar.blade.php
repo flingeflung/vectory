@@ -187,7 +187,7 @@
 
             <a
                 onclick="return window.navigateOrConfirm(event)"
-                href="{{ route('admin.personen') }}"
+                href="{{ session('admin.last_tab_url', route('admin.personen')) }}"
                 class="flex items-center px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.*') ? 'bg-sidebar-active text-sidebar-active-content' : 'text-sidebar-content hover:bg-sidebar-hover hover:text-sidebar-content-hover' }}"
             >
                 {{ __('Admin') }}
