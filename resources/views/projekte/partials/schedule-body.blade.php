@@ -42,7 +42,11 @@
                     @php $proposedDate = $proposal?->get($pws->id); @endphp
                     <tr class="border-t border-gray-100 {{ $referenceStepId === $pws->id ? 'bg-indigo-50' : '' }}">
                         <td class="py-1.5 pr-2 text-gray-700">
-                            {{ $pws->workflowStep->title }}
+                            @if ($pws->workflowStep->is_active)
+                                {{ $pws->workflowStep->title }}
+                            @else
+                                <span class="text-gray-400">{{ __('nur Termin, kein WFS!') }}</span>
+                            @endif
                         </td>
                         <td class="py-1.5 pr-2">
                             <input
