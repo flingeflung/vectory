@@ -393,8 +393,18 @@
             </div>
 
             <div x-show="!editingPeople">
-                @php $groupedPeople = $project->projectPeople->groupBy('function_group_id'); @endphp
-                @if ($groupedPeople->isEmpty())
+                @php
+                    $groupedPeople = $project->projectPeople->groupBy('function_group_id');
+                    // Unterscheidung wichtig: "niemand zugeordnet" (normal, Klick auf
+                    // "Ändern" hilft) vs. "Mandant hat noch gar keine Personen" (die
+                    // Zuordnung kann dann gar nicht klappen - eigener Hinweis statt
+                    // scheinbar funktionslosem Ändern-Dialog, siehe Ralf-Bug-Report zu
+                    // einem frisch angelegten Testmandanten ohne Personen).
+                    $hasAssignablePeople = $allFunctionGroups->contains(fn ($group) => $group->members->isNotEmpty());
+                @endphp
+                @if (! $hasAssignablePeople)
+                    <div class="mt-0.5 text-amber-700">{{ __('Für diesen Mandanten sind noch keine Personen angelegt. Wenn hier jemand zugeordnet werden soll, dann zuerst unter :location Personen anlegen.', ['location' => \App\Models\SystemSetting::tenantConfigLocation()]) }}</div>
+                @elseif ($groupedPeople->isEmpty())
                     <div class="mt-0.5 text-gray-400">&ndash; {{ __('Keine Personen zugeordnet') }} &ndash;</div>
                 @else
                     <div class="mt-0.5 grid grid-cols-2 gap-x-4 gap-y-0.5 text-gray-700">
@@ -414,6 +424,9 @@
             </div>
 
             <div x-show="editingPeople" x-cloak class="mt-0.5 max-h-56 overflow-y-auto rounded border border-gray-300 bg-white p-2 text-xs space-y-2">
+                @if (! $hasAssignablePeople)
+                    <div class="text-amber-700">{{ __('Für diesen Mandanten sind noch keine Personen angelegt. Wenn hier jemand zugeordnet werden soll, dann zuerst unter :location Personen anlegen.', ['location' => \App\Models\SystemSetting::tenantConfigLocation()]) }}</div>
+                @endif
                 @foreach ($allFunctionGroups as $group)
                     @php
                         $currentEntries = $project->projectPeople->where('function_group_id', $group->id);
