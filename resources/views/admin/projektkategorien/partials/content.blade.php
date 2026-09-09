@@ -80,7 +80,7 @@
                 data-row-form
                 class="shrink-0 border-b border-gray-100 p-3"
                 x-data="{ dirty: false }"
-                @input="dirty = true; window.__projektkategorienDirtyForms.add($el)"
+                @input="dirty = window.formIsDirty($el, window.__projektkategorienDirtyForms)"
                 @submit="dirty = false; window.__projektkategorienDirtyForms.delete($el)"
             >
                 @csrf
@@ -142,7 +142,7 @@
                         ])->values();
                     @endphp
                     <div x-sort:item="{{ $sub->id }}" x-data="{ rowDirty: false }" class="rounded-md border border-gray-200 p-2">
-                        <form method="POST" action="{{ route('admin.projektkategorien.arten.update', $sub) }}" data-row-form class="flex items-center gap-2" @input="rowDirty = true; window.__projektkategorienDirtyForms.add($el)" @submit="rowDirty = false; window.__projektkategorienDirtyForms.delete($el)">
+                        <form method="POST" action="{{ route('admin.projektkategorien.arten.update', $sub) }}" data-row-form class="flex items-center gap-2" @input="rowDirty = window.formIsDirty($el, window.__projektkategorienDirtyForms)" @submit="rowDirty = false; window.__projektkategorienDirtyForms.delete($el)">
                             @csrf
                             <span x-sort:handle class="cursor-move px-1 text-gray-300 hover:text-gray-500" title="{{ __('Sortierung ändern') }}">⠿</span>
                             <input type="text" name="name" value="{{ $sub->name }}" required class="flex-1 rounded-md border-gray-300 text-sm">

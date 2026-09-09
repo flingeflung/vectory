@@ -167,7 +167,7 @@
                         id="bulk-assign-form"
                         method="POST"
                         action="{{ route('admin.rechte.sets.assign-people', $selectedTemplate) }}"
-                        @change="dirty = true"
+                        @change="dirty = window.formIsDirty($el)"
                         @submit="dirty = false"
                     >
                         @csrf

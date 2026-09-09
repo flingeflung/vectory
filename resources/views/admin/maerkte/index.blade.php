@@ -117,7 +117,7 @@
                 id="country-language-form"
                 method="POST"
                 action="{{ $selectedSet ? route('admin.maerkte.gruppen.mitglieder.update', $selectedSet) : '#' }}"
-                @input="dirty = true"
+                @input="dirty = window.formIsDirty($el)"
                 @submit="dirty = false"
                 class="flex-1 min-h-0 overflow-y-auto"
             >

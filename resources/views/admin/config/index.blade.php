@@ -67,7 +67,7 @@
                     x-data="{ dirty: false, show: false }"
                     x-init="@if (session('status') === 'config-updated') show = true; setTimeout(() => show = false, 2000) @endif"
                 >
-                    <form method="POST" action="{{ route('admin.config.update') }}" @input="dirty = true; window.__configDirtyForms.add($el)" class="space-y-5">
+                    <form method="POST" action="{{ route('admin.config.update') }}" @input="dirty = window.formIsDirty($el, window.__configDirtyForms)" class="space-y-5">
                         @csrf
 
                         @foreach ($settings as $setting)
@@ -109,7 +109,7 @@
                     x-data="{ dirty: false, show: false }"
                     x-init="@if (session('status') === 'tenant-updated') show = true; setTimeout(() => show = false, 2000) @endif"
                 >
-                    <form method="POST" action="{{ route('admin.kunden.update', $currentTenant) }}" @input="dirty = true; window.__configDirtyForms.add($el)" class="space-y-2">
+                    <form method="POST" action="{{ route('admin.kunden.update', $currentTenant) }}" @input="dirty = window.formIsDirty($el, window.__configDirtyForms)" class="space-y-2">
                         @csrf
                         <input type="hidden" name="name" value="{{ $currentTenant->name }}">
                         <label class="block text-sm font-medium text-gray-700">{{ __('Projektpfad') }}</label>

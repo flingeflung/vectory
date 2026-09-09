@@ -239,6 +239,54 @@
             Zeilen-Formular voraus (NICHT auf Anlegen-/Löschen-Formularen -
             die sollen nach dem Neuladen normal zurückgesetzt werden).
         --}}
+        {{--
+            Echte Dirty-Prüfung statt eines simplen "wurde mal getippt"-Flags:
+            ein @input="dirty = true" ohne Gegenprobe merkt sich nie, wenn eine
+            Änderung von Hand wieder rückgängig gemacht wurde (Ralfs
+            Bug-Report, u.a. Kunden verwalten und Workflows - Speichern-Button
+            blieb sichtbar, "ungespeicherte Änderungen"-Meldung kam beim
+            Verlassen, obwohl der Wert wieder dem Ausgangszustand entsprach).
+            formIsDirty() vergleicht stattdessen den aktuellen Formularstand
+            gegen einen Ausgangs-Snapshot (dataset-Attribut am Formular
+            selbst, kein zusätzlicher Alpine-State nötig). dirtySet ist
+            optional - die bestehenden window.__xyzDirtyForms-Sets (fürs
+            Seitenverlassen-Warnung) werden passend mitgepflegt, wenn
+            übergeben.
+
+            Der Snapshot MUSS vor der ersten Änderung entstehen, nicht erst
+            beim ersten @input - sonst wäre die "Änderung" schon eingerechnet
+            und jeder erste Tastendruck würde fälschlich als "unverändert"
+            gelten (genau dieser Bug ist beim ersten Versuch hier passiert).
+            Ein global delegierter focusin-Listener (Capture-Phase, feuert
+            beim Reinklicken/Tab-Fokussieren eines Feldes - immer VOR der
+            eigentlichen Änderung) sichert den Snapshot rechtzeitig, ohne
+            dass jedes Formular-Template das einzeln anstoßen müsste.
+        --}}
+        <script>
+            window.formSnapshot = (el) => new URLSearchParams(new FormData(el)).toString();
+
+            document.addEventListener('focusin', (event) => {
+                const form = event.target.closest('form');
+                if (form && form.dataset.dirtyBaseline === undefined) {
+                    form.dataset.dirtyBaseline = window.formSnapshot(form);
+                }
+            }, true);
+
+            window.formIsDirty = function (el, dirtySet = null) {
+                // Fallback, falls kein vorheriges focusin gefeuert hat (z.B.
+                // eine Checkbox/ein Select per Tastatur-Enter statt Klick/Fokus
+                // geändert) - besser ein grob genauer Wert als ein Fehler.
+                if (el.dataset.dirtyBaseline === undefined) {
+                    el.dataset.dirtyBaseline = window.formSnapshot(el);
+                }
+                const isDirty = window.formSnapshot(el) !== el.dataset.dirtyBaseline;
+                if (dirtySet) {
+                    isDirty ? dirtySet.add(el) : dirtySet.delete(el);
+                }
+                return isDirty;
+            };
+        </script>
+
         <script>
             window.reloadManageListPreservingEdits = async function (body, url, headers = {}) {
                 const snapshot = new Map();

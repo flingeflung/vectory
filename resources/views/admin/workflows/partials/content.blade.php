@@ -163,7 +163,7 @@
                     data-row-form
                     class="shrink-0 space-y-2 border-b border-gray-100 p-3"
                     x-data="{ dirty: false }"
-                    @input="dirty = true; window.__workflowsDirtyForms.add($el)"
+                    @input="dirty = window.formIsDirty($el, window.__workflowsDirtyForms)"
                     @submit="dirty = false; window.__workflowsDirtyForms.delete($el)"
                 >
                     @csrf
@@ -233,7 +233,7 @@
                             method="POST"
                             action="{{ route('admin.workflows.schritte.bulk-update') }}"
                             data-steps-form
-                            @input="$store.workflowStepsDirty.value = true; window.__workflowsDirtyForms.add($el)"
+                            @input="$store.workflowStepsDirty.value = window.formIsDirty($el, window.__workflowsDirtyForms)"
                             @submit="$store.workflowStepsDirty.value = false; window.__workflowsDirtyForms.delete($el)"
                         >
                             @csrf

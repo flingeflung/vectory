@@ -141,7 +141,7 @@
                         id="member-assign-form"
                         method="POST"
                         action="{{ route('admin.function-groups.members.update', $selectedGroup) }}"
-                        @change="dirty = true"
+                        @change="dirty = window.formIsDirty($el)"
                         @submit="dirty = false"
                     >
                         @csrf
@@ -199,8 +199,8 @@
                     action="{{ route('admin.function-groups.update', $selectedGroup) }}"
                     class="flex flex-1 min-h-0 flex-col"
                     x-data="{ dirty: false }"
-                    @input="dirty = true"
-                    @change="dirty = true"
+                    @input="dirty = window.formIsDirty($el)"
+                    @change="dirty = window.formIsDirty($el)"
                 >
                     @csrf
                     <div class="shrink-0 space-y-2 border-b border-gray-100 p-3">

@@ -77,7 +77,7 @@
                             method="POST"
                             action="{{ route('admin.kunden.update', $tenant) }}"
                             x-data="{ dirty: false }"
-                            @input="dirty = true; window.__configDirtyForms.add($el)"
+                            @input="dirty = window.formIsDirty($el, window.__configDirtyForms)"
                             class="space-y-2"
                         >
                             @csrf

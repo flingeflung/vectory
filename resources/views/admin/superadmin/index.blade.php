@@ -5,7 +5,7 @@
                 x-data="{ dirty: false, show: false }"
                 x-init="@if (session('status') === 'superadmin-updated') show = true; setTimeout(() => show = false, 2000) @endif"
             >
-                <form method="POST" action="{{ route('admin.superadmin.update') }}" @input="dirty = true" @change="dirty = true" class="space-y-5">
+                <form method="POST" action="{{ route('admin.superadmin.update') }}" @input="dirty = window.formIsDirty($el)" @change="dirty = window.formIsDirty($el)" class="space-y-5">
                     @csrf
 
                     <div>
