@@ -179,6 +179,9 @@
                                 data-sort-index="{{ $loop->index }}"
                                 x-show="(showInactive || {{ $person->active || $selectedPerson?->id === $person->id ? 'true' : 'false' }}) && (!search || {{ \Illuminate\Support\Js::from(mb_strtolower($person->fullName())) }}.includes(search.toLowerCase())) && (!departmentFilter || {{ \Illuminate\Support\Js::from($person->department?->name ?? '') }} === departmentFilter)"
                                 class="flex items-center gap-1.5 rounded px-2 py-1 {{ $isAssigned ? 'opacity-50' : 'hover:bg-gray-50' }}"
+                                @if ($isAssigned && $person->permission_template_id !== $selectedTemplate->id)
+                                    title="{{ __('Hat bereits das Rechte-Set „:name“', ['name' => $person->permissionTemplate?->name ?? '?']) }}"
+                                @endif
                             >
                                 <input
                                     type="checkbox"

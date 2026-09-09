@@ -38,7 +38,13 @@ class PermissionController extends Controller
             ->withoutGlobalScope('tenant')
             ->visibleInTenant($tenantId)
             ->visibleToRole($request->user()->role)
-            ->with(['department' => fn ($query) => $query->withoutGlobalScope('tenant')])
+            ->with([
+                'department' => fn ($query) => $query->withoutGlobalScope('tenant'),
+                // withoutGlobalScope noetig: bei DL-eigenen Mitarbeitern mit
+                // Kundenzugriff gehoert das Set zu deren Heimat-Mandanten,
+                // nicht zum gerade aktiven Kunden (siehe Kommentar oben).
+                'permissionTemplate' => fn ($query) => $query->withoutGlobalScope('tenant'),
+            ])
             ->orderBy('last_name')
             ->orderBy('first_name')
             ->get(['id', 'first_name', 'last_name', 'active', 'permission_template_id', 'department_id']);
