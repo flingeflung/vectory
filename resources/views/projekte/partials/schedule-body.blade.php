@@ -25,6 +25,7 @@
             <thead class="text-gray-500">
                 <tr>
                     <th class="pb-2 pr-2">{{ __('Workflow-Schritt') }}</th>
+                    <th class="pb-2 pr-2">{{ __('Termin-Name') }}</th>
                     <th class="pb-2 pr-2">{{ __('Dauer (AT)') }}</th>
                     <th class="pb-2 pr-2">{{ __('Termin') }}</th>
                     @if ($hasProposal)
@@ -40,11 +41,14 @@
                 @foreach ($steps as $pws)
                     @php $proposedDate = $proposal?->get($pws->id); @endphp
                     <tr class="border-t border-gray-100 {{ $referenceStepId === $pws->id ? 'bg-indigo-50' : '' }}">
+                        <td class="py-1.5 pr-2 text-gray-700">
+                            {{ $pws->workflowStep->title }}
+                        </td>
                         <td class="py-1.5 pr-2">
                             <input
                                 type="text"
                                 value="{{ $pws->effectiveMilestoneTitle() }}"
-                                placeholder="{{ $pws->workflowStep->title }}"
+                                placeholder="{{ __('– kein Termin-Name –') }}"
                                 class="w-full rounded border-gray-300 text-xs"
                                 @change="
                                     fetch({{ \Illuminate\Support\Js::from(route('projekte.termine.update-field', [$project, $pws])) }}, {
