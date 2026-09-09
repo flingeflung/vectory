@@ -212,20 +212,6 @@
                 <label class="block text-xs text-gray-500">{{ __('Ende') }}</label>
                 <input type="date" name="end_date" value="{{ old('end_date', $project->end_date?->format('Y-m-d')) }}" class="mt-0.5 rounded border-gray-300 py-1 text-sm">
             </div>
-            <div>
-                <label class="block text-xs text-gray-500">{{ __('Publikation') }}</label>
-                {{-- Nur mit eigenem Recht änderbar - die TR ist fürs
-                     Publizieren zuständig, das tatsächliche Datum wird hier
-                     protokollarisch eingetragen (Vietto-Vorbild: landet in
-                     den Vorgängen). --}}
-                <input
-                    type="date"
-                    name="publication_date"
-                    value="{{ old('publication_date', $project->publication_date?->format('Y-m-d')) }}"
-                    @disabled(! auth()->user()->can('project.publication_date.edit'))
-                    class="mt-0.5 rounded border-gray-300 py-1 text-sm disabled:bg-gray-50 disabled:text-gray-400"
-                >
-            </div>
         </div>
 
         <div>
@@ -391,6 +377,20 @@
                     @endforeach
                 </select>
             </div>
+        </div>
+
+        <div>
+            <label class="block text-xs text-gray-500">{{ __('Publikation') }}</label>
+            {{-- Nur mit eigenem Recht änderbar - die TR ist fürs Publizieren
+                 zuständig, das tatsächliche Datum wird hier protokollarisch
+                 eingetragen (Vietto-Vorbild: landet in den Vorgängen). --}}
+            <input
+                type="date"
+                name="publication_date"
+                value="{{ old('publication_date', $project->publication_date?->format('Y-m-d')) }}"
+                @disabled(! auth()->user()->can('project.publication_date.edit'))
+                class="mt-0.5 rounded border-gray-300 py-1 text-sm disabled:bg-gray-50 disabled:text-gray-400"
+            >
         </div>
 
         <div x-data="{ editingPeople: false }">
@@ -622,6 +622,10 @@
                                                                 method: 'PATCH',
                                                                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': {{ \Illuminate\Support\Js::from(csrf_token()) }} },
                                                                 body: JSON.stringify({ due_date: value || null }),
+                                                            }).then(() => {
+                                                                @if ($pws->effectiveIsStart() || $pws->effectiveIsEnd())
+                                                                    window.refreshUnderlyingProject({{ $project->id }});
+                                                                @endif
                                                             }).finally(() => saving = false);
                                                         "
                                                         class="rounded border-gray-300 py-0.5 text-xs"
