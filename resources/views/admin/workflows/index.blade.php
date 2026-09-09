@@ -61,6 +61,42 @@
                 await window.reloadManageListPreservingEdits(container(), window.location.href, { 'X-Overlay': '1' });
                 window.showManageSavedToast('workflows-toast');
             });
+
+            // Alle Schritte auf einmal (Ralf: ein Speichern-Button je Zeile
+            // war "mühsam") - eigener Handler statt data-row-form, weil ein
+            // Validierungsfehler hier NICHT generisch weggeklickt wird:
+            // der Server rendert bei 422 direkt das Partial mit rot
+            // markierten Feldern + alten Eingaben zurück (kein Redirect,
+            // siehe WorkflowController::stepsBulkUpdate()) - das setzen wir
+            // 1:1 ein, statt wie beim generischen Handler oben nochmal per
+            // GET neu zu laden.
+            document.addEventListener('submit', async (event) => {
+                if (!container() || !container().contains(event.target) || !event.target.hasAttribute('data-steps-form')) {
+                    return;
+                }
+
+                event.preventDefault();
+
+                const formData = new FormData(event.target);
+                const response = await fetch(event.target.action, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': csrfToken },
+                    body: formData,
+                });
+
+                if (response.status === 422) {
+                    container().innerHTML = await response.text();
+                    return;
+                }
+
+                if (!response.ok) {
+                    await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Speichern fehlgeschlagen. Bitte Eingaben prüfen.')) }});
+                    return;
+                }
+
+                await window.reloadManageListPreservingEdits(container(), window.location.href, { 'X-Overlay': '1' });
+                window.showManageSavedToast('workflows-toast');
+            });
         })();
     </script>
 </x-admin-layout>

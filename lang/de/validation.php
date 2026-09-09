@@ -170,6 +170,20 @@ return [
         'password_confirmation' => 'Passwortbestätigung',
         'current_password' => 'aktuelles Passwort',
         'remember' => 'Angemeldet bleiben',
+
+        // Workflow-Schritte-Bulk-Speichern (WorkflowController::stepsBulkUpdate) -
+        // ohne diese Wildcard-Einträge zeigt Laravel den rohen Feldpfad
+        // ("Das Feld steps.310.title ist erforderlich"), was für Kunden
+        // nicht verständlich ist (siehe Prinzip: nicht offensichtliches
+        // Verhalten immer verständlich erklären).
+        'steps.*.title' => 'Titel',
+        'steps.*.short_title' => 'Kurztitel',
+        'steps.*.milestone_title' => 'Meilenstein-Titel',
+        'steps.*.duration_days' => 'Dauer (Tage)',
+        'steps.*.js_function' => 'Sonderbutton',
+        'steps.*.lifecycle_status' => 'Kastenfarbe',
+        'steps.*.description' => 'Beschreibung',
+        'steps.*.email_text' => 'E-Mail-Text',
     ],
 
 ];

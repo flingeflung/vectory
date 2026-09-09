@@ -169,9 +169,19 @@
                 <div class="flex-1 min-h-0 overflow-y-auto p-3 space-y-2" x-data="{ newStep: false }">
                     <div class="flex items-center justify-between">
                         <div class="text-xs font-semibold text-gray-500">{{ __('Schritte') }}</div>
-                        <button type="button" @click="newStep = !newStep; if (newStep) $nextTick(() => $refs.newStepTitle.focus())" class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200">
-                            + {{ __('Neu') }}
-                        </button>
+                        <div class="flex items-center gap-1">
+                            @if ($steps->isNotEmpty())
+                                <button type="button" @click="window.dispatchEvent(new CustomEvent('workflow-steps-expand-all'))" class="inline-flex items-center rounded-md border border-gray-300 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                                    {{ __('Alle ausklappen') }}
+                                </button>
+                                <button type="button" @click="window.dispatchEvent(new CustomEvent('workflow-steps-collapse-all'))" class="inline-flex items-center rounded-md border border-gray-300 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                                    {{ __('Alle einklappen') }}
+                                </button>
+                            @endif
+                            <button type="button" @click="newStep = !newStep; if (newStep) $nextTick(() => $refs.newStepTitle.focus())" class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200">
+                                + {{ __('Neu') }}
+                            </button>
+                        </div>
                     </div>
 
                     <form x-show="newStep" x-cloak method="POST" action="{{ route('admin.workflows.schritte.store') }}" class="flex items-center gap-2 rounded-md border border-gray-200 p-2">
@@ -182,136 +192,203 @@
                         <button type="submit" class="rounded-md bg-gray-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700">{{ __('Anlegen') }}</button>
                     </form>
 
-                    @if ($steps->isNotEmpty())
-                        <div
-                            x-data="{
-                                async saveOrder() {
-                                    const ids = [...this.$el.querySelectorAll('[x-sort\\:item]')].map(el => el.getAttribute('x-sort:item'));
-                                    await fetch({{ \Illuminate\Support\Js::from(route('admin.workflows.schritte.reorder')) }}, {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': {{ \Illuminate\Support\Js::from(csrf_token()) }} },
-                                        body: JSON.stringify({ workflow_id: {{ $selectedWorkflow->id }}, steps: ids }),
-                                    });
-                                },
-                            }"
-                            x-sort="saveOrder()"
-                            class="space-y-2"
+                    @if ($steps->isEmpty())
+                        <div class="rounded-md border border-dashed border-gray-200 p-3 text-sm text-gray-400">{{ __('Noch keine Schritte in diesem Workflow.') }}</div>
+                    @else
+                        @php
+                            // Alle Schritte werden zusammen in EINEM Formular
+                            // gespeichert (Ralf: "für jeden WFS einen eigenen
+                            // Speichern-Button" war "mühsam") - bei einem
+                            // Validierungsfehler wird NICHTS gespeichert, die
+                            // ganze Seite kommt mit alten Eingaben + rotem
+                            // Hinweistext zurück (siehe
+                            // WorkflowController::stepsBulkUpdate()). $errors
+                            // ist dabei entweder leer (normaler Seitenaufruf)
+                            // oder mit "steps.<id>.<feld>"-Schlüsseln gefüllt.
+                            $isResubmit = $errors->any();
+                        @endphp
+                        <form
+                            method="POST"
+                            action="{{ route('admin.workflows.schritte.bulk-update') }}"
+                            data-steps-form
+                            x-data="{ dirty: {{ $isResubmit ? 'true' : 'false' }} }"
+                            @input="dirty = true; window.__workflowsDirtyForms.add($el)"
+                            @submit="dirty = false; window.__workflowsDirtyForms.delete($el)"
                         >
-                    @endif
-                    @forelse ($steps as $step)
-                        <div x-sort:item="{{ $step->id }}" x-data="{ rowDirty: false, expanded: false, sendEmail: {{ \Illuminate\Support\Js::from($step->send_email) }} }" class="rounded-md border border-gray-200 p-2">
-                            <form method="POST" action="{{ route('admin.workflows.schritte.update', $step) }}" data-row-form class="space-y-2" @input="rowDirty = true; window.__workflowsDirtyForms.add($el)" @submit="rowDirty = false; window.__workflowsDirtyForms.delete($el)">
-                                @csrf
-                                <div class="flex items-center gap-2">
-                                    <span x-sort:handle class="cursor-move px-1 text-gray-300 hover:text-gray-500" title="{{ __('Sortierung ändern') }}">⠿</span>
-                                    <input type="text" name="title" value="{{ $step->title }}" required class="flex-1 rounded-md border-gray-300 text-sm">
-                                    <label class="flex shrink-0 items-center gap-1 text-xs text-gray-600">
-                                        <input type="checkbox" name="is_active" value="1" @checked($step->is_active) class="rounded border-gray-300">
-                                        {{ __('Aktiv') }}
-                                    </label>
-                                    <button type="button" @click="expanded = !expanded" class="shrink-0 text-xs text-indigo-600 hover:text-indigo-800" x-text="expanded ? {{ \Illuminate\Support\Js::from(__('weniger')) }} : {{ \Illuminate\Support\Js::from(__('Details')) }}"></button>
-                                    <button type="submit" x-show="rowDirty" x-cloak class="shrink-0 rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">
-                                        {{ __('Speichern') }}
-                                    </button>
-                                </div>
+                            @csrf
+                            <input type="hidden" name="workflow_id" value="{{ $selectedWorkflow->id }}">
 
-                                <div class="pl-6 text-xs text-gray-500">
-                                    {{ __('Funktionsgruppe(n)') }}:
-                                    <span class="ml-1 inline-flex flex-wrap gap-x-3 gap-y-1 align-middle">
-                                        @forelse ($functionGroups as $group)
-                                            <label class="inline-flex items-center gap-1">
-                                                <input type="checkbox" name="function_groups[{{ $group->id }}]" value="1" @checked($step->functionGroups->contains('id', $group->id)) class="rounded border-gray-300">
-                                                {{ $group->name }}
+                            <div
+                                x-data="{
+                                    async saveOrder() {
+                                        const ids = [...this.$el.querySelectorAll('[x-sort\\:item]')].map(el => el.getAttribute('x-sort:item'));
+                                        await fetch({{ \Illuminate\Support\Js::from(route('admin.workflows.schritte.reorder')) }}, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': {{ \Illuminate\Support\Js::from(csrf_token()) }} },
+                                            body: JSON.stringify({ workflow_id: {{ $selectedWorkflow->id }}, steps: ids }),
+                                        });
+                                    },
+                                }"
+                                x-sort="saveOrder()"
+                                class="space-y-2"
+                            >
+                                @foreach ($steps as $step)
+                                    @php $stepHasError = $errors->has("steps.{$step->id}.*"); @endphp
+                                    <div
+                                        x-sort:item="{{ $step->id }}"
+                                        x-data="{ expanded: {{ $stepHasError ? 'true' : 'false' }}, sendEmail: {{ \Illuminate\Support\Js::from($isResubmit ? old("steps.{$step->id}.send_email") !== null : $step->send_email) }} }"
+                                        x-on:workflow-steps-expand-all.window="expanded = true"
+                                        x-on:workflow-steps-collapse-all.window="expanded = false"
+                                        class="rounded-md border p-2 {{ $stepHasError ? 'border-red-300' : 'border-gray-200' }}"
+                                    >
+                                        <div class="flex items-center gap-2">
+                                            <span x-sort:handle class="cursor-move px-1 text-gray-300 hover:text-gray-500" title="{{ __('Sortierung ändern') }}">⠿</span>
+                                            <div class="min-w-0 flex-1">
+                                                <input
+                                                    type="text"
+                                                    name="steps[{{ $step->id }}][title]"
+                                                    value="{{ old("steps.{$step->id}.title", $step->title) }}"
+                                                    required
+                                                    class="w-full rounded-md text-sm {{ $errors->has("steps.{$step->id}.title") ? 'border-red-400' : 'border-gray-300' }}"
+                                                >
+                                                @error("steps.{$step->id}.title")
+                                                    <p class="mt-0.5 text-xs text-red-600">{{ $message }}</p>
+                                                @enderror
+                                            </div>
+                                            <label class="flex shrink-0 items-center gap-1 text-xs text-gray-600">
+                                                <input type="checkbox" name="steps[{{ $step->id }}][is_active]" value="1" @checked($isResubmit ? old("steps.{$step->id}.is_active") !== null : $step->is_active) class="rounded border-gray-300">
+                                                {{ __('Aktiv') }}
                                             </label>
-                                        @empty
-                                            <span class="text-gray-300">{{ __('– keine Funktionsgruppen angelegt –') }}</span>
-                                        @endforelse
-                                    </span>
-                                </div>
-
-                                <template x-if="expanded">
-                                    <div class="grid grid-cols-2 gap-3 rounded-md bg-gray-50 p-3 pl-9 text-xs">
-                                        <div>
-                                            <label class="block text-gray-500">{{ __('Kurztitel') }}</label>
-                                            <input type="text" name="short_title" value="{{ $step->short_title }}" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
-                                        </div>
-                                        <div>
-                                            <label class="block text-gray-500">{{ __('Meilenstein-Titel') }}</label>
-                                            <input type="text" name="milestone_title" value="{{ $step->milestone_title }}" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
+                                            <button type="button" @click="expanded = !expanded" class="shrink-0 text-xs text-indigo-600 hover:text-indigo-800" x-text="expanded ? {{ \Illuminate\Support\Js::from(__('weniger')) }} : {{ \Illuminate\Support\Js::from(__('Details')) }}"></button>
                                         </div>
 
-                                        <div class="col-span-2 flex flex-wrap gap-x-4 gap-y-1">
-                                            <label class="inline-flex items-center gap-1"><input type="checkbox" name="is_start" value="1" @checked($step->is_start) class="rounded border-gray-300"> {{ __('Start des Projekts') }}</label>
-                                            <label class="inline-flex items-center gap-1"><input type="checkbox" name="is_end" value="1" @checked($step->is_end) class="rounded border-gray-300"> {{ __('Ende des Projekts') }}</label>
-                                            <label class="inline-flex items-center gap-1"><input type="checkbox" name="is_market_launch" value="1" @checked($step->is_market_launch) class="rounded border-gray-300"> {{ __('Markteinführung') }}</label>
+                                        <div class="pl-6 text-xs text-gray-500">
+                                            {{ __('Funktionsgruppe(n)') }}:
+                                            <span class="ml-1 inline-flex flex-wrap gap-x-3 gap-y-1 align-middle">
+                                                @forelse ($functionGroups as $group)
+                                                    <label class="inline-flex items-center gap-1">
+                                                        <input type="checkbox" name="steps[{{ $step->id }}][function_groups][{{ $group->id }}]" value="1" @checked($isResubmit ? old("steps.{$step->id}.function_groups.{$group->id}") !== null : $step->functionGroups->contains('id', $group->id)) class="rounded border-gray-300">
+                                                        {{ $group->name }}
+                                                    </label>
+                                                @empty
+                                                    <span class="text-gray-300">{{ __('– keine Funktionsgruppen angelegt –') }}</span>
+                                                @endforelse
+                                            </span>
                                         </div>
 
-                                        <div class="col-span-2 flex flex-wrap items-center gap-x-4 gap-y-1">
-                                            <label class="inline-flex items-center gap-1"><input type="checkbox" name="has_due_date" value="1" @checked($step->has_due_date) class="rounded border-gray-300"> {{ __('Hat Termin') }}</label>
-                                            <label class="inline-flex items-center gap-1">
-                                                {{ __('Dauer (Tage)') }}
-                                                <input type="number" name="duration_days" min="0" value="{{ $step->duration_days }}" class="w-16 rounded-md border-gray-300 text-xs">
-                                            </label>
-                                            <label class="inline-flex items-center gap-1"><input type="checkbox" name="duration_editable" value="1" @checked($step->duration_editable) class="rounded border-gray-300"> {{ __('Dauer änderbar') }}</label>
-                                        </div>
+                                        <template x-if="expanded">
+                                            <div class="grid grid-cols-2 gap-3 rounded-md bg-gray-50 p-3 pl-9 text-xs">
+                                                <div>
+                                                    <label class="block text-gray-500">{{ __('Kurztitel') }}</label>
+                                                    <input type="text" name="steps[{{ $step->id }}][short_title]" value="{{ old("steps.{$step->id}.short_title", $step->short_title) }}" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
+                                                    @error("steps.{$step->id}.short_title")
+                                                        <p class="mt-0.5 text-red-600">{{ $message }}</p>
+                                                    @enderror
+                                                </div>
+                                                <div>
+                                                    <label class="block text-gray-500">{{ __('Meilenstein-Titel') }}</label>
+                                                    <input type="text" name="steps[{{ $step->id }}][milestone_title]" value="{{ old("steps.{$step->id}.milestone_title", $step->milestone_title) }}" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
+                                                    @error("steps.{$step->id}.milestone_title")
+                                                        <p class="mt-0.5 text-red-600">{{ $message }}</p>
+                                                    @enderror
+                                                </div>
 
-                                        <div class="col-span-2 flex flex-wrap gap-x-4 gap-y-1">
-                                            <label class="inline-flex items-center gap-1"><input type="checkbox" name="send_email" value="1" x-model="sendEmail" class="rounded border-gray-300"> {{ __('E-Mail beim Aktivieren senden') }}</label>
-                                            <label class="inline-flex items-center gap-1"><input type="checkbox" name="show_in_translation" value="1" @checked($step->show_in_translation) class="rounded border-gray-300"> {{ __('In Übersetzungsansicht zeigen') }}</label>
-                                        </div>
+                                                <div class="col-span-2 flex flex-wrap gap-x-4 gap-y-1">
+                                                    <label class="inline-flex items-center gap-1"><input type="checkbox" name="steps[{{ $step->id }}][is_start]" value="1" @checked($isResubmit ? old("steps.{$step->id}.is_start") !== null : $step->is_start) class="rounded border-gray-300"> {{ __('Start des Projekts') }}</label>
+                                                    <label class="inline-flex items-center gap-1"><input type="checkbox" name="steps[{{ $step->id }}][is_end]" value="1" @checked($isResubmit ? old("steps.{$step->id}.is_end") !== null : $step->is_end) class="rounded border-gray-300"> {{ __('Ende des Projekts') }}</label>
+                                                    <label class="inline-flex items-center gap-1"><input type="checkbox" name="steps[{{ $step->id }}][is_market_launch]" value="1" @checked($isResubmit ? old("steps.{$step->id}.is_market_launch") !== null : $step->is_market_launch) class="rounded border-gray-300"> {{ __('Markteinführung') }}</label>
+                                                </div>
 
-                                        <div>
-                                            <label class="block text-gray-500">{{ __('Kastenfarbe') }}</label>
-                                            <select name="lifecycle_status" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
-                                                <option value="1" @selected($step->lifecycle_status === 1)>{{ __('Bevorstehend (hell)') }}</option>
-                                                <option value="2" @selected($step->lifecycle_status === 2)>{{ __('Standard (grün)') }}</option>
-                                                <option value="3" @selected($step->lifecycle_status === 3)>{{ __('Abgeschlossen (dunkelgrün)') }}</option>
-                                                <option value="4" @selected($step->lifecycle_status === 4)>{{ __('Sonderfall (grau)') }}</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label class="block text-gray-500">{{ __('Sonderbutton') }}</label>
-                                            <select name="js_function" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
-                                                <option value="">{{ __('– keiner –') }}</option>
-                                                @foreach ($specialButtons as $key => $label)
-                                                    <option value="{{ $key }}" @selected($step->js_function === $key)>{{ $label }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
+                                                <div class="col-span-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                                                    <label class="inline-flex items-center gap-1"><input type="checkbox" name="steps[{{ $step->id }}][has_due_date]" value="1" @checked($isResubmit ? old("steps.{$step->id}.has_due_date") !== null : $step->has_due_date) class="rounded border-gray-300"> {{ __('Hat Termin') }}</label>
+                                                    <label class="inline-flex items-center gap-1">
+                                                        {{ __('Dauer (Tage)') }}
+                                                        <input type="number" name="steps[{{ $step->id }}][duration_days]" min="0" value="{{ old("steps.{$step->id}.duration_days", $step->duration_days) }}" class="w-16 rounded-md border-gray-300 text-xs">
+                                                    </label>
+                                                    <label class="inline-flex items-center gap-1"><input type="checkbox" name="steps[{{ $step->id }}][duration_editable]" value="1" @checked($isResubmit ? old("steps.{$step->id}.duration_editable") !== null : $step->duration_editable) class="rounded border-gray-300"> {{ __('Dauer änderbar') }}</label>
+                                                    @error("steps.{$step->id}.duration_days")
+                                                        <span class="text-red-600">{{ $message }}</span>
+                                                    @enderror
+                                                </div>
 
-                                        <div class="col-span-2">
-                                            <label class="block text-gray-500">{{ __('Beschreibung') }}</label>
-                                            <textarea name="description" rows="2" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">{{ $step->description }}</textarea>
-                                        </div>
-                                        <div class="col-span-2" x-show="sendEmail">
-                                            <label class="block text-gray-500">{{ __('E-Mail-Text') }}</label>
-                                            <textarea name="email_text" rows="2" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">{{ $step->email_text }}</textarea>
+                                                <div class="col-span-2 flex flex-wrap gap-x-4 gap-y-1">
+                                                    <label class="inline-flex items-center gap-1"><input type="checkbox" name="steps[{{ $step->id }}][send_email]" value="1" x-model="sendEmail" class="rounded border-gray-300"> {{ __('E-Mail beim Aktivieren senden') }}</label>
+                                                    <label class="inline-flex items-center gap-1"><input type="checkbox" name="steps[{{ $step->id }}][show_in_translation]" value="1" @checked($isResubmit ? old("steps.{$step->id}.show_in_translation") !== null : $step->show_in_translation) class="rounded border-gray-300"> {{ __('In Übersetzungsansicht zeigen') }}</label>
+                                                </div>
+
+                                                <div>
+                                                    <label class="block text-gray-500">{{ __('Kastenfarbe') }}</label>
+                                                    <select name="steps[{{ $step->id }}][lifecycle_status]" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
+                                                        @php $lifecycleOld = (string) old("steps.{$step->id}.lifecycle_status", (string) $step->lifecycle_status); @endphp
+                                                        <option value="1" @selected($lifecycleOld === '1')>{{ __('Bevorstehend (hell)') }}</option>
+                                                        <option value="2" @selected($lifecycleOld === '2')>{{ __('Standard (grün)') }}</option>
+                                                        <option value="3" @selected($lifecycleOld === '3')>{{ __('Abgeschlossen (dunkelgrün)') }}</option>
+                                                        <option value="4" @selected($lifecycleOld === '4')>{{ __('Sonderfall (grau)') }}</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label class="block text-gray-500">{{ __('Sonderbutton') }}</label>
+                                                    <select name="steps[{{ $step->id }}][js_function]" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
+                                                        @php $jsFunctionOld = (string) old("steps.{$step->id}.js_function", (string) $step->js_function); @endphp
+                                                        <option value="" @selected($jsFunctionOld === '')>{{ __('– keiner –') }}</option>
+                                                        @foreach ($specialButtons as $key => $label)
+                                                            <option value="{{ $key }}" @selected($jsFunctionOld === $key)>{{ $label }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    @error("steps.{$step->id}.js_function")
+                                                        <p class="mt-0.5 text-red-600">{{ $message }}</p>
+                                                    @enderror
+                                                </div>
+
+                                                <div class="col-span-2">
+                                                    <label class="block text-gray-500">{{ __('Beschreibung') }}</label>
+                                                    <textarea name="steps[{{ $step->id }}][description]" rows="2" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">{{ old("steps.{$step->id}.description", $step->description) }}</textarea>
+                                                </div>
+                                                <div class="col-span-2" x-show="sendEmail">
+                                                    <label class="block text-gray-500">{{ __('E-Mail-Text') }}</label>
+                                                    <textarea name="steps[{{ $step->id }}][email_text]" rows="2" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">{{ old("steps.{$step->id}.email_text", $step->email_text) }}</textarea>
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        <div class="mt-1.5 flex justify-end">
+                                            <button
+                                                type="button"
+                                                @click="window.deleteWithConfirm(document.getElementById('delete-step-form-{{ $step->id }}'), {
+                                                    message: {{ \Illuminate\Support\Js::from(__('Diesen Schritt wirklich endgültig löschen?')) }},
+                                                })"
+                                                class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                                            >
+                                                {{ __('Löschen') }}
+                                            </button>
                                         </div>
                                     </div>
-                                </template>
-                            </form>
+                                @endforeach
+                            </div>
 
-                            <form method="POST" action="{{ route('admin.workflows.schritte.destroy', $step) }}" x-ref="deleteForm" class="hidden">
+                            {{-- Schwebt am unteren Rand DIESES Bereichs, bleibt beim
+                                 Scrollen durch die Schritte sichtbar - gleiches
+                                 Muster wie der Speichern-Button im
+                                 Personen-Overlay (Ralf: "der Speichern-Button
+                                 müsste schweben und immer sichtbar sein"). --}}
+                            <div class="sticky bottom-0 -mx-3 -mb-3 mt-2 flex items-center justify-between gap-2 border-t border-gray-200 bg-white px-3 py-2" x-show="dirty" x-cloak>
+                                @if ($isResubmit)
+                                    <span class="text-xs text-red-600">{{ __('Bitte die rot markierten Felder korrigieren, dann erneut speichern.') }}</span>
+                                @else
+                                    <span></span>
+                                @endif
+                                <button type="submit" class="shrink-0 rounded-md bg-gray-800 px-4 py-1.5 text-xs font-medium text-white hover:bg-gray-700">
+                                    {{ __('Speichern') }}
+                                </button>
+                            </div>
+                        </form>
+
+                        @foreach ($steps as $step)
+                            <form method="POST" action="{{ route('admin.workflows.schritte.destroy', $step) }}" id="delete-step-form-{{ $step->id }}" class="hidden">
                                 @csrf
                                 @method('DELETE')
                             </form>
-                            <div class="mt-1.5 flex justify-end">
-                                <button
-                                    type="button"
-                                    @click="window.deleteWithConfirm($refs.deleteForm, {
-                                        message: {{ \Illuminate\Support\Js::from(__('Diesen Schritt wirklich endgültig löschen?')) }},
-                                    })"
-                                    class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
-                                >
-                                    {{ __('Löschen') }}
-                                </button>
-                            </div>
-                        </div>
-                    @empty
-                        <div class="rounded-md border border-dashed border-gray-200 p-3 text-sm text-gray-400">{{ __('Noch keine Schritte in diesem Workflow.') }}</div>
-                    @endforelse
-                    @if ($steps->isNotEmpty())
-                        </div>
+                        @endforeach
                     @endif
                 </div>
                 </div>

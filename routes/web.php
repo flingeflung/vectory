@@ -131,7 +131,7 @@ Route::middleware(['auth', 'verified', 'can:access-admin'])->prefix('admin')->na
     Route::post('/workflows/reorder', [WorkflowController::class, 'reorder'])->name('workflows.reorder');
     Route::post('/workflows/schritte', [WorkflowController::class, 'stepStore'])->name('workflows.schritte.store');
     Route::post('/workflows/schritte/reorder', [WorkflowController::class, 'stepReorder'])->name('workflows.schritte.reorder');
-    Route::post('/workflows/schritte/{step}', [WorkflowController::class, 'stepUpdate'])->name('workflows.schritte.update');
+    Route::post('/workflows/schritte/speichern', [WorkflowController::class, 'stepsBulkUpdate'])->name('workflows.schritte.bulk-update');
     Route::delete('/workflows/schritte/{step}', [WorkflowController::class, 'stepDestroy'])->name('workflows.schritte.destroy');
     Route::post('/workflows/{workflow}/neue-version', [WorkflowController::class, 'newVersion'])->name('workflows.new-version');
     Route::post('/workflows/{workflow}/veroeffentlichen', [WorkflowController::class, 'publish'])->name('workflows.publish');

@@ -11,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -41,14 +42,29 @@ class WorkflowController extends Controller
 {
     public function index(Request $request): View|Response
     {
+        $data = $this->buildIndexData($request, $request->filled('workflow') ? (int) $request->query('workflow') : null);
+
+        // Gleiches Muster wie Projektkategorien: Umbenennen/Schritt-Speichern
+        // laufen per fetch() + reloadManageListPreservingEdits() statt
+        // vollem Seiten-Reload, der Reload holt sich hierüber nur das
+        // Inhalts-Partial (X-Overlay-Header).
+        if ($this->isOverlayRequest($request)) {
+            return response()->view('admin.workflows.partials.content', $data);
+        }
+
+        return view('admin.workflows.index', $data);
+    }
+
+    /**
+     * @return array{workflows: \Illuminate\Support\Collection, selectedWorkflow: ?Workflow, steps: \Illuminate\Support\Collection, isPublished: bool, functionGroups: \Illuminate\Support\Collection, specialButtons: array, lifecycleColors: array}
+     */
+    private function buildIndexData(Request $request, ?int $workflowId): array
+    {
         $tenantId = CurrentTenant::id();
 
         $workflows = Workflow::query()->where('tenant_id', $tenantId)->orderBy('sort')->withCount('steps')->with('supersededBy')->get();
 
-        $selectedWorkflow = null;
-        if ($request->filled('workflow')) {
-            $selectedWorkflow = $workflows->firstWhere('id', (int) $request->query('workflow'));
-        }
+        $selectedWorkflow = $workflowId ? $workflows->firstWhere('id', $workflowId) : null;
 
         $steps = collect();
         $isPublished = false;
@@ -62,7 +78,7 @@ class WorkflowController extends Controller
         // dort bewusst kein Sortierkriterium (kein D&D für diese Liste).
         $functionGroups = FunctionGroup::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('name')->get(['id', 'name']);
 
-        $data = [
+        return [
             'workflows' => $workflows,
             'selectedWorkflow' => $selectedWorkflow,
             'steps' => $steps,
@@ -71,16 +87,6 @@ class WorkflowController extends Controller
             'specialButtons' => WorkflowStep::SPECIAL_BUTTONS,
             'lifecycleColors' => WorkflowStep::LIFECYCLE_COLORS,
         ];
-
-        // Gleiches Muster wie Projektkategorien: Umbenennen/Schritt-Speichern
-        // laufen per fetch() + reloadManageListPreservingEdits() statt
-        // vollem Seiten-Reload, der Reload holt sich hierüber nur das
-        // Inhalts-Partial (X-Overlay-Header).
-        if ($this->isOverlayRequest($request)) {
-            return response()->view('admin.workflows.partials.content', $data);
-        }
-
-        return view('admin.workflows.index', $data);
     }
 
     private function isOverlayRequest(Request $request): bool
@@ -260,60 +266,88 @@ class WorkflowController extends Controller
         return redirect()->route('admin.workflows', ['workflow' => $step->workflow_id])->with('status', 'workflows-updated');
     }
 
-    public function stepUpdate(Request $request, WorkflowStep $step): RedirectResponse
+    /**
+     * Speichert ALLE Schritte eines Workflows in einem Rutsch (Ralfs
+     * Bug-Report: ein Speichern-Button je Zeile war beim Durchgehen vieler
+     * Schritte "mühsam"). Ein Feld je Schritt validiert
+     * (steps.<id>.<feld>), damit ein Fehler in einer Zeile direkt darunter
+     * angezeigt werden kann, ohne die anderen Zeilen zu betreffen - alles
+     * oder nichts wird gespeichert (Ralfs Vorgabe: "das Speichern ist
+     * blockiert", kein Teilspeichern bei Fehlern).
+     */
+    public function stepsBulkUpdate(Request $request): RedirectResponse|Response
     {
-        abort_unless($step->tenant_id === CurrentTenant::id(), 404);
-
-        $workflow = $step->workflow;
+        $tenantId = CurrentTenant::id();
+        $workflow = Workflow::query()->where('tenant_id', $tenantId)->findOrFail($request->integer('workflow_id'));
         abort_if($workflow->isPublished(), 422, 'Dieser Workflow wurde bereits veröffentlicht und kann nicht mehr geändert werden. Bitte erst eine neue Version erstellen.');
 
-        $validated = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
-            'short_title' => ['nullable', 'string', 'max:255'],
-            'milestone_title' => ['nullable', 'string', 'max:255'],
-            'duration_days' => ['nullable', 'integer', 'min:0'],
-            'js_function' => ['nullable', 'string', Rule::in(array_keys(WorkflowStep::SPECIAL_BUTTONS))],
-            // Nicht "required": das Feld steckt im einklappbaren
-            // Details-Bereich (x-if="expanded") und fehlt deshalb im Request,
-            // wenn eine Zeile gespeichert wird, ohne "Details" vorher
-            // aufgeklappt zu haben - war "required" gesetzt, schlug die
-            // Validierung dann still fehl (fetch() prüft den Response-Status
-            // nicht) und die AJAX-Vorschau tat nur so, als sei gespeichert
-            // (Ralfs Bug-Report: Haken sah gesetzt aus, verschwand aber beim
-            // Verlassen der Seite wieder).
-            'lifecycle_status' => ['nullable', 'integer', 'between:1,4'],
-            'description' => ['nullable', 'string'],
-            'email_text' => ['nullable', 'string'],
+        $stepIds = WorkflowStep::query()->where('workflow_id', $workflow->id)->pluck('id');
+        $submittedIds = collect(array_keys($request->array('steps', [])))->map(fn ($id) => (int) $id);
+        abort_unless($submittedIds->every(fn ($id) => $stepIds->contains($id)), 404);
+
+        $validator = Validator::make($request->all(), [
+            'steps' => ['required', 'array'],
+            'steps.*.title' => ['required', 'string', 'max:255'],
+            'steps.*.short_title' => ['nullable', 'string', 'max:255'],
+            'steps.*.milestone_title' => ['nullable', 'string', 'max:255'],
+            'steps.*.duration_days' => ['nullable', 'integer', 'min:0'],
+            'steps.*.js_function' => ['nullable', 'string', Rule::in(array_keys(WorkflowStep::SPECIAL_BUTTONS))],
+            'steps.*.lifecycle_status' => ['nullable', 'integer', 'between:1,4'],
+            'steps.*.description' => ['nullable', 'string'],
+            'steps.*.email_text' => ['nullable', 'string'],
         ]);
 
-        $step->update([
-            ...$validated,
-            'duration_days' => $validated['duration_days'] ?? 0,
-            'lifecycle_status' => $validated['lifecycle_status'] ?? $step->lifecycle_status,
-            // ?? statt ?: - js_function fehlt im Request komplett, wenn die
-            // Zeile ohne aufgeklappte "Details" gespeichert wird, ?: würde
-            // dann (anders als ??) trotzdem zuerst zugreifen und einen
-            // "Undefined array key"-Fehler werfen.
-            'js_function' => ($validated['js_function'] ?? '') ?: null,
-            'is_active' => $request->boolean('is_active'),
-            'is_start' => $request->boolean('is_start'),
-            'is_end' => $request->boolean('is_end'),
-            'is_market_launch' => $request->boolean('is_market_launch'),
-            'has_due_date' => $request->boolean('has_due_date'),
-            'send_email' => $request->boolean('send_email'),
-            'duration_editable' => $request->boolean('duration_editable'),
-            'show_in_translation' => $request->boolean('show_in_translation'),
-        ]);
+        if ($validator->fails()) {
+            // Flash statt Redirect-mit-withInput: wir rendern die Seite
+            // direkt neu (kein Redirect, damit fetch() nicht unbemerkt der
+            // Weiterleitung folgt und Erfolg vortäuscht, siehe
+            // GraphicOrderController-Bugfix) - old() braucht die geflashten
+            // Werte trotzdem, um die Eingaben nicht zu verlieren.
+            $request->flash();
 
-        // function_groups[<id>]=1 statt function_groups[]=<id> - jede
-        // Checkbox braucht einen eigenen Feldnamen, sonst würde
-        // reloadManageListPreservingEdits() (snapshot je "input.name") beim
-        // ungespeicherten Wiederherstellen nur die letzte Checkbox behalten.
-        $functionGroupIds = collect(array_keys($request->array('function_groups', [])))->map(fn ($id) => (int) $id);
-        $validIds = FunctionGroup::query()->where('tenant_id', $step->tenant_id)->whereIn('id', $functionGroupIds)->pluck('id');
-        $step->functionGroups()->sync($validIds->mapWithKeys(fn ($id) => [$id => ['tenant_id' => $step->tenant_id]]));
+            return response()
+                ->view('admin.workflows.partials.content', $this->buildIndexData($request, $workflow->id) + [
+                    // $errors muss ein ViewErrorBag sein (nicht die rohe
+                    // MessageBag von validator->errors()) - @error/$errors->has()
+                    // im Blade erwarten intern getBag('default'), das eine
+                    // reine MessageBag nicht hat.
+                    'errors' => (new \Illuminate\Support\ViewErrorBag())->put('default', $validator->errors()),
+                ])
+                ->setStatusCode(422);
+        }
 
-        return redirect()->route('admin.workflows', ['workflow' => $step->workflow_id])->with('status', 'workflows-updated');
+        $validated = $validator->validated();
+
+        DB::transaction(function () use ($request, $validated, $tenantId) {
+            foreach ($validated['steps'] as $stepId => $data) {
+                $step = WorkflowStep::query()->where('tenant_id', $tenantId)->findOrFail((int) $stepId);
+
+                $step->update([
+                    ...$data,
+                    'duration_days' => $data['duration_days'] ?? 0,
+                    'lifecycle_status' => $data['lifecycle_status'] ?? $step->lifecycle_status,
+                    'js_function' => ($data['js_function'] ?? '') ?: null,
+                    'is_active' => $request->boolean("steps.$stepId.is_active"),
+                    'is_start' => $request->boolean("steps.$stepId.is_start"),
+                    'is_end' => $request->boolean("steps.$stepId.is_end"),
+                    'is_market_launch' => $request->boolean("steps.$stepId.is_market_launch"),
+                    'has_due_date' => $request->boolean("steps.$stepId.has_due_date"),
+                    'send_email' => $request->boolean("steps.$stepId.send_email"),
+                    'duration_editable' => $request->boolean("steps.$stepId.duration_editable"),
+                    'show_in_translation' => $request->boolean("steps.$stepId.show_in_translation"),
+                ]);
+
+                // function_groups[<id>]=1 statt function_groups[]=<id> - jede
+                // Checkbox braucht einen eigenen Feldnamen, sonst würde ein
+                // ungespeichertes Wiederherstellen anderer Felder nur die
+                // letzte Checkbox behalten (gleiches Muster wie zuvor).
+                $functionGroupIds = collect(array_keys($request->array("steps.$stepId.function_groups", [])))->map(fn ($id) => (int) $id);
+                $validIds = FunctionGroup::query()->where('tenant_id', $tenantId)->whereIn('id', $functionGroupIds)->pluck('id');
+                $step->functionGroups()->sync($validIds->mapWithKeys(fn ($id) => [$id => ['tenant_id' => $tenantId]]));
+            }
+        });
+
+        return redirect()->route('admin.workflows', ['workflow' => $workflow->id])->with('status', 'workflows-updated');
     }
 
     /**
