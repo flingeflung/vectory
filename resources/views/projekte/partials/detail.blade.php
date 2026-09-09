@@ -532,9 +532,20 @@
                         ->sortBy('sort')
                         ->values();
                 @endphp
-                <div class="mb-3">
-                    <span class="text-gray-500">{{ __('Workflow') }}:</span>
-                    <span class="font-semibold text-gray-900">{{ $project->workflow->name }}</span>
+                <div class="mb-3 flex items-center justify-between">
+                    <div>
+                        <span class="text-gray-500">{{ __('Workflow') }}:</span>
+                        <span class="font-semibold text-gray-900">{{ $project->workflow->name }}</span>
+                    </div>
+                    @can('workflow_step.due_date')
+                        <button
+                            type="button"
+                            @click.stop="window.openProjectSchedule({{ $project->id }})"
+                            class="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                        >
+                            {{ __('Termine berechnen') }}
+                        </button>
+                    @endcan
                 </div>
 
                 @if ($currentSteps->isEmpty())

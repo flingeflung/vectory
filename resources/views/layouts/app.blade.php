@@ -1477,6 +1477,62 @@
         </script>
 
         {{--
+            Terminberechnung (Vietto-Vorbild: ajax_workflow_edittermine.php) -
+            gleiches Muster wie das Aktivieren-Modal: eigenständig, global,
+            lädt/aktualisiert seinen Inhalt per fetch(). window.reloadProjectSchedule()
+            wird sowohl vom "Neu berechnen" als auch von "übernehmen"/"alle
+            übernehmen" im Partial selbst aufgerufen (siehe schedule-body.blade.php),
+            liefert kompletten HTML-Ersatz statt JSON, da Vietto dieselbe
+            Tabelle bei jedem Schritt komplett neu rendert statt einzelner
+            Werte.
+        --}}
+        <x-modal name="project-schedule" max-width="2xl">
+            <div class="flex max-h-[85vh] flex-col">
+                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Termine berechnen') }}</h3>
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-schedule' }))"
+                        class="text-gray-400 hover:text-gray-600"
+                        aria-label="{{ __('Schließen') }}"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="project-schedule-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
+                    {{ __('Lädt…') }}
+                </div>
+            </div>
+        </x-modal>
+
+        <script>
+            (function () {
+                const scheduleBody = () => document.getElementById('project-schedule-body');
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                let currentProjectId = null;
+
+                window.openProjectSchedule = async (projectId) => {
+                    currentProjectId = projectId;
+                    scheduleBody().innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
+                    window.dispatchEvent(new CustomEvent('open-modal', { detail: 'project-schedule' }));
+                    scheduleBody().innerHTML = await fetch(`/projekte/${projectId}/termine`).then((r) => r.text());
+                };
+
+                window.reloadProjectSchedule = async (url, params) => {
+                    const body = new URLSearchParams(params);
+                    scheduleBody().innerHTML = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: body.toString(),
+                    }).then((r) => r.text());
+                    await window.refreshUnderlyingProject(currentProjectId);
+                };
+            })();
+        </script>
+
+        {{--
             Projektverzeichnis: "Inhalt auflisten" (read-only Baumansicht) -
             aus Projektübersicht UND Projektdetails per Icon neben der PN
             öffenbar (siehe directory-status.blade.php), analog Viettos
