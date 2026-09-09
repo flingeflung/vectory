@@ -32,8 +32,8 @@
                         <th class="pb-2 pr-2"></th>
                     @endif
                     <th class="w-16 pb-2 pr-2 text-center">{{ __('Berechnung-referenz') }}</th>
-                    <th class="pb-2 pr-2 text-center">{{ __('Start') }}</th>
-                    <th class="pb-2 text-center">{{ __('Ende') }}</th>
+                    <th class="pb-2 pr-2 text-center">{{ __('Start') }}<sup>1</sup></th>
+                    <th class="pb-2 text-center">{{ __('Ende') }}<sup>1</sup></th>
                 </tr>
             </thead>
             <tbody>
@@ -133,6 +133,7 @@
         </table>
 
         <div class="mt-1 text-xs text-gray-400"><sup>1</sup> {{ __('Termine, die für das Projekt als Start- bzw. Enddatum gelten sollen.') }}</div>
+        <div class="text-xs text-gray-400">{{ __('Die Neuberechnung zählt nur Werktage (Mo-Fr) - Feiertage werden nicht berücksichtigt.') }}</div>
 
         <div class="mt-3 flex items-center justify-between border-t border-gray-200 pt-3">
             <button
