@@ -138,9 +138,23 @@
                 </div>
             @else
                 {{-- Entwurf: voll editierbar. --}}
+                @php
+                    // Muss vor dem x-init unten feststehen, das den Alpine-Store
+                    // initialisiert - siehe auch die spätere Verwendung beim
+                    // Schritte-Formular selbst.
+                    $isResubmit = $errors->any();
+                @endphp
                 <div
                     x-data="{}"
-                    x-init="window.adminPageIsDirty = () => window.__workflowsDirtyForms.size > 0;"
+                    x-init="
+                        window.adminPageIsDirty = () => window.__workflowsDirtyForms.size > 0;
+                        {{-- Geteilter Zustand zwischen dem Schritte-Formular und dem
+                             Speichern-Button im Fußbereich (siehe dort) - beide sind
+                             unterschiedliche Alpine-Komponenten (Geschwister, kein
+                             gemeinsames x-data), $store verbindet sie ohne
+                             DOM-Verschachtelung. --}}
+                        Alpine.store('workflowStepsDirty', { value: {{ \Illuminate\Support\Js::from($isResubmit ?? false) }} });
+                    "
                     class="flex flex-1 min-h-0 flex-col"
                 >
                 <form
@@ -165,6 +179,12 @@
                     <textarea name="description" rows="2" placeholder="{{ __('Beschreibung') }}" class="w-full rounded-md border-gray-300 text-sm">{{ $selectedWorkflow->description }}</textarea>
                     <p class="text-xs text-gray-400">{{ __('Entwurf - frei bearbeitbar und beliebig oft zum Testen einem Projekt zuweisbar. Bleibt so, bis du ihn veröffentlichst.') }}</p>
                 </form>
+
+                @if ($isResubmit)
+                    <div class="shrink-0 border-b border-gray-100 bg-red-50 px-3 py-2 text-xs text-red-600">
+                        {{ __('Bitte die rot markierten Felder korrigieren, dann erneut speichern.') }}
+                    </div>
+                @endif
 
                 <div class="flex-1 min-h-0 overflow-y-auto p-3 space-y-2" x-data="{ newStep: false }">
                     <div class="flex items-center justify-between">
@@ -205,15 +225,16 @@
                             // WorkflowController::stepsBulkUpdate()). $errors
                             // ist dabei entweder leer (normaler Seitenaufruf)
                             // oder mit "steps.<id>.<feld>"-Schlüsseln gefüllt.
-                            $isResubmit = $errors->any();
+                            // ($isResubmit selbst steht schon weiter oben fest,
+                            // wird hier nur nochmal referenziert.)
                         @endphp
                         <form
+                            id="workflow-steps-form"
                             method="POST"
                             action="{{ route('admin.workflows.schritte.bulk-update') }}"
                             data-steps-form
-                            x-data="{ dirty: {{ $isResubmit ? 'true' : 'false' }} }"
-                            @input="dirty = true; window.__workflowsDirtyForms.add($el)"
-                            @submit="dirty = false; window.__workflowsDirtyForms.delete($el)"
+                            @input="$store.workflowStepsDirty.value = true; window.__workflowsDirtyForms.add($el)"
+                            @submit="$store.workflowStepsDirty.value = false; window.__workflowsDirtyForms.delete($el)"
                         >
                             @csrf
                             <input type="hidden" name="workflow_id" value="{{ $selectedWorkflow->id }}">
@@ -365,22 +386,6 @@
                                     </div>
                                 @endforeach
                             </div>
-
-                            {{-- Schwebt am unteren Rand DIESES Bereichs, bleibt beim
-                                 Scrollen durch die Schritte sichtbar - gleiches
-                                 Muster wie der Speichern-Button im
-                                 Personen-Overlay (Ralf: "der Speichern-Button
-                                 müsste schweben und immer sichtbar sein"). --}}
-                            <div class="sticky bottom-0 -mx-3 mt-2 flex items-center justify-between gap-2 border-t border-gray-200 bg-white px-3 py-2" x-show="dirty" x-cloak>
-                                @if ($isResubmit)
-                                    <span class="text-xs text-red-600">{{ __('Bitte die rot markierten Felder korrigieren, dann erneut speichern.') }}</span>
-                                @else
-                                    <span></span>
-                                @endif
-                                <button type="submit" class="shrink-0 rounded-md bg-btn-primary px-4 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
-                                    {{ __('Speichern') }}
-                                </button>
-                            </div>
                         </form>
 
                         @foreach ($steps as $step)
@@ -407,6 +412,23 @@
                     }" class="flex items-center justify-between gap-2">
                         <span class="text-xs text-gray-400">{{ __('Entwurf - kann jederzeit gelöscht werden (auch eventuelle Test-Zuweisungen gehen dabei verloren).') }}</span>
                         <div class="flex items-center gap-2">
+                            {{-- Speichert das Schritte-Formular von außerhalb (form=
+                                 statt Verschachtelung) - liegt im immer sichtbaren
+                                 Fußbereich statt einer schwebenden Leiste innerhalb
+                                 der Liste, die dort mit dem letzten Schritt
+                                 kollidierte (Ralf-Bug-Report: "Lücke im weißen
+                                 Balken"). Geteilter Zustand über den Alpine-Store,
+                                 da dieser Button in einer anderen Komponente steckt
+                                 als das Formular selbst. --}}
+                            <button
+                                type="submit"
+                                form="workflow-steps-form"
+                                x-show="$store.workflowStepsDirty.value"
+                                x-cloak
+                                class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover"
+                            >
+                                {{ __('Speichern') }}
+                            </button>
                             <form method="POST" action="{{ route('admin.workflows.destroy', $selectedWorkflow) }}" x-ref="deleteWorkflowForm" class="hidden">
                                 @csrf
                                 @method('DELETE')
