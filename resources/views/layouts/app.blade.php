@@ -1268,12 +1268,22 @@
                         headers: { 'X-CSRF-TOKEN': csrfToken },
                         body: new FormData(event.target),
                     });
-                    illuBody().innerHTML = await response.text();
 
-                    if (response.ok) {
-                        snapshot();
-                        window.refreshUnderlyingProject(currentProjectId);
+                    // response.ok allein reicht nicht: bei einem serverseitigen
+                    // Fehler (z.B. Statuskatalog fehlt für den Mandanten) leitet
+                    // Laravel per redirect()->back() um - fetch() folgt dem
+                    // automatisch, die Zielseite antwortet dann ganz normal mit
+                    // 200. Ohne die redirected-Prüfung landet die komplette
+                    // Projekte-Seite als Inhalt im Illustrationsauftrag-Modal
+                    // (Ralf-Bug-Report).
+                    if (! response.ok || response.redirected) {
+                        await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Speichern fehlgeschlagen. Bitte Eingaben prüfen und erneut versuchen.')) }});
+                        return;
                     }
+
+                    illuBody().innerHTML = await response.text();
+                    snapshot();
+                    window.refreshUnderlyingProject(currentProjectId);
                 });
             })();
         </script>
