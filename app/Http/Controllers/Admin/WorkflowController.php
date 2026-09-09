@@ -322,25 +322,52 @@ class WorkflowController extends Controller
             foreach ($validated['steps'] as $stepId => $data) {
                 $step = WorkflowStep::query()->where('tenant_id', $tenantId)->findOrFail((int) $stepId);
 
-                $step->update([
-                    ...$data,
-                    'duration_days' => $data['duration_days'] ?? 0,
-                    'lifecycle_status' => $data['lifecycle_status'] ?? $step->lifecycle_status,
-                    'js_function' => ($data['js_function'] ?? '') ?: null,
+                $update = [
+                    'title' => $data['title'],
                     'is_active' => $request->boolean("steps.$stepId.is_active"),
-                    'is_start' => $request->boolean("steps.$stepId.is_start"),
-                    'is_end' => $request->boolean("steps.$stepId.is_end"),
-                    'is_market_launch' => $request->boolean("steps.$stepId.is_market_launch"),
-                    'has_due_date' => $request->boolean("steps.$stepId.has_due_date"),
-                    'send_email' => $request->boolean("steps.$stepId.send_email"),
-                    'duration_editable' => $request->boolean("steps.$stepId.duration_editable"),
-                    'show_in_translation' => $request->boolean("steps.$stepId.show_in_translation"),
-                ]);
+                ];
+
+                // Die restlichen Felder stecken im einklappbaren
+                // Details-Bereich (x-if="expanded") - x-if entfernt das
+                // Element bei eingeklapptem Zustand KOMPLETT aus dem DOM,
+                // die Felder fehlen dann ganz im Request. Ohne diese Prüfung
+                // wurden sie beim Speichern eines anderen Schritts still auf
+                // 0/false/null zurückgesetzt (Datenverlust-Bug, Ralfs
+                // Bug-Report: "der komplette Workflow ist geschrottet" -
+                // betraf 16 von 17 Schritten bei einem einzigen Testsubmit).
+                // Erkennungsmerkmal "Details war offen": duration_days ist
+                // ein normales number-Feld, das nur innerhalb des
+                // Details-Bereichs existiert und IMMER mitgeschickt wird,
+                // wenn der Bereich offen war (auch wenn leer).
+                if ($request->has("steps.$stepId.duration_days")) {
+                    $update = [
+                        ...$update,
+                        'short_title' => $data['short_title'] ?? null,
+                        'milestone_title' => $data['milestone_title'] ?? null,
+                        'duration_days' => $data['duration_days'] ?? 0,
+                        'lifecycle_status' => $data['lifecycle_status'] ?? $step->lifecycle_status,
+                        'js_function' => ($data['js_function'] ?? '') ?: null,
+                        'description' => $data['description'] ?? null,
+                        'email_text' => $data['email_text'] ?? null,
+                        'is_start' => $request->boolean("steps.$stepId.is_start"),
+                        'is_end' => $request->boolean("steps.$stepId.is_end"),
+                        'is_market_launch' => $request->boolean("steps.$stepId.is_market_launch"),
+                        'has_due_date' => $request->boolean("steps.$stepId.has_due_date"),
+                        'send_email' => $request->boolean("steps.$stepId.send_email"),
+                        'duration_editable' => $request->boolean("steps.$stepId.duration_editable"),
+                        'show_in_translation' => $request->boolean("steps.$stepId.show_in_translation"),
+                    ];
+                }
+
+                $step->update($update);
 
                 // function_groups[<id>]=1 statt function_groups[]=<id> - jede
                 // Checkbox braucht einen eigenen Feldnamen, sonst würde ein
                 // ungespeichertes Wiederherstellen anderer Felder nur die
                 // letzte Checkbox behalten (gleiches Muster wie zuvor).
+                // Steht AUSSERHALB des Details-Bereichs, wird immer
+                // mitgeschickt - hier ist "leer" also ein echtes "keine
+                // Funktionsgruppe angehakt", kein fehlendes Feld.
                 $functionGroupIds = collect(array_keys($request->array("steps.$stepId.function_groups", [])))->map(fn ($id) => (int) $id);
                 $validIds = FunctionGroup::query()->where('tenant_id', $tenantId)->whereIn('id', $functionGroupIds)->pluck('id');
                 $step->functionGroups()->sync($validIds->mapWithKeys(fn ($id) => [$id => ['tenant_id' => $tenantId]]));
