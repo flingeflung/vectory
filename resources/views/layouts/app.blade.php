@@ -1513,11 +1513,12 @@
                 const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
                 let currentProjectId = null;
 
-                window.openProjectSchedule = async (projectId) => {
+                window.openProjectSchedule = async (projectId, referenceStepId) => {
                     currentProjectId = projectId;
                     scheduleBody().innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
                     window.dispatchEvent(new CustomEvent('open-modal', { detail: 'project-schedule' }));
-                    scheduleBody().innerHTML = await fetch(`/projekte/${projectId}/termine`).then((r) => r.text());
+                    const query = referenceStepId ? `?reference_step_id=${referenceStepId}` : '';
+                    scheduleBody().innerHTML = await fetch(`/projekte/${projectId}/termine${query}`).then((r) => r.text());
                 };
 
                 window.reloadProjectSchedule = async (url, params) => {

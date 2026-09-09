@@ -532,20 +532,9 @@
                         ->sortBy('sort')
                         ->values();
                 @endphp
-                <div class="mb-3 flex items-center justify-between">
-                    <div>
-                        <span class="text-gray-500">{{ __('Workflow') }}:</span>
-                        <span class="font-semibold text-gray-900">{{ $project->workflow->name }}</span>
-                    </div>
-                    @can('workflow_step.due_date')
-                        <button
-                            type="button"
-                            @click.stop="window.openProjectSchedule({{ $project->id }})"
-                            class="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                        >
-                            {{ __('Termine berechnen') }}
-                        </button>
-                    @endcan
+                <div class="mb-3">
+                    <span class="text-gray-500">{{ __('Workflow') }}:</span>
+                    <span class="font-semibold text-gray-900">{{ $project->workflow->name }}</span>
                 </div>
 
                 @if ($currentSteps->isEmpty())
@@ -610,6 +599,19 @@
                                                         "
                                                         class="rounded border-gray-300 py-0.5 text-xs"
                                                     >
+                                                    @can('workflow_step.due_date')
+                                                        <button
+                                                            type="button"
+                                                            @click.stop="window.openProjectSchedule({{ $project->id }}, {{ $pws->id }})"
+                                                            class="text-gray-400 hover:text-gray-700"
+                                                            title="{{ __('Termine berechnen') }}"
+                                                        >
+                                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6h7.5v2.25h-7.5V6ZM12 2.25c-1.892 0-3.758.11-5.593.322C5.307 2.7 4.5 3.65 4.5 4.757V19.5a2.25 2.25 0 002.25 2.25h10.5a2.25 2.25 0 002.25-2.25V4.757c0-1.108-.806-2.057-1.907-2.185A48.507 48.507 0 0012 2.25Z" />
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 11.25h.008v.008H8.25v-.008Zm0 2.25h.008v.008H8.25V13.5Zm0 2.25h.008v.008H8.25v-.008Zm2.498-4.5h.007v.008h-.007v-.008Zm0 2.25h.007v.008h-.007V13.5Zm0 2.25h.007v.008h-.007v-.008Zm2.504-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V13.5Z" />
+                                                            </svg>
+                                                        </button>
+                                                    @endcan
                                                 </div>
                                             </div>
                                         @endif
@@ -655,76 +657,69 @@
                                     </div>
                                 @endif
                                 </div>
-                            </div>
 
-                            @if ($step->js_function === 'wfs_grafik')
-                                @php
-                                    $illuOrders = $project->graphicOrders;
-                                    $illuTotal = $illuOrders->count();
-                                    $illuOpen = $illuOrders->filter(fn ($o) => $o->status?->is_open)->count();
-                                    $illuDone = $illuOrders->filter(fn ($o) => $o->status && ! $o->status->is_open && ! $o->status->is_discarded)->count();
-                                    $illuDiscarded = $illuOrders->filter(fn ($o) => $o->status?->is_discarded)->count();
-                                    $illuAllClosed = $illuTotal > 0 && $illuOpen === 0;
-                                    // Solange mind. 1 Auftrag offen ist: "aktiviert", gleiche Farbe wie
-                                    // der Haupt-WFS (lifecycle_status=2). Erst wenn alle abgeschlossen
-                                    // sind, wechselt die Farbe auf "Beendet" (lifecycle_status=3) -
-                                    // siehe WorkflowStep::LIFECYCLE_COLORS, dieselbe Quelle wie oben.
-                                    $illuBgColor = match (true) {
-                                        $illuTotal === 0 => null,
-                                        $illuAllClosed => \App\Models\WorkflowStep::LIFECYCLE_COLORS[3],
-                                        default => \App\Models\WorkflowStep::LIFECYCLE_COLORS[2],
-                                    };
-                                @endphp
-                                <div
-                                    class="w-48 shrink-0 rounded-md px-3 py-2 text-xs {{ $illuTotal === 0 ? 'border-2 border-dashed border-gray-300' : 'border border-gray-300' }}"
-                                    @if ($illuBgColor) style="background-color: {{ $illuBgColor }}" @endif
-                                >
-                                    <div class="font-medium text-gray-900">{{ __('Illustration') }}</div>
-                                    <div class="mt-1 text-gray-700">
-                                        @if ($illuTotal === 0)
-                                            {{ __('Keine Aufträge vorhanden') }}
-                                        @else
-                                            {{ $illuTotal }} {{ $illuTotal === 1 ? __('Auftrag') : __('Aufträge') }}: {{ $illuOpen }} {{ __('offen') }}, {{ $illuDone }} {{ __('erledigt') }}, {{ $illuDiscarded }} {{ __('verworfen') }}
-                                        @endif
-                                    </div>
-                                    @if ($illuAllClosed)
-                                        <div class="mt-1 font-medium text-green-800">{{ __('Erledigt') }}</div>
-                                    @endif
-                                    <button
-                                        type="button"
-                                        @click.stop="window.openIllustrationOrders({{ $project->id }})"
-                                        class="mt-2 rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                                    >
-                                        {{ __('Illustrationsauftrag') }}
-                                    </button>
-                                </div>
-                            @elseif ($step->js_function === 'wfs_freigabe')
-                                <div
-                                    x-data="{ granted: {{ \Illuminate\Support\Js::from($pws->milestone_done_at !== null) }}, saving: false }"
-                                    class="w-40 shrink-0 rounded-md border px-3 py-2 text-xs"
-                                    :class="granted ? 'border-green-300 bg-green-50' : 'border-gray-300'"
-                                    @click.stop
-                                >
-                                    <div class="font-medium text-gray-900">{{ $step->milestone_title ?: __('Freigabe') }}</div>
-                                    @if ($pws->is_current && auth()->user()->can('workflow_step.activate'))
+                                {{-- Sonderbutton INNERHALB der Schritt-Box, nicht daneben (Ralf:
+                                     "In Vietto stehen die Buttons innerhalb des WFS") - eigene volle
+                                     Zeile unter Zuständigkeit/Funktionsgruppe. --}}
+                                @if ($step->js_function === 'wfs_grafik')
+                                    @php
+                                        $illuOrders = $project->graphicOrders;
+                                        $illuTotal = $illuOrders->count();
+                                        $illuOpen = $illuOrders->filter(fn ($o) => $o->status?->is_open)->count();
+                                        $illuDone = $illuOrders->filter(fn ($o) => $o->status && ! $o->status->is_open && ! $o->status->is_discarded)->count();
+                                        $illuDiscarded = $illuOrders->filter(fn ($o) => $o->status?->is_discarded)->count();
+                                        $illuAllClosed = $illuTotal > 0 && $illuOpen === 0;
+                                    @endphp
+                                    <div class="mt-2 flex items-center gap-2 border-t border-black/10 pt-2 text-xs" @click.stop>
                                         <button
                                             type="button"
-                                            :disabled="saving"
-                                            @click="
-                                                saving = true;
-                                                fetch({{ \Illuminate\Support\Js::from(route('projekte.workflow-steps.freigabe', [$project, $pws])) }}, {
-                                                    method: 'PATCH',
-                                                    headers: { 'X-CSRF-TOKEN': {{ \Illuminate\Support\Js::from(csrf_token()) }} },
-                                                }).then(r => r.json()).then(data => { granted = data.milestone_done_at !== null; }).finally(() => saving = false);
-                                            "
-                                            class="mt-1 rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                                            x-text="granted ? {{ \Illuminate\Support\Js::from(__('Freigabe zurücknehmen')) }} : {{ \Illuminate\Support\Js::from(__('Freigabe erteilen')) }}"
-                                        ></button>
-                                    @else
-                                        <div class="mt-1" :class="granted ? 'text-green-800' : 'text-gray-500'" x-text="granted ? {{ \Illuminate\Support\Js::from(__('Freigabe erteilt')) }} : {{ \Illuminate\Support\Js::from(__('Noch keine Freigabe')) }}"></div>
-                                    @endif
-                                </div>
-                            @endif
+                                            @click.stop="window.openIllustrationOrders({{ $project->id }})"
+                                            class="rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                                        >
+                                            {{ __('Illustrationsauftrag') }}
+                                        </button>
+                                        <span class="text-gray-700">
+                                            @if ($illuTotal === 0)
+                                                {{ __('Keine Aufträge vorhanden') }}
+                                            @else
+                                                {{ $illuTotal }} {{ $illuTotal === 1 ? __('Auftrag') : __('Aufträge') }}, {{ $illuOpen }} {{ __('offen') }}, {{ $illuDone }} {{ __('erledigt') }}, {{ $illuDiscarded }} {{ __('verworfen') }}
+                                                @if ($illuAllClosed)
+                                                    &middot; <span class="font-medium text-green-800">{{ __('Erledigt') }}</span>
+                                                @endif
+                                            @endif
+                                        </span>
+                                    </div>
+                                @elseif ($step->js_function === 'wfs_freigabe')
+                                    <div
+                                        x-data="{ granted: {{ \Illuminate\Support\Js::from($pws->milestone_done_at !== null) }}, saving: false }"
+                                        class="mt-2 flex items-center gap-2 border-t border-black/10 pt-2 text-xs"
+                                        @click.stop
+                                    >
+                                        {{-- Milestone-Titel als eigenständiges Label statt in den Satz
+                                             eingebaut - milestone_title ist Freitext, dessen Genus wir
+                                             nicht kennen ("Redaktionsschluss" bräuchte "kein", nicht
+                                             "keine") - grammatisch nur sicher als reines Label, nicht als
+                                             Satzobjekt von "erteilen/zurücknehmen". --}}
+                                        <span class="font-medium text-gray-700">{{ $step->milestone_title ?: __('Freigabe') }}:</span>
+                                        @if ($pws->is_current && auth()->user()->can('workflow_step.activate'))
+                                            <button
+                                                type="button"
+                                                :disabled="saving"
+                                                @click="
+                                                    saving = true;
+                                                    fetch({{ \Illuminate\Support\Js::from(route('projekte.workflow-steps.freigabe', [$project, $pws])) }}, {
+                                                        method: 'PATCH',
+                                                        headers: { 'X-CSRF-TOKEN': {{ \Illuminate\Support\Js::from(csrf_token()) }} },
+                                                    }).then(r => r.json()).then(data => { granted = data.milestone_done_at !== null; }).finally(() => saving = false);
+                                                "
+                                                class="rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                                                x-text="granted ? {{ \Illuminate\Support\Js::from(__('Freigabe zurücknehmen')) }} : {{ \Illuminate\Support\Js::from(__('Freigabe erteilen')) }}"
+                                            ></button>
+                                        @else
+                                            <span :class="granted ? 'text-green-800' : 'text-gray-500'" x-text="granted ? {{ \Illuminate\Support\Js::from(__('erteilt')) }} : {{ \Illuminate\Support\Js::from(__('noch nicht erteilt')) }}"></span>
+                                        @endif
+                                    </div>
+                                @endif
                             </div>
                             @unless ($loop->last)
                                 <svg class="h-5 w-5 shrink-0 text-gray-400" fill="currentColor" viewBox="0 0 20 20">

@@ -23,13 +23,23 @@ use Illuminate\View\View;
  */
 class ProjectScheduleController extends Controller
 {
-    public function form(Project $project): View
+    public function form(Request $request, Project $project): View
     {
+        // Optionale Vorauswahl: Klick auf das kleine "Termine berechnen"-Icon
+        // direkt neben einem Terminfeld markiert diesen Schritt schon als
+        // Referenz (Ralf: "kleine schicke Symbole direkt neben die
+        // Terminfelder" statt einem einzelnen, "verloren" wirkenden Button).
+        $steps = $this->scheduleStepsFor($project);
+        $referenceStepId = $request->integer('reference_step_id') ?: null;
+        if ($referenceStepId !== null && ! $steps->contains('id', $referenceStepId)) {
+            $referenceStepId = null;
+        }
+
         return view('projekte.partials.schedule-body', [
             'project' => $project,
-            'steps' => $this->scheduleStepsFor($project),
+            'steps' => $steps,
             'proposal' => null,
-            'referenceStepId' => null,
+            'referenceStepId' => $referenceStepId,
         ]);
     }
 
