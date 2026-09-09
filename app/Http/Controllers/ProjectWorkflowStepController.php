@@ -158,7 +158,8 @@ class ProjectWorkflowStepController extends Controller
         // Weiche Warnung: offene Illustrationsaufträge bei Beenden/Verwerfen (lifecycle_status 3/4).
         $openGraphicOrdersCount = null;
         if (in_array($target->workflowStep->lifecycle_status, [3, 4], true)) {
-            $count = $project->graphicOrders()->whereHas('status', fn ($query) => $query->where('is_open', true))->count();
+            $openStatusValues = array_map(fn ($status) => $status->value, array_filter(\App\Enums\GraphicOrderStatus::cases(), fn ($status) => $status->isOpen()));
+            $count = $project->graphicOrders()->whereIn('graphic_order_status_id', $openStatusValues)->count();
             $openGraphicOrdersCount = $count > 0 ? $count : null;
         }
 

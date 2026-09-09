@@ -7,6 +7,7 @@ use App\Models\FunctionGroup;
 use App\Models\Market;
 use App\Models\MarketSet;
 use App\Enums\ActivityType;
+use App\Enums\GraphicOrderStatus;
 use App\Mail\ProjectRequestMail;
 use App\Models\Activity;
 use App\Models\Favorite;
@@ -183,9 +184,11 @@ class ProjectController extends Controller
             return collect();
         }
 
+        $nonDiscardedStatusValues = array_map(fn ($status) => $status->value, array_filter(GraphicOrderStatus::cases(), fn ($status) => ! $status->isDiscarded()));
+
         return \App\Models\GraphicOrder::query()
             ->whereIn('project_id', $projectIds)
-            ->whereHas('status', fn (Builder $query) => $query->where('is_discarded', false))
+            ->whereIn('graphic_order_status_id', $nonDiscardedStatusValues)
             ->selectRaw('project_id, COUNT(*) as total, SUM(CASE WHEN done_at IS NOT NULL THEN 1 ELSE 0 END) as done, GREATEST(SUM(image_count), 0) as images')
             ->groupBy('project_id')
             ->get()
@@ -526,7 +529,7 @@ class ProjectController extends Controller
         $filters = $this->filtersFromRequest($request);
 
         return [
-            'project' => $project->loadMissing(['markets', 'projectPeople.person', 'projectPeople.functionGroup', 'workflow', 'activities.user', 'projectWorkflowSteps.workflowStep.functionGroups', 'projectWorkflowSteps.people.functionGroup', 'projectWorkflowSteps.people.person', 'graphicOrders.status', 'graphicOrders.initiatedBy', 'graphicOrders.illustrator']),
+            'project' => $project->loadMissing(['markets', 'projectPeople.person', 'projectPeople.functionGroup', 'workflow', 'activities.user', 'projectWorkflowSteps.workflowStep.functionGroups', 'projectWorkflowSteps.people.functionGroup', 'projectWorkflowSteps.people.person', 'graphicOrders.initiatedBy', 'graphicOrders.illustrator']),
             'attributes' => $project->relevantAttributes(),
             'allMarkets' => Market::query()->where('tenant_id', $project->tenant_id)->orderBy('sort')->get(),
             'marketSets' => MarketSet::query()->where('tenant_id', $project->tenant_id)->with('markets:id')->orderBy('sort')->get(),
@@ -724,10 +727,13 @@ class ProjectController extends Controller
             }
 
             if ($key === 'graphic_orders') {
+                $openStatusValues = array_map(fn ($status) => $status->value, array_filter(GraphicOrderStatus::cases(), fn ($status) => $status->isOpen()));
+                $nonDiscardedStatusValues = array_map(fn ($status) => $status->value, array_filter(GraphicOrderStatus::cases(), fn ($status) => ! $status->isDiscarded()));
+
                 match ($value) {
                     'ohne' => $query->whereDoesntHave('graphicOrders'),
-                    'mit' => $query->whereHas('graphicOrders.status', fn (Builder $query) => $query->where('is_discarded', false)),
-                    'offene' => $query->whereHas('graphicOrders.status', fn (Builder $query) => $query->where('is_open', true)),
+                    'mit' => $query->whereHas('graphicOrders', fn (Builder $query) => $query->whereIn('graphic_order_status_id', $nonDiscardedStatusValues)),
+                    'offene' => $query->whereHas('graphicOrders', fn (Builder $query) => $query->whereIn('graphic_order_status_id', $openStatusValues)),
                     default => null,
                 };
 
