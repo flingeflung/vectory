@@ -31,7 +31,7 @@
                         <th class="pb-2 pr-2">{{ __('Neu berechnet') }}</th>
                         <th class="pb-2 pr-2"></th>
                     @endif
-                    <th class="pb-2 pr-2 text-center">{{ __('Referenz') }}</th>
+                    <th class="w-16 pb-2 pr-2 text-center">{{ __('Berechnung-referenz') }}</th>
                     <th class="pb-2 pr-2 text-center">{{ __('Start') }}</th>
                     <th class="pb-2 text-center">{{ __('Ende') }}</th>
                 </tr>
