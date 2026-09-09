@@ -435,6 +435,20 @@ class ProjectController extends Controller
         }
         $validated['attributes'] = $attributes;
 
+        // Start/Ende werden einseitig aus dem als Start/Ende markierten
+        // Workflow-Schritt übernommen (ProjectWorkflowStepObserver), sobald
+        // ein solcher Schritt existiert - das Feld ist dann im Formular
+        // disabled, das hier ist die serverseitige Absicherung gegen einen
+        // manipulierten Request (gleiches Muster wie beim Publikationsdatum
+        // oben). Einfach unsetten statt abzulehnen: es gibt hier kein
+        // fehlendes Recht, das Feld ist schlicht nicht die Datenquelle.
+        if ($project->projectWorkflowSteps->contains(fn ($pws) => $pws->effectiveIsStart())) {
+            unset($validated['start_date']);
+        }
+        if ($project->projectWorkflowSteps->contains(fn ($pws) => $pws->effectiveIsEnd())) {
+            unset($validated['end_date']);
+        }
+
         // Publikationsdatum nur mit eigenem Recht änderbar (Ralf: "nur für
         // TR, sie ist schließlich für das Publizieren zuständig") - Feld ist
         // im Formular bei fehlendem Recht disabled, das hier ist die

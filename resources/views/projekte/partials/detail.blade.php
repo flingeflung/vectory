@@ -8,6 +8,16 @@
     // (die nur einen Rahmen haben).
     $secondaryBtn = 'inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover';
     $secondaryBtnDisabled = 'inline-flex items-center rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-300 cursor-not-allowed';
+
+    // Start/Ende werden einseitig aus dem als Start/Ende markierten
+    // Workflow-Schritt übernommen (ProjectWorkflowStepObserver), sobald ein
+    // solcher Schritt existiert - das Feld hier manuell zu ändern, wäre dann
+    // wirkungslos (der nächste Termin am WFS überschreibt es wieder) und
+    // damit irreführend. Also nur editierbar, solange es keinen WFS gibt,
+    // der diese Rolle trägt (Ralf-Feedback).
+    $startStep = $project->projectWorkflowSteps->first(fn ($pws) => $pws->effectiveIsStart());
+    $endStep = $project->projectWorkflowSteps->first(fn ($pws) => $pws->effectiveIsEnd());
+    $stepLabel = fn ($pws) => $pws->effectiveMilestoneTitle() ?: $pws->workflowStep->title;
 @endphp
 
 <div class="{{ $isOverlay ? 'flex h-full min-h-0 flex-col' : 'p-4' }}">
@@ -206,11 +216,29 @@
         <div class="flex flex-wrap gap-4">
             <div>
                 <label class="block text-xs text-gray-500">{{ __('Start') }}</label>
-                <input type="date" name="start_date" value="{{ old('start_date', $project->start_date?->format('Y-m-d')) }}" class="mt-0.5 rounded border-gray-300 py-1 text-sm">
+                <input
+                    type="date"
+                    name="start_date"
+                    value="{{ old('start_date', $project->start_date?->format('Y-m-d')) }}"
+                    @disabled($startStep)
+                    class="mt-0.5 rounded border-gray-300 py-1 text-sm disabled:bg-gray-50 disabled:text-gray-400"
+                >
+                @if ($startStep)
+                    <div class="mt-0.5 text-xs text-gray-400">{{ __('Aus Workflow-Schritt „:step“ übernommen.', ['step' => $stepLabel($startStep)]) }}</div>
+                @endif
             </div>
             <div>
                 <label class="block text-xs text-gray-500">{{ __('Ende') }}</label>
-                <input type="date" name="end_date" value="{{ old('end_date', $project->end_date?->format('Y-m-d')) }}" class="mt-0.5 rounded border-gray-300 py-1 text-sm">
+                <input
+                    type="date"
+                    name="end_date"
+                    value="{{ old('end_date', $project->end_date?->format('Y-m-d')) }}"
+                    @disabled($endStep)
+                    class="mt-0.5 rounded border-gray-300 py-1 text-sm disabled:bg-gray-50 disabled:text-gray-400"
+                >
+                @if ($endStep)
+                    <div class="mt-0.5 text-xs text-gray-400">{{ __('Aus Workflow-Schritt „:step“ übernommen.', ['step' => $stepLabel($endStep)]) }}</div>
+                @endif
             </div>
         </div>
 
