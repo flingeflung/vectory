@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\FunctionGroup;
+use App\Models\SystemSetting;
+use App\Models\Tenant;
 use App\Models\Workflow;
 use App\Models\WorkflowStep;
 use App\Support\CurrentTenant;
@@ -78,6 +80,10 @@ class WorkflowController extends Controller
         // dort bewusst kein Sortierkriterium (kein D&D für diese Liste).
         $functionGroups = FunctionGroup::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('name')->get(['id', 'name']);
 
+        $otherTenants = SystemSetting::multiTenantEnabled()
+            ? Tenant::query()->where('id', '!=', $tenantId)->orderBy('name')->get(['id', 'name'])
+            : collect();
+
         return [
             'workflows' => $workflows,
             'selectedWorkflow' => $selectedWorkflow,
@@ -86,6 +92,7 @@ class WorkflowController extends Controller
             'functionGroups' => $functionGroups,
             'specialButtons' => WorkflowStep::SPECIAL_BUTTONS,
             'lifecycleColors' => WorkflowStep::LIFECYCLE_COLORS,
+            'otherTenants' => $otherTenants,
         ];
     }
 
@@ -300,6 +307,64 @@ class WorkflowController extends Controller
         });
 
         return redirect()->route('admin.workflows', ['workflow' => $newWorkflow->id])->with('status', 'workflows-updated');
+    }
+
+    /**
+     * "Zu anderem Kunden kopieren" (Ralf, 2026-09-10, ausgelöst durch den
+     * manuellen Umzug eines aus Vietto importierten WF nach _Standardkunde
+     * per Tinker - "die brauchen wir"). Bewusst OHNE Funktionsgruppen-
+     * Zuordnung an den Schritten: Namen/Sets unterscheiden sich je Kunde
+     * (unterschiedliche Kürzel, teils fehlende Gruppen), ein Namens-Mapping
+     * würde stillschweigend falsche Gruppen zuordnen können - der Admin
+     * weist sie im Zielkunden bewusst selbst neu zu, UI erklärt das vorher.
+     * Kein "(Kopie)"-Namenszusatz, da im Zielkunden kein Namenskonflikt
+     * droht. Bleibt nach dem Kopieren im aktuell aktiven (Quell-)Kunden -
+     * ein Wechsel des aktiven Mandanten wäre hier ein zu großer Nebeneffekt
+     * für eine reine Kopier-Aktion.
+     */
+    public function copyToTenant(Request $request, Workflow $workflow): RedirectResponse
+    {
+        abort_unless($workflow->tenant_id === CurrentTenant::id(), 404);
+        abort_unless(SystemSetting::multiTenantEnabled(), 403);
+
+        $targetTenant = Tenant::query()
+            ->where('id', '!=', $workflow->tenant_id)
+            ->findOrFail($request->integer('target_tenant_id'));
+
+        DB::transaction(function () use ($workflow, $targetTenant) {
+            $nextSort = 1 + (int) Workflow::query()->where('tenant_id', $targetTenant->id)->max('sort');
+            $newWorkflow = Workflow::query()->create([
+                'tenant_id' => $targetTenant->id,
+                'short_name' => $workflow->short_name,
+                'name' => $workflow->name,
+                'description' => $workflow->description,
+                'active' => false,
+                'sort' => $nextSort,
+            ]);
+
+            $workflow->steps->each(fn (WorkflowStep $step) => WorkflowStep::query()->create([
+                'tenant_id' => $targetTenant->id,
+                'workflow_id' => $newWorkflow->id,
+                'title' => $step->title,
+                'short_title' => $step->short_title,
+                'milestone_title' => $step->milestone_title,
+                'sort' => $step->sort,
+                'duration_days' => $step->duration_days,
+                'is_active' => $step->is_active,
+                'is_start' => $step->is_start,
+                'is_end' => $step->is_end,
+                'is_market_launch' => $step->is_market_launch,
+                'has_due_date' => $step->has_due_date,
+                'send_email' => $step->send_email,
+                'show_in_translation' => $step->show_in_translation,
+                'js_function' => $step->js_function,
+                'description' => $step->description,
+                'email_text' => $step->email_text,
+                'lifecycle_status' => $step->lifecycle_status,
+            ]));
+        });
+
+        return redirect()->route('admin.workflows', ['workflow' => $workflow->id])->with('status', 'workflow-copied-to-tenant');
     }
 
     public function stepStore(Request $request): RedirectResponse

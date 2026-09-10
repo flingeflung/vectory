@@ -137,6 +137,7 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     Route::delete('/workflows/schritte/{step}', [WorkflowController::class, 'stepDestroy'])->name('workflows.schritte.destroy');
     Route::post('/workflows/{workflow}/neue-version', [WorkflowController::class, 'newVersion'])->name('workflows.new-version');
     Route::post('/workflows/{workflow}/kopieren', [WorkflowController::class, 'duplicate'])->name('workflows.duplicate');
+    Route::post('/workflows/{workflow}/kopieren-zu', [WorkflowController::class, 'copyToTenant'])->name('workflows.copy-to-tenant');
 
     Route::get('/mail-vorlagen', [MailTemplateController::class, 'index'])->name('mail-vorlagen');
     Route::post('/mail-vorlagen', [MailTemplateController::class, 'store'])->name('mail-vorlagen.store');
