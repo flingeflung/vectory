@@ -31,10 +31,12 @@
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('Projektpfad') }}</label>
                         <input type="text" name="project_path" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
+                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Ordner, unter dem die Projektverzeichnisse dieses Kunden angelegt werden.') }}</p>
                     </div>
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('Info-E-Mail') }}</label>
                         <input type="email" name="notification_email" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
+                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Empfänger für automatische Mitteilungen an diesen Kunden, z. B. Projektanfragen.') }}</p>
                     </div>
                     @if ($tenants->isNotEmpty())
                         <div>
@@ -106,10 +108,12 @@
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('Projektpfad') }}</label>
                         <input type="text" name="project_path" value="{{ $selectedTenant->project_path }}" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Ordner, unter dem die Projektverzeichnisse dieses Kunden angelegt werden.') }}</p>
                     </div>
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('Info-E-Mail') }}</label>
                         <input type="email" name="notification_email" value="{{ $selectedTenant->notification_email }}" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Empfänger für automatische Mitteilungen an diesen Kunden, z. B. Projektanfragen.') }}</p>
                     </div>
                 </form>
 
