@@ -332,11 +332,16 @@ class WorkflowController extends Controller
             ->findOrFail($request->integer('target_tenant_id'));
 
         DB::transaction(function () use ($workflow, $targetTenant) {
-            $nextSort = 1 + (int) Workflow::query()->where('tenant_id', $targetTenant->id)->max('sort');
+            // withoutGlobalScope('tenant') nötig: der automatische Scope
+            // filtert sonst zusätzlich auf CurrentTenant::id() (den QUELL-
+            // Kunden) - "tenant_id = Ziel AND tenant_id = Quelle" ist nie
+            // wahr, max()/exists() liefern dann immer null/false, egal was
+            // beim Zielkunden schon existiert (siehe uniqueWorkflowName()).
+            $nextSort = 1 + (int) Workflow::withoutGlobalScope('tenant')->where('tenant_id', $targetTenant->id)->max('sort');
             $newWorkflow = Workflow::query()->create([
                 'tenant_id' => $targetTenant->id,
                 'short_name' => $workflow->short_name,
-                'name' => $workflow->name,
+                'name' => $this->uniqueWorkflowName($workflow->name, $targetTenant->id),
                 'description' => $workflow->description,
                 'active' => false,
                 'sort' => $nextSort,
@@ -365,6 +370,27 @@ class WorkflowController extends Controller
         });
 
         return redirect()->route('admin.workflows', ['workflow' => $workflow->id])->with('status', 'workflow-copied-to-tenant');
+    }
+
+    /**
+     * Windows-übliches Namensschema bei Kollision: "Name" existiert schon
+     * beim Zielkunden -> "Name (1)", ist das auch belegt -> "Name (2)" usw.
+     * (Ralf, 2026-09-10, direkt nach dem Bau von copyToTenant()).
+     */
+    private function uniqueWorkflowName(string $name, int $tenantId): string
+    {
+        // withoutGlobalScope('tenant') aus demselben Grund wie bei $nextSort
+        // oben - $tenantId ist hier fast immer NICHT CurrentTenant::id().
+        if (! Workflow::withoutGlobalScope('tenant')->where('tenant_id', $tenantId)->where('name', $name)->exists()) {
+            return $name;
+        }
+
+        $counter = 1;
+        while (Workflow::withoutGlobalScope('tenant')->where('tenant_id', $tenantId)->where('name', "{$name} ({$counter})")->exists()) {
+            $counter++;
+        }
+
+        return "{$name} ({$counter})";
     }
 
     public function stepStore(Request $request): RedirectResponse
