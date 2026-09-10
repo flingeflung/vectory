@@ -102,7 +102,21 @@
                     <div class="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
                         {{ __('Dieser Workflow wurde am :date veröffentlicht und ist deshalb eingefroren - Inhalte lassen sich nicht mehr ändern. Für Anpassungen bitte eine neue Version erstellen; bestehende Projekte bleiben unverändert auf dieser Version.', ['date' => $selectedWorkflow->published_at->format('d.m.Y')]) }}
                     </div>
-                    <div x-data class="mt-2 flex justify-end">
+                    <div x-data class="mt-2 flex justify-end gap-2">
+                        <form method="POST" action="{{ route('admin.workflows.duplicate', $selectedWorkflow) }}" x-ref="duplicateForm" class="hidden">
+                            @csrf
+                        </form>
+                        <button
+                            type="button"
+                            @click="window.deleteWithConfirm($refs.duplicateForm, {
+                                title: {{ \Illuminate\Support\Js::from(__('Workflow kopieren')) }},
+                                message: {{ \Illuminate\Support\Js::from(__('Legt eine eigenständige Kopie dieses Workflows (inkl. aller Schritte) an - ohne Verknüpfung zum Original, das unverändert bestehen bleibt. Die Kopie startet inaktiv.')) }},
+                                confirmLabel: {{ \Illuminate\Support\Js::from(__('Kopieren')) }},
+                            })"
+                            class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                        >
+                            {{ __('Kopieren') }}
+                        </button>
                         <form method="POST" action="{{ route('admin.workflows.new-version', $selectedWorkflow) }}" x-ref="newVersionForm" class="hidden">
                             @csrf
                         </form>
@@ -427,6 +441,20 @@
                                 class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover"
                             >
                                 {{ __('Speichern') }}
+                            </button>
+                            <form method="POST" action="{{ route('admin.workflows.duplicate', $selectedWorkflow) }}" x-ref="duplicateForm" class="hidden">
+                                @csrf
+                            </form>
+                            <button
+                                type="button"
+                                @click="window.deleteWithConfirm($refs.duplicateForm, {
+                                    title: {{ \Illuminate\Support\Js::from(__('Workflow kopieren')) }},
+                                    message: {{ \Illuminate\Support\Js::from(__('Legt eine eigenständige Kopie dieses Workflows (inkl. aller Schritte) an - ohne Verknüpfung zum Original, das unverändert bestehen bleibt. Die Kopie startet inaktiv.')) }},
+                                    confirmLabel: {{ \Illuminate\Support\Js::from(__('Kopieren')) }},
+                                })"
+                                class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                            >
+                                {{ __('Kopieren') }}
                             </button>
                             <form method="POST" action="{{ route('admin.workflows.destroy', $selectedWorkflow) }}" x-ref="deleteWorkflowForm" class="hidden">
                                 @csrf

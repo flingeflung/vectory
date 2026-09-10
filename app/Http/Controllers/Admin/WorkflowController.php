@@ -244,6 +244,64 @@ class WorkflowController extends Controller
         return redirect()->route('admin.workflows', ['workflow' => $newWorkflow->id])->with('status', 'workflows-updated');
     }
 
+    /**
+     * "Kopieren": eigenständige Kopie ohne Versions-Verknüpfung - anders als
+     * newVersion() bleibt das Original unangetastet (keine superseded_by_id,
+     * keine Deaktivierung). Die Kopie startet inaktiv, damit sie erst nach
+     * Durchsicht/Anpassung für neue Projekte wählbar wird (Ralf: "Kopie...,
+     * die ich dann ändern kann").
+     */
+    public function duplicate(Workflow $workflow): RedirectResponse
+    {
+        abort_unless($workflow->tenant_id === CurrentTenant::id(), 404);
+
+        $newWorkflow = DB::transaction(function () use ($workflow) {
+            $nextSort = 1 + (int) Workflow::query()->where('tenant_id', $workflow->tenant_id)->max('sort');
+            $newWorkflow = Workflow::query()->create([
+                'tenant_id' => $workflow->tenant_id,
+                'short_name' => $workflow->short_name,
+                'name' => $workflow->name.' '.__('(Kopie)'),
+                'description' => $workflow->description,
+                'active' => false,
+                'sort' => $nextSort,
+            ]);
+
+            $workflow->steps->each(function (WorkflowStep $step) use ($newWorkflow) {
+                $newStep = WorkflowStep::query()->create([
+                    'tenant_id' => $newWorkflow->tenant_id,
+                    'workflow_id' => $newWorkflow->id,
+                    'title' => $step->title,
+                    'short_title' => $step->short_title,
+                    'milestone_title' => $step->milestone_title,
+                    'sort' => $step->sort,
+                    'duration_days' => $step->duration_days,
+                    'is_active' => $step->is_active,
+                    'is_start' => $step->is_start,
+                    'is_end' => $step->is_end,
+                    'is_market_launch' => $step->is_market_launch,
+                    'has_due_date' => $step->has_due_date,
+                    'send_email' => $step->send_email,
+                    'show_in_translation' => $step->show_in_translation,
+                    'js_function' => $step->js_function,
+                    'description' => $step->description,
+                    'email_text' => $step->email_text,
+                    'lifecycle_status' => $step->lifecycle_status,
+                ]);
+
+                $functionGroupIds = $step->functionGroups()->pluck('function_groups.id');
+                if ($functionGroupIds->isNotEmpty()) {
+                    $newStep->functionGroups()->sync(
+                        $functionGroupIds->mapWithKeys(fn ($id) => [$id => ['tenant_id' => $newWorkflow->tenant_id]])
+                    );
+                }
+            });
+
+            return $newWorkflow;
+        });
+
+        return redirect()->route('admin.workflows', ['workflow' => $newWorkflow->id])->with('status', 'workflows-updated');
+    }
+
     public function stepStore(Request $request): RedirectResponse
     {
         $tenantId = CurrentTenant::id();
