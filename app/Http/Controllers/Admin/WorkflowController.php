@@ -221,7 +221,6 @@ class WorkflowController extends Controller
                     'is_market_launch' => $step->is_market_launch,
                     'has_due_date' => $step->has_due_date,
                     'send_email' => $step->send_email,
-                    'duration_editable' => $step->duration_editable,
                     'show_in_translation' => $step->show_in_translation,
                     'js_function' => $step->js_function,
                     'description' => $step->description,
@@ -354,7 +353,6 @@ class WorkflowController extends Controller
                         'is_market_launch' => $request->boolean("steps.$stepId.is_market_launch"),
                         'has_due_date' => $request->boolean("steps.$stepId.has_due_date"),
                         'send_email' => $request->boolean("steps.$stepId.send_email"),
-                        'duration_editable' => $request->boolean("steps.$stepId.duration_editable"),
                         'show_in_translation' => $request->boolean("steps.$stepId.show_in_translation"),
                     ];
                 }

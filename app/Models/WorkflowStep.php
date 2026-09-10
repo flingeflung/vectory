@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 #[Fillable([
     'tenant_id', 'workflow_id', 'legacy_id', 'title', 'short_title', 'milestone_title',
     'sort', 'duration_days', 'is_active', 'is_start', 'is_end', 'is_market_launch',
-    'has_due_date', 'send_email', 'duration_editable', 'show_in_translation',
+    'has_due_date', 'send_email', 'show_in_translation',
     'js_function', 'js_function_param', 'description', 'email_text', 'msg_task_function_group_ids',
     'lifecycle_status',
 ])]
@@ -56,7 +56,6 @@ class WorkflowStep extends Model
             'is_market_launch' => 'boolean',
             'has_due_date' => 'boolean',
             'send_email' => 'boolean',
-            'duration_editable' => 'boolean',
             'show_in_translation' => 'boolean',
         ];
     }

@@ -326,7 +326,6 @@
                                                         {{ __('Dauer (Tage)') }}
                                                         <input type="number" name="steps[{{ $step->id }}][duration_days]" min="0" value="{{ old("steps.{$step->id}.duration_days", $step->duration_days) }}" class="w-16 rounded-md border-gray-300 text-xs">
                                                     </label>
-                                                    <label class="inline-flex items-center gap-1"><input type="checkbox" name="steps[{{ $step->id }}][duration_editable]" value="1" @checked($isResubmit ? old("steps.{$step->id}.duration_editable") !== null : $step->duration_editable) class="rounded border-gray-300"> {{ __('Dauer änderbar') }}</label>
                                                     @error("steps.{$step->id}.duration_days")
                                                         <span class="text-red-600">{{ $message }}</span>
                                                     @enderror

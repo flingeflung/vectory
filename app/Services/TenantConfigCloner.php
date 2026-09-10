@@ -238,7 +238,6 @@ class TenantConfigCloner
                     'is_market_launch' => $row->is_market_launch,
                     'has_due_date' => $row->has_due_date,
                     'send_email' => $row->send_email,
-                    'duration_editable' => $row->duration_editable,
                     'show_in_translation' => $row->show_in_translation,
                     'js_function' => $row->js_function,
                     'js_function_param' => $row->js_function_param,

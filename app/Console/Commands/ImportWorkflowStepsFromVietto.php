@@ -61,7 +61,6 @@ class ImportWorkflowStepsFromVietto extends Command
                     'is_market_launch' => (bool) $row->blnIsMarkteinfuehrung,
                     'has_due_date' => (bool) $row->blnTermin,
                     'send_email' => (bool) $row->blnEmailsenden,
-                    'duration_editable' => (bool) $row->blnDauerAenderbar,
                     'show_in_translation' => (bool) $row->blnShowinTransl,
                     'js_function' => $row->strJSFunction ?: null,
                     'js_function_param' => $row->strJSFunctionParam ?: null,
