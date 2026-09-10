@@ -71,6 +71,15 @@
                 @endif
             </div>
         </div>
+        <div class="mt-2 shrink-0 text-right">
+            <button
+                type="button"
+                onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'mail-template-manager' }))"
+                class="text-xs text-gray-500 hover:text-gray-700"
+            >
+                {{ __('Mail-Vorlagen verwalten') }}
+            </button>
+        </div>
     </div>
 
     {{-- Rechts: entweder der ausgewählte Workflow (Entwurf: voll editierbar;
