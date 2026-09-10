@@ -25,6 +25,9 @@ class MailTemplateController extends Controller
     private const BASE_PLACEHOLDERS = [
         'pn' => 'PN',
         'title' => 'Bezeichnung',
+        'start_date' => 'Start',
+        'end_date' => 'Ende',
+        'publication_date' => 'Publikation',
     ];
 
     public function index(Request $request): View
@@ -32,6 +35,10 @@ class MailTemplateController extends Controller
         $tenantId = CurrentTenant::id();
 
         $templates = MailTemplate::query()->where('tenant_id', $tenantId)->orderBy('name')->get();
+
+        $selectedTemplate = $request->filled('template')
+            ? $templates->firstWhere('id', (int) $request->query('template'))
+            : null;
 
         $placeholders = collect(self::BASE_PLACEHOLDERS)
             ->map(fn ($label, $key) => ['key' => $key, 'label' => $label])
@@ -46,24 +53,27 @@ class MailTemplateController extends Controller
 
         return view('admin.mail-templates.index', [
             'templates' => $templates,
+            'selectedTemplate' => $selectedTemplate,
             'placeholders' => $placeholders,
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
+        // Analog zu WorkflowController::store(): nur der Name ist beim
+        // Anlegen Pflicht, Betreff/Text werden direkt danach rechts in der
+        // Auswahl ausgefüllt - dort (in update()) sind sie dann Pflicht.
         $name = trim((string) $request->string('name'));
-        $subject = trim((string) $request->string('subject'));
-        abort_if($name === '' || $subject === '', 422);
+        abort_if($name === '', 422);
 
-        MailTemplate::query()->create([
+        $template = MailTemplate::query()->create([
             'tenant_id' => CurrentTenant::id(),
             'name' => $name,
-            'subject' => $subject,
-            'body' => (string) $request->string('body'),
+            'subject' => '',
+            'body' => '',
         ]);
 
-        return redirect()->route('admin.mail-vorlagen')->with('status', 'mail-templates-updated');
+        return redirect()->route('admin.mail-vorlagen', ['template' => $template->id])->with('status', 'mail-templates-updated');
     }
 
     public function update(Request $request, MailTemplate $mailTemplate): RedirectResponse
@@ -80,7 +90,7 @@ class MailTemplateController extends Controller
             'body' => (string) $request->string('body'),
         ]);
 
-        return redirect()->route('admin.mail-vorlagen')->with('status', 'mail-templates-updated');
+        return redirect()->route('admin.mail-vorlagen', ['template' => $mailTemplate->id])->with('status', 'mail-templates-updated');
     }
 
     public function destroy(Request $request, MailTemplate $mailTemplate): RedirectResponse
