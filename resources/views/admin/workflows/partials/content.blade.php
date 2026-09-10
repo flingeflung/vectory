@@ -111,11 +111,11 @@
                             @click="window.deleteWithConfirm($refs.duplicateForm, {
                                 title: {{ \Illuminate\Support\Js::from(__('Workflow kopieren')) }},
                                 message: {{ \Illuminate\Support\Js::from(__('Legt eine eigenständige Kopie dieses Workflows (inkl. aller Schritte) an - ohne Verknüpfung zum Original, das unverändert bestehen bleibt. Die Kopie startet inaktiv.')) }},
-                                confirmLabel: {{ \Illuminate\Support\Js::from(__('Kopieren')) }},
+                                confirmLabel: {{ \Illuminate\Support\Js::from(__('Hierher kopieren')) }},
                             })"
                             class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
                         >
-                            {{ __('Kopieren') }}
+                            {{ __('Hierher kopieren') }}
                         </button>
                         <form method="POST" action="{{ route('admin.workflows.new-version', $selectedWorkflow) }}" x-ref="newVersionForm" class="hidden">
                             @csrf
@@ -481,11 +481,11 @@
                                 @click="window.deleteWithConfirm($refs.duplicateForm, {
                                     title: {{ \Illuminate\Support\Js::from(__('Workflow kopieren')) }},
                                     message: {{ \Illuminate\Support\Js::from(__('Legt eine eigenständige Kopie dieses Workflows (inkl. aller Schritte) an - ohne Verknüpfung zum Original, das unverändert bestehen bleibt. Die Kopie startet inaktiv.')) }},
-                                    confirmLabel: {{ \Illuminate\Support\Js::from(__('Kopieren')) }},
+                                    confirmLabel: {{ \Illuminate\Support\Js::from(__('Hierher kopieren')) }},
                                 })"
                                 class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
                             >
-                                {{ __('Kopieren') }}
+                                {{ __('Hierher kopieren') }}
                             </button>
                             @if ($otherTenants->isNotEmpty())
                                 <form
