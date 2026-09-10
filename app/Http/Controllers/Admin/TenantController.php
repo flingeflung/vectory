@@ -25,12 +25,15 @@ class TenantController extends Controller
      * sichtbar/erreichbar - ohne MF ist der eine Mandant keine "Kunden"-
      * Liste, sondern die eigene Firma, die bleibt auf der Konfig-Seite.
      */
-    public function index(): View
+    public function index(Request $request): View
     {
         abort_unless(SystemSetting::multiTenantEnabled(), 403);
 
+        $tenants = Tenant::query()->orderBy('name')->get();
+
         return view('admin.kunden.index', [
-            'tenants' => Tenant::query()->orderBy('name')->get(),
+            'tenants' => $tenants,
+            'selectedTenant' => $request->filled('tenant') ? $tenants->firstWhere('id', (int) $request->query('tenant')) : null,
         ]);
     }
 
@@ -69,7 +72,7 @@ class TenantController extends Controller
         // umschalten, statt beim bisherigen aktiven Kunden zu bleiben.
         CurrentTenant::switchTo($tenant->id);
 
-        return redirect()->route('admin.kunden');
+        return redirect()->route('admin.kunden', ['tenant' => $tenant->id]);
     }
 
     /**
