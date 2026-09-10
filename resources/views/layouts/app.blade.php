@@ -936,11 +936,11 @@
         </script>
 
         {{--
-            Mail-Vorlagen-Verwaltung, Step 1 (Ralf, 2026-09-10): gleiches
-            Muster wie business-unit-manager oben, aus der Workflows-Seite
-            heraus öffenbar. window.insertMailPlaceholder ist global, weil
-            sowohl das "neue Vorlage"-Formular als auch jede Zeile im
-            manage-body ihre eigene Textarea per $refs referenzieren.
+            Mail-Vorlagen, Step 1 (Ralf, 2026-09-10): eigener Admin-Reiter
+            (siehe admin/mail-templates/index.blade.php), kein Overlay mehr.
+            window.insertMailPlaceholder bleibt global, da sowohl das "neue
+            Vorlage"-Formular als auch jede Zeile im manage-body ihre eigene
+            Textarea per $refs referenzieren.
         --}}
         <script>
             window.insertMailPlaceholder = function (textarea, token) {
@@ -953,90 +953,6 @@
                 textarea.setSelectionRange(pos, pos);
                 textarea.dispatchEvent(new Event('input', { bubbles: true }));
             };
-        </script>
-
-        <x-modal name="mail-template-manager" max-width="lg" :dirty-check="'mailTemplateManagerIsDirty'">
-            <div class="flex max-h-[80vh] flex-col">
-                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
-                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Mail-Vorlagen verwalten') }}</h3>
-                    <button
-                        type="button"
-                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'mail-template-manager' }))"
-                        class="text-gray-400 hover:text-gray-600"
-                        aria-label="{{ __('Schließen') }}"
-                    >
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
-                <div id="mail-template-manager-toast" x-data="{ show: false }" x-show="show" x-cloak x-transition.opacity class="mx-4 mt-2 shrink-0 rounded bg-green-50 px-3 py-1.5 text-xs text-green-700">
-                    {{ __('Gespeichert.') }}
-                </div>
-                <div id="mail-template-manager-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
-                    {{ __('Lädt…') }}
-                </div>
-            </div>
-        </x-modal>
-
-        <script>
-            (function () {
-                const body = () => document.getElementById('mail-template-manager-body');
-                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
-                let wasOpened = false;
-                let savedSnapshot = null;
-
-                const serializeAllForms = () => [...body().querySelectorAll('form:not([data-delete-form])')]
-                    .map((form) => new URLSearchParams(new FormData(form)).toString())
-                    .join('|');
-
-                const snapshot = () => {
-                    savedSnapshot = serializeAllForms();
-                };
-
-                window.mailTemplateManagerIsDirty = () => {
-                    return savedSnapshot !== null && serializeAllForms() !== savedSnapshot;
-                };
-
-                const load = async () => {
-                    await window.reloadManageListPreservingEdits(body(), {{ \Illuminate\Support\Js::from(route('admin.mail-vorlagen')) }});
-                    snapshot();
-                };
-
-                window.addEventListener('open-modal', (event) => {
-                    if (event.detail !== 'mail-template-manager') {
-                        return;
-                    }
-                    wasOpened = true;
-                    load();
-                });
-
-                window.addEventListener('close-modal', (event) => {
-                    if (event.detail !== 'mail-template-manager' || !wasOpened) {
-                        return;
-                    }
-                    wasOpened = false;
-                });
-
-                document.addEventListener('submit', async (event) => {
-                    if (!body() || !body().contains(event.target)) {
-                        return;
-                    }
-                    event.preventDefault();
-                    const isRowForm = event.target.hasAttribute('data-row-form');
-
-                    const formData = new FormData(event.target);
-                    await fetch(event.target.action, {
-                        method: 'POST',
-                        headers: { 'X-CSRF-TOKEN': csrfToken },
-                        body: formData,
-                    });
-                    await load();
-                    if (isRowForm) {
-                        window.showManageSavedToast('mail-template-manager-toast');
-                    }
-                });
-            })();
         </script>
 
         {{--

@@ -4,7 +4,7 @@
             + {{ __('Mail-Vorlage anlegen') }}
         </button>
     </div>
-    <form x-show="creating" x-cloak method="POST" action="{{ route('admin.mail-vorlagen.store') }}" class="space-y-2 rounded-md border border-gray-200 p-2" x-data="{}">
+    <form x-show="creating" x-cloak method="POST" action="{{ route('admin.mail-vorlagen.store') }}" class="space-y-2 rounded-md border border-gray-200 p-2" x-data="{}" @input="window.__mailTemplatesDirtyForms.add($el)" @submit="window.__mailTemplatesDirtyForms.delete($el)">
         @csrf
         <div>
             <label class="block text-xs text-gray-500">{{ __('Name') }}</label>
@@ -41,7 +41,7 @@
     <div class="max-h-96 space-y-2 overflow-y-auto">
         @forelse ($templates as $template)
             <div class="rounded-md border border-gray-200 p-2" x-data="{}">
-                <form data-row-form x-data="{ dirty: false }" @input="dirty = window.formIsDirty($el)" method="POST" action="{{ route('admin.mail-vorlagen.update', $template) }}" class="space-y-2">
+                <form data-row-form x-data="{ dirty: false }" @input="dirty = window.formIsDirty($el, window.__mailTemplatesDirtyForms)" method="POST" action="{{ route('admin.mail-vorlagen.update', $template) }}" class="space-y-2">
                     @csrf
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('Name') }}</label>
@@ -65,25 +65,27 @@
                             </div>
                         @endif
                     </div>
-                    <div class="flex items-center justify-between">
-                        <button
-                            type="button"
-                            @click="window.deleteWithConfirm($el.closest('[x-data]').querySelector('[data-delete-form]'), {
-                                message: {{ \Illuminate\Support\Js::from(__('Diese Mail-Vorlage wirklich endgültig löschen?')) }},
-                            })"
-                            class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
-                        >
-                            {{ __('Löschen') }}
-                        </button>
+                    <div class="flex justify-end">
                         <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-2 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
                             {{ __('Speichern') }}
                         </button>
                     </div>
                 </form>
-                <form data-delete-form method="POST" action="{{ route('admin.mail-vorlagen.destroy', $template) }}" class="hidden">
+                <form x-ref="deleteForm" method="POST" action="{{ route('admin.mail-vorlagen.destroy', $template) }}" class="hidden">
                     @csrf
                     @method('DELETE')
                 </form>
+                <div class="mt-2 flex justify-end">
+                    <button
+                        type="button"
+                        @click="window.deleteWithConfirm($refs.deleteForm, {
+                            message: {{ \Illuminate\Support\Js::from(__('Diese Mail-Vorlage wirklich endgültig löschen?')) }},
+                        })"
+                        class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                    >
+                        {{ __('Löschen') }}
+                    </button>
+                </div>
             </div>
         @empty
             <div class="p-3 text-sm text-gray-400">{{ __('Noch keine Mail-Vorlagen angelegt.') }}</div>

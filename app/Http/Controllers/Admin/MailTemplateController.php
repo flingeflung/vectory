@@ -11,11 +11,10 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
- * Mail-Vorlagen-Verwaltung, Step 1 (Ralf, 2026-09-10) - "klitzekleines"
- * Overlay wie Firma/Abteilung/Geschäftsbereich/Rolle, hier aus der
- * Workflows-Seite heraus verlinkt. Bewusst generisch (nicht workflow-
- * spezifisch), nur die Platzierung des Einstiegs orientiert sich am
- * aktuell einzigen bekannten Anwendungsfall (Sonderbutton "Info-Mail").
+ * Mail-Vorlagen-Verwaltung, Step 1 (Ralf, 2026-09-10) - eigener Admin-Reiter
+ * (zunächst als Overlay aus der Workflows-Seite gebaut, war laut Ralf zu
+ * versteckt). Bewusst generisch nutzbar, nicht workflow-spezifisch, nur
+ * der ursprüngliche Anwendungsfall (Sonderbutton "Info-Mail") war dort.
  */
 class MailTemplateController extends Controller
 {
@@ -45,7 +44,7 @@ class MailTemplateController extends Controller
                     ->get(['key', 'label'])
             );
 
-        return view('admin.mail-templates.partials.manage-body', [
+        return view('admin.mail-templates.index', [
             'templates' => $templates,
             'placeholders' => $placeholders,
         ]);
@@ -62,7 +61,7 @@ class MailTemplateController extends Controller
             'body' => (string) $request->string('body'),
         ]);
 
-        return redirect()->route('admin.mail-vorlagen');
+        return redirect()->route('admin.mail-vorlagen')->with('status', 'mail-templates-updated');
     }
 
     public function update(Request $request, MailTemplate $mailTemplate): RedirectResponse
@@ -77,7 +76,7 @@ class MailTemplateController extends Controller
             'body' => (string) $request->string('body'),
         ]);
 
-        return redirect()->route('admin.mail-vorlagen');
+        return redirect()->route('admin.mail-vorlagen')->with('status', 'mail-templates-updated');
     }
 
     public function destroy(Request $request, MailTemplate $mailTemplate): RedirectResponse
@@ -86,6 +85,6 @@ class MailTemplateController extends Controller
 
         $mailTemplate->delete();
 
-        return redirect()->route('admin.mail-vorlagen');
+        return redirect()->route('admin.mail-vorlagen')->with('status', 'mail-templates-updated');
     }
 }

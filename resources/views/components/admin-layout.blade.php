@@ -55,6 +55,13 @@
                 </a>
                 <a
                     onclick="return window.navigateOrConfirm(event)"
+                    href="{{ route('admin.mail-vorlagen') }}"
+                    class="pb-2 {{ request()->routeIs('admin.mail-vorlagen*') ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700' }}"
+                >
+                    {{ __('Mail-Vorlagen') }}
+                </a>
+                <a
+                    onclick="return window.navigateOrConfirm(event)"
                     href="{{ route('admin.config') }}"
                     class="pb-2 {{ request()->routeIs('admin.config') ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700' }}"
                 >
