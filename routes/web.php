@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\LegacyRoleController;
 use App\Http\Controllers\Admin\PermissionController as AdminPermissionController;
 use App\Http\Controllers\Admin\PersonController as AdminPersonController;
 use App\Http\Controllers\Admin\ProjectTypeController;
+use App\Http\Controllers\Admin\AttributeController;
 use App\Http\Controllers\Admin\MailTemplateController;
 use App\Http\Controllers\Admin\WorkflowController;
 use App\Http\Controllers\Admin\SuperAdminController;
@@ -143,6 +144,15 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     Route::post('/mail-vorlagen', [MailTemplateController::class, 'store'])->name('mail-vorlagen.store');
     Route::post('/mail-vorlagen/{mailTemplate}', [MailTemplateController::class, 'update'])->name('mail-vorlagen.update');
     Route::delete('/mail-vorlagen/{mailTemplate}', [MailTemplateController::class, 'destroy'])->name('mail-vorlagen.destroy');
+
+    Route::get('/projektattribute', [AttributeController::class, 'index'])->name('projektattribute');
+    Route::post('/projektattribute', [AttributeController::class, 'store'])->name('projektattribute.store');
+    Route::post('/projektattribute/{attribute}', [AttributeController::class, 'update'])->name('projektattribute.update');
+    Route::delete('/projektattribute/{attribute}', [AttributeController::class, 'destroy'])->name('projektattribute.destroy');
+    Route::post('/projektattribute/{attribute}/optionen', [AttributeController::class, 'storeOption'])->name('projektattribute.optionen.store');
+    Route::post('/projektattribute/optionen/{option}', [AttributeController::class, 'updateOption'])->name('projektattribute.optionen.update');
+    Route::delete('/projektattribute/optionen/{option}', [AttributeController::class, 'destroyOption'])->name('projektattribute.optionen.destroy');
+    Route::post('/projektattribute/{attribute}/projektart', [AttributeController::class, 'toggleProjectType'])->name('projektattribute.projektart.toggle');
     Route::post('/workflows/{workflow}/veroeffentlichen', [WorkflowController::class, 'publish'])->name('workflows.publish');
     Route::post('/workflows/{workflow}', [WorkflowController::class, 'update'])->name('workflows.update');
     Route::delete('/workflows/{workflow}', [WorkflowController::class, 'destroy'])->name('workflows.destroy');

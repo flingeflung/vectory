@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Attribute;
 use App\Models\DisplayFilterSet;
 use App\Models\FunctionGroup;
 use App\Models\Market;
@@ -353,7 +354,12 @@ class ProjectController extends Controller
     {
         abort_unless($request->user()->can('project.edit'), 403);
 
-        $relevantAttributes = $project->relevantAttributes();
+        // Alle drei Bereiche zusammen: typspezifische (nach Projektart
+        // gefiltert) + Stammdaten/Ablaufdaten-Zusatzattribute (gelten
+        // immer, siehe Project::sectionAttributes()).
+        $relevantAttributes = $project->relevantAttributes()
+            ->concat($project->sectionAttributes(Attribute::SECTION_STAMMDATEN))
+            ->concat($project->sectionAttributes(Attribute::SECTION_ABLAUFDATEN));
         $isOverlay = $this->isOverlayRequest($request);
 
         $validator = Validator::make($request->all(), [
@@ -381,11 +387,7 @@ class ProjectController extends Controller
             'project_people_primary' => ['array'],
             'project_people_primary.*' => ['nullable', 'integer'],
             'attributes' => ['array'],
-            ...$relevantAttributes->mapWithKeys(fn ($attribute) => [
-                'attributes.'.$attribute->key => $attribute->data_type === 'number'
-                    ? ['nullable', 'numeric']
-                    : ['nullable', 'string', 'max:255'],
-            ])->all(),
+            ...$this->attributeValidationRules($relevantAttributes),
         ]);
 
         if ($validator->fails()) {
@@ -423,14 +425,30 @@ class ProjectController extends Controller
         $primaryInput = $validated['project_people_primary'] ?? [];
         unset($validated['markets'], $validated['project_people'], $validated['project_people_primary']);
 
-        // Nur die für die Projektart relevanten Attribute überschreiben, Rest im JSON unangetastet lassen.
+        // Nur die für dieses Projekt relevanten Attribute überschreiben (Typspezifisch nach
+        // Projektart gefiltert + Stammdaten/Ablaufdaten immer dabei), Rest im JSON unangetastet lassen.
         $attributes = $project->attributes ?? [];
         foreach ($relevantAttributes as $attribute) {
-            $value = $validated['attributes'][$attribute->key] ?? null;
-            if ($value === null || $value === '') {
-                unset($attributes[$attribute->key]);
+            $key = $attribute->key;
+
+            // Checkbox: bei Nicht-Ankreuzen fehlt das Feld im Request
+            // komplett (kein leerer String) - genau wie beim "archived"-Feld
+            // oben zählt das als "false", nie als "unverändert lassen".
+            if ($attribute->data_type === Attribute::DATA_TYPE_BOOLEAN) {
+                $attributes[$key] = $request->boolean("attributes.$key");
+
+                continue;
+            }
+
+            $value = $validated['attributes'][$key] ?? null;
+            if ($attribute->data_type === Attribute::DATA_TYPE_SELECT && $attribute->multiple) {
+                $value = array_values(array_filter((array) $value, fn ($v) => $v !== null && $v !== ''));
+            }
+
+            if ($value === null || $value === '' || $value === []) {
+                unset($attributes[$key]);
             } else {
-                $attributes[$attribute->key] = $value;
+                $attributes[$key] = $value;
             }
         }
         $validated['attributes'] = $attributes;
@@ -568,6 +586,8 @@ class ProjectController extends Controller
         return [
             'project' => $project->loadMissing(['markets', 'projectPeople.person', 'projectPeople.functionGroup', 'workflow', 'activities.user', 'projectWorkflowSteps.workflowStep.functionGroups', 'projectWorkflowSteps.people.functionGroup', 'projectWorkflowSteps.people.person', 'graphicOrders.initiatedBy', 'graphicOrders.illustrator']),
             'attributes' => $project->relevantAttributes(),
+            'stammdatenAttributes' => $project->sectionAttributes(\App\Models\Attribute::SECTION_STAMMDATEN),
+            'ablaufdatenAttributes' => $project->sectionAttributes(\App\Models\Attribute::SECTION_ABLAUFDATEN),
             'allMarkets' => Market::query()->where('tenant_id', $project->tenant_id)->orderBy('sort')->get(),
             'marketSets' => MarketSet::query()->where('tenant_id', $project->tenant_id)->with('markets:id')->orderBy('sort')->get(),
             'allFunctionGroups' => FunctionGroup::query()->where('tenant_id', $project->tenant_id)->with(['members' => fn ($query) => $query->withoutGlobalScope('tenant')
@@ -903,5 +923,34 @@ class ProjectController extends Controller
     private function isOverlayRequest(Request $request): bool
     {
         return $request->header('X-Overlay') === '1';
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, Attribute>  $attributes
+     */
+    private function attributeValidationRules($attributes): array
+    {
+        $rules = [];
+
+        foreach ($attributes as $attribute) {
+            $key = 'attributes.'.$attribute->key;
+
+            $rules[$key] = match ($attribute->data_type) {
+                Attribute::DATA_TYPE_NUMBER => ['nullable', 'numeric'],
+                Attribute::DATA_TYPE_DATE => ['nullable', 'date'],
+                Attribute::DATA_TYPE_BOOLEAN => ['boolean'],
+                Attribute::DATA_TYPE_TEXTAREA => ['nullable', 'string'],
+                Attribute::DATA_TYPE_SELECT => $attribute->multiple
+                    ? ['array']
+                    : ['nullable', 'string', Rule::in($attribute->options->pluck('value'))],
+                default => ['nullable', 'string', 'max:255'],
+            };
+
+            if ($attribute->data_type === Attribute::DATA_TYPE_SELECT && $attribute->multiple) {
+                $rules[$key.'.*'] = ['string', Rule::in($attribute->options->pluck('value'))];
+            }
+        }
+
+        return $rules;
     }
 }

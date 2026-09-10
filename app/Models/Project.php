@@ -243,11 +243,31 @@ class Project extends Model
     {
         return \App\Models\Attribute::query()
             ->where('tenant_id', $this->tenant_id)
+            ->where('section', \App\Models\Attribute::SECTION_TYPSPEZIFISCH)
             ->whereIn('id', function ($query) {
                 $query->select('attribute_id')
                     ->from('attribute_project_type')
-                    ->where('project_type_sub', $this->project_type_sub);
+                    ->where('project_type_sub_id', $this->project_type_sub_id);
             })
+            ->with('options')
+            ->orderBy('sort')
+            ->get();
+    }
+
+    /**
+     * Zusatzattribute für Stammdaten/Ablaufdaten (Ralf, 2026-09-10) - anders
+     * als relevantAttributes() nicht nach Projektart eingeschränkt, gelten
+     * immer für alle Projekte des Mandanten (diese zwei Bereiche sind
+     * inhaltlich nicht an eine Projektart gebunden).
+     *
+     * @return Collection<int, \App\Models\Attribute>
+     */
+    public function sectionAttributes(string $section): Collection
+    {
+        return \App\Models\Attribute::query()
+            ->where('tenant_id', $this->tenant_id)
+            ->where('section', $section)
+            ->with('options')
             ->orderBy('sort')
             ->get();
     }
