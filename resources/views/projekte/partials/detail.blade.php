@@ -344,6 +344,14 @@
             </div>
         </div>
 
+        @if ($stammdatenAttributes->isNotEmpty())
+            <div class="grid grid-cols-2 gap-2">
+                @foreach ($stammdatenAttributes as $attribute)
+                    @include('projekte.partials.attribute-field', ['attribute' => $attribute])
+                @endforeach
+            </div>
+        @endif
+
         </div>
         </div>
         </div>
@@ -357,15 +365,7 @@
         <div class="min-w-0 flex-1">
             <div class="grid grid-cols-4 gap-2">
                 @foreach ($attributes as $attribute)
-                    <div>
-                        <label class="block text-xs text-gray-500">{{ $attribute->label }}</label>
-                        <input
-                            type="{{ $attribute->data_type === 'number' ? 'number' : 'text' }}"
-                            name="attributes[{{ $attribute->key }}]"
-                            value="{{ old('attributes.'.$attribute->key, $project->attributes[$attribute->key] ?? '') }}"
-                            class="mt-0.5 w-full rounded border-gray-300 py-1 text-sm"
-                        >
-                    </div>
+                    @include('projekte.partials.attribute-field', ['attribute' => $attribute])
                 @endforeach
             </div>
         </div>
@@ -518,6 +518,14 @@
                 {{ __('Archiviert') }}
             </label>
         </div>
+
+        @if ($ablaufdatenAttributes->isNotEmpty())
+            <div class="grid grid-cols-2 gap-2">
+                @foreach ($ablaufdatenAttributes as $attribute)
+                    @include('projekte.partials.attribute-field', ['attribute' => $attribute])
+                @endforeach
+            </div>
+        @endif
 
         </div>
         </div>
