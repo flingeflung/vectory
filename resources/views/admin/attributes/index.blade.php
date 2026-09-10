@@ -86,10 +86,24 @@
                             </div>
                         </form>
 
-                        <div class="space-y-2">
+                        <div
+                            x-data="{
+                                async saveOrder() {
+                                    const ids = [...this.$el.querySelectorAll('[x-sort\\:item]')].map(el => el.getAttribute('x-sort:item'));
+                                    await fetch({{ \Illuminate\Support\Js::from(route('admin.projektattribute.reorder')) }}, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': {{ \Illuminate\Support\Js::from(csrf_token()) }} },
+                                        body: JSON.stringify({ attributes: ids }),
+                                    });
+                                },
+                            }"
+                            x-sort="saveOrder()"
+                            class="space-y-2"
+                        >
                             @forelse ($attributesBySection->get($section, collect()) as $attribute)
-                                <div class="rounded-md border border-gray-200 p-2" x-data="{ managingOptions: false }">
+                                <div x-sort:item="{{ $attribute->id }}" class="rounded-md border border-gray-200 p-2" x-data="{ managingOptions: false }">
                                     <div class="flex items-center gap-2">
+                                        <span x-sort:handle class="shrink-0 cursor-move text-gray-300 hover:text-gray-500" title="{{ __('Verschieben') }}">⠿</span>
                                         <form
                                             method="POST"
                                             action="{{ route('admin.projektattribute.update', $attribute) }}"

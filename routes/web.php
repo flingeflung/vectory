@@ -147,6 +147,10 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
 
     Route::get('/projektattribute', [AttributeController::class, 'index'])->name('projektattribute');
     Route::post('/projektattribute', [AttributeController::class, 'store'])->name('projektattribute.store');
+    // Fester Pfad vor dem {attribute}-Wildcard registriert - sonst würde
+    // "reorder" als ID interpretiert (gleiche Falle wie bei Workflows/
+    // Projektkategorien).
+    Route::post('/projektattribute/reorder', [AttributeController::class, 'reorder'])->name('projektattribute.reorder');
     Route::post('/projektattribute/{attribute}', [AttributeController::class, 'update'])->name('projektattribute.update');
     Route::delete('/projektattribute/{attribute}', [AttributeController::class, 'destroy'])->name('projektattribute.destroy');
     Route::post('/projektattribute/{attribute}/optionen', [AttributeController::class, 'storeOption'])->name('projektattribute.optionen.store');

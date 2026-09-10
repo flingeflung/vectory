@@ -94,6 +94,22 @@ class AttributeController extends Controller
         return $this->redirectToSection($section);
     }
 
+    /**
+     * Ralf: "die Felder müssen sortierbar sein" - bestimmt die
+     * Anzeigereihenfolge in den Projektdetails, gleiches Drag&Drop-Muster
+     * wie bei Workflows/Projektkategorien.
+     */
+    public function reorder(Request $request): RedirectResponse
+    {
+        $tenantId = CurrentTenant::id();
+
+        collect($request->array('attributes'))->values()->each(function (string $id, int $index) use ($tenantId) {
+            Attribute::query()->where('tenant_id', $tenantId)->where('id', (int) $id)->update(['sort' => $index]);
+        });
+
+        return redirect()->route('admin.projektattribute');
+    }
+
     public function update(Request $request, Attribute $attribute): RedirectResponse
     {
         abort_unless($attribute->tenant_id === CurrentTenant::id(), 404);
