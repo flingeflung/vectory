@@ -7,14 +7,14 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Mail-Vorlagen-Konzept, Step 1 (Ralf, 2026-09-10): reiner Textbaustein mit
+ * Mail-Vorlagen-Konzept, Step 1 (Ralf, 2026-09-10): Betreff + Text mit
  * einfügbaren Projekt-Feld-Platzhaltern (z.B. "{material_number}", siehe
  * App\Models\Attribute::available_in_mail_templates + die festen
- * Basisfelder in MailTemplateController::PLACEHOLDER_FIELDS). Wo eine
- * Vorlage ausgewählt und mit wem/welchem Betreff sie tatsächlich verschickt
- * wird, ist bewusst nicht Teil dieses Modells - das kommt in Step 2.
+ * Basisfelder in MailTemplateController::BASE_PLACEHOLDERS). Empfänger/CC
+ * sind bewusst NICHT Teil dieses Modells - die werden laut Ralf erst im
+ * jeweiligen Anwendungsfall festgelegt (Step 2, noch nicht gebaut).
  */
-#[Fillable(['tenant_id', 'name', 'body'])]
+#[Fillable(['tenant_id', 'name', 'subject', 'body'])]
 class MailTemplate extends Model
 {
     use BelongsToTenant;

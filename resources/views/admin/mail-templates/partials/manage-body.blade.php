@@ -7,8 +7,26 @@
     <form x-show="creating" x-cloak method="POST" action="{{ route('admin.mail-vorlagen.store') }}" class="space-y-2 rounded-md border border-gray-200 p-2" x-data="{}" @input="window.__mailTemplatesDirtyForms.add($el)" @submit="window.__mailTemplatesDirtyForms.delete($el)">
         @csrf
         <div>
-            <label class="block text-xs text-gray-500">{{ __('Name') }}</label>
+            <label class="block text-xs text-gray-500">{{ __('Name der Vorlage') }}</label>
             <input type="text" name="name" x-ref="newName" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+        </div>
+        <div>
+            <label class="block text-xs text-gray-500">{{ __('Betreff') }}</label>
+            <input type="text" name="subject" x-ref="newSubject" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+            @if ($placeholders->isNotEmpty())
+                <div class="mt-1 flex flex-wrap gap-1">
+                    <span class="text-xs text-gray-400">{{ __('Feld einfügen:') }}</span>
+                    @foreach ($placeholders as $placeholder)
+                        <button
+                            type="button"
+                            @click="window.insertMailPlaceholder($refs.newSubject, {{ \Illuminate\Support\Js::from('{'.$placeholder['key'].'}') }})"
+                            class="rounded border border-gray-300 bg-btn-secondary px-1.5 py-0.5 text-xs text-gray-700 hover:bg-btn-secondary-hover"
+                        >
+                            {{ $placeholder['label'] }}
+                        </button>
+                    @endforeach
+                </div>
+            @endif
         </div>
         <div>
             <label class="block text-xs text-gray-500">{{ __('Text') }}</label>
@@ -33,7 +51,7 @@
                 {{ __('Abbrechen') }}
             </button>
             <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">
-                {{ __('Anlegen') }}
+                {{ __('Speichern') }}
             </button>
         </div>
     </form>
@@ -44,8 +62,26 @@
                 <form data-row-form x-data="{ dirty: false }" @input="dirty = window.formIsDirty($el, window.__mailTemplatesDirtyForms)" method="POST" action="{{ route('admin.mail-vorlagen.update', $template) }}" class="space-y-2">
                     @csrf
                     <div>
-                        <label class="block text-xs text-gray-500">{{ __('Name') }}</label>
+                        <label class="block text-xs text-gray-500">{{ __('Name der Vorlage') }}</label>
                         <input type="text" name="name" value="{{ $template->name }}" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500">{{ __('Betreff') }}</label>
+                        <input type="text" name="subject" x-ref="subject" value="{{ $template->subject }}" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                        @if ($placeholders->isNotEmpty())
+                            <div class="mt-1 flex flex-wrap gap-1">
+                                <span class="text-xs text-gray-400">{{ __('Feld einfügen:') }}</span>
+                                @foreach ($placeholders as $placeholder)
+                                    <button
+                                        type="button"
+                                        @click="window.insertMailPlaceholder($refs.subject, {{ \Illuminate\Support\Js::from('{'.$placeholder['key'].'}') }})"
+                                        class="rounded border border-gray-300 bg-btn-secondary px-1.5 py-0.5 text-xs text-gray-700 hover:bg-btn-secondary-hover"
+                                    >
+                                        {{ $placeholder['label'] }}
+                                    </button>
+                                @endforeach
+                            </div>
+                        @endif
                     </div>
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('Text') }}</label>

@@ -53,11 +53,13 @@ class MailTemplateController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $name = trim((string) $request->string('name'));
-        abort_if($name === '', 422);
+        $subject = trim((string) $request->string('subject'));
+        abort_if($name === '' || $subject === '', 422);
 
         MailTemplate::query()->create([
             'tenant_id' => CurrentTenant::id(),
             'name' => $name,
+            'subject' => $subject,
             'body' => (string) $request->string('body'),
         ]);
 
@@ -69,10 +71,12 @@ class MailTemplateController extends Controller
         abort_unless($mailTemplate->tenant_id === CurrentTenant::id(), 404);
 
         $name = trim((string) $request->string('name'));
-        abort_if($name === '', 422);
+        $subject = trim((string) $request->string('subject'));
+        abort_if($name === '' || $subject === '', 422);
 
         $mailTemplate->update([
             'name' => $name,
+            'subject' => $subject,
             'body' => (string) $request->string('body'),
         ]);
 
