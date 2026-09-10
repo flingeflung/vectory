@@ -91,7 +91,7 @@ class AttributeController extends Controller
 
         $this->columns->ensureColumn($attribute);
 
-        return redirect()->route('admin.projektattribute')->with('status', 'attributes-updated');
+        return $this->redirectToSection($section);
     }
 
     public function update(Request $request, Attribute $attribute): RedirectResponse
@@ -103,7 +103,7 @@ class AttributeController extends Controller
 
         $attribute->update(['label' => $label]);
 
-        return redirect()->route('admin.projektattribute')->with('status', 'attributes-updated');
+        return $this->redirectToSection($attribute->section);
     }
 
     public function destroy(Request $request, Attribute $attribute): RedirectResponse
@@ -123,7 +123,7 @@ class AttributeController extends Controller
             $attribute->delete();
         });
 
-        return redirect()->route('admin.projektattribute')->with('status', 'attributes-updated');
+        return $this->redirectToSection($attribute->section);
     }
 
     public function storeOption(Request $request, Attribute $attribute): RedirectResponse
@@ -141,7 +141,7 @@ class AttributeController extends Controller
             'sort' => 1 + (int) AttributeOption::query()->where('attribute_id', $attribute->id)->max('sort'),
         ]);
 
-        return redirect()->route('admin.projektattribute')->with('status', 'attributes-updated');
+        return $this->redirectToSection($attribute->section);
     }
 
     public function updateOption(Request $request, AttributeOption $option): RedirectResponse
@@ -153,7 +153,7 @@ class AttributeController extends Controller
 
         $option->update(['label' => $label]);
 
-        return redirect()->route('admin.projektattribute')->with('status', 'attributes-updated');
+        return $this->redirectToSection($option->attribute->section);
     }
 
     public function destroyOption(Request $request, AttributeOption $option): RedirectResponse
@@ -188,7 +188,7 @@ class AttributeController extends Controller
             $option->delete();
         });
 
-        return redirect()->route('admin.projektattribute')->with('status', 'attributes-updated');
+        return $this->redirectToSection($attribute->section);
     }
 
     /**
@@ -215,7 +215,18 @@ class AttributeController extends Controller
             ]);
         }
 
-        return redirect()->route('admin.projektattribute');
+        return $this->redirectToSection($attribute->section);
+    }
+
+    /**
+     * Ralf-Bug-Report: nach dem Anlegen eines Attributs sprang der Reiter
+     * immer auf Stammdaten zurück - der einfache redirect() zur Seite ohne
+     * Query-String verlor, welcher Bereich gerade offen war (die Seite
+     * liest das aus ?bereich=, siehe admin/attributes/index.blade.php).
+     */
+    private function redirectToSection(string $section): RedirectResponse
+    {
+        return redirect()->route('admin.projektattribute', ['bereich' => $section])->with('status', 'attributes-updated');
     }
 
     private function dataTypeOptions(): array
