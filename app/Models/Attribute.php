@@ -57,7 +57,7 @@ class Attribute extends Model
         ],
         self::SECTION_ABLAUFDATEN => [
             'workflow_id' => 'Workflow',
-            'publication_date' => 'Publikation',
+            'publication_date' => 'Publikationsdatum',
             'project_people' => 'Projektbeteiligte Personen',
             'archived' => 'Archiviert',
         ],

@@ -1,5 +1,5 @@
 <div>
-    <label class="block text-xs text-gray-500">{{ __('Publikation') }}</label>
+    <label class="block text-xs text-gray-500">{{ __('Publikationsdatum') }}</label>
     {{-- Nur mit eigenem Recht änderbar - die TR ist fürs Publizieren
          zuständig, das tatsächliche Datum wird hier protokollarisch
          eingetragen (Vietto-Vorbild: landet in den Vorgängen). --}}
