@@ -97,7 +97,6 @@
                                             <span x-sort:handle class="shrink-0 cursor-move text-gray-300 hover:text-gray-500" title="{{ __('Verschieben') }}">⠿</span>
                                             <span class="shrink-0 text-gray-300" title="{{ __('Festes Feld - nur die Reihenfolge ist änderbar') }}">🔒</span>
                                             <span class="flex-1 text-sm text-gray-700">{{ $attribute->label }}</span>
-                                            @include('admin.attributes.partials.same-row-toggle')
                                         </div>
                                     @elseif ($attribute->data_type === 'select')
                                         {{-- Ralf, 2026-09-11: Pulldown-Name+Optionen werden nicht mehr
@@ -107,7 +106,6 @@
                                             <span x-sort:handle class="shrink-0 cursor-move text-gray-300 hover:text-gray-500" title="{{ __('Verschieben') }}">⠿</span>
                                             <span class="flex-1 text-sm text-gray-700">{{ $attribute->label }}</span>
                                             <span class="shrink-0 text-xs text-gray-400">{{ $dataTypes[$attribute->data_type] }}{{ $attribute->multiple ? ' ('.__('Mehrfachauswahl').')' : '' }}</span>
-                                            @include('admin.attributes.partials.same-row-toggle')
                                             <button
                                                 type="button"
                                                 onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'pulldown-edit-{{ $attribute->id }}' }))"
@@ -152,7 +150,6 @@
                                                 {{ __('Speichern') }}
                                             </button>
                                         </form>
-                                        @include('admin.attributes.partials.same-row-toggle')
                                         <form method="POST" action="{{ route('admin.projektattribute.destroy', $attribute) }}" x-ref="deleteForm" class="hidden">
                                             @csrf
                                             @method('DELETE')
