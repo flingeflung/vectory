@@ -12,8 +12,8 @@
         'title' => __('Angehakt: wird 1:1 übernommen, bei mehreren Kopien mit Zusatz „Kopie 1/2/…“. Nicht angehakt: Feld startet beim Kopieren leer, muss von Hand ausgefüllt werden.'),
         'version' => __('Angehakt: Versionsnummer wird übernommen, beim Kopieren wird zusätzlich gefragt, ob sie um 1 erhöht werden soll.'),
         'status' => __('Wird nicht 1:1 übernommen - die Kopie startet mit Status „Geplant“ bzw. folgt automatisch dem mitkopierten Workflow.'),
-        'workflow_id' => __('Ist der ursprüngliche Workflow nicht mehr aktuell, wird automatisch die neueste Version verknüpft.'),
-        'project_people' => __('Angehakt: Projektbeteiligte Personen werden mitkopiert - ist eine davon inaktiv, wird vor dem Kopieren gewarnt.'),
+        'workflow_id' => __('Wenn der ursprüngliche Workflow nicht mehr aktuell ist, wird automatisch die neueste Version verknüpft.'),
+        'project_people' => __('Angehakt: Projektbeteiligte Personen werden mitkopiert. Wenn eine davon inaktiv ist, wird vor dem Kopieren gewarnt.'),
     ];
 @endphp
 
