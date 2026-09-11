@@ -75,6 +75,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/projekte/{project}/kopieren', [ProjectCopyController::class, 'store'])->name('projekte.kopieren.store');
 
     Route::get('/projekte/{project}/verknuepfungen/neu', [ProjectConnectionController::class, 'form'])->name('projekte.verknuepfungen.form');
+    Route::get('/projekte/{project}/verknuepfungen/mehr', [ProjectConnectionController::class, 'moreOtherProjects'])->name('projekte.verknuepfungen.mehr');
     Route::post('/projekte/{project}/verknuepfungen', [ProjectConnectionController::class, 'store'])->name('projekte.verknuepfungen.store');
     Route::delete('/projekte/{project}/verknuepfungen/{connection}', [ProjectConnectionController::class, 'destroy'])->name('projekte.verknuepfungen.destroy');
 

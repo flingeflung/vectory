@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Project;
 use App\Models\ProjectConnection;
 use App\Support\CurrentTenant;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -19,6 +21,15 @@ use Illuminate\View\View;
 class ProjectConnectionController extends Controller
 {
     /**
+     * Ralf, 2026-09-11: bei ~6700 Projekten (Sanitär) sind "Andere Projekte"
+     * in einem Rutsch zu viele - 500 laden, weitere per Nachladen beim
+     * Scrollen ans Listenende (siehe moreOtherProjects()), analog
+     * unendlichem Scrollen. "Verknüpfte Projekte" bleibt unpaginiert (in
+     * der Praxis immer klein).
+     */
+    private const PAGE_SIZE = 500;
+
+    /**
      * Inhalt des "Verknüpfen"-Modals - eigenständig statt im großen
      * Projekt-Formular verschachtelt (verschachtelte <form>-Elemente
      * reißen im Browser das versteckte _method-Feld ins äußere Formular
@@ -26,12 +37,11 @@ class ProjectConnectionController extends Controller
      *
      * Struktur 1:1 aus Viettos ajax_getpnconnections.php übernommen (Ralf,
      * 2026-09-11, nach mehreren Fehlversuchen meinerseits direkt im
-     * Vietto-Quellcode nachgeschaut statt weiter zu raten): EIN Query über
-     * ALLE Projekte dieses Mandanten (außer sich selbst), verknüpfte zuerst
-     * (angehakt, mit Richtungstext), dann alle anderen (nicht angehakt) -
-     * das Suchfeld filtert genau diese eine Liste (beide Abschnitte), ersetzt
-     * sie nicht durch eine separate Trefferliste. "q" leer = komplette
-     * Liste, wie in Vietto.
+     * Vietto-Quellcode nachgeschaut statt weiter zu raten): verknüpfte
+     * Projekte zuerst (angehakt, mit Richtungstext), dann alle anderen
+     * (nicht angehakt) - das Suchfeld filtert diese eine Liste (beide
+     * Abschnitte), ersetzt sie nicht durch eine separate Trefferliste. "q"
+     * leer = komplette Liste, wie in Vietto (nur eben paginiert, s. o.).
      */
     public function form(Project $project, Request $request): View
     {
@@ -39,13 +49,18 @@ class ProjectConnectionController extends Controller
 
         $search = trim((string) $request->query('q', ''));
 
-        $query = Project::query()->where('tenant_id', $project->tenant_id)->where('id', '!=', $project->id);
-        if ($search !== '') {
-            $query->where(fn ($q) => $q->where('source_pn', 'like', "%{$search}%")->orWhere('title', 'like', "%{$search}%"));
-        }
-        $allProjects = $query->orderBy('source_pn')->get(['id', 'source_pn', 'title']);
-
         $connections = $project->connections()->keyBy('otherProject.id');
+        $connectedIds = $connections->keys()->all();
+
+        $connectedQuery = Project::query()->where('tenant_id', $project->tenant_id)->whereIn('id', $connectedIds);
+        $this->applySearch($connectedQuery, $search);
+        $connectedProjects = $connectedQuery->orderBy('source_pn')->get(['id', 'source_pn', 'title']);
+
+        $otherQuery = Project::query()->where('tenant_id', $project->tenant_id)
+            ->where('id', '!=', $project->id)
+            ->whereNotIn('id', $connectedIds);
+        $this->applySearch($otherQuery, $search);
+        $otherProjects = $otherQuery->orderBy('source_pn')->limit(self::PAGE_SIZE)->get(['id', 'source_pn', 'title']);
 
         // Autovervollständigung für die Richtungs-Bezeichnungen (Vietto-
         // Vorbild) - bereits verwendete Texte dieses Mandanten, damit sich
@@ -60,11 +75,48 @@ class ProjectConnectionController extends Controller
         return view('projekte.partials.connection-add-body', [
             'project' => $project,
             'search' => $search,
-            'connectedProjects' => $allProjects->filter(fn ($p) => $connections->has($p->id))->values(),
-            'otherProjects' => $allProjects->reject(fn ($p) => $connections->has($p->id))->values(),
+            'connectedProjects' => $connectedProjects,
+            'otherProjects' => $otherProjects,
+            'otherHasMore' => $otherProjects->count() === self::PAGE_SIZE,
+            'pageSize' => self::PAGE_SIZE,
             'connections' => $connections,
             'labelSuggestions' => $labelSuggestions,
         ]);
+    }
+
+    /**
+     * Nachladen weiterer "Andere Projekte" beim Scrollen ans Listenende -
+     * gibt nur die Zeilen-Fragmente zurück (kein ganzes Modal), "Weitere
+     * vorhanden?" steckt im X-Has-More-Header statt im HTML selbst.
+     */
+    public function moreOtherProjects(Project $project, Request $request): Response
+    {
+        abort_unless($project->tenant_id === CurrentTenant::id(), 404);
+
+        $search = trim((string) $request->query('q', ''));
+        $offset = max(0, $request->integer('offset'));
+
+        $connectedIds = $project->connections()->pluck('otherProject.id')->all();
+
+        $otherQuery = Project::query()->where('tenant_id', $project->tenant_id)
+            ->where('id', '!=', $project->id)
+            ->whereNotIn('id', $connectedIds);
+        $this->applySearch($otherQuery, $search);
+        $otherProjects = $otherQuery->orderBy('source_pn')->skip($offset)->take(self::PAGE_SIZE)->get(['id', 'source_pn', 'title']);
+
+        $html = view('projekte.partials.connection-other-project-rows', [
+            'project' => $project,
+            'otherProjects' => $otherProjects,
+        ])->render();
+
+        return response($html)->header('X-Has-More', $otherProjects->count() === self::PAGE_SIZE ? '1' : '0');
+    }
+
+    private function applySearch(Builder $query, string $search): void
+    {
+        if ($search !== '') {
+            $query->where(fn ($q) => $q->where('source_pn', 'like', "%{$search}%")->orWhere('title', 'like', "%{$search}%"));
+        }
     }
 
     public function store(Request $request, Project $project): RedirectResponse

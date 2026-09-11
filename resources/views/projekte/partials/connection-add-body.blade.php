@@ -4,6 +4,9 @@
         searchTimer: null,
         addingId: null, addLabel: '', addLabelReverse: '',
         loading: false,
+        otherOffset: {{ $otherProjects->count() }},
+        otherHasMore: {{ $otherHasMore ? 'true' : 'false' }},
+        loadingMore: false,
         onSearchInput() {
             clearTimeout(this.searchTimer);
             this.searchTimer = setTimeout(() => this.runSearch(), 400);
@@ -16,10 +19,40 @@
                 const html = await fetch(url).then((r) => r.text());
                 const fresh = new DOMParser().parseFromString(html, 'text/html').getElementById('connection-list');
                 const current = document.getElementById('connection-list');
-                if (fresh && current) { current.innerHTML = fresh.innerHTML; }
+                if (fresh && current) {
+                    current.innerHTML = fresh.innerHTML;
+                    current.scrollTop = 0;
+                    this.otherOffset = parseInt(fresh.dataset.otherOffset || '0', 10);
+                    this.otherHasMore = fresh.dataset.otherHasMore === '1';
+                }
             } finally {
                 this.loading = false;
                 window.hideProjectConnectionLoading();
+            }
+        },
+        // Ralf, 2026-09-11: bei ~6700 Projekten (Sanitär) lädt die Liste
+        // andere Projekte nur die ersten {{ $pageSize }}, weitere kommen
+        // beim Erreichen des Listenendes nach (unendliches Scrollen) statt
+        // alles auf einmal. Bewusst KEINE geraden Anführungszeichen in
+        // diesem Kommentarblock - die würden das umschließende x-data-
+        // Attribut vorzeitig beenden.
+        onListScroll(el) {
+            if (this.loadingMore || ! this.otherHasMore) return;
+            if (el.scrollTop + el.clientHeight >= el.scrollHeight - 150) {
+                this.loadMore();
+            }
+        },
+        async loadMore() {
+            this.loadingMore = true;
+            try {
+                const url = `/projekte/{{ $project->id }}/verknuepfungen/mehr?q=` + encodeURIComponent(this.term) + `&offset=` + this.otherOffset;
+                const response = await fetch(url);
+                const html = await response.text();
+                document.getElementById('other-projects-rows').insertAdjacentHTML('beforeend', html);
+                this.otherHasMore = response.headers.get('X-Has-More') === '1';
+                this.otherOffset += {{ $pageSize }};
+            } finally {
+                this.loadingMore = false;
             }
         },
         startAdd(id) { this.addingId = id; this.addLabel = ''; this.addLabelReverse = ''; },
@@ -81,7 +114,13 @@
         <input type="text" x-model="term" @input="onSearchInput()" :disabled="loading" autocomplete="off" class="mt-0.5 w-full rounded-md border-gray-300 text-sm disabled:bg-gray-50">
     </div>
 
-    <div id="connection-list" class="mt-3">
+    <div
+        id="connection-list"
+        class="mt-3 max-h-[50vh] overflow-y-auto"
+        @scroll="onListScroll($event.target)"
+        data-other-offset="{{ $otherProjects->count() }}"
+        data-other-has-more="{{ $otherHasMore ? '1' : '0' }}"
+    >
         <div class="mb-1 text-[11px] font-medium text-gray-500">{{ __('Verknüpfte Projekte') }}</div>
         @forelse ($connectedProjects as $p)
             @php $entry = $connections->get($p->id); @endphp
@@ -103,34 +142,14 @@
         @endforelse
 
         <div class="mb-1 mt-3 text-[11px] font-medium text-gray-500">{{ __('Andere Projekte') }}</div>
-        @forelse ($otherProjects as $p)
-            <div class="border-b border-gray-100 py-1 last:border-0">
-                <div class="flex items-start gap-1.5 text-xs text-gray-700">
-                    <input type="checkbox" :disabled="loading" @click.prevent="addingId === {{ $p->id }} ? (addingId = null) : startAdd({{ $p->id }})" class="mt-0.5 shrink-0 rounded border-gray-300">
-                    <span>{{ $p->source_pn }} &ndash; {{ $p->title }}</span>
-                </div>
-                {{-- Ralf, 2026-09-11 (S1, Vietto-Vorbild): "Was ist X aus
-                     Sicht von Y?" statt abstrakter "Richtung"-Begriffe -
-                     macht für den Benutzer direkt klar, was einzutragen ist,
-                     ohne Fachbegriffe wie "Richtung"/"Rückrichtung". --}}
-                <div x-show="addingId === {{ $p->id }}" x-cloak class="ml-5 mt-1 space-y-1.5 rounded-md border border-gray-200 bg-gray-50 p-2">
-                    <div>
-                        <label class="block text-[11px] text-gray-500">{{ __('Was ist :other aus Sicht von :this?', ['other' => $p->source_pn, 'this' => $project->source_pn]) }}</label>
-                        <input type="text" x-model="addLabel" list="connection-label-suggestions" :disabled="loading" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
-                    </div>
-                    <div>
-                        <label class="block text-[11px] text-gray-500">{{ __('Was ist :this aus Sicht von :other?', ['this' => $project->source_pn, 'other' => $p->source_pn]) }}</label>
-                        <input type="text" x-model="addLabelReverse" list="connection-label-suggestions" :disabled="loading" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
-                    </div>
-                    <div class="flex justify-end gap-2">
-                        <button type="button" :disabled="loading" @click="addingId = null" class="rounded border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:cursor-not-allowed disabled:opacity-50">{{ __('Abbrechen') }}</button>
-                        <button type="button" :disabled="loading" @click="confirmAdd({{ $p->id }})" class="rounded bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover disabled:cursor-not-allowed disabled:opacity-50">{{ __('Verknüpfen') }}</button>
-                    </div>
-                </div>
-            </div>
-        @empty
-            <div class="text-xs text-gray-400">{{ __('Keine Treffer.') }}</div>
-        @endforelse
+        <div id="other-projects-rows">
+            @if ($otherProjects->isEmpty())
+                <div class="text-xs text-gray-400">{{ __('Keine Treffer.') }}</div>
+            @else
+                @include('projekte.partials.connection-other-project-rows')
+            @endif
+        </div>
+        <div x-show="loadingMore" x-cloak class="py-1.5 text-center text-[11px] text-gray-400">{{ __('Lädt weitere Projekte…') }}</div>
     </div>
 
     <datalist id="connection-label-suggestions">
