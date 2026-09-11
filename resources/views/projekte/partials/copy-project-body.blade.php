@@ -7,6 +7,7 @@
     x-data="{
         templateId: {{ \Illuminate\Support\Js::from($firstTemplateId) }},
         templateFieldKeys: {{ \Illuminate\Support\Js::from($templateFieldKeys) }},
+        copyableFields: {{ \Illuminate\Support\Js::from($copyableFields) }},
         count: 1,
         has(key) { return (this.templateFieldKeys[this.templateId] || []).includes(key); },
     }"
@@ -37,6 +38,19 @@
                         <option value="{{ $template->id }}">{{ $template->name }}</option>
                     @endforeach
                 </select>
+            </div>
+
+            <div class="rounded-md border border-gray-200 bg-gray-50 p-1.5">
+                <p class="mb-1 text-[11px] text-gray-400">{{ __('Grün = wird kopiert, grau/durchgestrichen = nicht') }}</p>
+                <div class="flex flex-wrap gap-1">
+                    <template x-for="key in Object.keys(copyableFields)" :key="key">
+                        <span
+                            :class="has(key) ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-200 text-gray-500 line-through'"
+                            class="rounded px-1.5 py-0.5 text-[11px]"
+                            x-text="copyableFields[key]"
+                        ></span>
+                    </template>
+                </div>
             </div>
 
             <div>

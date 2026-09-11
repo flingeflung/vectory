@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\ActivityType;
 use App\Models\Activity;
+use App\Models\Attribute;
 use App\Models\CopyTemplate;
 use App\Models\Project;
 use App\Models\ProjectConnection;
@@ -35,6 +36,17 @@ class ProjectCopyController extends Controller
         private readonly ProjectNumberAllocator $numberAllocator,
     ) {}
 
+    /**
+     * Feste Felder, deren Haken in der Vorlage aktuell KEINE Auswirkung
+     * hat (siehe store()-Dispatch): Archiviert wird immer fest auf "nein"
+     * gesetzt, die übrigen sind reine Platzhalter ohne Datenquelle (siehe
+     * Attribute::SYSTEM_FIELDS-Docblock). Bewusst aus der Kopieren-
+     * Übersicht ausgeblendet, damit dort nur steht, was wirklich zählt -
+     * gleiche Liste würde sich sonst mit Feldern füllen, die so oder so
+     * nichts tun.
+     */
+    private const NO_EFFECT_KEYS = ['archived', 'date_progress', 'progress', 'checklist', 'project_connections', 'remarks_echo', 'changes_vs_previous_version'];
+
     public function form(Project $project): View
     {
         abort_unless($project->tenant_id === CurrentTenant::id(), 404);
@@ -43,6 +55,14 @@ class ProjectCopyController extends Controller
         $tenant = CurrentTenant::current();
 
         $templates = CopyTemplate::query()->where('tenant_id', $tenant->id)->orderBy('sort')->orderBy('name')->with('fields')->get();
+
+        // Ralf: "erkennen können, welche Attribute wie kopiert werden und
+        // welche nicht" - kompakte Übersicht im Formular selbst, reagiert
+        // clientseitig auf die Vorlagen-Auswahl (siehe copy-project-body.blade.php).
+        $copyableFields = Attribute::query()->where('tenant_id', $tenant->id)
+            ->whereNotIn('key', self::NO_EFFECT_KEYS)
+            ->orderBy('section')->orderBy('sort')
+            ->pluck('label', 'key');
 
         // Ralf: "wenn 'kopieren' angehakt ist, dann Prüfung, ob eine der
         // Personen inaktiv ist, und ggf. Hinweis geben, bevor der
@@ -59,6 +79,7 @@ class ProjectCopyController extends Controller
             'project' => $project,
             'tenant' => $tenant,
             'templates' => $templates,
+            'copyableFields' => $copyableFields,
             'inactivePeopleNames' => $inactivePeopleNames,
         ]);
     }
