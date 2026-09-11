@@ -70,32 +70,25 @@
     {{-- Rechts: gewählte Vorlage - Name, Feld-Auswahl je Bereich. --}}
     <div class="flex flex-1 min-h-0 flex-col rounded-lg border border-gray-200 bg-white">
         @if ($selectedTemplate)
-            <div class="flex min-h-0 flex-1 flex-col" x-data="{ dirty: false }">
-                {{-- WICHTIG: Speichern- und Lösch-Formular dürfen NICHT
-                     verschachtelt sein (siehe gleiche Anmerkung bei den
-                     Mail-Vorlagen) - deshalb hier zwei GESCHWISTER-Formulare. --}}
+            <div class="flex min-h-0 flex-1 flex-col">
+                {{-- Name wird wie die Feld-Haken automatisch gespeichert
+                     (Ralf: sonst unlogisch, wenn die Haken sofort wirken,
+                     aber der Name einen extra Speichern-Klick braucht) -
+                     normaler Formular-Submit statt Fetch, damit die Liste
+                     links den neuen Namen sofort mit anzeigt. --}}
                 <form
-                    id="copy-template-form-{{ $selectedTemplate->id }}"
-                    data-row-form
                     method="POST"
                     action="{{ route('admin.projektkopie-vorlagen.update', $selectedTemplate) }}"
-                    class="shrink-0 flex items-end gap-2 border-b border-gray-100 p-3"
-                    @input="dirty = window.formIsDirty($el, window.__copyTemplatesDirtyForms)"
-                    @submit="dirty = false; window.__copyTemplatesDirtyForms.delete($el)"
+                    class="shrink-0 border-b border-gray-100 p-3"
                 >
                     @csrf
-                    <div class="flex-1">
-                        <label class="block text-xs text-gray-500">{{ __('Name der Vorlage') }}</label>
-                        <input type="text" name="name" value="{{ $selectedTemplate->name }}" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
-                    </div>
-                    <button type="submit" x-show="dirty" x-cloak class="shrink-0 rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
-                        {{ __('Speichern') }}
-                    </button>
+                    <label class="block text-xs text-gray-500">{{ __('Name der Vorlage') }}</label>
+                    <input type="text" name="name" value="{{ $selectedTemplate->name }}" required onchange="this.form.submit()" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                 </form>
 
                 <div class="min-h-0 flex-1 overflow-y-auto p-3">
                     <div class="mb-3 flex items-center justify-between">
-                        <p class="text-xs text-gray-400">{{ __('Klick auf ein Feld schaltet sofort um, kein Speichern-Button nötig.') }}</p>
+                        <p class="text-xs text-gray-400">{{ __('Markierte Attribute werden beim Kopieren von Projekten vom Quell- in das Zielprojekt übernommen. Änderungen in der Vorlage werden automatisch gespeichert.') }}</p>
                         <div class="flex shrink-0 gap-3">
                             <form method="POST" action="{{ route('admin.projektkopie-vorlagen.alle-markieren', $selectedTemplate) }}">
                                 @csrf
