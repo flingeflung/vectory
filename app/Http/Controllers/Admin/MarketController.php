@@ -61,12 +61,35 @@ class MarketController extends Controller
             }
         }
 
+        $existingMarkets = Market::query()->where('tenant_id', $tenantId)
+            ->whereNotNull('country_id')->whereNotNull('language_id')
+            ->get(['id', 'country_id', 'language_id', 'no_translation'])
+            ->keyBy(fn ($market) => "{$market->country_id}-{$market->language_id}");
+
         return view('admin.maerkte.index', [
             'sets' => $sets,
             'countries' => $countries,
             'selectedSet' => $selectedSet,
             'checkedPairs' => $checkedPairs,
+            'existingMarkets' => $existingMarkets,
         ]);
+    }
+
+    /**
+     * Ralf, 2026-09-11: "Es wird keine Übersetzung für diesen Markt
+     * durchgeführt" (Anzeige in den Projektdetails, Markt-Feld) war bisher
+     * nirgendwo konfigurierbar - kam nur aus dem ursprünglichen Vietto-
+     * Import mit. Sofort-Toggle wie beim Projektart-Zuordnungs-Raster
+     * (AttributeController::toggleProjectType) statt eigenem Formular, da
+     * es ein einzelnes Flag an einem schon bestehenden Datensatz ist.
+     */
+    public function toggleNoTranslation(Market $market): RedirectResponse
+    {
+        abort_unless($market->tenant_id === CurrentTenant::id(), 404);
+
+        $market->update(['no_translation' => ! $market->no_translation]);
+
+        return redirect()->back();
     }
 
     public function setsStore(Request $request): RedirectResponse

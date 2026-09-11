@@ -134,13 +134,34 @@
                                 </td>
                                 <td class="px-3 py-2 align-top">
                                     @forelse ($country->languages as $language)
-                                        @php $pairKey = "{$country->id}-{$language->id}"; @endphp
-                                        <label class="mr-3 inline-flex items-center gap-1 py-0.5">
-                                            @if ($selectedSet)
-                                                <input type="checkbox" name="pairs[]" value="{{ $pairKey }}" class="rounded border-gray-300" @checked($checkedPairs->contains($pairKey))>
+                                        @php
+                                            $pairKey = "{$country->id}-{$language->id}";
+                                            $existingMarket = $existingMarkets->get($pairKey);
+                                        @endphp
+                                        <span class="mr-3 inline-flex items-center gap-1 py-0.5">
+                                            <label class="inline-flex items-center gap-1">
+                                                @if ($selectedSet)
+                                                    <input type="checkbox" name="pairs[]" value="{{ $pairKey }}" class="rounded border-gray-300" @checked($checkedPairs->contains($pairKey))>
+                                                @endif
+                                                <span class="text-gray-700">{{ $language->name }} <span class="text-gray-400">{{ $language->code }}</span></span>
+                                            </label>
+                                            @if ($existingMarket)
+                                                <label class="inline-flex items-center gap-1 text-gray-400" title="{{ __('Für diesen Markt wird keine Übersetzung durchgeführt.') }}">
+                                                    <input
+                                                        type="checkbox"
+                                                        class="rounded border-gray-300"
+                                                        @checked($existingMarket->no_translation)
+                                                        @click="
+                                                            fetch({{ \Illuminate\Support\Js::from(route('admin.maerkte.keine-uebersetzung.toggle', $existingMarket->id)) }}, {
+                                                                method: 'POST',
+                                                                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Content-Type': 'application/x-www-form-urlencoded' },
+                                                            });
+                                                        "
+                                                    >
+                                                    {{ __('keine Übersetzung') }}
+                                                </label>
                                             @endif
-                                            <span class="text-gray-700">{{ $language->name }} <span class="text-gray-400">{{ $language->code }}</span></span>
-                                        </label>
+                                        </span>
                                     @empty
                                         <span class="text-gray-300">–</span>
                                     @endforelse

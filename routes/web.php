@@ -114,6 +114,7 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     Route::post('/maerkte/gruppen/{set}', [MarketController::class, 'setsUpdate'])->name('maerkte.gruppen.update');
     Route::delete('/maerkte/gruppen/{set}', [MarketController::class, 'setsDestroy'])->name('maerkte.gruppen.destroy');
     Route::post('/maerkte/gruppen/{set}/mitglieder', [MarketController::class, 'setsMembersUpdate'])->name('maerkte.gruppen.mitglieder.update');
+    Route::post('/maerkte/{market}/keine-uebersetzung', [MarketController::class, 'toggleNoTranslation'])->name('maerkte.keine-uebersetzung.toggle');
 
     Route::get('/projektkategorien', [ProjectTypeController::class, 'index'])->name('projektkategorien');
     Route::post('/projektkategorien', [ProjectTypeController::class, 'mainStore'])->name('projektkategorien.store');
