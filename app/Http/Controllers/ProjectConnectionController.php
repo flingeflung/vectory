@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use App\Models\ProjectConnection;
-use App\Models\RecentlyViewedProject;
 use App\Support\CurrentTenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,12 +24,19 @@ class ProjectConnectionController extends Controller
      * Inhalt des "Verknüpfen"-Modals - eigenständig statt im großen
      * Projekt-Formular verschachtelt (verschachtelte <form>-Elemente
      * reißen im Browser das versteckte _method-Feld ins äußere Formular
-     * mit rein, siehe gleiche Anmerkung bei den Mail-Vorlagen). Zeigt
-     * Ralf, 2026-09-11 (S2, Vietto-Vorbild "Verbundene Projekte"):
-     * bestehende Verknüpfungen UND das Hinzufügen neuer in EINEM Modal,
-     * bleibt beim Hinzufügen/Entfernen offen (lädt sich selbst neu) -
-     * mehrere Verknüpfungen lassen sich so nacheinander anlegen, ohne
-     * das Modal jedes Mal zu schließen und neu zu öffnen.
+     * mit rein, siehe gleiche Anmerkung bei den Mail-Vorlagen).
+     *
+     * Struktur wie von Ralf konkret vorgegeben (Vietto-Vorbild "Verbundene
+     * Projekte", 2026-09-11): Suchfeld (PN/Bezeichnung) oben, darunter
+     * immer die bereits verknüpften Projekte (angehakt, mit Richtungstext),
+     * darunter die zur Suche passenden noch nicht verknüpften Projekte
+     * (nicht angehakt). Bewusst NICHT Viettos ungefiltert geladene
+     * Gesamtliste (Ralf selbst: "lädt bei inzwischen vielen Projekten
+     * sehr sehr langsam") - die untere Liste bleibt leer, bis gesucht
+     * wird, "Andere Projekte" ist also KEIN Vollständigkeits-Browser,
+     * sondern nur der Suchtreffer-Bereich. Bleibt beim Anhaken/Entfernen
+     * offen (lädt sich selbst neu) - mehrere Verknüpfungen lassen sich so
+     * nacheinander anlegen, ohne das Modal jedes Mal zu schließen.
      */
     public function form(Project $project): View
     {
@@ -46,28 +52,9 @@ class ProjectConnectionController extends Controller
             ->sort()
             ->values();
 
-        $connections = $project->connections();
-
-        // Ralf: "Ich habe ein Suchfeld, aber keinen Überblick" - bewusst
-        // NICHT Viettos ungefilterte Gesamtliste (Ralf selbst: "lädt bei
-        // inzwischen vielen Projekten sehr sehr langsam"), sondern die
-        // zuletzt vom NUTZER geöffneten Projekte als schneller, personalisierter
-        // Einstieg zum Anklicken - Suche bleibt für alles andere.
-        $recentProjects = RecentlyViewedProject::query()
-            ->where('user_id', request()->user()->id)
-            ->where('project_id', '!=', $project->id)
-            ->whereNotIn('project_id', $connections->pluck('otherProject.id'))
-            ->with('project')
-            ->orderByDesc('viewed_at')
-            ->limit(8)
-            ->get()
-            ->pluck('project')
-            ->filter();
-
         return view('projekte.partials.connection-add-body', [
             'project' => $project,
-            'connections' => $connections,
-            'recentProjects' => $recentProjects,
+            'connections' => $project->connections(),
             'labelSuggestions' => $labelSuggestions,
         ]);
     }
