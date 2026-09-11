@@ -47,18 +47,24 @@ class Attribute extends Model
     public const SYSTEM_FIELDS = [
         self::SECTION_STAMMDATEN => [
             'title' => 'Bezeichnung',
+            // Ralf, 2026-09-11: "Start und Ende müssen in einer Zeile
+            // nebeneinander stehen" - direkt nach Bezeichnung einsortiert,
+            // damit die beiden im 2-spaltigen Raster garantiert dieselbe
+            // Zeile teilen (siehe detail.blade.php $isWideField/Zeilen-
+            // Zähler - nur schmale Felder mit gerader Vorgänger-Anzahl
+            // landen nebeneinander).
+            'start_date' => 'Start',
+            'end_date' => 'Ende',
             'project_type' => 'Projektkategorie/-art',
             'version' => 'Version',
             'status' => 'Status',
-            'start_date' => 'Start',
-            'end_date' => 'Ende',
+            // "Erstellungsstatus ist auch ein Stammdatum" - ursprünglich
+            // (Vietto-Vorbild) bei Ablaufdaten eingeordnet, gehört
+            // inhaltlich aber hierher (keine Ablauf-/Prozessinfo, sondern
+            // eine feste Eigenschaft des Projekts).
+            'creation_type' => 'Erstellungsstatus',
             'markets' => 'Markt',
             'remarks' => 'Bemerkungen',
-            // Ralf, 2026-09-11: "Erstellungsstatus ist auch ein Stammdatum" -
-            // ursprünglich (Vietto-Vorbild) bei Ablaufdaten eingeordnet,
-            // gehört inhaltlich aber hierher (keine Ablauf-/Prozessinfo,
-            // sondern eine feste Eigenschaft des Projekts).
-            'creation_type' => 'Erstellungsstatus',
         ],
         self::SECTION_ABLAUFDATEN => [
             'workflow_id' => 'Workflow',
