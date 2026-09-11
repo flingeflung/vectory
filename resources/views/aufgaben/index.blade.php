@@ -113,7 +113,10 @@
                                     <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ $task->functionGroup?->short_name ?? '–' }}</td>
                                     <td class="px-4 py-2 whitespace-nowrap text-gray-500">
                                         @if ($showAllWfsPersons)
-                                            {{ ($wfsPeopleByTask->get($task->id) ?? collect())->map->fullName()->implode(', ') ?: '–' }}
+                                            {{-- Ralf: "Nachname, Vorname" pro Person UND ", " zwischen
+                                                 mehreren Personen war zweideutig - Trennzeichen zwischen
+                                                 Personen deshalb Semikolon statt Komma. --}}
+                                            {{ ($wfsPeopleByTask->get($task->id) ?? collect())->map->fullName()->implode('; ') ?: '–' }}
                                         @else
                                             {{ $task->person?->fullName() ?? '–' }}
                                         @endif

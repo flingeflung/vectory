@@ -90,6 +90,21 @@ class Project extends Model
     }
 
     /**
+     * Footer "angelegt durch"/"zuletzt geändert" (siehe ProjectObserver) -
+     * bewusst NICHT in Fillable, damit das nur der Observer setzen kann,
+     * nie ein manipulierter Request.
+     */
+    public function createdByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by_user_id');
+    }
+
+    public function updatedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by_user_id');
+    }
+
+    /**
      * Klartext-Projektart.
      */
     protected function projectTypeLabel(): CastsAttribute

@@ -221,6 +221,9 @@
         </div>
         </div>
         </div>
+
+        @include('projekte.partials.footer')
+
         @csrf
         @method('patch')
         </form>

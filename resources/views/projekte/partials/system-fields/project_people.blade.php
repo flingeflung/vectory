@@ -29,7 +29,10 @@
                         <div>
                             <span class="text-gray-500">{{ $group->short_name }}:</span>
                             @foreach ($entries as $entry)
-                                <span class="{{ $entry->person->active ? '' : 'text-gray-400' }}">{{ $entry->person->fullName() }}{{ ! $entry->person->active ? ' [i]' : '' }}</span>@if ($entry->is_primary)<span class="text-amber-500" title="{{ __('Erstansprechpartner') }}">&#9733;</span>@endif @if (! $loop->last), @endif
+                                {{-- Ralf: "Nachname, Vorname" pro Person UND ", " zwischen mehreren
+                                     Personen war zweideutig lesbar - Trennzeichen zwischen Personen
+                                     deshalb Semikolon statt Komma. --}}
+                                <span class="{{ $entry->person->active ? '' : 'text-gray-400' }}">{{ $entry->person->fullName() }}{{ ! $entry->person->active ? ' [i]' : '' }}</span>@if ($entry->is_primary)<span class="text-amber-500" title="{{ __('Erstansprechpartner') }}">&#9733;</span>@endif @if (! $loop->last); @endif
                             @endforeach
                         </div>
                     @endif
