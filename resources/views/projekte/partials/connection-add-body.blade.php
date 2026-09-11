@@ -30,13 +30,13 @@
                 window.hideProjectConnectionLoading();
             }
         },
-        onListScroll(el) {
-            if (this.loadingMore || ! this.otherHasMore) return;
-            if (el.scrollTop + el.clientHeight >= el.scrollHeight - 150) {
-                this.loadMore();
-            }
+        initScrollSentinel(el) {
+            new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting) { this.loadMore(); }
+            }, { root: document.getElementById('connection-list'), rootMargin: '200px' }).observe(el);
         },
         async loadMore() {
+            if (this.loadingMore || ! this.otherHasMore) return;
             this.loadingMore = true;
             try {
                 const url = `/projekte/{{ $project->id }}/verknuepfungen/mehr?q=` + encodeURIComponent(this.term) + `&offset=` + this.otherOffset;
@@ -61,36 +61,47 @@
             }
             this.loading = true;
             window.showProjectConnectionLoading();
-            const response = await fetch({{ \Illuminate\Support\Js::from(route('projekte.verknuepfungen.store', $project)) }}, {
-                method: 'POST',
-                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({ related_project_id: id, label: this.addLabel, label_reverse: this.addLabelReverse }),
-            });
-            if (! response.ok) {
+            try {
+                const response = await fetch({{ \Illuminate\Support\Js::from(route('projekte.verknuepfungen.store', $project)) }}, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ related_project_id: id, label: this.addLabel, label_reverse: this.addLabelReverse }),
+                });
+                if (! response.ok) {
+                    window.notifyDialog({{ \Illuminate\Support\Js::from(__('Verknüpfen fehlgeschlagen. Bitte Eingaben prüfen und erneut versuchen.')) }});
+                    return;
+                }
+                const rowHtml = await response.text();
+                document.getElementById('connected-projects-rows').insertAdjacentHTML('beforeend', rowHtml);
+                document.getElementById(`other-row-${id}`)?.remove();
+                this.addingId = null;
+            } finally {
                 this.loading = false;
                 window.hideProjectConnectionLoading();
-                window.notifyDialog({{ \Illuminate\Support\Js::from(__('Verknüpfen fehlgeschlagen. Bitte Eingaben prüfen und erneut versuchen.')) }});
-                return;
             }
-            // Sanduhr bleibt an, bis der komplette Neuladen-Zyklus fertig ist
-            // (reloadProjectConnectionModal blendet sie selbst wieder aus) -
-            // sonst kurzes Flackern zwischen den beiden Fetches.
-            window.reloadProjectConnectionModal();
         },
-        removeConnection(connectionId) {
+        removeConnection(connectionId, otherProjectId) {
             window.confirmDialog({
                 title: {{ \Illuminate\Support\Js::from(__('Verknüpfung entfernen?')) }},
                 message: {{ \Illuminate\Support\Js::from(__('Diese Verknüpfung wirklich entfernen?')) }},
                 confirmLabel: {{ \Illuminate\Support\Js::from(__('Entfernen')) }},
                 cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
-            }).then((ok) => {
+            }).then(async (ok) => {
                 if (! ok) return;
                 this.loading = true;
                 window.showProjectConnectionLoading();
-                fetch(`/projekte/{{ $project->id }}/verknuepfungen/${connectionId}`, {
-                    method: 'DELETE',
-                    headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
-                }).then(() => window.reloadProjectConnectionModal());
+                try {
+                    const response = await fetch(`/projekte/{{ $project->id }}/verknuepfungen/${connectionId}`, {
+                        method: 'DELETE',
+                        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                    });
+                    if (response.ok) {
+                        document.getElementById(`connected-row-${otherProjectId}`)?.remove();
+                    }
+                } finally {
+                    this.loading = false;
+                    window.hideProjectConnectionLoading();
+                }
             });
         },
     }"
@@ -102,20 +113,28 @@
          beim Tippen ausgetauscht), sonst verliert es beim Tippen den Fokus
          (Live-Suche-Konvention, siehe CLAUDE.md).
 
-         Ralf: bei ~6700 Projekten (Sanitär) dauert Hinzufügen/Entfernen/
-         Suchen spürbar - Sanduhr (window.show/hideProjectConnectionLoading,
-         siehe layouts/app.blade.php) plus Klicksperre (:disabled="loading")
-         auf allen Kästchen/Buttons, sonst "verleitet das zum wilden
-         Rumklicken".
+         Ralf: bei ~6700 Projekten (Sanitär) war das komplette Neuladen der
+         Liste nach jedem Hinzufügen/Entfernen spürbar langsam ("das geht
+         alles von meiner Nutzungszeit ab"). Hinzufügen/Entfernen laden
+         deshalb NICHT mehr die ganze Liste neu (window.reloadProjectConnectionModal
+         wird dafür nicht mehr benutzt) - store()/destroy() geben nur noch
+         die eine betroffene Zeile bzw. 204 zurück, der Client fügt sie
+         direkt ein bzw. entfernt sie direkt (confirmAdd/removeConnection).
+         Sanduhr (window.show/hideProjectConnectionLoading, siehe
+         layouts/app.blade.php) plus Klicksperre (:disabled="loading") auf
+         allen Kästchen/Buttons bleiben trotzdem, weil diese Fetches auf
+         Sanitärs Datenmenge nicht beliebig schnell sind.
 
-         Aus demselben Grund lädt "Andere Projekte" nur die ersten
-         {{ $pageSize }} (onListScroll/loadMore) statt alles auf einmal -
-         weitere kommen beim Erreichen des Listenendes nach (unendliches
-         Scrollen), bis nichts mehr kommt. loadMore() prüft response.ok:
-         ein Serverfehler beim Nachladen hätte sonst denselben Effekt wie
-         "keine weiteren Projekte mehr" (X-Has-More-Header fehlt dann) und
-         das Nachladen wäre stillschweigend für immer stehengeblieben
-         (Ralf-Bug-Report "nach X ist finito").
+         Aus demselben Performance-Grund lädt "Andere Projekte" nur die
+         ersten {{ $pageSize }} (initScrollSentinel/loadMore, Intersection
+         Observer statt manueller Scroll-Positions-Berechnung - robuster
+         gegenüber Rundungsfehlern bei Zoom/hoher Pixeldichte) statt alles
+         auf einmal - weitere kommen beim Erreichen des Listenendes nach
+         (unendliches Scrollen), bis nichts mehr kommt. loadMore() prüft
+         response.ok: ein Serverfehler beim Nachladen hätte sonst denselben
+         Effekt wie "keine weiteren Projekte mehr" (X-Has-More-Header fehlt
+         dann) und das Nachladen wäre stillschweigend für immer
+         stehengeblieben (Ralf-Bug-Report "nach X ist finito").
 
          WICHTIG für Änderungen an diesem x-data-Block: KEINE geraden
          Anführungszeichen in JS-Kommentaren dort verwenden - die beenden
@@ -131,29 +150,17 @@
     <div
         id="connection-list"
         class="mt-3 max-h-[50vh] overflow-y-auto"
-        @scroll="onListScroll($event.target)"
         data-other-offset="{{ $otherProjects->count() }}"
         data-other-has-more="{{ $otherHasMore ? '1' : '0' }}"
     >
         <div class="mb-1 text-[11px] font-medium text-gray-500">{{ __('Verknüpfte Projekte') }}</div>
-        @forelse ($connectedProjects as $p)
-            @php $entry = $connections->get($p->id); @endphp
-            <div class="border-b border-gray-100 py-1 last:border-0">
-                {{-- Bewusst KEIN <label> um Checkbox+Text: ein <label> leitet
-                     jeden Klick auf den Text automatisch an die Checkbox
-                     weiter (Browser-Standardverhalten) - ein Klick auf den
-                     Projektnamen hätte sonst ungewollt die Verknüpfung
-                     entfernt (Ralf-Bug-Report). Nur die Checkbox selbst
-                     soll klickbar sein. --}}
-                <div class="flex items-start gap-1.5 text-xs text-gray-700">
-                    <input type="checkbox" checked :disabled="loading" @click.prevent="removeConnection({{ $entry->connection->id }})" class="mt-0.5 shrink-0 rounded border-gray-300">
-                    <span>{{ $p->source_pn }} &ndash; {{ $p->title }}</span>
-                </div>
-                <div class="ml-5 text-[11px] text-gray-400">{{ $entry->label }}</div>
-            </div>
-        @empty
-            <div class="text-xs text-gray-400">{{ __('Keine Treffer.') }}</div>
-        @endforelse
+        <div id="connected-projects-rows">
+            @if ($connectedProjects->isEmpty())
+                <div class="text-xs text-gray-400">{{ __('Keine Treffer.') }}</div>
+            @else
+                @include('projekte.partials.connection-connected-project-rows')
+            @endif
+        </div>
 
         <div class="mb-1 mt-3 text-[11px] font-medium text-gray-500">{{ __('Andere Projekte') }}</div>
         <div id="other-projects-rows">
@@ -163,6 +170,7 @@
                 @include('projekte.partials.connection-other-project-rows')
             @endif
         </div>
+        <div x-init="initScrollSentinel($el)" class="h-px"></div>
         <div x-show="loadingMore" x-cloak class="py-1.5 text-center text-[11px] text-gray-400">{{ __('Lädt weitere Projekte…') }}</div>
     </div>
 

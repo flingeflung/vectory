@@ -4,7 +4,7 @@
      ProjectConnectionController::moreOtherProjects()) dieselbe Zeile
      rendern. Braucht $project (Kontext-Projekt) und $p (die Zeile) aus
      der Alpine-Umgebung des einbindenden Modals (loading/addingId/...). --}}
-<div class="border-b border-gray-100 py-1 last:border-0">
+<div class="border-b border-gray-100 py-1 last:border-0" id="other-row-{{ $p->id }}">
     <div class="flex items-start gap-1.5 text-xs text-gray-700">
         <input type="checkbox" :disabled="loading" @click.prevent="addingId === {{ $p->id }} ? (addingId = null) : startAdd({{ $p->id }})" class="mt-0.5 shrink-0 rounded border-gray-300">
         <span>{{ $p->source_pn }} &ndash; {{ $p->title }}</span>

@@ -6,7 +6,6 @@ use App\Models\Project;
 use App\Models\ProjectConnection;
 use App\Support\CurrentTenant;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Validation\Rule;
@@ -119,7 +118,15 @@ class ProjectConnectionController extends Controller
         }
     }
 
-    public function store(Request $request, Project $project): RedirectResponse
+    /**
+     * Gibt NUR die neu entstandene "Verknüpfte Projekte"-Zeile als HTML-
+     * Fragment zurück (statt die komplette Liste neu zu laden/rendern) -
+     * bei ~6700 Projekten (Sanitär) war das komplette Neuladen nach jedem
+     * Hinzufügen spürbar langsam (Ralf-Bug-Report). Client entfernt die
+     * entsprechende "Andere Projekte"-Zeile selbst (siehe
+     * connection-add-body.blade.php, confirmAdd()).
+     */
+    public function store(Request $request, Project $project): Response
     {
         abort_unless($project->tenant_id === CurrentTenant::id(), 404);
 
@@ -142,25 +149,39 @@ class ProjectConnectionController extends Controller
             throw ValidationException::withMessages(['related_project_id' => __('Diese beiden Projekte sind bereits verknüpft.')]);
         }
 
-        ProjectConnection::query()->create([
+        $label = trim($validated['label']);
+
+        $connection = ProjectConnection::query()->create([
             'tenant_id' => $project->tenant_id,
             'project_id' => $project->id,
             'related_project_id' => $validated['related_project_id'],
-            'label' => trim($validated['label']),
+            'label' => $label,
             'label_reverse' => trim($validated['label_reverse']),
             'created_by_user_id' => $request->user()->id,
         ]);
 
-        return back();
+        $relatedProject = Project::query()->findOrFail($validated['related_project_id']);
+
+        $html = view('projekte.partials.connection-connected-project-row', [
+            'p' => $relatedProject,
+            'connectionId' => $connection->id,
+            'label' => $label,
+        ])->render();
+
+        return response($html);
     }
 
-    public function destroy(Project $project, ProjectConnection $connection): RedirectResponse
+    /**
+     * Nur ein 204 - der Client entfernt die betroffene Zeile selbst, kein
+     * Neuladen der Liste nötig (gleicher Grund wie bei store()).
+     */
+    public function destroy(Project $project, ProjectConnection $connection): Response
     {
         abort_unless($project->tenant_id === CurrentTenant::id(), 404);
         abort_unless(in_array($project->id, [$connection->project_id, $connection->related_project_id], true), 404);
 
         $connection->delete();
 
-        return back();
+        return response('', 204);
     }
 }
