@@ -34,10 +34,10 @@
                 </a>
                 <a
                     onclick="return window.navigateOrConfirm(event)"
-                    href="{{ route('admin.maerkte') }}"
-                    class="pb-2 {{ request()->routeIs('admin.maerkte*') ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700' }}"
+                    href="{{ route('admin.config') }}"
+                    class="pb-2 {{ request()->routeIs('admin.config') ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700' }}"
                 >
-                    {{ __('Märkte') }}
+                    {{ __('Stammdaten') }}
                 </a>
                 <a
                     onclick="return window.navigateOrConfirm(event)"
@@ -45,6 +45,20 @@
                     class="pb-2 {{ request()->routeIs('admin.projektkategorien*') ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700' }}"
                 >
                     {{ __('Projektkategorien') }}
+                </a>
+                <a
+                    onclick="return window.navigateOrConfirm(event)"
+                    href="{{ route('admin.projektattribute') }}"
+                    class="pb-2 {{ request()->routeIs('admin.projektattribute*') ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700' }}"
+                >
+                    {{ __('Projektattribute') }}
+                </a>
+                <a
+                    onclick="return window.navigateOrConfirm(event)"
+                    href="{{ route('admin.maerkte') }}"
+                    class="pb-2 {{ request()->routeIs('admin.maerkte*') ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700' }}"
+                >
+                    {{ __('Märkte') }}
                 </a>
                 <a
                     onclick="return window.navigateOrConfirm(event)"
@@ -59,20 +73,6 @@
                     class="pb-2 {{ request()->routeIs('admin.mail-vorlagen*') ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700' }}"
                 >
                     {{ __('Mail-Vorlagen') }}
-                </a>
-                <a
-                    onclick="return window.navigateOrConfirm(event)"
-                    href="{{ route('admin.projektattribute') }}"
-                    class="pb-2 {{ request()->routeIs('admin.projektattribute*') ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700' }}"
-                >
-                    {{ __('Projektattribute') }}
-                </a>
-                <a
-                    onclick="return window.navigateOrConfirm(event)"
-                    href="{{ route('admin.config') }}"
-                    class="pb-2 {{ request()->routeIs('admin.config') ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700' }}"
-                >
-                    {{ __('Stammdaten') }}
                 </a>
                 @if (\App\Models\SystemSetting::multiTenantEnabled())
                     <a
