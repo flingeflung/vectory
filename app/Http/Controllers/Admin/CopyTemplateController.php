@@ -48,15 +48,21 @@ class CopyTemplateController extends Controller
 
     /**
      * Feste Felder, die beim Anlegen einer neuen Vorlage standardmäßig
-     * angehakt sind (Ralf/Claude-Analyse, 2026-09-11): strukturelle
-     * Klassifikation, die bei einer Kopie meist unverändert bleibt.
-     * Alle anderen festen Felder starten unangehakt (Bezeichnung, Start/
-     * Ende, Version, Status/Erstellungsstatus, Bemerkungen, Publikations-
-     * datum, Projektbeteiligte Personen, Archiviert, die noch datenlosen
-     * Platzhalterfelder) - jeweils, weil eine Kopie hier bewusst frisch
-     * starten oder der Nutzer aktiv entscheiden soll.
+     * angehakt sind (Ralf/Claude-Analyse, 2026-09-11, von Ralf korrigiert):
+     * strukturelle Klassifikation, die bei einer Kopie meist unverändert
+     * bleibt, PLUS Bezeichnung und Version - beide sind Pflichtwerte, die
+     * das Zielprojekt so oder so braucht (Bezeichnung: Pflichtfeld ohne
+     * DB-Default; Version: die vereinbarte "+1?"-Abfrage beim Kopieren
+     * selbst ergibt nur Sinn, wenn der Ausgangswert überhaupt mitkommt).
+     * Nicht angehakt heißt bei Bezeichnung: Feld startet im Kopier-Dialog
+     * leer statt vorbefüllt, Speichern bleibt trotzdem erst mit Eingabe
+     * möglich. Alle übrigen festen Felder starten unangehakt (Start/Ende,
+     * Status/Erstellungsstatus, Bemerkungen, Publikationsdatum, Projekt-
+     * beteiligte Personen, Archiviert, die noch datenlosen Platzhalter-
+     * felder) - jeweils, weil eine Kopie hier bewusst frisch starten oder
+     * der Nutzer aktiv entscheiden soll.
      */
-    private const DEFAULT_CHECKED_KEYS = ['project_type', 'markets', 'workflow_id'];
+    private const DEFAULT_CHECKED_KEYS = ['title', 'project_type', 'version', 'markets', 'workflow_id'];
 
     public function store(Request $request): RedirectResponse
     {
