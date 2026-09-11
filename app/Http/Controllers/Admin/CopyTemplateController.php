@@ -46,6 +46,18 @@ class CopyTemplateController extends Controller
         ]);
     }
 
+    /**
+     * Feste Felder, die beim Anlegen einer neuen Vorlage standardmäßig
+     * angehakt sind (Ralf/Claude-Analyse, 2026-09-11): strukturelle
+     * Klassifikation, die bei einer Kopie meist unverändert bleibt.
+     * Alle anderen festen Felder starten unangehakt (Bezeichnung, Start/
+     * Ende, Version, Status/Erstellungsstatus, Bemerkungen, Publikations-
+     * datum, Projektbeteiligte Personen, Archiviert, die noch datenlosen
+     * Platzhalterfelder) - jeweils, weil eine Kopie hier bewusst frisch
+     * starten oder der Nutzer aktiv entscheiden soll.
+     */
+    private const DEFAULT_CHECKED_KEYS = ['project_type', 'markets', 'workflow_id'];
+
     public function store(Request $request): RedirectResponse
     {
         $tenantId = CurrentTenant::id();
@@ -58,6 +70,23 @@ class CopyTemplateController extends Controller
             'name' => $name,
             'sort' => 1 + (int) CopyTemplate::query()->where('tenant_id', $tenantId)->max('sort'),
         ]);
+
+        // Zusatzfelder (system=false) sind ebenfalls default angehakt -
+        // Ausnahme Freitext (mehrzeilig) und Datum, die wie ihre festen
+        // Pendants (Bemerkungen, Start/Ende, Publikationsdatum) bewusst
+        // nicht automatisch übernommen werden.
+        $defaultFieldIds = Attribute::query()
+            ->where('tenant_id', $tenantId)
+            ->where(function ($query) {
+                $query->whereIn('key', self::DEFAULT_CHECKED_KEYS)
+                    ->orWhere(function ($query) {
+                        $query->where('system', false)
+                            ->whereNotIn('data_type', [Attribute::DATA_TYPE_TEXTAREA, Attribute::DATA_TYPE_DATE]);
+                    });
+            })
+            ->pluck('id');
+
+        $template->fields()->attach($defaultFieldIds);
 
         return redirect()->route('admin.projektkopie-vorlagen', ['vorlage' => $template->id])->with('status', 'copy-templates-updated');
     }
