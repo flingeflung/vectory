@@ -73,13 +73,7 @@
                         {{ $selectedSet ? $selectedSet->name : __('Markt-Katalog') }}
                     </div>
                     <p class="text-xs text-gray-400">
-                        @if ($selectedSet)
-                            {{ __('Hake die Sprachen an, die für diese Ländergruppe gelten, und speichere.') }}
-                        @else
-                            {{ __('Wähle links eine Ländergruppe aus, um Sprachen zuzuordnen.') }}
-                        @endif
                         {{ __('Ländercodes nach ISO 3166-1, Sprachcodes nach ISO 639-1.') }}
-                        {{ __('„keine Übersetzung“ wirkt sofort beim Anklicken, unabhängig vom Speichern-Button.') }}
                     </p>
                 </div>
                 <div class="flex shrink-0 items-center gap-2">
