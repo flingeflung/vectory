@@ -6,6 +6,7 @@ use App\Enums\ActivityType;
 use App\Models\Activity;
 use App\Models\CopyTemplate;
 use App\Models\Project;
+use App\Models\ProjectConnection;
 use App\Models\ProjectPerson;
 use App\Models\ProjectWorkflowStep;
 use App\Models\Tenant;
@@ -86,9 +87,10 @@ class ProjectCopyController extends Controller
         $count = $validated['count'];
         $incrementVersion = $request->boolean('increment_version');
         $sourceAttributes = $sourceProject->attributes ?? [];
+        $userId = $request->user()->id;
 
         $newProjectIds = DB::transaction(function () use (
-            $sourceProject, $tenantId, $baseTitle, $count, $checkedKeys, $customFieldKeys, $incrementVersion, $sourceAttributes
+            $sourceProject, $tenantId, $baseTitle, $count, $checkedKeys, $customFieldKeys, $incrementVersion, $sourceAttributes, $userId
         ) {
             // Zeilen-Lock auf den Mandanten als Mutex - gleiches Prinzip wie
             // ProjectController::store(), damit mehrere gleichzeitige
@@ -146,6 +148,20 @@ class ProjectCopyController extends Controller
                 $newProject = Project::query()->create($attrs);
 
                 Activity::log($newProject, ActivityType::ProjectCopied, __('Projekt neu angelegt (Kopie von :pn).', ['pn' => $sourceProject->source_pn]));
+
+                // Ralf: "wenn wir es schon hätten, dann könnte der
+                // Mechanismus die Verknüpfung direkt anlegen" - anders als
+                // Vietto (eigener Haken + Freitext im Kopier-Dialog) hier
+                // immer automatisch mit festem Wortlaut, änderbar über die
+                // normale Projektverknüpfungen-Verwaltung danach.
+                ProjectConnection::query()->create([
+                    'tenant_id' => $tenantId,
+                    'project_id' => $sourceProject->id,
+                    'related_project_id' => $newProject->id,
+                    'label' => __('Kopiert nach'),
+                    'label_reverse' => __('Kopiert von'),
+                    'created_by_user_id' => $userId,
+                ]);
 
                 if (in_array('markets', $checkedKeys, true)) {
                     $newProject->markets()->sync(

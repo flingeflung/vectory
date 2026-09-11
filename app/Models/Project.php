@@ -152,7 +152,7 @@ class Project extends Model
         return $this->hasMany(ProjectPerson::class);
     }
 
-    public function workflow(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function workflow(): BelongsTo
     {
         return $this->belongsTo(Workflow::class);
     }
@@ -160,6 +160,39 @@ class Project extends Model
     public function projectWorkflowSteps(): HasMany
     {
         return $this->hasMany(ProjectWorkflowStep::class)->orderBy('sort');
+    }
+
+    public function connectionsFrom(): HasMany
+    {
+        return $this->hasMany(ProjectConnection::class, 'project_id');
+    }
+
+    public function connectionsTo(): HasMany
+    {
+        return $this->hasMany(ProjectConnection::class, 'related_project_id');
+    }
+
+    /**
+     * Verknüpfungen aus Sicht DIESES Projekts, unabhängig davon, ob es die
+     * project_id- oder related_project_id-Seite der Zeile ist (siehe
+     * ProjectConnection-Migration) - liefert je Verknüpfung das jeweils
+     * andere Projekt und die aus dieser Richtung passende Bezeichnung.
+     *
+     * @return Collection<int, object{connection: ProjectConnection, otherProject: Project, label: string}>
+     */
+    public function connections(): Collection
+    {
+        return $this->connectionsFrom->map(fn (ProjectConnection $c) => (object) [
+            'connection' => $c,
+            'otherProject' => $c->relatedProject,
+            'label' => $c->label,
+        ])->concat(
+            $this->connectionsTo->map(fn (ProjectConnection $c) => (object) [
+                'connection' => $c,
+                'otherProject' => $c->project,
+                'label' => $c->label_reverse,
+            ])
+        );
     }
 
     /**
@@ -252,13 +285,13 @@ class Project extends Model
      * Variable Attribute, die für die Projektart dieses Projekts relevant
      * sind (Analogon zu Viettos attribute_projekttyp_cx).
      *
-     * @return Collection<int, \App\Models\Attribute>
+     * @return Collection<int, Attribute>
      */
     public function relevantAttributes(): Collection
     {
-        return \App\Models\Attribute::query()
+        return Attribute::query()
             ->where('tenant_id', $this->tenant_id)
-            ->where('section', \App\Models\Attribute::SECTION_TYPSPEZIFISCH)
+            ->where('section', Attribute::SECTION_TYPSPEZIFISCH)
             ->whereIn('id', function ($query) {
                 $query->select('attribute_id')
                     ->from('attribute_project_type')
@@ -275,11 +308,11 @@ class Project extends Model
      * immer für alle Projekte des Mandanten (diese zwei Bereiche sind
      * inhaltlich nicht an eine Projektart gebunden).
      *
-     * @return Collection<int, \App\Models\Attribute>
+     * @return Collection<int, Attribute>
      */
     public function sectionAttributes(string $section): Collection
     {
-        return \App\Models\Attribute::query()
+        return Attribute::query()
             ->where('tenant_id', $this->tenant_id)
             ->where('section', $section)
             ->with('options')
@@ -293,7 +326,7 @@ class Project extends Model
      * Validierung/Schreiblogik in ProjectController::update() und dürfen
      * nicht über den generischen attributes-JSON-Merge laufen.
      *
-     * @return Collection<int, \App\Models\Attribute>
+     * @return Collection<int, Attribute>
      */
     public function customSectionAttributes(string $section): Collection
     {

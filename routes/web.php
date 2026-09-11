@@ -22,6 +22,7 @@ use App\Http\Controllers\FavoriteController;
 use App\Http\Controllers\GraphicOrderController;
 use App\Http\Controllers\IllustrationOverviewController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProjectConnectionController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectCopyController;
 use App\Http\Controllers\ProjectDirectoryController;
@@ -72,6 +73,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/projekte/{project}/kopieren', [ProjectCopyController::class, 'form'])->name('projekte.kopieren.form');
     Route::post('/projekte/{project}/kopieren', [ProjectCopyController::class, 'store'])->name('projekte.kopieren.store');
+
+    Route::get('/projekte/{project}/verknuepfungen/neu', [ProjectConnectionController::class, 'form'])->name('projekte.verknuepfungen.form');
+    Route::post('/projekte/{project}/verknuepfungen', [ProjectConnectionController::class, 'store'])->name('projekte.verknuepfungen.store');
+    Route::delete('/projekte/{project}/verknuepfungen/{connection}', [ProjectConnectionController::class, 'destroy'])->name('projekte.verknuepfungen.destroy');
 
     Route::get('/favoriten', [FavoriteController::class, 'index'])->name('favoriten');
 
