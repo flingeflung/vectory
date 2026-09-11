@@ -135,6 +135,21 @@
 
         <div id="personen-list" class="flex-1 min-h-0 overflow-y-auto">
             <div class="px-3 py-1.5 text-xs text-gray-400">
+                @if ($canSearchAllTenants)
+                    @php
+                        $tenantFilterValue = $filters['tenant_id'] ?? '';
+                        if ($tenantFilterValue === 'all') {
+                            $searchCriteria = __('Alle Kunden');
+                        } elseif ($tenantFilterValue !== '') {
+                            $filterTenant = $tenants->firstWhere('id', (int) $tenantFilterValue);
+                            $searchCriteria = __('Personen des Kunden :tenant', ['tenant' => $filterTenant?->short_name ?? $filterTenant?->name ?? '?']);
+                        } else {
+                            $activeTenant = \App\Support\CurrentTenant::current();
+                            $searchCriteria = __('Personen des Kunden :tenant + solche mit Zugriff darauf', ['tenant' => $activeTenant?->short_name ?? $activeTenant?->name ?? '?']);
+                        }
+                    @endphp
+                    {{ $searchCriteria }}:
+                @endif
                 {{ trans_choice(':count Person gefunden|:count Personen gefunden', $people->count(), ['count' => $people->count()]) }}
             </div>
             <table class="min-w-full divide-y divide-gray-100 text-sm">
