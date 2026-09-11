@@ -157,7 +157,7 @@
                                                     type="button"
                                                     class="inline-flex items-center"
                                                     :class="translated ? 'text-gray-700' : 'text-gray-300'"
-                                                    :title="(translated ? {{ \Illuminate\Support\Js::from(__('Wird übersetzt.')) }} : {{ \Illuminate\Support\Js::from(__('Wird nicht übersetzt.')) }}) + ' ' + {{ \Illuminate\Support\Js::from(__('Wirkt sofort, unabhängig vom Speichern-Button oben.')) }}"
+                                                    :title="translated ? {{ \Illuminate\Support\Js::from(__('Wird übersetzt.')) }} : {{ \Illuminate\Support\Js::from(__('Wird nicht übersetzt.')) }}"
                                                     @if ($selectedSet) x-show="active" @endif
                                                     @click="
                                                         translated = !translated;
