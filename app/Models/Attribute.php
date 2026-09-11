@@ -60,6 +60,22 @@ class Attribute extends Model
             'publication_date' => 'Publikationsdatum',
             'project_people' => 'Projektbeteiligte Personen',
             'archived' => 'Archiviert',
+            // Ralf, 2026-09-11: sechs neue, bewusst NICHT editierbare
+            // Anzeigefelder (Vietto-Vorbild in ajax_getprojektdetails.php) -
+            // "progress" ist nur ein Duplikat der schon vorhandenen
+            // berechneten Fortschrittsanzeige (siehe system-fields/status),
+            // "remarks_echo" ein Duplikat der Stammdaten-Bemerkungen -
+            // beide haben also schon eine echte Datenquelle. Die übrigen
+            // vier haben (noch) keine Datenquelle in Vectory und zeigen
+            // bewusst nur einen "– noch nicht verfügbar –"-Platzhalter,
+            // bis das jeweilige Feature (Checkliste, Projektverbindungen)
+            // gebaut ist - siehe Backlog-Memory.
+            'progress' => 'Projektfortschritt',
+            'creation_type' => 'Erstellungsstatus',
+            'checklist' => 'Checkliste',
+            'project_connections' => 'Projektverknüpfungen',
+            'remarks_echo' => 'Bemerkungen',
+            'changes_vs_previous_version' => 'Änderungen zur Vorversion',
         ],
     ];
 

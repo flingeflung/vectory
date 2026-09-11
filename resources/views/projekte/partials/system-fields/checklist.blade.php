@@ -1,0 +1,9 @@
+{{--
+    Ralf, 2026-09-11: Platzhalter nach Vietto-Vorbild (dort eigenes
+    Checklisten-Subsystem mit Vorlagen/Abschnitten/Punkten) - steht auf dem
+    Backlog, in Vectory noch ohne eigene Datenquelle/Eingabe.
+--}}
+<div>
+    <label class="block text-xs text-gray-500">{{ __('Checkliste') }}</label>
+    <div class="mt-0.5 text-gray-400">{{ __('– noch nicht verfügbar –') }}</div>
+</div>
