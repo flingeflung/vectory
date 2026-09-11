@@ -166,9 +166,16 @@
         <div class="w-0.5 shrink-0 rounded-full" style="background-color: #09f" title="{{ __('Stammdaten') }}"></div>
         <div class="min-w-0 flex-1">
 
-        <div class="grid grid-cols-2 gap-x-4 gap-y-2.5">
+        <div class="grid grid-cols-2 gap-x-4">
+        @php $col = 0; $row = 0; @endphp
         @foreach ($stammdatenAttributes as $field)
-            <div class="{{ $isWideField($field) ? 'col-span-2' : '' }}">
+            @php
+                $wide = $isWideField($field);
+                if ($wide && $col !== 0) { $row++; $col = 0; }
+                $isFirstRow = $row === 0;
+                if ($wide) { $row++; $col = 0; } else { $col++; if ($col >= 2) { $col = 0; $row++; } }
+            @endphp
+            <div class="{{ $wide ? 'col-span-2' : '' }} {{ $isFirstRow ? '' : 'border-t border-gray-100 pt-2' }}">
                 @if ($field->system)
                     @include('projekte.partials.system-fields.'.$field->key)
                 @else
@@ -206,9 +213,16 @@
         <div class="w-0.5 shrink-0 rounded-full" style="background-color: #396" title="{{ __('Ablaufdaten') }}"></div>
         <div class="min-w-0 flex-1">
 
-        <div class="grid grid-cols-2 gap-x-4 gap-y-2.5">
+        <div class="grid grid-cols-2 gap-x-4">
+        @php $col = 0; $row = 0; @endphp
         @foreach ($ablaufdatenAttributes as $field)
-            <div class="{{ $isWideField($field) ? 'col-span-2' : '' }}">
+            @php
+                $wide = $isWideField($field);
+                if ($wide && $col !== 0) { $row++; $col = 0; }
+                $isFirstRow = $row === 0;
+                if ($wide) { $row++; $col = 0; } else { $col++; if ($col >= 2) { $col = 0; $row++; } }
+            @endphp
+            <div class="{{ $wide ? 'col-span-2' : '' }} {{ $isFirstRow ? '' : 'border-t border-gray-100 pt-2' }}">
                 @if ($field->system)
                     @include('projekte.partials.system-fields.'.$field->key)
                 @else
