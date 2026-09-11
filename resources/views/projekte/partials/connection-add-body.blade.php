@@ -30,12 +30,6 @@
                 window.hideProjectConnectionLoading();
             }
         },
-        // Ralf, 2026-09-11: bei ~6700 Projekten (Sanitär) lädt die Liste
-        // andere Projekte nur die ersten {{ $pageSize }}, weitere kommen
-        // beim Erreichen des Listenendes nach (unendliches Scrollen) statt
-        // alles auf einmal. Bewusst KEINE geraden Anführungszeichen in
-        // diesem Kommentarblock - die würden das umschließende x-data-
-        // Attribut vorzeitig beenden.
         onListScroll(el) {
             if (this.loadingMore || ! this.otherHasMore) return;
             if (el.scrollTop + el.clientHeight >= el.scrollHeight - 150) {
@@ -47,12 +41,6 @@
             try {
                 const url = `/projekte/{{ $project->id }}/verknuepfungen/mehr?q=` + encodeURIComponent(this.term) + `&offset=` + this.otherOffset;
                 const response = await fetch(url);
-                // Ralf-Bug-Report "nach X ist finito": ohne diese Prüfung
-                // wäre ein Serverfehler beim Nachladen (X-Has-More-Header
-                // fehlt dann) stillschweigend als "keine weiteren Projekte"
-                // missverstanden worden statt als Fehler - otherHasMore
-                // bleibt jetzt bei einem Fehler unangetastet, ein erneutes
-                // Scrollen versucht es wieder.
                 if (! response.ok) {
                     window.notifyDialog({{ \Illuminate\Support\Js::from(__('Nachladen fehlgeschlagen. Bitte erneut versuchen (z. B. kurz hoch- und wieder runterscrollen).')) }});
                     return;
@@ -118,7 +106,23 @@
          Suchen spürbar - Sanduhr (window.show/hideProjectConnectionLoading,
          siehe layouts/app.blade.php) plus Klicksperre (:disabled="loading")
          auf allen Kästchen/Buttons, sonst "verleitet das zum wilden
-         Rumklicken". --}}
+         Rumklicken".
+
+         Aus demselben Grund lädt "Andere Projekte" nur die ersten
+         {{ $pageSize }} (onListScroll/loadMore) statt alles auf einmal -
+         weitere kommen beim Erreichen des Listenendes nach (unendliches
+         Scrollen), bis nichts mehr kommt. loadMore() prüft response.ok:
+         ein Serverfehler beim Nachladen hätte sonst denselben Effekt wie
+         "keine weiteren Projekte mehr" (X-Has-More-Header fehlt dann) und
+         das Nachladen wäre stillschweigend für immer stehengeblieben
+         (Ralf-Bug-Report "nach X ist finito").
+
+         WICHTIG für Änderungen an diesem x-data-Block: KEINE geraden
+         Anführungszeichen in JS-Kommentaren dort verwenden - die beenden
+         das umschließende x-data="..."-Attribut vorzeitig, der Rest der
+         Seite landet dann als Rohtext im Browser (ist hier schon zweimal
+         passiert). Erklärungen gehören hierher in diesen Blade-Kommentar,
+         nicht in JS-Kommentare innerhalb von x-data. --}}
     <div>
         <label class="block text-xs text-gray-500">{{ __('Projekt suchen (PN oder Bezeichnung)') }}</label>
         <input type="text" x-model="term" @input="onSearchInput()" :disabled="loading" autocomplete="off" class="mt-0.5 w-full rounded-md border-gray-300 text-sm disabled:bg-gray-50">
