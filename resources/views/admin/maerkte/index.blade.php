@@ -132,16 +132,28 @@
                                         @php
                                             $pairKey = "{$country->id}-{$language->id}";
                                             $existingMarket = $existingMarkets->get($pairKey);
+                                            // "keine Übersetzung" ist eine Eigenschaft des Markt-Datensatzes
+                                            // selbst, unabhängig von der aktuell betrachteten Ländergruppe -
+                                            // nur zeigen, wenn die Sprache hier auch tatsächlich angehakt ist,
+                                            // sonst wirkt "Sprache aus, aber keine Übersetzung an" widersprüchlich.
+                                            $showNoTranslation = $existingMarket && (! $selectedSet || $checkedPairs->contains($pairKey));
                                         @endphp
-                                        <span class="mr-3 inline-flex items-center gap-1 py-0.5">
+                                        <span
+                                            class="mr-3 inline-flex items-center gap-1 py-0.5"
+                                            @if ($selectedSet) x-data="{ active: {{ $checkedPairs->contains($pairKey) ? 'true' : 'false' }} }" @endif
+                                        >
                                             <label class="inline-flex items-center gap-1">
                                                 @if ($selectedSet)
-                                                    <input type="checkbox" name="pairs[]" value="{{ $pairKey }}" class="rounded border-gray-300" @checked($checkedPairs->contains($pairKey))>
+                                                    <input type="checkbox" name="pairs[]" value="{{ $pairKey }}" class="rounded border-gray-300" @checked($checkedPairs->contains($pairKey)) @change="active = $event.target.checked">
                                                 @endif
                                                 <span class="text-gray-700">{{ $language->name }} <span class="text-gray-400">{{ $language->code }}</span></span>
                                             </label>
-                                            @if ($existingMarket)
-                                                <label class="inline-flex items-center gap-1 text-gray-400" title="{{ __('Für diesen Markt wird keine Übersetzung durchgeführt. Wirkt sofort, unabhängig vom Speichern-Button oben.') }}">
+                                            @if ($showNoTranslation)
+                                                <label
+                                                    class="inline-flex items-center gap-1 text-gray-400"
+                                                    title="{{ __('Für diesen Markt wird keine Übersetzung durchgeführt. Wirkt sofort, unabhängig vom Speichern-Button oben.') }}"
+                                                    @if ($selectedSet) x-show="active" @endif
+                                                >
                                                     <input
                                                         type="checkbox"
                                                         class="rounded border-gray-300"
