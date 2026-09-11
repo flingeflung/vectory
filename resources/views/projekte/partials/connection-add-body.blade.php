@@ -47,6 +47,16 @@
             try {
                 const url = `/projekte/{{ $project->id }}/verknuepfungen/mehr?q=` + encodeURIComponent(this.term) + `&offset=` + this.otherOffset;
                 const response = await fetch(url);
+                // Ralf-Bug-Report "nach X ist finito": ohne diese Prüfung
+                // wäre ein Serverfehler beim Nachladen (X-Has-More-Header
+                // fehlt dann) stillschweigend als "keine weiteren Projekte"
+                // missverstanden worden statt als Fehler - otherHasMore
+                // bleibt jetzt bei einem Fehler unangetastet, ein erneutes
+                // Scrollen versucht es wieder.
+                if (! response.ok) {
+                    window.notifyDialog({{ \Illuminate\Support\Js::from(__('Nachladen fehlgeschlagen. Bitte erneut versuchen (z. B. kurz hoch- und wieder runterscrollen).')) }});
+                    return;
+                }
                 const html = await response.text();
                 document.getElementById('other-projects-rows').insertAdjacentHTML('beforeend', html);
                 this.otherHasMore = response.headers.get('X-Has-More') === '1';
