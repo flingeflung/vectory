@@ -116,18 +116,21 @@ class AttributeController extends Controller
         abort_unless($attribute->tenant_id === CurrentTenant::id(), 404);
         abort_if($attribute->system, 403);
 
-        DB::transaction(function () use ($attribute) {
-            // Werte aus allen Projekten dieses Mandanten entfernen, statt
-            // eine tote Karteileiche im JSON zu hinterlassen.
-            DB::table('projects')
-                ->where('tenant_id', $attribute->tenant_id)
-                ->whereNotNull('attributes')
-                ->update(['attributes' => DB::raw("JSON_REMOVE(attributes, '$.\"{$attribute->key}\"')")]);
+        // Kein DB::transaction() hier: $attribute->delete() löst über
+        // AttributeObserver::deleted() ggf. ein ALTER TABLE (Spalten-
+        // Aufräumung, siehe AttributeColumnManager) aus - DDL committet in
+        // MySQL immer implizit, eine umschließende Transaktion wäre an der
+        // Stelle schon beendet und Laravels eigener Commit am Ende würde mit
+        // "There is no active transaction" scheitern.
 
-            // Spalten-Aufräumung läuft jetzt über AttributeObserver::deleted(),
-            // greift damit auch bei anderen Löschwegen als diesem Controller.
-            $attribute->delete();
-        });
+        // Werte aus allen Projekten dieses Mandanten entfernen, statt eine
+        // tote Karteileiche im JSON zu hinterlassen.
+        DB::table('projects')
+            ->where('tenant_id', $attribute->tenant_id)
+            ->whereNotNull('attributes')
+            ->update(['attributes' => DB::raw("JSON_REMOVE(attributes, '$.\"{$attribute->key}\"')")]);
+
+        $attribute->delete();
 
         return $this->redirectToSection($attribute->section);
     }
