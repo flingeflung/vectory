@@ -30,11 +30,6 @@
                 window.hideProjectConnectionLoading();
             }
         },
-        initScrollSentinel(el) {
-            new IntersectionObserver((entries) => {
-                if (entries[0].isIntersecting) { this.loadMore(); }
-            }, { root: document.getElementById('connection-list'), rootMargin: '200px' }).observe(el);
-        },
         async loadMore() {
             if (this.loadingMore || ! this.otherHasMore) return;
             this.loadingMore = true;
@@ -126,15 +121,19 @@
          Sanitärs Datenmenge nicht beliebig schnell sind.
 
          Aus demselben Performance-Grund lädt "Andere Projekte" nur die
-         ersten {{ $pageSize }} (initScrollSentinel/loadMore, Intersection
-         Observer statt manueller Scroll-Positions-Berechnung - robuster
-         gegenüber Rundungsfehlern bei Zoom/hoher Pixeldichte) statt alles
-         auf einmal - weitere kommen beim Erreichen des Listenendes nach
-         (unendliches Scrollen), bis nichts mehr kommt. loadMore() prüft
-         response.ok: ein Serverfehler beim Nachladen hätte sonst denselben
-         Effekt wie "keine weiteren Projekte mehr" (X-Has-More-Header fehlt
-         dann) und das Nachladen wäre stillschweigend für immer
-         stehengeblieben (Ralf-Bug-Report "nach X ist finito").
+         ersten {{ $pageSize }} (loadMore()) statt alles auf einmal -
+         weitere kommen über den Button "Weitere laden" am Listenende.
+         Ursprünglich automatisch beim Scrollen (erst manuelle Scroll-
+         Positions-Berechnung, dann ein IntersectionObserver) - bei Ralfs
+         echten ~6700 Projekten blieb beides irgendwann stehen, obwohl der
+         Server jeden einzelnen Abschnitt nachweislich fehlerfrei und
+         schnell ausliefert (durchgetestet bis zum letzten Datensatz). Die
+         Fehlerursache ließ sich clientseitig nicht zuverlässig
+         reproduzieren - ein expliziter Button ist weniger elegant, aber
+         ohne Scroll-Erkennungs-Unsicherheiten. loadMore() prüft
+         response.ok: ein Serverfehler hätte sonst denselben Effekt wie
+         "keine weiteren Projekte mehr" (X-Has-More-Header fehlt dann) und
+         der Button wäre stillschweigend verschwunden.
 
          WICHTIG für Änderungen an diesem x-data-Block: KEINE geraden
          Anführungszeichen in JS-Kommentaren dort verwenden - die beenden
@@ -170,8 +169,17 @@
                 @include('projekte.partials.connection-other-project-rows')
             @endif
         </div>
-        <div x-init="initScrollSentinel($el)" class="h-px"></div>
-        <div x-show="loadingMore" x-cloak class="py-1.5 text-center text-[11px] text-gray-400">{{ __('Lädt weitere Projekte…') }}</div>
+        <div x-show="otherHasMore" x-cloak class="py-1.5 text-center">
+            <button
+                type="button"
+                @click="loadMore()"
+                :disabled="loadingMore"
+                class="rounded border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-[11px] font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:cursor-not-allowed disabled:opacity-50"
+            >
+                <span x-show="! loadingMore">{{ __('Weitere laden') }}</span>
+                <span x-show="loadingMore" x-cloak>{{ __('Lädt…') }}</span>
+            </button>
+        </div>
     </div>
 
     <datalist id="connection-label-suggestions">
