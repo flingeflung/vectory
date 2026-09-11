@@ -54,6 +54,11 @@ class Attribute extends Model
             'end_date' => 'Ende',
             'markets' => 'Markt',
             'remarks' => 'Bemerkungen',
+            // Ralf, 2026-09-11: "Erstellungsstatus ist auch ein Stammdatum" -
+            // ursprünglich (Vietto-Vorbild) bei Ablaufdaten eingeordnet,
+            // gehört inhaltlich aber hierher (keine Ablauf-/Prozessinfo,
+            // sondern eine feste Eigenschaft des Projekts).
+            'creation_type' => 'Erstellungsstatus',
         ],
         self::SECTION_ABLAUFDATEN => [
             'workflow_id' => 'Workflow',
@@ -66,15 +71,15 @@ class Attribute extends Model
             // berechneten Fortschrittsanzeige (siehe system-fields/status),
             // "remarks_echo" ein Duplikat der Stammdaten-Bemerkungen -
             // beide haben also schon eine echte Datenquelle. Die übrigen
-            // vier haben (noch) keine Datenquelle in Vectory und zeigen
-            // bewusst nur einen "– noch nicht verfügbar –"-Platzhalter,
-            // bis das jeweilige Feature (Checkliste, Projektverbindungen)
-            // gebaut ist - siehe Backlog-Memory.
+            // drei (Erstellungsstatus zu Stammdaten verschoben, s.o.) haben
+            // (noch) keine Datenquelle in Vectory und zeigen bewusst nur
+            // einen "– noch nicht verfügbar –"-Platzhalter, bis das
+            // jeweilige Feature (Checkliste, Projektverbindungen) gebaut
+            // ist - siehe Backlog-Memory.
             // date_progress vor progress (Ralf: "erst Datum, dann projekt") -
             // beide als eigene volle Zeile, direkt untereinander.
             'date_progress' => 'Datumsfortschritt',
             'progress' => 'Projektfortschritt',
-            'creation_type' => 'Erstellungsstatus',
             'checklist' => 'Checkliste',
             'project_connections' => 'Projektverknüpfungen',
             'remarks_echo' => 'Bemerkungen',
