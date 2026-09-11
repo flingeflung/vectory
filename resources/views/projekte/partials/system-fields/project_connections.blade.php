@@ -8,7 +8,12 @@
 <div
     x-data="{
         removeConnection(connectionId, projectId) {
-            window.confirmDialog({{ \Illuminate\Support\Js::from(__('Diese Verknüpfung wirklich entfernen?')) }}).then((ok) => {
+            window.confirmDialog({
+                title: {{ \Illuminate\Support\Js::from(__('Verknüpfung entfernen?')) }},
+                message: {{ \Illuminate\Support\Js::from(__('Diese Verknüpfung wirklich entfernen?')) }},
+                confirmLabel: {{ \Illuminate\Support\Js::from(__('Entfernen')) }},
+                cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
+            }).then((ok) => {
                 if (! ok) return;
                 fetch(`/projekte/${projectId}/verknuepfungen/${connectionId}`, {
                     method: 'DELETE',

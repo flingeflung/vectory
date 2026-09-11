@@ -24,7 +24,12 @@ class ProjectConnectionController extends Controller
      * Inhalt des "Verknüpfen"-Modals - eigenständig statt im großen
      * Projekt-Formular verschachtelt (verschachtelte <form>-Elemente
      * reißen im Browser das versteckte _method-Feld ins äußere Formular
-     * mit rein, siehe gleiche Anmerkung bei den Mail-Vorlagen).
+     * mit rein, siehe gleiche Anmerkung bei den Mail-Vorlagen). Zeigt
+     * Ralf, 2026-09-11 (S2, Vietto-Vorbild "Verbundene Projekte"):
+     * bestehende Verknüpfungen UND das Hinzufügen neuer in EINEM Modal,
+     * bleibt beim Hinzufügen/Entfernen offen (lädt sich selbst neu) -
+     * mehrere Verknüpfungen lassen sich so nacheinander anlegen, ohne
+     * das Modal jedes Mal zu schließen und neu zu öffnen.
      */
     public function form(Project $project): View
     {
@@ -42,6 +47,7 @@ class ProjectConnectionController extends Controller
 
         return view('projekte.partials.connection-add-body', [
             'project' => $project,
+            'connections' => $project->connections(),
             'labelSuggestions' => $labelSuggestions,
         ]);
     }

@@ -1497,7 +1497,7 @@
         <x-modal name="project-connection-add" max-width="sm">
             <div class="flex max-h-[85vh] flex-col">
                 <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
-                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Projekt verknüpfen') }}</h3>
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Projektverknüpfungen') }}</h3>
                     <button
                         type="button"
                         onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-connection-add' }))"
@@ -1518,7 +1518,6 @@
         <script>
             (function () {
                 const connectionBody = () => document.getElementById('project-connection-add-body');
-                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
                 let currentProjectId = null;
 
                 window.openProjectConnectionAdd = async (projectId) => {
@@ -1528,27 +1527,20 @@
                     connectionBody().innerHTML = await fetch(`/projekte/${projectId}/verknuepfungen/neu`).then((r) => r.text());
                 };
 
-                document.addEventListener('submit', async (event) => {
-                    if (!connectionBody() || !connectionBody().contains(event.target)) {
+                // Ralf, 2026-09-11 (S2): nach Hinzufügen/Entfernen bleibt das
+                // Modal offen und lädt nur seinen eigenen Inhalt neu (statt
+                // sich zu schließen) - mehrere Verknüpfungen lassen sich so
+                // direkt nacheinander anlegen. Formular-Submit/Löschen laufen
+                // dafür direkt in connection-add-body.blade.php selbst per
+                // Fetch, nicht über eine globale Submit-Abfangung wie bei den
+                // anderen Modals.
+                window.reloadProjectConnectionModal = async () => {
+                    if (! currentProjectId) {
                         return;
                     }
-
-                    event.preventDefault();
-
-                    const response = await fetch(event.target.action, {
-                        method: 'POST',
-                        headers: { 'X-CSRF-TOKEN': csrfToken },
-                        body: new FormData(event.target),
-                    });
-
-                    if (!response.ok) {
-                        await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Verknüpfen fehlgeschlagen. Bitte Eingaben prüfen und erneut versuchen.')) }});
-                        return;
-                    }
-
-                    window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-connection-add' }));
+                    connectionBody().innerHTML = await fetch(`/projekte/${currentProjectId}/verknuepfungen/neu`).then((r) => r.text());
                     window.refreshUnderlyingProject(currentProjectId);
-                });
+                };
             })();
         </script>
 
