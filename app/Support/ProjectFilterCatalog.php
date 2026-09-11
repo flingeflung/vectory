@@ -21,7 +21,7 @@ class ProjectFilterCatalog
     /**
      * @var list<string>
      */
-    public const DEFAULT_ACTIVE = ['title', 'status', 'initiator'];
+    public const DEFAULT_ACTIVE = ['title', 'status', 'attribute:initiator'];
 
     /**
      * @return list<array{key: string, label: string, type: string, options?: array}>
@@ -35,7 +35,6 @@ class ProjectFilterCatalog
             ['value' => 3, 'label' => __('Verworfen')],
         ];
         $boolOptions = ['1' => __('Ja'), '0' => __('Nein')];
-        $localizationOptions = ['1' => __('Ja'), '0' => __('Nein'), 'null' => __('nicht zugewiesen')];
 
         $fixed = [
             ['key' => 'source_pn', 'label' => __('PN'), 'type' => 'text'],
@@ -45,9 +44,6 @@ class ProjectFilterCatalog
             ['key' => 'project_type', 'label' => __('Projekttyp/-art'), 'type' => 'grouped_multiselect', 'groups' => self::projectTypeGroups($tenantId)],
             ['key' => 'version', 'label' => __('Version'), 'type' => 'select', 'options' => self::versionOptions($tenantId)],
             ['key' => 'workflow_id', 'label' => __('Workflow'), 'type' => 'select', 'options' => self::workflowOptions($tenantId)],
-            ['key' => 'construction_year', 'label' => __('Baujahr'), 'type' => 'text'],
-            ['key' => 'initiator', 'label' => __('Initiator'), 'type' => 'text'],
-            ['key' => 'system_model', 'label' => __('Modell/System'), 'type' => 'text'],
             ['key' => 'remarks', 'label' => __('Bemerkungen'), 'type' => 'text'],
             ['key' => 'markets', 'label' => __('Märkte/Subsprachen'), 'type' => 'multiselect', 'columns' => 2, 'options' => self::marketOptions($tenantId)],
             ['key' => 'graphic_orders', 'label' => __('Grafikaufträge'), 'type' => 'select', 'options' => [
@@ -57,7 +53,6 @@ class ProjectFilterCatalog
             ]],
             ['key' => 'favorite', 'label' => __('Favorit'), 'type' => 'select', 'options' => $boolOptions, 'no_placeholder' => true],
             ['key' => 'archived', 'label' => __('Archiviert'), 'type' => 'select', 'options' => $boolOptions, 'no_placeholder' => true],
-            ['key' => 'localization', 'label' => __('Übersetzung/Lokalisierung notwendig?'), 'type' => 'select', 'options' => $localizationOptions],
             ['key' => 'start_date', 'label' => __('Start'), 'type' => 'date_range'],
             ['key' => 'end_date', 'label' => __('Ende'), 'type' => 'date_range'],
             ['key' => 'publication_date', 'label' => __('Publikationsdatum'), 'type' => 'date_range'],
@@ -65,6 +60,7 @@ class ProjectFilterCatalog
 
         $attributes = Attribute::query()
             ->where('tenant_id', $tenantId)
+            ->where('system', false)
             ->orderBy('sort')
             ->get()
             ->map(fn (Attribute $attribute) => [

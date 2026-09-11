@@ -28,23 +28,13 @@
         <div class="min-h-0 flex-1 overflow-y-auto">
             @foreach (['stammdaten', 'ablaufdaten', 'typspezifisch'] as $section)
                 <div x-show="activeTab === {{ \Illuminate\Support\Js::from($section) }}" x-cloak class="space-y-4">
-                    <div class="rounded-lg border border-gray-200 bg-white p-4">
-                        <div class="mb-2 text-xs font-semibold text-gray-500">{{ __('Schon vorhanden') }}</div>
-                        @if (($builtInFields[$section] ?? []) === [])
-                            <p class="text-xs text-gray-400">{{ __('Keine festen Felder in diesem Bereich.') }}</p>
-                        @else
-                            <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
-                                @foreach ($builtInFields[$section] as $field)
-                                    <span>{{ $field }}</span>
-                                @endforeach
-                            </div>
-                        @endif
-                    </div>
-
                     <div class="rounded-lg border border-gray-200 bg-white p-4" x-data="{ creating: false, newType: 'text' }">
                         <div class="mb-2 flex items-center justify-between">
-                            <div class="text-xs font-semibold text-gray-500">{{ __('Zusatzfelder') }}</div>
-                            <button type="button" @click="creating = !creating" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
+                            <div>
+                                <div class="text-xs font-semibold text-gray-500">{{ __('Felder') }}</div>
+                                <p class="text-xs text-gray-400">{{ __('Feste Felder (Schloss-Symbol) lassen sich nur per Drag & Drop einsortieren, nicht umbenennen/löschen.') }}</p>
+                            </div>
+                            <button type="button" @click="creating = !creating" class="shrink-0 rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                                 + {{ __('Neu') }}
                             </button>
                         </div>
@@ -98,10 +88,17 @@
                                 },
                             }"
                             x-sort="saveOrder()"
-                            class="space-y-2"
+                            class="space-y-1"
                         >
                             @forelse ($attributesBySection->get($section, collect()) as $attribute)
-                                <div x-sort:item="{{ $attribute->id }}" class="rounded-md border border-gray-200 p-2" x-data="{ managingOptions: false }">
+                                <div x-sort:item="{{ $attribute->id }}" class="rounded-md border border-gray-200 px-2 py-1" x-data="{ managingOptions: false }">
+                                    @if ($attribute->system)
+                                        <div class="flex items-center gap-2">
+                                            <span x-sort:handle class="shrink-0 cursor-move text-gray-300 hover:text-gray-500" title="{{ __('Verschieben') }}">⠿</span>
+                                            <span class="shrink-0 text-gray-300" title="{{ __('Festes Feld - nur die Reihenfolge ist änderbar') }}">🔒</span>
+                                            <span class="flex-1 text-sm text-gray-700">{{ $attribute->label }}</span>
+                                        </div>
+                                    @else
                                     <div class="flex items-center gap-2">
                                         <span x-sort:handle class="shrink-0 cursor-move text-gray-300 hover:text-gray-500" title="{{ __('Verschieben') }}">⠿</span>
                                         <form
@@ -138,6 +135,7 @@
                                             {{ __('Löschen') }}
                                         </button>
                                     </div>
+                                    @endif
 
                                     @if ($attribute->data_type === 'select')
                                         <div x-show="managingOptions" x-cloak class="mt-2 space-y-1.5 border-t border-gray-100 pt-2">
@@ -183,7 +181,7 @@
                                     @endif
                                 </div>
                             @empty
-                                <p class="text-xs text-gray-400">{{ __('Noch keine Zusatzfelder angelegt.') }}</p>
+                                <p class="text-xs text-gray-400">{{ __('Noch keine Felder in diesem Bereich.') }}</p>
                             @endforelse
                         </div>
                     </div>

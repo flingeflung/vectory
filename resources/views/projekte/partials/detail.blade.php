@@ -18,6 +18,19 @@
     $startStep = $project->projectWorkflowSteps->first(fn ($pws) => $pws->effectiveIsStart());
     $endStep = $project->projectWorkflowSteps->first(fn ($pws) => $pws->effectiveIsEnd());
     $stepLabel = fn ($pws) => $pws->effectiveMilestoneTitle() ?: $pws->workflowStep->title;
+
+    // Ralf: "Bitte weniger Weißraum insgesamt" - Stammdaten/Ablaufdaten
+    // laufen deshalb als 2-spaltiges Raster statt einer Feld-pro-Zeile-
+    // Liste; von Natur aus breite Felder (Fließtext, Mehrfachauswahl,
+    // Personen-/Markt-Zuordnung) spannen beide Spalten.
+    $isWideField = function ($field) {
+        if ($field->system) {
+            return in_array($field->key, ['title', 'remarks', 'markets', 'project_people'], true);
+        }
+
+        return $field->data_type === \App\Models\Attribute::DATA_TYPE_TEXTAREA
+            || ($field->data_type === \App\Models\Attribute::DATA_TYPE_SELECT && $field->multiple);
+    };
 @endphp
 
 <div class="{{ $isOverlay ? 'flex h-full min-h-0 flex-col' : 'p-4' }}">
@@ -151,213 +164,26 @@
         <div class="border-t-2" style="border-color: #09f"></div>
         <div class="flex gap-3">
         <div class="w-0.5 shrink-0 rounded-full" style="background-color: #09f" title="{{ __('Stammdaten') }}"></div>
-        <div class="min-w-0 flex-1 space-y-3">
+        <div class="min-w-0 flex-1">
 
-        <div>
-            <label class="block text-xs text-gray-500">{{ __('Bezeichnung') }}</label>
-            <input type="text" name="title" value="{{ old('title', $project->title) }}" class="mt-0.5 w-full rounded border-gray-300 py-1 text-sm" required>
-        </div>
-
-        <div class="grid grid-cols-4 gap-2">
-            <div class="col-span-2">
-                <label class="block text-xs text-gray-500">{{ __('Modell/System') }}</label>
-                <input type="text" name="system_model" value="{{ old('system_model', $project->system_model) }}" class="mt-0.5 w-full rounded border-gray-300 py-1 text-sm">
-            </div>
-            <div>
-                <label class="block text-xs text-gray-500">{{ __('Baujahr') }}</label>
-                <input type="text" name="construction_year" value="{{ old('construction_year', $project->construction_year) }}" class="mt-0.5 w-full max-w-[100px] rounded border-gray-300 py-1 text-sm">
-            </div>
-            <div>
-                <label class="block text-xs text-gray-500">{{ __('Version') }}</label>
-                <input type="number" name="version" value="{{ old('version', $project->version) }}" class="mt-0.5 w-full max-w-[80px] rounded border-gray-300 py-1 text-sm">
-            </div>
-        </div>
-
-        <div class="grid grid-cols-3 gap-2">
-            <div class="col-span-2">
-                <label class="block text-xs text-gray-500">{{ __('Initiator') }}</label>
-                <input type="text" name="initiator" value="{{ old('initiator', $project->initiator) }}" class="mt-0.5 w-full rounded border-gray-300 py-1 text-sm">
-            </div>
-            <div>
-                <label class="block text-xs text-gray-500">{{ __('Status') }}</label>
-                @php $hasCurrentWfsStep = $project->projectWorkflowSteps->contains('is_current', true); @endphp
-                @if ($hasCurrentWfsStep)
-                    {{-- Wird automatisch aus dem aktuellen WFS-Schritt abgeleitet (siehe
-                         ProjectWorkflowStepController::activate) - kein manuelles Feld mehr,
-                         solange ein Schritt aktuell ist. --}}
-                    <input type="hidden" name="status" value="{{ $project->status }}">
-                    <div class="mt-0.5 w-full rounded border border-gray-200 bg-gray-50 py-1 px-2 text-sm text-gray-700" title="{{ __('Wird automatisch aus dem aktuellen Workflow-Schritt abgeleitet') }}">
-                        {{ $statusOptions[$project->status] ?? '–' }}
-                    </div>
+        <div class="grid grid-cols-2 gap-x-4 gap-y-2.5">
+        @foreach ($stammdatenAttributes as $field)
+            <div class="{{ $isWideField($field) ? 'col-span-2' : '' }}">
+                @if ($field->system)
+                    @include('projekte.partials.system-fields.'.$field->key)
                 @else
-                    <select name="status" class="mt-0.5 w-full rounded border-gray-300 py-1 text-sm">
-                        @foreach ($statusOptions as $value => $label)
-                            @if (! in_array($value, [2, 3], true) || auth()->user()->can('project.complete') || $project->status === $value)
-                                <option value="{{ $value }}" @selected(old('status', $project->status) == $value)>{{ $label }}</option>
-                            @endif
-                        @endforeach
-                    </select>
+                    @include('projekte.partials.attribute-field', ['attribute' => $field])
                 @endif
             </div>
+        @endforeach
         </div>
-
-        @if ($hasCurrentWfsStep && ($progress = $project->progressPercent()) !== null)
-            <div>
-                <div class="mb-0.5 flex items-center justify-between text-xs text-gray-500">
-                    <span>{{ __('Fortschritt') }}</span>
-                    <span>{{ $progress }} %</span>
-                </div>
-                <div class="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
-                    <div class="h-full rounded-full bg-blue-500" style="width: {{ $progress }}%"></div>
-                </div>
-            </div>
-        @endif
-
-        <div class="flex flex-wrap gap-4">
-            <div>
-                <label class="block text-xs text-gray-500">{{ __('Start') }}</label>
-                <input
-                    type="date"
-                    name="start_date"
-                    value="{{ old('start_date', $project->start_date?->format('Y-m-d')) }}"
-                    @disabled($startStep)
-                    class="mt-0.5 rounded border-gray-300 py-1 text-sm disabled:bg-gray-50 disabled:text-gray-400"
-                >
-                @if ($startStep)
-                    <div class="mt-0.5 text-xs text-gray-400">{{ __('Aus Workflow-Schritt „:step“ übernommen.', ['step' => $stepLabel($startStep)]) }}</div>
-                @endif
-            </div>
-            <div>
-                <label class="block text-xs text-gray-500">{{ __('Ende') }}</label>
-                <input
-                    type="date"
-                    name="end_date"
-                    value="{{ old('end_date', $project->end_date?->format('Y-m-d')) }}"
-                    @disabled($endStep)
-                    class="mt-0.5 rounded border-gray-300 py-1 text-sm disabled:bg-gray-50 disabled:text-gray-400"
-                >
-                @if ($endStep)
-                    <div class="mt-0.5 text-xs text-gray-400">{{ __('Aus Workflow-Schritt „:step“ übernommen.', ['step' => $stepLabel($endStep)]) }}</div>
-                @endif
-            </div>
-        </div>
-
-        <div>
-            <label class="block text-xs text-gray-500">{{ __('Bemerkungen') }}</label>
-            <textarea name="remarks" rows="2" class="mt-0.5 w-full rounded border-gray-300 text-sm">{{ old('remarks', $project->remarks) }}</textarea>
-        </div>
-
-        <div
-            x-data="{
-                editingMarkets: false,
-                marketSets: {{ \Illuminate\Support\Js::from($marketSets->mapWithKeys(fn ($set) => [$set->id => $set->markets->pluck('id')])) }},
-                selectedSet: '',
-                applySet() {
-                    if (! this.selectedSet) return;
-                    const checkboxes = [...this.$root.querySelectorAll('input[name=\'markets[]\']')];
-
-                    if (this.selectedSet === '__all__') {
-                        checkboxes.forEach(cb => cb.checked = true);
-                    } else if (this.selectedSet === '__none__') {
-                        checkboxes.forEach(cb => cb.checked = false);
-                    } else {
-                        const ids = this.marketSets[this.selectedSet] ?? [];
-                        checkboxes.forEach(cb => cb.checked = ids.includes(Number(cb.value)));
-                    }
-
-                    this.selectedSet = '';
-                },
-            }"
-        >
-            <div class="flex items-center gap-2">
-                <label class="text-xs text-gray-500">{{ __('Markt') }}</label>
-                <button type="button" @click="editingMarkets = !editingMarkets" class="{{ $secondaryBtn }}">
-                    <span x-show="!editingMarkets">{{ __('Ändern') }}</span>
-                    <span x-show="editingMarkets" x-cloak>{{ __('Fertig') }}</span>
-                </button>
-            </div>
-
-            <div x-show="!editingMarkets">
-                @if ($project->markets->isEmpty())
-                    <div class="mt-0.5 text-gray-400">&ndash; {{ __('Kein Markt zugewiesen') }} &ndash;</div>
-                @else
-                    <div class="mt-0.5 text-gray-700">
-                        @if ($project->markets->count() > 4)
-                            <span class="text-xs text-gray-500">{{ $project->markets->count() }} {{ __('Märkte') }}:</span>
-                        @endif
-                        @foreach ($project->markets as $market)
-                            <span class="font-semibold">{{ $market->country_iso }}{{ strtolower($market->language_code) }}</span>@if ($market->no_translation)*@endif {{ $market->country_short_name }}@if (! $loop->last), @endif
-                        @endforeach
-                    </div>
-                    @if ($project->markets->contains('no_translation', true))
-                        <div class="mt-0.5 text-xs text-gray-400">* {{ __('Es wird keine Übersetzung für diesen Markt durchgeführt') }}</div>
-                    @endif
-                @endif
-            </div>
-
-            <div class="mt-1.5">
-                @php
-                    $localizationOld = old('localization');
-                    $localizationValue = $localizationOld !== null ? $localizationOld : ($project->localization === null ? '' : ($project->localization ? '1' : '0'));
-                @endphp
-                <label class="block text-xs text-gray-500">{{ __('Übersetzung/Lokalisierung notwendig?') }}</label>
-                <select name="localization" class="mt-0.5 w-48 rounded border-gray-300 py-1 text-sm">
-                    <option value="" @selected($localizationValue === '')>{{ __('– nicht zugewiesen –') }}</option>
-                    <option value="1" @selected($localizationValue === '1')>{{ __('Ja') }}</option>
-                    <option value="0" @selected($localizationValue === '0')>{{ __('Nein') }}</option>
-                </select>
-            </div>
-
-            <div x-show="editingMarkets" x-cloak class="mt-0.5">
-                <div class="mb-1.5 flex items-center gap-1.5">
-                    <select x-model="selectedSet" class="rounded border-gray-300 py-1 text-xs">
-                        <option value="">{{ __('Standard-Märkte zuweisen') }}</option>
-                        <option value="__all__">{{ __('Alle auswählen') }}</option>
-                        <option value="__none__">{{ __('Alle entfernen') }}</option>
-                        @if ($marketSets->isNotEmpty())
-                            <optgroup label="{{ __('Gespeicherte Sets') }}">
-                                @foreach ($marketSets as $set)
-                                    <option value="{{ $set->id }}">{{ $set->name }}</option>
-                                @endforeach
-                            </optgroup>
-                        @endif
-                    </select>
-                    <button type="button" x-show="selectedSet" x-cloak @click="applySet()" class="rounded bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
-                        {{ __('Zuweisen') }}
-                    </button>
-                </div>
-
-                <div class="grid grid-cols-2 gap-x-4 gap-y-1 max-h-56 overflow-y-auto rounded border border-gray-300 bg-white p-2 text-xs">
-                @foreach ($allMarkets as $market)
-                    <label class="flex items-center gap-1 text-gray-600">
-                        <input
-                            type="checkbox"
-                            name="markets[]"
-                            value="{{ $market->id }}"
-                            class="shrink-0 rounded border-gray-300"
-                            @checked($project->markets->contains('id', $market->id))
-                        >
-                        {{ $market->label() }}
-                    </label>
-                @endforeach
-                </div>
-            </div>
-        </div>
-
-        @if ($stammdatenAttributes->isNotEmpty())
-            <div class="grid grid-cols-2 gap-2">
-                @foreach ($stammdatenAttributes as $attribute)
-                    @include('projekte.partials.attribute-field', ['attribute' => $attribute])
-                @endforeach
-            </div>
-        @endif
 
         </div>
         </div>
         </div>
 
         @if ($attributes->isNotEmpty())
-        <div class="!mt-6">
+        <div class="!mt-4">
         <div class="text-[11px] font-medium" style="color: #999">{{ __('Typspezifische Attribute') }}</div>
         <div class="border-t-2" style="border-color: {{ $project->attribute_section_color }}"></div>
         <div class="flex gap-3">
@@ -373,159 +199,24 @@
         </div>
         @endif
 
-        <div class="!mt-6">
+        <div class="!mt-4">
         <div class="text-[11px] font-medium" style="color: #999">{{ __('Ablaufdaten') }}</div>
         <div class="border-t-2" style="border-color: #396"></div>
         <div class="flex gap-3">
         <div class="w-0.5 shrink-0 rounded-full" style="background-color: #396" title="{{ __('Ablaufdaten') }}"></div>
-        <div class="min-w-0 flex-1 space-y-3">
+        <div class="min-w-0 flex-1">
 
-        <div x-data="{ editingWorkflow: false }">
-            <div class="flex items-center gap-2">
-                <label class="text-xs text-gray-500">{{ __('Workflow') }}</label>
-                <button type="button" @click="editingWorkflow = !editingWorkflow" class="{{ $secondaryBtn }}">
-                    <span x-show="!editingWorkflow">{{ __('Ändern') }}</span>
-                    <span x-show="editingWorkflow" x-cloak>{{ __('Fertig') }}</span>
-                </button>
-            </div>
-
-            <div x-show="!editingWorkflow" class="mt-0.5 text-gray-700">
-                {{ $project->workflow?->name ?? __('– kein Workflow zugewiesen –') }}
-            </div>
-
-            <div x-show="editingWorkflow" x-cloak class="mt-0.5">
-                <select name="workflow_id" class="w-full max-w-sm rounded border-gray-300 py-1 text-sm">
-                    <option value="">{{ __('– kein Workflow zugewiesen –') }}</option>
-                    @foreach ($availableWorkflows as $availableWorkflow)
-                        <option
-                            value="{{ $availableWorkflow->id }}"
-                            @selected(old('workflow_id', $project->workflow_id) == $availableWorkflow->id)
-                            @class(['text-gray-400' => ! $availableWorkflow->active])
-                        >{{ $availableWorkflow->name }}{{ ! $availableWorkflow->active ? ' [i]' : '' }}</option>
-                    @endforeach
-                </select>
-            </div>
-        </div>
-
-        <div>
-            <label class="block text-xs text-gray-500">{{ __('Publikation') }}</label>
-            {{-- Nur mit eigenem Recht änderbar - die TR ist fürs Publizieren
-                 zuständig, das tatsächliche Datum wird hier protokollarisch
-                 eingetragen (Vietto-Vorbild: landet in den Vorgängen). --}}
-            <input
-                type="date"
-                name="publication_date"
-                value="{{ old('publication_date', $project->publication_date?->format('Y-m-d')) }}"
-                @disabled(! auth()->user()->can('project.publication_date.edit'))
-                class="mt-0.5 rounded border-gray-300 py-1 text-sm disabled:bg-gray-50 disabled:text-gray-400"
-            >
-        </div>
-
-        <div x-data="{ editingPeople: false }">
-            <div class="flex items-center gap-2">
-                <label class="text-xs text-gray-500">{{ __('Projektbeteiligte Personen') }}</label>
-                <button type="button" @click="editingPeople = !editingPeople" class="{{ $secondaryBtn }}">
-                    <span x-show="!editingPeople">{{ __('Ändern') }}</span>
-                    <span x-show="editingPeople" x-cloak>{{ __('Fertig') }}</span>
-                </button>
-            </div>
-
-            <div x-show="!editingPeople">
-                @php
-                    $groupedPeople = $project->projectPeople->groupBy('function_group_id');
-                    // Unterscheidung wichtig: "niemand zugeordnet" (normal, Klick auf
-                    // "Ändern" hilft) vs. "Mandant hat noch gar keine Personen" (die
-                    // Zuordnung kann dann gar nicht klappen - eigener Hinweis statt
-                    // scheinbar funktionslosem Ändern-Dialog, siehe Ralf-Bug-Report zu
-                    // einem frisch angelegten Testmandanten ohne Personen).
-                    $hasAssignablePeople = $allFunctionGroups->contains(fn ($group) => $group->members->isNotEmpty());
-                @endphp
-                @if (! $hasAssignablePeople)
-                    <div class="mt-0.5 text-amber-700">{{ __('Für diesen Mandanten sind noch keine Personen angelegt. Wenn hier jemand zugeordnet werden soll, dann zuerst unter :location Personen anlegen.', ['location' => \App\Models\SystemSetting::tenantConfigLocation()]) }}</div>
-                @elseif ($groupedPeople->isEmpty())
-                    <div class="mt-0.5 text-gray-400">&ndash; {{ __('Keine Personen zugeordnet') }} &ndash;</div>
+        <div class="grid grid-cols-2 gap-x-4 gap-y-2.5">
+        @foreach ($ablaufdatenAttributes as $field)
+            <div class="{{ $isWideField($field) ? 'col-span-2' : '' }}">
+                @if ($field->system)
+                    @include('projekte.partials.system-fields.'.$field->key)
                 @else
-                    <div class="mt-0.5 grid grid-cols-2 gap-x-4 gap-y-0.5 text-gray-700">
-                        @foreach ($allFunctionGroups as $group)
-                            @php $entries = $groupedPeople->get($group->id); @endphp
-                            @if ($entries)
-                                <div>
-                                    <span class="text-gray-500">{{ $group->short_name }}:</span>
-                                    @foreach ($entries as $entry)
-                                        <span class="{{ $entry->person->active ? '' : 'text-gray-400' }}">{{ $entry->person->fullName() }}{{ ! $entry->person->active ? ' [i]' : '' }}</span>@if ($entry->is_primary)<span class="text-amber-500" title="{{ __('Erstansprechpartner') }}">&#9733;</span>@endif @if (! $loop->last), @endif
-                                    @endforeach
-                                </div>
-                            @endif
-                        @endforeach
-                    </div>
+                    @include('projekte.partials.attribute-field', ['attribute' => $field])
                 @endif
             </div>
-
-            <div x-show="editingPeople" x-cloak class="mt-0.5 max-h-56 overflow-y-auto rounded border border-gray-300 bg-white p-2 text-xs space-y-2">
-                @if (! $hasAssignablePeople)
-                    <div class="text-amber-700">{{ __('Für diesen Mandanten sind noch keine Personen angelegt. Wenn hier jemand zugeordnet werden soll, dann zuerst unter :location Personen anlegen.', ['location' => \App\Models\SystemSetting::tenantConfigLocation()]) }}</div>
-                @endif
-                @foreach ($allFunctionGroups as $group)
-                    @php
-                        $currentEntries = $project->projectPeople->where('function_group_id', $group->id);
-                    @endphp
-                    {{-- Inaktive Funktionsgruppen werden für NEUE Zuordnungen
-                         nicht mehr angeboten, bleiben aber sichtbar/editierbar,
-                         wenn hier im Projekt schon jemand darüber zugeordnet
-                         ist - sonst würde ein Speichern diese Zuordnung
-                         stillschweigend entfernen (ihre Checkboxen kämen ja
-                         gar nicht mehr im Formular vor). --}}
-                    @if ($group->members->isNotEmpty() && ($group->active || $currentEntries->isNotEmpty()))
-                        @php
-                            $currentPersonIds = $currentEntries->pluck('person_id')->all();
-                            $currentPrimaryId = optional($currentEntries->firstWhere('is_primary', true))->person_id;
-                        @endphp
-                        <div>
-                            <div class="mb-0.5 font-medium text-gray-600">{{ $group->name }}</div>
-                            <div class="grid grid-cols-2 gap-x-3 gap-y-0.5">
-                                @foreach ($group->members as $person)
-                                    <label class="flex items-center gap-1 {{ $person->active ? 'text-gray-600' : 'text-gray-400' }}">
-                                        <input
-                                            type="checkbox"
-                                            name="project_people[{{ $group->id }}][]"
-                                            value="{{ $person->id }}"
-                                            class="shrink-0 rounded border-gray-300"
-                                            @checked(in_array($person->id, $currentPersonIds, true))
-                                        >
-                                        <input
-                                            type="radio"
-                                            name="project_people_primary[{{ $group->id }}]"
-                                            value="{{ $person->id }}"
-                                            class="shrink-0"
-                                            title="{{ __('Als Erstansprechpartner markieren') }}"
-                                            onclick="this.previousElementSibling.checked = true"
-                                            @checked($currentPrimaryId === $person->id)
-                                        >
-                                        {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }}
-                                    </label>
-                                @endforeach
-                            </div>
-                        </div>
-                    @endif
-                @endforeach
-            </div>
+        @endforeach
         </div>
-
-        <div>
-            <label class="flex items-center gap-1 text-xs text-gray-700">
-                <input type="hidden" name="archived" value="0">
-                <input type="checkbox" name="archived" value="1" class="rounded border-gray-300" @checked(old('archived', $project->archived))>
-                {{ __('Archiviert') }}
-            </label>
-        </div>
-
-        @if ($ablaufdatenAttributes->isNotEmpty())
-            <div class="grid grid-cols-2 gap-2">
-                @foreach ($ablaufdatenAttributes as $attribute)
-                    @include('projekte.partials.attribute-field', ['attribute' => $attribute])
-                @endforeach
-            </div>
-        @endif
 
         </div>
         </div>

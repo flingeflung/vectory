@@ -33,8 +33,6 @@ class ProjectColumnCatalog
             ['key' => 'version', 'label' => __('Version'), 'long_text' => false],
             ['key' => 'start_date', 'label' => __('Start'), 'long_text' => false],
             ['key' => 'end_date', 'label' => __('Ende'), 'long_text' => false],
-            ['key' => 'system_model', 'label' => __('Modell/System'), 'long_text' => true],
-            ['key' => 'initiator', 'label' => __('Initiator'), 'long_text' => true],
             ['key' => 'remarks', 'label' => __('Bemerkungen'), 'long_text' => true],
             ['key' => 'markets', 'label' => __('Märkte/Subsprachen'), 'long_text' => false, 'icons' => true],
             ['key' => 'graphic_orders_summary', 'label' => __('Illustration'), 'long_text' => false, 'graphic_summary' => true],
@@ -43,6 +41,7 @@ class ProjectColumnCatalog
 
         $attributes = Attribute::query()
             ->where('tenant_id', $tenantId)
+            ->where('system', false)
             ->orderBy('sort')
             ->get()
             ->map(fn (Attribute $attribute) => [
@@ -67,7 +66,7 @@ class ProjectColumnCatalog
 
         return array_map(
             fn (string $key) => ['key' => $key, 'visible' => in_array($key, $visibleByDefault, true), 'long_text' => false],
-            ['title', 'attribute:format', 'version', 'status', 'project_type', 'start_date', 'end_date', 'system_model', 'initiator', 'remarks', 'attribute:material_number', 'attribute:farbe', 'attribute:heftung', 'attribute:erstauflage']
+            ['title', 'attribute:format', 'version', 'status', 'project_type', 'start_date', 'end_date', 'remarks', 'attribute:material_number', 'attribute:farbe', 'attribute:heftung', 'attribute:erstauflage']
         );
     }
 

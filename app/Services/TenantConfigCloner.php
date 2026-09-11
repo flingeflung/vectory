@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Attribute;
+use App\Models\AttributeOption;
 use App\Models\BusinessUnit;
 use App\Models\Department;
 use App\Models\FunctionGroup;
@@ -34,6 +35,41 @@ use Illuminate\Support\Facades\DB;
  */
 class TenantConfigCloner
 {
+    public function __construct(private readonly AttributeColumnManager $columns) {}
+
+    /**
+     * Legt für einen Mandanten die festen "system"-Felder an (Bezeichnung,
+     * Start, Workflow, ...), falls sie noch fehlen - unabhängig davon, ob
+     * dabei von einem Quell-Mandanten geklont wird (Ralf, 2026-09-10: "frei
+     * mischbar mit Zusatzfeldern"). Läuft für JEDEN neuen Mandanten (siehe
+     * TenantController::store()), auch ohne Quell-Mandanten - anders als
+     * die Zusatzfelder unten (copyAttributes()) sind system-Felder kein
+     * kopierbarer Bestand, sondern Grundausstattung.
+     */
+    public function seedSystemAttributes(Tenant $tenant): void
+    {
+        foreach (Attribute::SYSTEM_FIELDS as $section => $fields) {
+            $sort = 0;
+            foreach ($fields as $key => $label) {
+                $exists = Attribute::query()->withoutGlobalScope('tenant')
+                    ->where('tenant_id', $tenant->id)->where('key', $key)->exists();
+
+                if (! $exists) {
+                    Attribute::query()->create([
+                        'tenant_id' => $tenant->id,
+                        'section' => $section,
+                        'system' => true,
+                        'key' => $key,
+                        'label' => $label,
+                        'data_type' => Attribute::DATA_TYPE_TEXT,
+                        'sort' => $sort,
+                    ]);
+                }
+                $sort++;
+            }
+        }
+    }
+
     /**
      * Nur in einen wirklich leeren Kunden kopierbar - Ralf: "beachte, dass
      * man schon angefangen haben könnte, Dinge zu erstellen. Wenn dann
@@ -56,12 +92,12 @@ class TenantConfigCloner
             $marketMap = $this->copySimple(Market::class, $source->id, $target->id, [
                 'legacy_id', 'country_iso', 'country_name', 'country_short_name', 'language_code', 'language_name', 'no_translation', 'sort',
             ]);
-            $attributeMap = $this->copySimple(Attribute::class, $source->id, $target->id, ['key', 'label', 'data_type', 'sort']);
+            $attributeMap = $this->copyAttributes($source->id, $target->id);
             $projectTypeMainMap = $this->copySimple(ProjectTypeMain::class, $source->id, $target->id, ['legacy_id', 'name', 'sort']);
 
-            $this->copyProjectTypeSubs($source->id, $target->id, $projectTypeMainMap);
+            $projectTypeSubMap = $this->copyProjectTypeSubs($source->id, $target->id, $projectTypeMainMap);
             $this->copyMarketSets($source->id, $target->id, $marketMap);
-            $this->copyAttributeProjectTypeLinks($source->id, $attributeMap);
+            $this->copyAttributeProjectTypeLinks($attributeMap, $projectTypeSubMap);
             $workflowMap = $this->copyWorkflows($source->id, $target->id);
             $workflowStepMap = $this->copyWorkflowSteps($source->id, $target->id, $workflowMap);
             $this->copyWorkflowStepFunctionGroups($target->id, $workflowStepMap, $functionGroupMap);
@@ -115,11 +151,16 @@ class TenantConfigCloner
         return $map;
     }
 
-    private function copyProjectTypeSubs(int $sourceTenantId, int $targetTenantId, array $projectTypeMainMap): void
+    /**
+     * @return array<int, int> Alte Unterart-ID => neue Unterart-ID
+     */
+    private function copyProjectTypeSubs(int $sourceTenantId, int $targetTenantId, array $projectTypeMainMap): array
     {
+        $map = [];
+
         ProjectTypeSub::query()->withoutGlobalScope('tenant')->where('tenant_id', $sourceTenantId)->get()
-            ->each(function (ProjectTypeSub $row) use ($targetTenantId, $projectTypeMainMap) {
-                ProjectTypeSub::query()->create([
+            ->each(function (ProjectTypeSub $row) use ($targetTenantId, $projectTypeMainMap, &$map) {
+                $new = ProjectTypeSub::query()->create([
                     'tenant_id' => $targetTenantId,
                     'project_type_main_id' => $projectTypeMainMap[$row->project_type_main_id] ?? null,
                     'legacy_id' => $row->legacy_id,
@@ -128,7 +169,53 @@ class TenantConfigCloner
                     'symbol' => $row->symbol,
                     'sort' => $row->sort,
                 ]);
+                $map[$row->id] = $new->id;
             });
+
+        return $map;
+    }
+
+    /**
+     * Zusatzfelder (system=false) - die festen system-Felder werden separat
+     * über seedSystemAttributes() angelegt, nicht hier kopiert (sonst
+     * gäbe es sie doppelt, siehe TenantController::store()). Jedes kopierte
+     * Feld bekommt sofort seine generierte Schnell-Filter-Spalte
+     * (AttributeColumnManager), genau wie beim manuellen Anlegen.
+     *
+     * @return array<int, int> Alte Attribut-ID => neue Attribut-ID
+     */
+    private function copyAttributes(int $sourceTenantId, int $targetTenantId): array
+    {
+        $map = [];
+
+        Attribute::query()->withoutGlobalScope('tenant')->where('tenant_id', $sourceTenantId)->where('system', false)
+            ->with('options')->get()
+            ->each(function (Attribute $row) use ($targetTenantId, &$map) {
+                $new = Attribute::query()->create([
+                    'tenant_id' => $targetTenantId,
+                    'section' => $row->section,
+                    'key' => $row->key,
+                    'label' => $row->label,
+                    'data_type' => $row->data_type,
+                    'multiple' => $row->multiple,
+                    'available_in_mail_templates' => $row->available_in_mail_templates,
+                    'sort' => $row->sort,
+                ]);
+                $map[$row->id] = $new->id;
+
+                foreach ($row->options as $option) {
+                    AttributeOption::query()->create([
+                        'attribute_id' => $new->id,
+                        'value' => $option->value,
+                        'label' => $option->label,
+                        'sort' => $option->sort,
+                    ]);
+                }
+
+                $this->columns->ensureColumn($new);
+            });
+
+        return $map;
     }
 
     private function copyMarketSets(int $sourceTenantId, int $targetTenantId, array $marketMap): void
@@ -154,11 +241,12 @@ class TenantConfigCloner
     /**
      * attribute_project_type hat bewusst KEIN eigenes tenant_id (siehe
      * Modell-Docblock) - Scoping läuft nur indirekt über attribute_id.
-     * project_type_sub ist dort ein roher Legacy-Code, kein echter
-     * Fremdschlüssel (siehe Tabellen-Kommentar) - wird unverändert
-     * übernommen, keine Zuordnung nötig.
+     * project_type_sub_id ist der echte Fremdschlüssel (siehe Migration
+     * 2026_09_10_100003_fix_attribute_project_type...) - beide Seiten der
+     * Zuordnung müssen auf die neu kopierten IDs des Zielmandanten
+     * umgemappt werden, nicht nur attribute_id.
      */
-    private function copyAttributeProjectTypeLinks(int $sourceTenantId, array $attributeMap): void
+    private function copyAttributeProjectTypeLinks(array $attributeMap, array $projectTypeSubMap): void
     {
         $sourceAttributeIds = array_keys($attributeMap);
         if ($sourceAttributeIds === []) {
@@ -166,10 +254,14 @@ class TenantConfigCloner
         }
 
         DB::table('attribute_project_type')->whereIn('attribute_id', $sourceAttributeIds)->get()
-            ->each(function ($row) use ($attributeMap) {
+            ->each(function ($row) use ($attributeMap, $projectTypeSubMap) {
+                if (! isset($projectTypeSubMap[$row->project_type_sub_id])) {
+                    return;
+                }
+
                 DB::table('attribute_project_type')->insert([
                     'attribute_id' => $attributeMap[$row->attribute_id],
-                    'project_type_sub' => $row->project_type_sub,
+                    'project_type_sub_id' => $projectTypeSubMap[$row->project_type_sub_id],
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);

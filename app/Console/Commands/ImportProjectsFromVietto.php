@@ -65,22 +65,20 @@ class ImportProjectsFromVietto extends Command
                 [
                     'title' => $row->strTitle ?: $faker->sentence(4),
                     'codename' => $row->strCodename !== null && $row->strCodename !== '' ? $faker->word() : null,
-                    'initiator' => $row->strInitiator !== null && $row->strInitiator !== '' ? $faker->name() : null,
-                    'system_model' => $row->strSystemModell !== null && $row->strSystemModell !== '' ? $faker->words(2, true) : null,
-                    'construction_year' => $row->strBaujahr ?: null,
                     'project_type_main' => $row->projIDmain,
                     'project_type_sub' => $row->projIDsub,
                     'version' => $row->intVersion,
                     'status' => $row->intBearbStatus,
                     'archived' => (bool) $row->blnIsInArchiv,
-                    'localization' => (bool) $row->blnLokalisierung,
                     'publication_date' => $sanitizeDate($row->dtgPublDate),
                     'start_date' => $sanitizeDate($row->dtgStartDate),
                     'end_date' => $sanitizeDate($row->dtgEndDate),
                     'remarks' => $row->txtBemerk !== null && $row->txtBemerk !== '' ? $faker->realText(200) : null,
 
                     // Variable, projekttyp-abhängige Attribute (Analogon zu Viettos attribute/
-                    // attribute_projekttyp_cx, "orangener Bereich" im Vietto-Formular).
+                    // attribute_projekttyp_cx, "orangener Bereich" im Vietto-Formular) +
+                    // Baujahr/Initiator/Lokalisierung, die auf Ralfs Wunsch von festen
+                    // Spalten zu normalen Zusatzfeldern geworden sind (2026-09-10).
                     // Materialnummer ist produktidentifizierend -> anonymisiert.
                     'attributes' => array_filter([
                         'material_number' => $row->strMatnr !== null && $row->strMatnr !== '' ? $faker->numerify('#########') : null,
@@ -88,6 +86,10 @@ class ImportProjectsFromVietto extends Command
                         'heftung' => $row->intHeftung,
                         'erstauflage' => $row->intErstauflage,
                         'format' => $row->strSizeFertigesDok ?: $row->strSizeBogen,
+                        'initiator' => $row->strInitiator !== null && $row->strInitiator !== '' ? $faker->name() : null,
+                        'construction_year' => $row->strBaujahr ?: null,
+                        'system_model' => $row->strSystemModell !== null && $row->strSystemModell !== '' ? $faker->words(2, true) : null,
+                        'localization' => (bool) $row->blnLokalisierung ? 'ja' : 'nein',
                     ], fn ($value) => $value !== null && $value !== ''),
                 ]
             );

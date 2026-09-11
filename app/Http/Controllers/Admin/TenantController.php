@@ -65,6 +65,12 @@ class TenantController extends Controller
             $this->configCloner->clone($sourceTenant, $tenant);
         }
 
+        // Feste Projektattribut-Felder (Bezeichnung, Start, Workflow, ...) -
+        // jeder Mandant braucht sie, unabhängig davon, ob von einem
+        // Quell-Mandanten geklont wurde (Ralf, 2026-09-10: "frei mischbar
+        // mit Zusatzfeldern").
+        $this->configCloner->seedSystemAttributes($tenant);
+
         $this->seedDefaultPermissionTemplates($tenant, $sourceTenant);
 
         // Ralf: sonst könnte man unbemerkt im falschen (vorher aktiven)

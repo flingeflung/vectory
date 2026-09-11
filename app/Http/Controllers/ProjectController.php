@@ -17,6 +17,7 @@ use App\Models\ProjectPerson;
 use App\Models\RecentlyViewedProject;
 use App\Models\SystemSetting;
 use App\Models\Tenant;
+use App\Models\ProjectTypeMain;
 use App\Models\ProjectTypeSub;
 use App\Models\ProjectWorkflowStep;
 use App\Models\Workflow;
@@ -358,19 +359,16 @@ class ProjectController extends Controller
         // gefiltert) + Stammdaten/Ablaufdaten-Zusatzattribute (gelten
         // immer, siehe Project::sectionAttributes()).
         $relevantAttributes = $project->relevantAttributes()
-            ->concat($project->sectionAttributes(Attribute::SECTION_STAMMDATEN))
-            ->concat($project->sectionAttributes(Attribute::SECTION_ABLAUFDATEN));
+            ->concat($project->customSectionAttributes(Attribute::SECTION_STAMMDATEN))
+            ->concat($project->customSectionAttributes(Attribute::SECTION_ABLAUFDATEN));
         $isOverlay = $this->isOverlayRequest($request);
 
         $validator = Validator::make($request->all(), [
             'title' => ['required', 'string', 'max:255'],
-            'construction_year' => ['nullable', 'string', 'max:30'],
-            'initiator' => ['nullable', 'string', 'max:255'],
-            'system_model' => ['nullable', 'string', 'max:255'],
+            'project_type_sub_id' => ['nullable', 'integer', Rule::exists('project_type_subs', 'id')->where('tenant_id', $project->tenant_id)],
             'version' => ['nullable', 'integer'],
             'status' => ['required', 'integer', 'in:0,1,2,3'],
             'archived' => ['boolean'],
-            'localization' => ['nullable', 'in:0,1'],
             'workflow_id' => ['nullable', 'integer', Rule::exists('workflows', 'id')->where('tenant_id', $project->tenant_id)],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date'],
@@ -416,10 +414,15 @@ class ProjectController extends Controller
         }
 
         $validated['archived'] = $request->boolean('archived');
-        // Tri-state: leere Auswahl = nicht zugewiesen (null), sonst Ja/Nein.
-        // ConvertEmptyStringsToNull (globale Middleware) macht aus "" bereits null, bevor wir hier ankommen.
-        $localizationInput = $request->input('localization');
-        $validated['localization'] = $localizationInput === null || $localizationInput === '' ? null : (bool) $localizationInput;
+        // Projektkategorie/-art (Ralf: "fehlt noch bei den Stammdaten") -
+        // project_type_main_id trägt keine eigene Formularauswahl, sondern
+        // wird aus der gewählten Unterart abgeleitet (wie project_type_sub()
+        // das für die Anzeige schon tut).
+        if (array_key_exists('project_type_sub_id', $validated)) {
+            $validated['project_type_main_id'] = $validated['project_type_sub_id']
+                ? ProjectTypeSub::query()->where('tenant_id', $project->tenant_id)->find($validated['project_type_sub_id'])?->project_type_main_id
+                : null;
+        }
         $marketIds = $validated['markets'] ?? [];
         $projectPeopleInput = $validated['project_people'] ?? [];
         $primaryInput = $validated['project_people_primary'] ?? [];
@@ -588,6 +591,7 @@ class ProjectController extends Controller
             'attributes' => $project->relevantAttributes(),
             'stammdatenAttributes' => $project->sectionAttributes(\App\Models\Attribute::SECTION_STAMMDATEN),
             'ablaufdatenAttributes' => $project->sectionAttributes(\App\Models\Attribute::SECTION_ABLAUFDATEN),
+            'projectTypeCategories' => ProjectTypeMain::query()->where('tenant_id', $project->tenant_id)->orderBy('sort')->with(['subs' => fn ($query) => $query->orderBy('sort')])->get(),
             'allMarkets' => Market::query()->where('tenant_id', $project->tenant_id)->orderBy('sort')->get(),
             'marketSets' => MarketSet::query()->where('tenant_id', $project->tenant_id)->with('markets:id')->orderBy('sort')->get(),
             'allFunctionGroups' => FunctionGroup::query()->where('tenant_id', $project->tenant_id)->with(['members' => fn ($query) => $query->withoutGlobalScope('tenant')
@@ -732,12 +736,6 @@ class ProjectController extends Controller
                 continue;
             }
 
-            if ($key === 'localization') {
-                $value === 'null' ? $query->whereNull('localization') : $query->where('localization', (bool) $value);
-
-                continue;
-            }
-
             if ($key === 'favorite') {
                 $favoritesQuery = fn (Builder $query) => $query->where('user_id', Auth::id());
                 (bool) $value ? $query->whereHas('favorites', $favoritesQuery) : $query->whereDoesntHave('favorites', $favoritesQuery);
@@ -830,8 +828,8 @@ class ProjectController extends Controller
             $query->where('source_pn', 'like', "{$term}%")
                 ->orWhere('title', 'like', "%{$term}%")
                 ->orWhere('codename', 'like', "%{$term}%")
-                ->orWhere('initiator', 'like', "%{$term}%")
-                ->orWhere('system_model', 'like', "%{$term}%")
+                ->orWhere('attributes->initiator', 'like', "%{$term}%")
+                ->orWhere('attributes->system_model', 'like', "%{$term}%")
                 ->orWhere('attributes_material_number', 'like', "%{$term}%");
 
             if ($includeRemarks) {

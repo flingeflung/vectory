@@ -271,4 +271,17 @@ class Project extends Model
             ->orderBy('sort')
             ->get();
     }
+
+    /**
+     * Wie sectionAttributes(), aber ohne die system=true-Zeilen (Bezeichnung,
+     * Start, Workflow, ...) - die haben eigene, fest verdrahtete
+     * Validierung/Schreiblogik in ProjectController::update() und dürfen
+     * nicht über den generischen attributes-JSON-Merge laufen.
+     *
+     * @return Collection<int, \App\Models\Attribute>
+     */
+    public function customSectionAttributes(string $section): Collection
+    {
+        return $this->sectionAttributes($section)->where('system', false)->values();
+    }
 }

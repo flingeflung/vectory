@@ -32,17 +32,6 @@ class AttributeController extends Controller
 {
     public function __construct(private readonly AttributeColumnManager $columns) {}
 
-    /**
-     * Feste, im Code vorgegebene Felder je Bereich - rein zur Übersicht auf
-     * dieser Seite (nicht bearbeitbar/löschbar hier), damit der Admin auf
-     * einen Blick sieht, was schon da ist, bevor er weitere Felder anlegt.
-     */
-    private const BUILT_IN_FIELDS = [
-        Attribute::SECTION_STAMMDATEN => ['Bezeichnung', 'Modell/System', 'Baujahr', 'Version', 'Initiator', 'Status', 'Markt', 'Übersetzung/Lokalisierung notwendig?', 'Bemerkungen'],
-        Attribute::SECTION_ABLAUFDATEN => ['Start', 'Ende', 'Publikation', 'Workflow', 'Projektbeteiligte Personen', 'Archiviert'],
-        Attribute::SECTION_TYPSPEZIFISCH => [],
-    ];
-
     public function index(Request $request): View
     {
         $tenantId = CurrentTenant::id();
@@ -59,7 +48,6 @@ class AttributeController extends Controller
 
         return view('admin.attributes.index', [
             'attributesBySection' => $attributes,
-            'builtInFields' => self::BUILT_IN_FIELDS,
             'categories' => $categories,
             'assignments' => $assignments,
             'dataTypes' => $this->dataTypeOptions(),
@@ -113,6 +101,7 @@ class AttributeController extends Controller
     public function update(Request $request, Attribute $attribute): RedirectResponse
     {
         abort_unless($attribute->tenant_id === CurrentTenant::id(), 404);
+        abort_if($attribute->system, 403);
 
         $label = trim((string) $request->string('label'));
         abort_if($label === '', 422);
@@ -125,6 +114,7 @@ class AttributeController extends Controller
     public function destroy(Request $request, Attribute $attribute): RedirectResponse
     {
         abort_unless($attribute->tenant_id === CurrentTenant::id(), 404);
+        abort_if($attribute->system, 403);
 
         DB::transaction(function () use ($attribute) {
             // Werte aus allen Projekten dieses Mandanten entfernen, statt

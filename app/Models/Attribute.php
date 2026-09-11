@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['tenant_id', 'section', 'key', 'label', 'data_type', 'multiple', 'sort', 'available_in_mail_templates'])]
+#[Fillable(['tenant_id', 'section', 'system', 'key', 'label', 'data_type', 'multiple', 'sort', 'available_in_mail_templates'])]
 #[ObservedBy(AttributeObserver::class)]
 class Attribute extends Model
 {
@@ -29,6 +29,39 @@ class Attribute extends Model
     public const SECTION_TYPSPEZIFISCH = 'typspezifisch';
 
     public const SECTIONS = [self::SECTION_STAMMDATEN, self::SECTION_ABLAUFDATEN, self::SECTION_TYPSPEZIFISCH];
+
+    /**
+     * Feste Felder, die es schon vor der Attribut-Verwaltung gab (Ralf,
+     * 2026-09-10: "frei mischbar mit Zusatzfeldern") - bekommen jetzt
+     * eigene Attribute-Zeilen (system=true) statt nur einer hartkodierten
+     * Anzeigeliste, damit sie einen echten, pro Kunde änderbaren sort-Wert
+     * tragen und sich frei mit den Zusatzfeldern mischen lassen. Nur die
+     * Reihenfolge ist über die Verwaltungsseite änderbar, nicht
+     * Bezeichnung/Löschen. Baujahr/Initiator/Übersetzung-Lokalisierung und
+     * Modell/System sind bewusst NICHT hier drin - die sind auf Ralfs
+     * Wunsch zu normalen Zusatzfeldern geworden (siehe attributes-
+     * Migration/Datenmigration). Modell/System explizit deshalb, weil die
+     * Caption je Kunde variiert ("bei Viega Modell, anderswo Typ") und das
+     * Feld später ohnehin per PIM-Anbindung befüllt wird, nicht manuell.
+     */
+    public const SYSTEM_FIELDS = [
+        self::SECTION_STAMMDATEN => [
+            'title' => 'Bezeichnung',
+            'project_type' => 'Projektkategorie/-art',
+            'version' => 'Version',
+            'status' => 'Status',
+            'start_date' => 'Start',
+            'end_date' => 'Ende',
+            'markets' => 'Markt',
+            'remarks' => 'Bemerkungen',
+        ],
+        self::SECTION_ABLAUFDATEN => [
+            'workflow_id' => 'Workflow',
+            'publication_date' => 'Publikation',
+            'project_people' => 'Projektbeteiligte Personen',
+            'archived' => 'Archiviert',
+        ],
+    ];
 
     /**
      * Feldtypen, gegen Viettos tatsächliche Projekt-Formularfelder
@@ -61,6 +94,7 @@ class Attribute extends Model
     protected function casts(): array
     {
         return [
+            'system' => 'boolean',
             'multiple' => 'boolean',
             'available_in_mail_templates' => 'boolean',
         ];
