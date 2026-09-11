@@ -64,10 +64,16 @@
         @forelse ($connectedProjects as $p)
             @php $entry = $connections->get($p->id); @endphp
             <div class="border-b border-gray-100 py-1 last:border-0">
-                <label class="flex items-start gap-1.5 text-xs text-gray-700">
+                {{-- Bewusst KEIN <label> um Checkbox+Text: ein <label> leitet
+                     jeden Klick auf den Text automatisch an die Checkbox
+                     weiter (Browser-Standardverhalten) - ein Klick auf den
+                     Projektnamen hätte sonst ungewollt die Verknüpfung
+                     entfernt (Ralf-Bug-Report). Nur die Checkbox selbst
+                     soll klickbar sein. --}}
+                <div class="flex items-start gap-1.5 text-xs text-gray-700">
                     <input type="checkbox" checked @click.prevent="removeConnection({{ $entry->connection->id }})" class="mt-0.5 shrink-0 rounded border-gray-300">
                     <span>{{ $p->source_pn }} &ndash; {{ $p->title }}</span>
-                </label>
+                </div>
                 <div class="ml-5 text-[11px] text-gray-400">{{ $entry->label }}</div>
             </div>
         @empty
@@ -77,10 +83,10 @@
         <div class="mb-1 mt-3 text-[11px] font-medium text-gray-500">{{ __('Andere Projekte') }}</div>
         @forelse ($otherProjects as $p)
             <div class="border-b border-gray-100 py-1 last:border-0">
-                <label class="flex items-start gap-1.5 text-xs text-gray-700">
+                <div class="flex items-start gap-1.5 text-xs text-gray-700">
                     <input type="checkbox" @click.prevent="addingId === {{ $p->id }} ? (addingId = null) : startAdd({{ $p->id }})" class="mt-0.5 shrink-0 rounded border-gray-300">
                     <span>{{ $p->source_pn }} &ndash; {{ $p->title }}</span>
-                </label>
+                </div>
                 {{-- Ralf, 2026-09-11 (S1, Vietto-Vorbild): "Was ist X aus
                      Sicht von Y?" statt abstrakter "Richtung"-Begriffe -
                      macht für den Benutzer direkt klar, was einzutragen ist,
