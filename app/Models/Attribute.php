@@ -70,6 +70,9 @@ class Attribute extends Model
             // bewusst nur einen "– noch nicht verfügbar –"-Platzhalter,
             // bis das jeweilige Feature (Checkliste, Projektverbindungen)
             // gebaut ist - siehe Backlog-Memory.
+            // date_progress vor progress (Ralf: "erst Datum, dann projekt") -
+            // beide als eigene volle Zeile, direkt untereinander.
+            'date_progress' => 'Datumsfortschritt',
             'progress' => 'Projektfortschritt',
             'creation_type' => 'Erstellungsstatus',
             'checklist' => 'Checkliste',
