@@ -25,7 +25,7 @@
     // Personen-/Markt-Zuordnung) spannen beide Spalten.
     $isWideField = function ($field) {
         if ($field->system) {
-            return in_array($field->key, ['title', 'remarks', 'markets', 'project_people', 'remarks_echo', 'changes_vs_previous_version', 'date_progress', 'progress'], true);
+            return in_array($field->key, ['title', 'start_date', 'status', 'remarks', 'markets', 'project_people', 'remarks_echo', 'changes_vs_previous_version', 'date_progress', 'progress'], true);
         }
 
         return $field->data_type === \App\Models\Attribute::DATA_TYPE_TEXTAREA
