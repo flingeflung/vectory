@@ -1,5 +1,20 @@
 @php
     $sectionLabels = ['stammdaten' => __('Stammdaten'), 'ablaufdaten' => __('Ablaufdaten'), 'typspezifisch' => __('Typspezifische Attribute')];
+
+    // Ralf, 2026-09-11: "die müssen auch verstehen, was da passiert, ohne
+    // ein Handbuch durchlesen zu müssen" - bei Feldern, deren Verhalten
+    // beim Kopieren nicht einfach "1:1 übernommen oder nicht" ist, steht
+    // die tatsächliche Auswirkung direkt als Tooltipp dabei, nicht nur im
+    // Kopf der Entwickler. Die eigentliche Kopierlogik selbst ist Phase 2 -
+    // hier schon mal die Erklärung, damit die Vorlage von Anfang an
+    // verständlich bedienbar ist.
+    $fieldHints = [
+        'title' => __('Angehakt: wird 1:1 übernommen, bei mehreren Kopien mit Zusatz „Kopie 1/2/…“. Nicht angehakt: Feld startet beim Kopieren leer, muss von Hand ausgefüllt werden.'),
+        'version' => __('Angehakt: Versionsnummer wird übernommen, beim Kopieren wird zusätzlich gefragt, ob sie um 1 erhöht werden soll.'),
+        'status' => __('Wird nicht 1:1 übernommen - die Kopie startet mit Status „Geplant“ bzw. folgt automatisch dem mitkopierten Workflow.'),
+        'workflow_id' => __('Ist der ursprüngliche Workflow nicht mehr aktuell, wird automatisch die neueste Version verknüpft.'),
+        'project_people' => __('Angehakt: Projektbeteiligte Personen werden mitkopiert - ist eine davon inaktiv, wird vor dem Kopieren gewarnt.'),
+    ];
 @endphp
 
 <div class="mb-4 shrink-0 rounded-lg border border-gray-200 bg-white p-3" x-data="{ dirty: false }">
@@ -124,6 +139,9 @@
                                                 {{ $attribute->label }}
                                                 @if ($attribute->system)
                                                     <span class="text-gray-300" title="{{ __('Festes Feld') }}">🔒</span>
+                                                @endif
+                                                @if (isset($fieldHints[$attribute->key]))
+                                                    <span class="cursor-help text-gray-300" title="{{ $fieldHints[$attribute->key] }}">ⓘ</span>
                                                 @endif
                                             </label>
                                         @endforeach
