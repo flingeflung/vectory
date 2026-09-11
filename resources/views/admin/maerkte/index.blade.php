@@ -79,6 +79,7 @@
                             {{ __('Wähle links eine Ländergruppe aus, um Sprachen zuzuordnen.') }}
                         @endif
                         {{ __('Ländercodes nach ISO 3166-1, Sprachcodes nach ISO 639-1.') }}
+                        {{ __('„keine Übersetzung“ wirkt sofort beim Anklicken, unabhängig vom Speichern-Button.') }}
                     </p>
                 </div>
                 <div class="flex shrink-0 items-center gap-2">
@@ -146,7 +147,7 @@
                                                 <span class="text-gray-700">{{ $language->name }} <span class="text-gray-400">{{ $language->code }}</span></span>
                                             </label>
                                             @if ($existingMarket)
-                                                <label class="inline-flex items-center gap-1 text-gray-400" title="{{ __('Für diesen Markt wird keine Übersetzung durchgeführt.') }}">
+                                                <label class="inline-flex items-center gap-1 text-gray-400" title="{{ __('Für diesen Markt wird keine Übersetzung durchgeführt. Wirkt sofort, unabhängig vom Speichern-Button oben.') }}">
                                                     <input
                                                         type="checkbox"
                                                         class="rounded border-gray-300"
