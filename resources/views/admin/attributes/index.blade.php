@@ -51,11 +51,11 @@
                             <div class="flex gap-2">
                                 <div class="flex-1">
                                     <label class="block text-xs text-gray-500">{{ __('Bezeichnung') }}</label>
-                                    <input type="text" name="label" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                                    <input type="text" name="label" required class="mt-0.5 w-full rounded-md border-gray-300 py-1 text-sm">
                                 </div>
                                 <div class="w-40">
                                     <label class="block text-xs text-gray-500">{{ __('Feldtyp') }}</label>
-                                    <select name="data_type" x-model="newType" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                                    <select name="data_type" x-model="newType" class="mt-0.5 w-full rounded-md border-gray-300 py-1 text-sm">
                                         @foreach ($dataTypes as $value => $typeLabel)
                                             <option value="{{ $value }}">{{ $typeLabel }}</option>
                                         @endforeach
@@ -91,13 +91,47 @@
                             class="space-y-1"
                         >
                             @forelse ($attributesBySection->get($section, collect()) as $attribute)
-                                <div x-sort:item="{{ $attribute->id }}" class="rounded-md border border-gray-200 px-2 py-1" x-data="{ managingOptions: false }">
+                                <div x-sort:item="{{ $attribute->id }}" class="rounded-md border border-gray-200 px-2 py-0.5">
                                     @if ($attribute->system)
                                         <div class="flex items-center gap-2">
                                             <span x-sort:handle class="shrink-0 cursor-move text-gray-300 hover:text-gray-500" title="{{ __('Verschieben') }}">⠿</span>
                                             <span class="shrink-0 text-gray-300" title="{{ __('Festes Feld - nur die Reihenfolge ist änderbar') }}">🔒</span>
                                             <span class="flex-1 text-sm text-gray-700">{{ $attribute->label }}</span>
                                         </div>
+                                    @elseif ($attribute->data_type === 'select')
+                                        {{-- Ralf, 2026-09-11: Pulldown-Name+Optionen werden nicht mehr
+                                             inline bearbeitet, sondern gemeinsam in einem eigenen
+                                             kleinen Overlay ("Ändern") und ganzheitlich gespeichert. --}}
+                                        <div class="flex items-center gap-2">
+                                            <span x-sort:handle class="shrink-0 cursor-move text-gray-300 hover:text-gray-500" title="{{ __('Verschieben') }}">⠿</span>
+                                            <span class="flex-1 text-sm text-gray-700">{{ $attribute->label }}</span>
+                                            <span class="shrink-0 text-xs text-gray-400">{{ $dataTypes[$attribute->data_type] }}{{ $attribute->multiple ? ' ('.__('Mehrfachauswahl').')' : '' }}</span>
+                                            <button
+                                                type="button"
+                                                onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'pulldown-edit-{{ $attribute->id }}' }))"
+                                                class="shrink-0 rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                                            >
+                                                {{ __('Ändern') }}
+                                            </button>
+                                            <form method="POST" action="{{ route('admin.projektattribute.destroy', $attribute) }}" x-ref="deleteForm" class="hidden">
+                                                @csrf
+                                                @method('DELETE')
+                                            </form>
+                                            <button
+                                                type="button"
+                                                @click="window.deleteWithConfirm($refs.deleteForm, {
+                                                    message: {{ \Illuminate\Support\Js::from(__('Dieses Attribut wirklich endgültig löschen? Vorhandene Werte in Projekten gehen dabei verloren.')) }},
+                                                })"
+                                                class="shrink-0 rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                                            >
+                                                {{ __('Löschen') }}
+                                            </button>
+                                        </div>
+                                        @if ($attribute->options->isNotEmpty())
+                                            <div class="ml-6 mt-0.5 text-xs text-gray-400">
+                                                {{ $attribute->options->pluck('label')->implode(', ') }}
+                                            </div>
+                                        @endif
                                     @else
                                     <div class="flex items-center gap-2">
                                         <span x-sort:handle class="shrink-0 cursor-move text-gray-300 hover:text-gray-500" title="{{ __('Verschieben') }}">⠿</span>
@@ -110,17 +144,12 @@
                                             @submit="dirty = false; window.__attributesDirtyForms.delete($el)"
                                         >
                                             @csrf
-                                            <input type="text" name="label" value="{{ $attribute->label }}" required class="flex-1 rounded-md border-gray-300 text-sm">
-                                            <span class="shrink-0 text-xs text-gray-400">{{ $dataTypes[$attribute->data_type] }}{{ $attribute->multiple ? ' ('.__('Mehrfachauswahl').')' : '' }}</span>
+                                            <input type="text" name="label" value="{{ $attribute->label }}" required class="flex-1 rounded-md border-gray-300 py-1 text-sm">
+                                            <span class="shrink-0 text-xs text-gray-400">{{ $dataTypes[$attribute->data_type] }}</span>
                                             <button type="submit" x-show="dirty" x-cloak class="shrink-0 rounded-md bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
                                                 {{ __('Speichern') }}
                                             </button>
                                         </form>
-                                        @if ($attribute->data_type === 'select')
-                                            <button type="button" @click="managingOptions = !managingOptions" class="shrink-0 rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
-                                                {{ __('Optionen') }}
-                                            </button>
-                                        @endif
                                         <form method="POST" action="{{ route('admin.projektattribute.destroy', $attribute) }}" x-ref="deleteForm" class="hidden">
                                             @csrf
                                             @method('DELETE')
@@ -136,55 +165,71 @@
                                         </button>
                                     </div>
                                     @endif
-
-                                    @if ($attribute->data_type === 'select')
-                                        <div x-show="managingOptions" x-cloak class="mt-2 space-y-1.5 border-t border-gray-100 pt-2">
-                                            @foreach ($attribute->options as $option)
-                                                <div class="flex items-center gap-2" x-data="{}">
-                                                    <form
-                                                        method="POST"
-                                                        action="{{ route('admin.projektattribute.optionen.update', $option) }}"
-                                                        class="flex flex-1 items-center gap-2"
-                                                        x-data="{ dirty: false }"
-                                                        @input="dirty = window.formIsDirty($el, window.__attributesDirtyForms)"
-                                                        @submit="dirty = false; window.__attributesDirtyForms.delete($el)"
-                                                    >
-                                                        @csrf
-                                                        <input type="text" name="label" value="{{ $option->label }}" required class="flex-1 rounded-md border-gray-300 text-xs">
-                                                        <button type="submit" x-show="dirty" x-cloak class="shrink-0 rounded bg-btn-primary px-1.5 py-0.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
-                                                            {{ __('Speichern') }}
-                                                        </button>
-                                                    </form>
-                                                    <form x-ref="deleteForm" method="POST" action="{{ route('admin.projektattribute.optionen.destroy', $option) }}" class="hidden">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                    </form>
-                                                    <button
-                                                        type="button"
-                                                        @click="window.deleteWithConfirm($refs.deleteForm, {
-                                                            message: {{ \Illuminate\Support\Js::from(__('Diese Option wirklich löschen?')) }},
-                                                        })"
-                                                        class="shrink-0 rounded border border-red-300 px-1.5 py-0.5 text-xs font-medium text-red-600 hover:bg-red-50"
-                                                    >
-                                                        {{ __('Löschen') }}
-                                                    </button>
-                                                </div>
-                                            @endforeach
-                                            <form method="POST" action="{{ route('admin.projektattribute.optionen.store', $attribute) }}" class="flex items-center gap-2">
-                                                @csrf
-                                                <input type="text" name="label" placeholder="{{ __('Neue Option') }}" required class="flex-1 rounded-md border-gray-300 text-xs">
-                                                <button type="submit" class="shrink-0 rounded bg-btn-primary px-1.5 py-0.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
-                                                    {{ __('Hinzufügen') }}
-                                                </button>
-                                            </form>
-                                        </div>
-                                    @endif
                                 </div>
                             @empty
                                 <p class="text-xs text-gray-400">{{ __('Noch keine Felder in diesem Bereich.') }}</p>
                             @endforelse
                         </div>
                     </div>
+
+                    {{-- Pulldown-Bearbeiten-Overlays bewusst AUSSERHALB des x-sort-Containers
+                         gerendert (nicht als Kind eines x-sort:item), damit die Drag&Drop-
+                         Bibliothek nicht auf zusätzlichen, versteckten Overlay-Inhalt
+                         innerhalb einer Zeile reagiert. --}}
+                    @foreach ($attributesBySection->get($section, collect()) as $attribute)
+                        @if (! $attribute->system && $attribute->data_type === 'select')
+                            <x-modal :name="'pulldown-edit-'.$attribute->id" max-width="sm" :dirty-check="'pulldownDirty'.$attribute->id">
+                                <div x-data="{ options: {{ \Illuminate\Support\Js::from($attribute->options->map(fn ($o) => ['id' => $o->id, 'label' => $o->label])->values()) }} }" class="p-4">
+                                    <h3 class="mb-3 text-sm font-semibold text-gray-900">{{ __('Pulldown bearbeiten') }}</h3>
+                                    <form
+                                        id="pulldown-form-{{ $attribute->id }}"
+                                        method="POST"
+                                        action="{{ route('admin.projektattribute.pulldown.update', $attribute) }}"
+                                        class="space-y-3"
+                                    >
+                                        @csrf
+                                        <div>
+                                            <label class="block text-xs text-gray-500">{{ __('Bezeichnung') }}</label>
+                                            <input type="text" name="label" value="{{ $attribute->label }}" required class="mt-0.5 w-full rounded-md border-gray-300 py-1 text-sm">
+                                        </div>
+
+                                        <div>
+                                            <label class="mb-1 block text-xs text-gray-500">{{ __('Optionen') }}</label>
+                                            <div class="space-y-1.5">
+                                                <template x-for="(option, index) in options" :key="index">
+                                                    <div class="flex items-center gap-1.5">
+                                                        <input type="hidden" :name="'options['+index+'][id]'" :value="option.id">
+                                                        <input type="text" :name="'options['+index+'][label]'" x-model="option.label" required class="flex-1 rounded-md border-gray-300 py-1 text-sm">
+                                                        <button type="button" @click="options.splice(index, 1)" class="shrink-0 text-gray-400 hover:text-red-600" title="{{ __('Option entfernen') }}">
+                                                            &times;
+                                                        </button>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            <button type="button" @click="options.push({ id: null, label: '' })" class="mt-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-800">
+                                                + {{ __('Option hinzufügen') }}
+                                            </button>
+                                        </div>
+
+                                        <div class="flex justify-end gap-2 border-t border-gray-100 pt-3">
+                                            <button type="button" onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'pulldown-edit-{{ $attribute->id }}' }))" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
+                                                {{ __('Abbrechen') }}
+                                            </button>
+                                            <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
+                                                {{ __('Speichern') }}
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                                <script>
+                                    window['pulldownDirty{{ $attribute->id }}'] = () => {
+                                        const form = document.getElementById('pulldown-form-{{ $attribute->id }}');
+                                        return form ? window.formIsDirty(form) : false;
+                                    };
+                                </script>
+                            </x-modal>
+                        @endif
+                    @endforeach
 
                     @if ($section === 'typspezifisch' && $attributesBySection->get('typspezifisch', collect())->isNotEmpty())
                         <div class="rounded-lg border border-gray-200 bg-white p-4">

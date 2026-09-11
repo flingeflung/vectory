@@ -132,69 +132,91 @@ class AttributeController extends Controller
         return $this->redirectToSection($attribute->section);
     }
 
-    public function storeOption(Request $request, Attribute $attribute): RedirectResponse
+    /**
+     * Ralf, 2026-09-11: Pulldown-Bearbeitung (Name + Optionen) läuft über ein
+     * eigenes Overlay und wird "ganzheitlich" in EINEM Request gespeichert,
+     * statt Name/Optionen einzeln über getrennte Endpunkte - dieser Endpunkt
+     * ersetzt die vorherigen storeOption()/updateOption()/destroyOption().
+     * $options ist eine vollständige Momentaufnahme (id + label je Zeile,
+     * id leer = neue Option) - alles, was hier fehlt, aber noch in der DB
+     * steht, gilt als vom Nutzer gelöscht.
+     */
+    public function updatePulldown(Request $request, Attribute $attribute): RedirectResponse
     {
         abort_unless($attribute->tenant_id === CurrentTenant::id(), 404);
+        abort_if($attribute->system, 403);
         abort_unless($attribute->data_type === Attribute::DATA_TYPE_SELECT, 422);
 
         $label = trim((string) $request->string('label'));
         abort_if($label === '', 422);
 
-        AttributeOption::query()->create([
-            'attribute_id' => $attribute->id,
-            'value' => $this->uniqueOptionValue($label, $attribute->id),
-            'label' => $label,
-            'sort' => 1 + (int) AttributeOption::query()->where('attribute_id', $attribute->id)->max('sort'),
-        ]);
+        $submittedOptions = collect($request->array('options'))
+            ->map(fn ($row) => [
+                'id' => isset($row['id']) && $row['id'] !== '' ? (int) $row['id'] : null,
+                'label' => trim((string) ($row['label'] ?? '')),
+            ])
+            ->filter(fn ($row) => $row['label'] !== '')
+            ->values();
 
-        return $this->redirectToSection($attribute->section);
-    }
+        DB::transaction(function () use ($attribute, $label, $submittedOptions) {
+            $attribute->update(['label' => $label]);
 
-    public function updateOption(Request $request, AttributeOption $option): RedirectResponse
-    {
-        abort_unless($option->attribute->tenant_id === CurrentTenant::id(), 404);
+            $existingOptions = $attribute->options()->get()->keyBy('id');
+            $keptIds = $submittedOptions->pluck('id')->filter()->all();
 
-        $label = trim((string) $request->string('label'));
-        abort_if($label === '', 422);
-
-        $option->update(['label' => $label]);
-
-        return $this->redirectToSection($option->attribute->section);
-    }
-
-    public function destroyOption(Request $request, AttributeOption $option): RedirectResponse
-    {
-        abort_unless($option->attribute->tenant_id === CurrentTenant::id(), 404);
-
-        $attribute = $option->attribute;
-
-        DB::transaction(function () use ($option, $attribute) {
-            if ($attribute->multiple) {
-                // Mehrfachauswahl: Wert aus jeder Projekt-Werteliste entfernen, nicht nur die Option selbst löschen.
-                $projects = DB::table('projects')->where('tenant_id', $attribute->tenant_id)
-                    ->whereNotNull('attributes')
-                    ->select('id', 'attributes')
-                    ->get();
-                foreach ($projects as $project) {
-                    $values = json_decode($project->attributes, true) ?? [];
-                    if (isset($values[$attribute->key]) && is_array($values[$attribute->key])) {
-                        $values[$attribute->key] = array_values(array_diff($values[$attribute->key], [$option->value]));
-                        if ($values[$attribute->key] === []) {
-                            unset($values[$attribute->key]);
-                        }
-                        DB::table('projects')->where('id', $project->id)->update(['attributes' => json_encode($values)]);
-                    }
+            foreach ($existingOptions as $option) {
+                if (! in_array($option->id, $keptIds, true)) {
+                    $this->removeOptionValueFromProjects($attribute, $option);
+                    $option->delete();
                 }
-            } else {
-                DB::table('projects')->where('tenant_id', $attribute->tenant_id)
-                    ->where(DB::raw("JSON_UNQUOTE(JSON_EXTRACT(attributes, '$.\"{$attribute->key}\"'))"), $option->value)
-                    ->update(['attributes' => DB::raw("JSON_REMOVE(attributes, '$.\"{$attribute->key}\"')")]);
             }
 
-            $option->delete();
+            foreach ($submittedOptions as $index => $row) {
+                if ($row['id'] && $existingOptions->has($row['id'])) {
+                    $existingOptions[$row['id']]->update(['label' => $row['label'], 'sort' => $index]);
+                } else {
+                    AttributeOption::query()->create([
+                        'attribute_id' => $attribute->id,
+                        'value' => $this->uniqueOptionValue($row['label'], $attribute->id),
+                        'label' => $row['label'],
+                        'sort' => $index,
+                    ]);
+                }
+            }
         });
 
         return $this->redirectToSection($attribute->section);
+    }
+
+    /**
+     * Entfernt den Wert einer gelöschten Option aus allen Projekten dieses
+     * Mandanten, statt eine tote Karteileiche im attributes-JSON zu
+     * hinterlassen (Werte referenzieren AttributeOption::value, nicht die
+     * ID - eine umbenannte Option braucht das nicht, nur eine gelöschte).
+     */
+    private function removeOptionValueFromProjects(Attribute $attribute, AttributeOption $option): void
+    {
+        if ($attribute->multiple) {
+            // Mehrfachauswahl: Wert aus jeder Projekt-Werteliste entfernen, nicht nur die Option selbst löschen.
+            $projects = DB::table('projects')->where('tenant_id', $attribute->tenant_id)
+                ->whereNotNull('attributes')
+                ->select('id', 'attributes')
+                ->get();
+            foreach ($projects as $project) {
+                $values = json_decode($project->attributes, true) ?? [];
+                if (isset($values[$attribute->key]) && is_array($values[$attribute->key])) {
+                    $values[$attribute->key] = array_values(array_diff($values[$attribute->key], [$option->value]));
+                    if ($values[$attribute->key] === []) {
+                        unset($values[$attribute->key]);
+                    }
+                    DB::table('projects')->where('id', $project->id)->update(['attributes' => json_encode($values)]);
+                }
+            }
+        } else {
+            DB::table('projects')->where('tenant_id', $attribute->tenant_id)
+                ->where(DB::raw("JSON_UNQUOTE(JSON_EXTRACT(attributes, '$.\"{$attribute->key}\"'))"), $option->value)
+                ->update(['attributes' => DB::raw("JSON_REMOVE(attributes, '$.\"{$attribute->key}\"')")]);
+        }
     }
 
     /**

@@ -153,9 +153,7 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     Route::post('/projektattribute/reorder', [AttributeController::class, 'reorder'])->name('projektattribute.reorder');
     Route::post('/projektattribute/{attribute}', [AttributeController::class, 'update'])->name('projektattribute.update');
     Route::delete('/projektattribute/{attribute}', [AttributeController::class, 'destroy'])->name('projektattribute.destroy');
-    Route::post('/projektattribute/{attribute}/optionen', [AttributeController::class, 'storeOption'])->name('projektattribute.optionen.store');
-    Route::post('/projektattribute/optionen/{option}', [AttributeController::class, 'updateOption'])->name('projektattribute.optionen.update');
-    Route::delete('/projektattribute/optionen/{option}', [AttributeController::class, 'destroyOption'])->name('projektattribute.optionen.destroy');
+    Route::post('/projektattribute/{attribute}/pulldown', [AttributeController::class, 'updatePulldown'])->name('projektattribute.pulldown.update');
     Route::post('/projektattribute/{attribute}/projektart', [AttributeController::class, 'toggleProjectType'])->name('projektattribute.projektart.toggle');
     Route::post('/workflows/{workflow}/veroeffentlichen', [WorkflowController::class, 'publish'])->name('workflows.publish');
     Route::post('/workflows/{workflow}', [WorkflowController::class, 'update'])->name('workflows.update');
