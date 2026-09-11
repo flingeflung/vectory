@@ -1,6 +1,7 @@
 <div
     x-data="{
         term: {{ \Illuminate\Support\Js::from($search) }},
+        sortDesc: {{ $sortDesc ? 'true' : 'false' }},
         searchTimer: null,
         addingId: null, addLabel: '', addLabelReverse: '',
         loading: false,
@@ -29,6 +30,19 @@
                 this.loading = false;
                 window.hideProjectConnectionLoading();
             }
+        },
+        async toggleSort() {
+            this.sortDesc = ! this.sortDesc;
+            await fetch({{ \Illuminate\Support\Js::from(route('projekte.verknuepfungen.sortierung')) }}, {
+                method: 'PATCH',
+                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+            });
+            await this.runSearch();
+        },
+        initScrollSentinel(el) {
+            new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting) { this.loadMore(); }
+            }, { rootMargin: '300px' }).observe(el);
         },
         async loadMore() {
             if (this.loadingMore || ! this.otherHasMore) return;
@@ -122,18 +136,21 @@
 
          Aus demselben Performance-Grund lädt "Andere Projekte" nur die
          ersten {{ $pageSize }} (loadMore()) statt alles auf einmal -
-         weitere kommen über den Button "Weitere laden" am Listenende.
-         Ursprünglich automatisch beim Scrollen (erst manuelle Scroll-
-         Positions-Berechnung, dann ein IntersectionObserver) - bei Ralfs
-         echten ~6700 Projekten blieb beides irgendwann stehen, obwohl der
-         Server jeden einzelnen Abschnitt nachweislich fehlerfrei und
-         schnell ausliefert (durchgetestet bis zum letzten Datensatz). Die
-         Fehlerursache ließ sich clientseitig nicht zuverlässig
-         reproduzieren - ein expliziter Button ist weniger elegant, aber
-         ohne Scroll-Erkennungs-Unsicherheiten. loadMore() prüft
-         response.ok: ein Serverfehler hätte sonst denselben Effekt wie
-         "keine weiteren Projekte mehr" (X-Has-More-Header fehlt dann) und
-         der Button wäre stillschweigend verschwunden.
+         weitere kommen automatisch beim Scrollen ans Listenende nach
+         (initScrollSentinel(), IntersectionObserver auf dem leeren Div am
+         Listenende). Ein erster Versuch mit root: #connection-list ist bei
+         Ralfs echten ~6700 Projekten irgendwann stehengeblieben, obwohl der
+         Server jeden Abschnitt nachweislich fehlerfrei und schnell
+         ausliefert (durchgetestet bis zum letzten Datensatz) - Ursache
+         vermutlich verschachteltes Scrollen (die Liste hatte selbst
+         max-h-[50vh] overflow-y-auto UND saß im ebenfalls scrollbaren
+         Modal). Fix: #connection-list hat jetzt keine eigene Scrollbar
+         mehr (nur noch das Modal scrollt), und der Observer beobachtet
+         relativ zum Viewport (root: null) statt relativ zu einem
+         verschachtelten Container. loadMore() prüft response.ok: ein
+         Serverfehler hätte sonst denselben Effekt wie "keine weiteren
+         Projekte mehr" (X-Has-More-Header fehlt dann) und würde still
+         nichts mehr nachladen.
 
          WICHTIG für Änderungen an diesem x-data-Block: KEINE geraden
          Anführungszeichen in JS-Kommentaren dort verwenden - die beenden
@@ -141,14 +158,30 @@
          Seite landet dann als Rohtext im Browser (ist hier schon zweimal
          passiert). Erklärungen gehören hierher in diesen Blade-Kommentar,
          nicht in JS-Kommentare innerhalb von x-data. --}}
-    <div>
-        <label class="block text-xs text-gray-500">{{ __('Projekt suchen (PN oder Bezeichnung)') }}</label>
-        <input type="text" x-model="term" @input="onSearchInput()" :disabled="loading" autocomplete="off" class="mt-0.5 w-full rounded-md border-gray-300 text-sm disabled:bg-gray-50">
+    <div class="flex items-end gap-2">
+        <div class="flex-1">
+            <label class="block text-xs text-gray-500">{{ __('Projekt suchen (PN oder Bezeichnung)') }}</label>
+            <input type="text" x-model="term" @input="onSearchInput()" :disabled="loading" autocomplete="off" class="mt-0.5 w-full rounded-md border-gray-300 text-sm disabled:bg-gray-50">
+        </div>
+        {{-- Ralf, 2026-09-11: Sortierrichtung nach PN umkehrbar, damit auch
+             hohe PNs (die neuesten Projekte) oben stehen können, ohne
+             erst durch die ganze Liste zu scrollen - gemerkte Einstellung
+             pro Benutzer (users.project_connection_sort_desc), nicht nur
+             für diesen einen Aufruf. --}}
+        <button
+            type="button"
+            @click="toggleSort()"
+            :disabled="loading"
+            :title="sortDesc ? {{ \Illuminate\Support\Js::from(__('Sortierung: PN absteigend. Klicken für aufsteigend.')) }} : {{ \Illuminate\Support\Js::from(__('Sortierung: PN aufsteigend. Klicken für absteigend.')) }}"
+            class="shrink-0 rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:cursor-not-allowed disabled:opacity-50"
+        >
+            {{ __('PN') }} <span x-text="sortDesc ? '↓' : '↑'"></span>
+        </button>
     </div>
 
     <div
         id="connection-list"
-        class="mt-3 max-h-[50vh] overflow-y-auto"
+        class="mt-3"
         data-other-offset="{{ $otherProjects->count() }}"
         data-other-has-more="{{ $otherHasMore ? '1' : '0' }}"
     >
@@ -169,16 +202,8 @@
                 @include('projekte.partials.connection-other-project-rows')
             @endif
         </div>
-        <div x-show="otherHasMore" x-cloak class="py-1.5 text-center">
-            <button
-                type="button"
-                @click="loadMore()"
-                :disabled="loadingMore"
-                class="rounded border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-[11px] font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:cursor-not-allowed disabled:opacity-50"
-            >
-                <span x-show="! loadingMore">{{ __('Weitere laden') }}</span>
-                <span x-show="loadingMore" x-cloak>{{ __('Lädt…') }}</span>
-            </button>
+        <div x-show="otherHasMore" x-cloak x-init="initScrollSentinel($el)" class="py-1.5 text-center text-[11px] text-gray-400">
+            <span x-show="loadingMore" x-cloak>{{ __('Lädt…') }}</span>
         </div>
     </div>
 

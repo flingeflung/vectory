@@ -47,19 +47,20 @@ class ProjectConnectionController extends Controller
         abort_unless($project->tenant_id === CurrentTenant::id(), 404);
 
         $search = trim((string) $request->query('q', ''));
+        $sortDirection = $request->user()->project_connection_sort_desc ? 'desc' : 'asc';
 
         $connections = $project->connections()->keyBy('otherProject.id');
         $connectedIds = $connections->keys()->all();
 
         $connectedQuery = Project::query()->where('tenant_id', $project->tenant_id)->whereIn('id', $connectedIds);
         $this->applySearch($connectedQuery, $search);
-        $connectedProjects = $connectedQuery->orderBy('source_pn')->get(['id', 'source_pn', 'title']);
+        $connectedProjects = $connectedQuery->orderBy('source_pn', $sortDirection)->get(['id', 'source_pn', 'title']);
 
         $otherQuery = Project::query()->where('tenant_id', $project->tenant_id)
             ->where('id', '!=', $project->id)
             ->whereNotIn('id', $connectedIds);
         $this->applySearch($otherQuery, $search);
-        $otherProjects = $otherQuery->orderBy('source_pn')->limit(self::PAGE_SIZE)->get(['id', 'source_pn', 'title']);
+        $otherProjects = $otherQuery->orderBy('source_pn', $sortDirection)->limit(self::PAGE_SIZE)->get(['id', 'source_pn', 'title']);
 
         // Autovervollständigung für die Richtungs-Bezeichnungen (Vietto-
         // Vorbild) - bereits verwendete Texte dieses Mandanten, damit sich
@@ -74,6 +75,7 @@ class ProjectConnectionController extends Controller
         return view('projekte.partials.connection-add-body', [
             'project' => $project,
             'search' => $search,
+            'sortDesc' => $request->user()->project_connection_sort_desc,
             'connectedProjects' => $connectedProjects,
             'otherProjects' => $otherProjects,
             'otherHasMore' => $otherProjects->count() === self::PAGE_SIZE,
@@ -81,6 +83,22 @@ class ProjectConnectionController extends Controller
             'connections' => $connections,
             'labelSuggestions' => $labelSuggestions,
         ]);
+    }
+
+    /**
+     * Sortierrichtung (PN auf-/absteigend) ist eine gemerkte Einstellung
+     * pro Benutzer (Ralf, 2026-09-11), nicht nur ein Query-Parameter -
+     * gleiches Prinzip wie users.hide_discarded_projects_on_reset. Gibt
+     * nur 204 zurück, der Client lädt die Liste per runSearch() selbst neu
+     * (liest die neue Richtung dann aus form()).
+     */
+    public function toggleSort(Request $request): Response
+    {
+        $request->user()->update([
+            'project_connection_sort_desc' => ! $request->user()->project_connection_sort_desc,
+        ]);
+
+        return response('', 204);
     }
 
     /**
@@ -94,6 +112,7 @@ class ProjectConnectionController extends Controller
 
         $search = trim((string) $request->query('q', ''));
         $offset = max(0, $request->integer('offset'));
+        $sortDirection = $request->user()->project_connection_sort_desc ? 'desc' : 'asc';
 
         $connectedIds = $project->connections()->pluck('otherProject.id')->all();
 
@@ -101,7 +120,7 @@ class ProjectConnectionController extends Controller
             ->where('id', '!=', $project->id)
             ->whereNotIn('id', $connectedIds);
         $this->applySearch($otherQuery, $search);
-        $otherProjects = $otherQuery->orderBy('source_pn')->skip($offset)->take(self::PAGE_SIZE)->get(['id', 'source_pn', 'title']);
+        $otherProjects = $otherQuery->orderBy('source_pn', $sortDirection)->skip($offset)->take(self::PAGE_SIZE)->get(['id', 'source_pn', 'title']);
 
         $html = view('projekte.partials.connection-other-project-rows', [
             'project' => $project,
