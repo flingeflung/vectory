@@ -3,34 +3,48 @@
         term: {{ \Illuminate\Support\Js::from($search) }},
         searchTimer: null,
         addingId: null, addLabel: '', addLabelReverse: '',
+        loading: false,
         onSearchInput() {
             clearTimeout(this.searchTimer);
             this.searchTimer = setTimeout(() => this.runSearch(), 400);
         },
         async runSearch() {
-            const url = `/projekte/{{ $project->id }}/verknuepfungen/neu?q=` + encodeURIComponent(this.term);
-            const html = await fetch(url).then((r) => r.text());
-            const fresh = new DOMParser().parseFromString(html, 'text/html').getElementById('connection-list');
-            const current = document.getElementById('connection-list');
-            if (fresh && current) { current.innerHTML = fresh.innerHTML; }
+            this.loading = true;
+            window.showProjectConnectionLoading();
+            try {
+                const url = `/projekte/{{ $project->id }}/verknuepfungen/neu?q=` + encodeURIComponent(this.term);
+                const html = await fetch(url).then((r) => r.text());
+                const fresh = new DOMParser().parseFromString(html, 'text/html').getElementById('connection-list');
+                const current = document.getElementById('connection-list');
+                if (fresh && current) { current.innerHTML = fresh.innerHTML; }
+            } finally {
+                this.loading = false;
+                window.hideProjectConnectionLoading();
+            }
         },
         startAdd(id) { this.addingId = id; this.addLabel = ''; this.addLabelReverse = ''; },
-        confirmAdd(id) {
+        async confirmAdd(id) {
             if (! this.addLabel.trim() || ! this.addLabelReverse.trim()) {
                 window.notifyDialog({{ \Illuminate\Support\Js::from(__('Bitte beide Bezeichnungen eintragen.')) }});
                 return;
             }
-            fetch({{ \Illuminate\Support\Js::from(route('projekte.verknuepfungen.store', $project)) }}, {
+            this.loading = true;
+            window.showProjectConnectionLoading();
+            const response = await fetch({{ \Illuminate\Support\Js::from(route('projekte.verknuepfungen.store', $project)) }}, {
                 method: 'POST',
                 headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: new URLSearchParams({ related_project_id: id, label: this.addLabel, label_reverse: this.addLabelReverse }),
-            }).then((response) => {
-                if (! response.ok) {
-                    window.notifyDialog({{ \Illuminate\Support\Js::from(__('Verknüpfen fehlgeschlagen. Bitte Eingaben prüfen und erneut versuchen.')) }});
-                    return;
-                }
-                window.reloadProjectConnectionModal();
             });
+            if (! response.ok) {
+                this.loading = false;
+                window.hideProjectConnectionLoading();
+                window.notifyDialog({{ \Illuminate\Support\Js::from(__('Verknüpfen fehlgeschlagen. Bitte Eingaben prüfen und erneut versuchen.')) }});
+                return;
+            }
+            // Sanduhr bleibt an, bis der komplette Neuladen-Zyklus fertig ist
+            // (reloadProjectConnectionModal blendet sie selbst wieder aus) -
+            // sonst kurzes Flackern zwischen den beiden Fetches.
+            window.reloadProjectConnectionModal();
         },
         removeConnection(connectionId) {
             window.confirmDialog({
@@ -40,6 +54,8 @@
                 cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
             }).then((ok) => {
                 if (! ok) return;
+                this.loading = true;
+                window.showProjectConnectionLoading();
                 fetch(`/projekte/{{ $project->id }}/verknuepfungen/${connectionId}`, {
                     method: 'DELETE',
                     headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
@@ -53,10 +69,16 @@
          filtert nur nach, lädt keine separate Trefferliste. Suchfeld bleibt
          bewusst AUSSERHALB von #connection-list (nur dieser Bereich wird
          beim Tippen ausgetauscht), sonst verliert es beim Tippen den Fokus
-         (Live-Suche-Konvention, siehe CLAUDE.md). --}}
+         (Live-Suche-Konvention, siehe CLAUDE.md).
+
+         Ralf: bei ~6700 Projekten (Sanitär) dauert Hinzufügen/Entfernen/
+         Suchen spürbar - Sanduhr (window.show/hideProjectConnectionLoading,
+         siehe layouts/app.blade.php) plus Klicksperre (:disabled="loading")
+         auf allen Kästchen/Buttons, sonst "verleitet das zum wilden
+         Rumklicken". --}}
     <div>
         <label class="block text-xs text-gray-500">{{ __('Projekt suchen (PN oder Bezeichnung)') }}</label>
-        <input type="text" x-model="term" @input="onSearchInput()" autocomplete="off" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+        <input type="text" x-model="term" @input="onSearchInput()" :disabled="loading" autocomplete="off" class="mt-0.5 w-full rounded-md border-gray-300 text-sm disabled:bg-gray-50">
     </div>
 
     <div id="connection-list" class="mt-3">
@@ -71,7 +93,7 @@
                      entfernt (Ralf-Bug-Report). Nur die Checkbox selbst
                      soll klickbar sein. --}}
                 <div class="flex items-start gap-1.5 text-xs text-gray-700">
-                    <input type="checkbox" checked @click.prevent="removeConnection({{ $entry->connection->id }})" class="mt-0.5 shrink-0 rounded border-gray-300">
+                    <input type="checkbox" checked :disabled="loading" @click.prevent="removeConnection({{ $entry->connection->id }})" class="mt-0.5 shrink-0 rounded border-gray-300">
                     <span>{{ $p->source_pn }} &ndash; {{ $p->title }}</span>
                 </div>
                 <div class="ml-5 text-[11px] text-gray-400">{{ $entry->label }}</div>
@@ -84,7 +106,7 @@
         @forelse ($otherProjects as $p)
             <div class="border-b border-gray-100 py-1 last:border-0">
                 <div class="flex items-start gap-1.5 text-xs text-gray-700">
-                    <input type="checkbox" @click.prevent="addingId === {{ $p->id }} ? (addingId = null) : startAdd({{ $p->id }})" class="mt-0.5 shrink-0 rounded border-gray-300">
+                    <input type="checkbox" :disabled="loading" @click.prevent="addingId === {{ $p->id }} ? (addingId = null) : startAdd({{ $p->id }})" class="mt-0.5 shrink-0 rounded border-gray-300">
                     <span>{{ $p->source_pn }} &ndash; {{ $p->title }}</span>
                 </div>
                 {{-- Ralf, 2026-09-11 (S1, Vietto-Vorbild): "Was ist X aus
@@ -94,15 +116,15 @@
                 <div x-show="addingId === {{ $p->id }}" x-cloak class="ml-5 mt-1 space-y-1.5 rounded-md border border-gray-200 bg-gray-50 p-2">
                     <div>
                         <label class="block text-[11px] text-gray-500">{{ __('Was ist :other aus Sicht von :this?', ['other' => $p->source_pn, 'this' => $project->source_pn]) }}</label>
-                        <input type="text" x-model="addLabel" list="connection-label-suggestions" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
+                        <input type="text" x-model="addLabel" list="connection-label-suggestions" :disabled="loading" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
                     </div>
                     <div>
                         <label class="block text-[11px] text-gray-500">{{ __('Was ist :this aus Sicht von :other?', ['this' => $project->source_pn, 'other' => $p->source_pn]) }}</label>
-                        <input type="text" x-model="addLabelReverse" list="connection-label-suggestions" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
+                        <input type="text" x-model="addLabelReverse" list="connection-label-suggestions" :disabled="loading" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
                     </div>
                     <div class="flex justify-end gap-2">
-                        <button type="button" @click="addingId = null" class="rounded border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Abbrechen') }}</button>
-                        <button type="button" @click="confirmAdd({{ $p->id }})" class="rounded bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">{{ __('Verknüpfen') }}</button>
+                        <button type="button" :disabled="loading" @click="addingId = null" class="rounded border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:cursor-not-allowed disabled:opacity-50">{{ __('Abbrechen') }}</button>
+                        <button type="button" :disabled="loading" @click="confirmAdd({{ $p->id }})" class="rounded bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover disabled:cursor-not-allowed disabled:opacity-50">{{ __('Verknüpfen') }}</button>
                     </div>
                 </div>
             </div>

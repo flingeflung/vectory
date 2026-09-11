@@ -1509,8 +1509,18 @@
                         </svg>
                     </button>
                 </div>
-                <div id="project-connection-add-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
-                    {{ __('Lädt…') }}
+                <div class="relative min-h-0 flex-1 overflow-y-auto">
+                    <div id="project-connection-add-body" class="px-4 py-3 text-sm">
+                        {{ __('Lädt…') }}
+                    </div>
+                    {{-- Ralf: bei ~6700 Projekten (Sanitär) dauert das Neuladen
+                         spürbar - ohne Rückmeldung "verleitet das zum wilden
+                         Rumklicken". Sanduhr + Klicksperre (siehe :disabled
+                         in connection-add-body.blade.php), gleiches Muster wie
+                         beim Projekt-/Personen-Overlay oben. --}}
+                    <div id="project-connection-add-loading" class="absolute inset-0 hidden items-center justify-center bg-white/70">
+                        <x-loading-spinner class="h-8 w-8 text-gray-400" />
+                    </div>
                 </div>
             </div>
         </x-modal>
@@ -1518,7 +1528,11 @@
         <script>
             (function () {
                 const connectionBody = () => document.getElementById('project-connection-add-body');
+                const connectionLoading = () => document.getElementById('project-connection-add-loading');
                 let currentProjectId = null;
+
+                window.showProjectConnectionLoading = () => connectionLoading().classList.replace('hidden', 'flex');
+                window.hideProjectConnectionLoading = () => connectionLoading().classList.replace('flex', 'hidden');
 
                 window.openProjectConnectionAdd = async (projectId) => {
                     currentProjectId = projectId;
@@ -1538,8 +1552,13 @@
                     if (! currentProjectId) {
                         return;
                     }
-                    connectionBody().innerHTML = await fetch(`/projekte/${currentProjectId}/verknuepfungen/neu`).then((r) => r.text());
-                    window.refreshUnderlyingProject(currentProjectId);
+                    window.showProjectConnectionLoading();
+                    try {
+                        connectionBody().innerHTML = await fetch(`/projekte/${currentProjectId}/verknuepfungen/neu`).then((r) => r.text());
+                        window.refreshUnderlyingProject(currentProjectId);
+                    } finally {
+                        window.hideProjectConnectionLoading();
+                    }
                 };
             })();
         </script>
