@@ -125,10 +125,21 @@ class FunctionGroupController extends Controller
         $shortName = trim((string) $request->string('short_name'));
         abort_if($name === '' || $shortName === '', 422);
 
+        $isIllustrationGroup = $request->boolean('is_illustration_group');
+
+        // Genau eine Illustrations-Gruppe pro Mandant - wird hier gesetzt,
+        // fällt sie bei jeder anderen Gruppe des Mandanten automatisch weg
+        // (GraphicOrderController/IllustrationOverviewController/Task
+        // erwarten alle genau EIN Ergebnis, kein Mehrfach-Match).
+        if ($isIllustrationGroup) {
+            FunctionGroup::query()->where('tenant_id', $group->tenant_id)->where('id', '!=', $group->id)->update(['is_illustration_group' => false]);
+        }
+
         $group->update([
             'name' => $name,
             'short_name' => $shortName,
             'active' => $request->boolean('active'),
+            'is_illustration_group' => $isIllustrationGroup,
         ]);
 
         return redirect()->route('admin.function-groups', ['gruppe' => $group->id])->with('status', 'function-groups-updated');

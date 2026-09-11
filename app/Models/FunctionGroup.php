@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * Reines Task-Routing (Illustrator-Auswahl etc.) - hat bewusst keinen
  * Einfluss auf Rechte, siehe PermissionTemplate/Person::hasPermission().
  */
-#[Fillable(['tenant_id', 'legacy_id', 'name', 'short_name', 'sort', 'active'])]
+#[Fillable(['tenant_id', 'legacy_id', 'name', 'short_name', 'sort', 'active', 'is_illustration_group'])]
 class FunctionGroup extends Model
 {
     use BelongsToTenant;
@@ -20,6 +20,7 @@ class FunctionGroup extends Model
     {
         return [
             'active' => 'boolean',
+            'is_illustration_group' => 'boolean',
         ];
     }
 

@@ -122,7 +122,7 @@ class Task extends Model
 
         $functionGroup = FunctionGroup::query()
             ->where('tenant_id', $graphicOrder->tenant_id)
-            ->where('legacy_id', 5)
+            ->where('is_illustration_group', true)
             ->first();
 
         if (! $functionGroup) {

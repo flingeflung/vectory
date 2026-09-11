@@ -88,7 +88,7 @@ class TenantConfigCloner
             $departmentMap = $this->copySimple(Department::class, $source->id, $target->id, ['legacy_id', 'name', 'short_name', 'sort', 'active']);
             $this->copySimple(LegacyRole::class, $source->id, $target->id, ['legacy_id', 'name', 'sort']);
             $this->copySimple(BusinessUnit::class, $source->id, $target->id, ['name', 'sort', 'active']);
-            $functionGroupMap = $this->copySimple(FunctionGroup::class, $source->id, $target->id, ['legacy_id', 'name', 'short_name', 'sort', 'active']);
+            $functionGroupMap = $this->copySimple(FunctionGroup::class, $source->id, $target->id, ['legacy_id', 'name', 'short_name', 'sort', 'active', 'is_illustration_group']);
             $marketMap = $this->copySimple(Market::class, $source->id, $target->id, [
                 'legacy_id', 'country_iso', 'country_name', 'country_short_name', 'language_code', 'language_name', 'no_translation', 'sort',
             ]);

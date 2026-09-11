@@ -217,6 +217,10 @@
                                 {{ trans_choice(':count Mitglied|:count Mitglieder', $groupMemberIds->count(), ['count' => $groupMemberIds->count()]) }}
                             </span>
                         </div>
+                        <label class="flex items-center gap-1.5 text-xs text-gray-600" title="{{ __('Diese Gruppe wird bei Illustrationsaufträgen als Illustratoren-Auswahl verwendet. Nur eine Gruppe pro Kunde möglich - das Anhaken hier entfernt es bei jeder anderen Gruppe.') }}">
+                            <input type="checkbox" name="is_illustration_group" value="1" @checked($selectedGroup->is_illustration_group) class="rounded border-gray-300">
+                            {{ __('Illustrations-/Grafikerstellungs-Gruppe') }}
+                        </label>
                     </div>
 
                     <div class="flex-1 min-h-0 overflow-y-auto p-3 text-sm text-gray-500">

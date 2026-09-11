@@ -43,7 +43,7 @@ class IllustrationOverviewController extends Controller
         $user = $request->user();
         $statuses = collect(GraphicOrderStatus::cases());
         $illustrationPersons = FunctionGroup::query()
-            ->where('legacy_id', 5)
+            ->where('is_illustration_group', true)
             ->with(['members' => fn ($query) => $query->withoutGlobalScope('tenant')
                 ->visibleInTenant(CurrentTenant::id())
                 ->visibleToRole($user->role)])

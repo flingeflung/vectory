@@ -102,7 +102,7 @@ class GraphicOrderController extends Controller
             'project' => $project->fresh()->loadMissing(['graphicOrders.initiatedBy', 'graphicOrders.illustrator', 'graphicOrders.completedBy']),
             'illustrationPersons' => FunctionGroup::query()
                 ->where('tenant_id', $project->tenant_id)
-                ->where('legacy_id', 5)
+                ->where('is_illustration_group', true)
                 ->with(['members' => fn ($query) => $query->withoutGlobalScope('tenant')
                     ->visibleInTenant($project->tenant_id)
                     ->visibleToRole(auth()->user()->role)])
