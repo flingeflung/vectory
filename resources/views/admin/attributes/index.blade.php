@@ -91,6 +91,14 @@
                             class="space-y-1"
                         >
                             @forelse ($attributesBySection->get($section, collect()) as $attribute)
+                                @php
+                                    $valueCount = $valueCounts[$attribute->id] ?? 0;
+                                    // Ralf, 2026-09-11: Löschen mit vorhandenen Werten nur für
+                                    // Super-Admin (Szenario: gekündigter Admin, Zugang noch nicht
+                                    // gesperrt) - serverseitig zusätzlich in AttributeController::
+                                    // destroy() durchgesetzt, hier nur die Anzeige/UI-Sperre.
+                                    $deletionLocked = $valueCount > 0 && auth()->user()->role !== 'super_admin';
+                                @endphp
                                 <div x-sort:item="{{ $attribute->id }}" class="rounded-md border border-gray-200 px-2 py-0.5">
                                     @if ($attribute->system)
                                         <div class="flex items-center gap-2">
@@ -113,19 +121,27 @@
                                             >
                                                 {{ __('Ändern') }}
                                             </button>
-                                            <form method="POST" action="{{ route('admin.projektattribute.destroy', $attribute) }}" x-ref="deleteForm{{ $attribute->id }}" class="hidden">
-                                                @csrf
-                                                @method('DELETE')
-                                            </form>
-                                            <button
-                                                type="button"
-                                                @click="window.deleteWithConfirm($refs['deleteForm{{ $attribute->id }}'], {
-                                                    message: {{ \Illuminate\Support\Js::from(__('Dieses Attribut wirklich endgültig löschen? Vorhandene Werte in Projekten gehen dabei verloren.')) }},
-                                                })"
-                                                class="shrink-0 rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
-                                            >
-                                                {{ __('Löschen') }}
-                                            </button>
+                                            @if ($deletionLocked)
+                                                <span class="shrink-0 text-xs text-gray-400" title="{{ __('Wird in :count Projekten verwendet - nur Super-Admin kann Felder mit vorhandenen Werten löschen.', ['count' => $valueCount]) }}">
+                                                    🔒 {{ trans_choice(':count Projekt|:count Projekte', $valueCount, ['count' => $valueCount]) }}
+                                                </span>
+                                            @else
+                                                <form method="POST" action="{{ route('admin.projektattribute.destroy', $attribute) }}" x-ref="deleteForm{{ $attribute->id }}" class="hidden">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                </form>
+                                                <button
+                                                    type="button"
+                                                    @click="window.deleteWithConfirm($refs['deleteForm{{ $attribute->id }}'], {
+                                                        message: {{ \Illuminate\Support\Js::from($valueCount > 0
+                                                            ? __('Achtung: Wird aktuell in :count Projekten verwendet - diese Werte gehen beim Löschen unwiderruflich verloren.', ['count' => $valueCount])
+                                                            : __('Dieses Attribut wirklich endgültig löschen? Vorhandene Werte in Projekten gehen dabei verloren.')) }},
+                                                    })"
+                                                    class="shrink-0 rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                                                >
+                                                    {{ __('Löschen') }}
+                                                </button>
+                                            @endif
                                         </div>
                                         @if ($attribute->options->isNotEmpty())
                                             <div class="ml-6 mt-0.5 text-xs text-gray-400">
@@ -150,19 +166,27 @@
                                                 {{ __('Speichern') }}
                                             </button>
                                         </form>
-                                        <form method="POST" action="{{ route('admin.projektattribute.destroy', $attribute) }}" x-ref="deleteForm{{ $attribute->id }}" class="hidden">
-                                            @csrf
-                                            @method('DELETE')
-                                        </form>
-                                        <button
-                                            type="button"
-                                            @click="window.deleteWithConfirm($refs['deleteForm{{ $attribute->id }}'], {
-                                                message: {{ \Illuminate\Support\Js::from(__('Dieses Attribut wirklich endgültig löschen? Vorhandene Werte in Projekten gehen dabei verloren.')) }},
-                                            })"
-                                            class="shrink-0 rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
-                                        >
-                                            {{ __('Löschen') }}
-                                        </button>
+                                        @if ($deletionLocked)
+                                            <span class="shrink-0 text-xs text-gray-400" title="{{ __('Wird in :count Projekten verwendet - nur Super-Admin kann Felder mit vorhandenen Werten löschen.', ['count' => $valueCount]) }}">
+                                                🔒 {{ trans_choice(':count Projekt|:count Projekte', $valueCount, ['count' => $valueCount]) }}
+                                            </span>
+                                        @else
+                                            <form method="POST" action="{{ route('admin.projektattribute.destroy', $attribute) }}" x-ref="deleteForm{{ $attribute->id }}" class="hidden">
+                                                @csrf
+                                                @method('DELETE')
+                                            </form>
+                                            <button
+                                                type="button"
+                                                @click="window.deleteWithConfirm($refs['deleteForm{{ $attribute->id }}'], {
+                                                    message: {{ \Illuminate\Support\Js::from($valueCount > 0
+                                                        ? __('Achtung: Wird aktuell in :count Projekten verwendet - diese Werte gehen beim Löschen unwiderruflich verloren.', ['count' => $valueCount])
+                                                        : __('Dieses Attribut wirklich endgültig löschen? Vorhandene Werte in Projekten gehen dabei verloren.')) }},
+                                                })"
+                                                class="shrink-0 rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                                            >
+                                                {{ __('Löschen') }}
+                                            </button>
+                                        @endif
                                     </div>
                                     @endif
                                 </div>

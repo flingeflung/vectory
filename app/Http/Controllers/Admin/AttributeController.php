@@ -36,7 +36,19 @@ class AttributeController extends Controller
     {
         $tenantId = CurrentTenant::id();
 
-        $attributes = Attribute::query()->where('tenant_id', $tenantId)->with('options')->orderBy('sort')->get()->groupBy('section');
+        $allAttributes = Attribute::query()->where('tenant_id', $tenantId)->with('options')->orderBy('sort')->get();
+
+        // Ralf, 2026-09-11: "wenn > 0: komplett sperren, nur für Super-Admin
+        // zu löschen" - ein Admin mit noch nicht gesperrtem Zugang könnte
+        // sonst versehentlich (oder mutwillig, siehe Ralfs Kündigungs-
+        // Szenario) Werte aus tausenden Projekten unwiderruflich löschen.
+        // Zähler hier einmal pro Attribut vorberechnet, damit Anzeige (Sperre/
+        // Warnhinweis) und die serverseitige Durchsetzung in destroy()
+        // dieselbe Zahl verwenden.
+        $valueCounts = $allAttributes->where('system', false)
+            ->mapWithKeys(fn (Attribute $attribute) => [$attribute->id => $this->valueCount($attribute)]);
+
+        $attributes = $allAttributes->groupBy('section');
 
         $categories = ProjectTypeMain::query()->where('tenant_id', $tenantId)->orderBy('sort')->with('subs')->get();
 
@@ -51,6 +63,7 @@ class AttributeController extends Controller
             'categories' => $categories,
             'assignments' => $assignments,
             'dataTypes' => $this->dataTypeOptions(),
+            'valueCounts' => $valueCounts,
         ]);
     }
 
@@ -115,6 +128,13 @@ class AttributeController extends Controller
     {
         abort_unless($attribute->tenant_id === CurrentTenant::id(), 404);
         abort_if($attribute->system, 403);
+
+        // Ralf: bei vorhandenen Werten darf nur Super-Admin löschen (Szenario:
+        // gekündigter Mitarbeiter mit Admin-Rechten, dessen Zugang noch nicht
+        // gesperrt ist) - serverseitig durchgesetzt, nicht nur im UI versteckt.
+        if ($this->valueCount($attribute) > 0) {
+            abort_unless($request->user()->role === 'super_admin', 403);
+        }
 
         // Kein DB::transaction() hier: $attribute->delete() löst über
         // AttributeObserver::deleted() ggf. ein ALTER TABLE (Spalten-
@@ -258,6 +278,19 @@ class AttributeController extends Controller
     private function redirectToSection(string $section): RedirectResponse
     {
         return redirect()->route('admin.projektattribute', ['bereich' => $section])->with('status', 'attributes-updated');
+    }
+
+    /**
+     * Anzahl Projekte dieses Mandanten, die aktuell einen Wert für dieses
+     * Attribut gesetzt haben - Grundlage für die Lösch-Sperre oben.
+     */
+    private function valueCount(Attribute $attribute): int
+    {
+        return DB::table('projects')
+            ->where('tenant_id', $attribute->tenant_id)
+            ->whereNotNull('attributes')
+            ->whereRaw("JSON_EXTRACT(attributes, '$.\"{$attribute->key}\"') is not null")
+            ->count();
     }
 
     private function dataTypeOptions(): array
