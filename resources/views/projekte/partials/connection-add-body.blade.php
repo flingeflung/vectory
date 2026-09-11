@@ -16,6 +16,10 @@
         },
         startAdd(id) { this.addingId = id; this.addLabel = ''; this.addLabelReverse = ''; },
         confirmAdd(id) {
+            if (! this.addLabel.trim() || ! this.addLabelReverse.trim()) {
+                window.notifyDialog({{ \Illuminate\Support\Js::from(__('Bitte beide Bezeichnungen eintragen.')) }});
+                return;
+            }
             fetch({{ \Illuminate\Support\Js::from(route('projekte.verknuepfungen.store', $project)) }}, {
                 method: 'POST',
                 headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -60,11 +64,11 @@
         @forelse ($connectedProjects as $p)
             @php $entry = $connections->get($p->id); @endphp
             <div class="border-b border-gray-100 py-1 last:border-0">
-                <label class="flex items-start gap-1.5 text-sm text-gray-700">
+                <label class="flex items-start gap-1.5 text-xs text-gray-700">
                     <input type="checkbox" checked @click.prevent="removeConnection({{ $entry->connection->id }})" class="mt-0.5 shrink-0 rounded border-gray-300">
                     <span>{{ $p->source_pn }} &ndash; {{ $p->title }}</span>
                 </label>
-                <div class="ml-5 text-xs text-gray-400">{{ $entry->label }}</div>
+                <div class="ml-5 text-[11px] text-gray-400">{{ $entry->label }}</div>
             </div>
         @empty
             <div class="text-xs text-gray-400">{{ __('Keine Treffer.') }}</div>
@@ -73,16 +77,26 @@
         <div class="mb-1 mt-3 text-[11px] font-medium text-gray-500">{{ __('Andere Projekte') }}</div>
         @forelse ($otherProjects as $p)
             <div class="border-b border-gray-100 py-1 last:border-0">
-                <label class="flex items-start gap-1.5 text-sm text-gray-700">
+                <label class="flex items-start gap-1.5 text-xs text-gray-700">
                     <input type="checkbox" @click.prevent="addingId === {{ $p->id }} ? (addingId = null) : startAdd({{ $p->id }})" class="mt-0.5 shrink-0 rounded border-gray-300">
                     <span>{{ $p->source_pn }} &ndash; {{ $p->title }}</span>
                 </label>
+                {{-- Ralf, 2026-09-11 (S1, Vietto-Vorbild): "Was ist X aus
+                     Sicht von Y?" statt abstrakter "Richtung"-Begriffe -
+                     macht für den Benutzer direkt klar, was einzutragen ist,
+                     ohne Fachbegriffe wie "Richtung"/"Rückrichtung". --}}
                 <div x-show="addingId === {{ $p->id }}" x-cloak class="ml-5 mt-1 space-y-1.5 rounded-md border border-gray-200 bg-gray-50 p-2">
-                    <input type="text" x-model="addLabel" list="connection-label-suggestions" placeholder="{{ __('Bezeichnung dieser Richtung (von diesem Projekt aus), z. B. Vorlage für') }}" class="w-full rounded-md border-gray-300 text-xs">
-                    <input type="text" x-model="addLabelReverse" list="connection-label-suggestions" placeholder="{{ __('Bezeichnung der Rückrichtung, z. B. Kopie von') }}" class="w-full rounded-md border-gray-300 text-xs">
+                    <div>
+                        <label class="block text-[11px] text-gray-500">{{ __('Was ist :other aus Sicht von :this?', ['other' => $p->source_pn, 'this' => $project->source_pn]) }}</label>
+                        <input type="text" x-model="addLabel" list="connection-label-suggestions" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-gray-500">{{ __('Was ist :this aus Sicht von :other?', ['this' => $project->source_pn, 'other' => $p->source_pn]) }}</label>
+                        <input type="text" x-model="addLabelReverse" list="connection-label-suggestions" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
+                    </div>
                     <div class="flex justify-end gap-2">
                         <button type="button" @click="addingId = null" class="rounded border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Abbrechen') }}</button>
-                        <button type="button" :disabled="!addLabel.trim() || !addLabelReverse.trim()" @click="confirmAdd({{ $p->id }})" class="rounded bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover disabled:cursor-not-allowed disabled:opacity-50">{{ __('Verknüpfen') }}</button>
+                        <button type="button" @click="confirmAdd({{ $p->id }})" class="rounded bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">{{ __('Verknüpfen') }}</button>
                     </div>
                 </div>
             </div>
