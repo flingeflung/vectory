@@ -16,7 +16,7 @@ use Illuminate\Support\Collection;
 #[Fillable([
     'tenant_id', 'source_pn', 'title', 'codename', 'initiator', 'system_model',
     'construction_year', 'project_type_main', 'project_type_sub', 'project_type_main_id', 'project_type_sub_id', 'version',
-    'status', 'archived', 'localization', 'publication_date', 'start_date', 'end_date', 'remarks',
+    'status', 'creation_type', 'archived', 'localization', 'publication_date', 'start_date', 'end_date', 'remarks',
     'attributes', 'workflow_id',
 ])]
 #[ObservedBy(ProjectObserver::class)]

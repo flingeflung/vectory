@@ -368,6 +368,7 @@ class ProjectController extends Controller
             'project_type_sub_id' => ['nullable', 'integer', Rule::exists('project_type_subs', 'id')->where('tenant_id', $project->tenant_id)],
             'version' => ['nullable', 'integer'],
             'status' => ['required', 'integer', 'in:0,1,2,3'],
+            'creation_type' => ['nullable', 'integer', 'in:1,2'],
             'archived' => ['boolean'],
             'workflow_id' => ['nullable', 'integer', Rule::exists('workflows', 'id')->where('tenant_id', $project->tenant_id)],
             'start_date' => ['nullable', 'date'],
