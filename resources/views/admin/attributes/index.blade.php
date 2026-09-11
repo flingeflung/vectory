@@ -195,7 +195,7 @@
 
                                         <div>
                                             <label class="mb-1 block text-xs text-gray-500">{{ __('Optionen') }}</label>
-                                            <div class="space-y-1.5">
+                                            <div x-ref="optionsList" class="space-y-1.5">
                                                 <template x-for="(option, index) in options" :key="index">
                                                     <div class="flex items-center gap-1.5">
                                                         <input type="hidden" :name="'options['+index+'][id]'" :value="option.id">
@@ -206,7 +206,14 @@
                                                     </div>
                                                 </template>
                                             </div>
-                                            <button type="button" @click="options.push({ id: null, label: '' })" class="mt-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-800">
+                                            <button
+                                                type="button"
+                                                @click="
+                                                    options.push({ id: null, label: '' });
+                                                    $nextTick(() => [...$refs.optionsList.querySelectorAll('input[type=text]')].pop()?.focus());
+                                                "
+                                                class="mt-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-800"
+                                            >
                                                 + {{ __('Option hinzufügen') }}
                                             </button>
                                         </div>
