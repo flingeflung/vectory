@@ -25,8 +25,13 @@ class ProjectWorkflowStepPerson extends Model
         return $this->belongsTo(FunctionGroup::class);
     }
 
+    /**
+     * Ohne Tenant-Scope - gleicher Grund wie ProjectPerson::person() (eine
+     * per Kundenzugriff freigegebene Person gehört einem anderen Mandanten
+     * als dem aktiven).
+     */
     public function person(): BelongsTo
     {
-        return $this->belongsTo(Person::class);
+        return $this->belongsTo(Person::class)->withoutGlobalScope('tenant');
     }
 }

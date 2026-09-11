@@ -25,9 +25,18 @@ class ProjectPerson extends Model
         return $this->belongsTo(Project::class);
     }
 
+    /**
+     * Ohne Tenant-Scope: eine per Kundenzugriff freigegebene Person (siehe
+     * person_tenant, FunctionGroup::members()-Ladung in ProjectController)
+     * gehört einem ANDEREN Mandanten als dem aktiven - mit Scope würde die
+     * Relation sie stillschweigend zu null auflösen (Ralf-Bug-Report:
+     * "Attempt to read property 'active' on null" beim Speichern von
+     * Projektbeteiligten mit einer mandantsfremden, aber zugriffs­berechtigten
+     * Person). Gleicher Fix wie bei User::person().
+     */
     public function person(): BelongsTo
     {
-        return $this->belongsTo(Person::class);
+        return $this->belongsTo(Person::class)->withoutGlobalScope('tenant');
     }
 
     public function functionGroup(): BelongsTo

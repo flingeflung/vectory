@@ -7,6 +7,7 @@ use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Collection;
 
 #[Fillable(['tenant_id', 'project_id', 'person_id', 'function_group_id', 'project_workflow_step_id', 'graphic_order_id', 'source'])]
 class Task extends Model
@@ -23,9 +24,16 @@ class Task extends Model
         return $this->belongsTo(Project::class);
     }
 
+    /**
+     * Ohne Tenant-Scope - gleicher Grund wie ProjectPerson::person() (eine
+     * per Kundenzugriff freigegebene Person gehört einem anderen Mandanten
+     * als dem aktiven). Vorher stillschweigend als fehlende Aufgabe
+     * ausgefiltert (siehe ->filter() in assignedPeopleFor()), nicht als
+     * Crash sichtbar - hier trotzdem korrigiert, nicht nur maskiert.
+     */
     public function person(): BelongsTo
     {
-        return $this->belongsTo(Person::class);
+        return $this->belongsTo(Person::class)->withoutGlobalScope('tenant');
     }
 
     public function functionGroup(): BelongsTo
@@ -154,9 +162,9 @@ class Task extends Model
      * (Option "Alle WFS-Personen zeigen") dieselbe Auflösung für die
      * Anzeige braucht, nicht nur für den Rebuild.
      *
-     * @return \Illuminate\Support\Collection<int, Person>
+     * @return Collection<int, Person>
      */
-    public static function assignedPeopleFor(ProjectWorkflowStep $step, FunctionGroup $functionGroup): \Illuminate\Support\Collection
+    public static function assignedPeopleFor(ProjectWorkflowStep $step, FunctionGroup $functionGroup): Collection
     {
         $override = $step->people->where('function_group_id', $functionGroup->id);
 
