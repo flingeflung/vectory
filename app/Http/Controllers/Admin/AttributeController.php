@@ -247,6 +247,23 @@ class AttributeController extends Controller
     }
 
     /**
+     * Ralf, 2026-09-11: "Ist es nun so, dass ... immer Paare bilden?" - war
+     * bis dahin reiner Zufall der Sortier-Reihenfolge (gerade/ungerade
+     * Anzahl schmaler Felder davor). Dieses Flag koppelt zwei Felder robust
+     * aneinander, unabhängig von allem, was sonst noch umsortiert wird -
+     * siehe detail.blade.php Zeilen-Algorithmus, der dieses Flag mit
+     * höherer Priorität behandelt als die Auto-Paarung.
+     */
+    public function toggleSameRowAsNext(Attribute $attribute): RedirectResponse
+    {
+        abort_unless($attribute->tenant_id === CurrentTenant::id(), 404);
+
+        $attribute->update(['same_row_as_next' => ! $attribute->same_row_as_next]);
+
+        return $this->redirectToSection($attribute->section);
+    }
+
+    /**
      * Ralf-Bug-Report: nach dem Anlegen eines Attributs sprang der Reiter
      * immer auf Stammdaten zurück - der einfache redirect() zur Seite ohne
      * Query-String verlor, welcher Bereich gerade offen war (die Seite

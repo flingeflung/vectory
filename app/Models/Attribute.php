@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['tenant_id', 'section', 'system', 'key', 'label', 'data_type', 'multiple', 'sort', 'available_in_mail_templates'])]
+#[Fillable(['tenant_id', 'section', 'system', 'key', 'label', 'data_type', 'multiple', 'sort', 'available_in_mail_templates', 'same_row_as_next'])]
 #[ObservedBy(AttributeObserver::class)]
 class Attribute extends Model
 {
@@ -127,6 +127,7 @@ class Attribute extends Model
             'system' => 'boolean',
             'multiple' => 'boolean',
             'available_in_mail_templates' => 'boolean',
+            'same_row_as_next' => 'boolean',
         ];
     }
 

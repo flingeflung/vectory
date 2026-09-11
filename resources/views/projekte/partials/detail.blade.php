@@ -167,13 +167,25 @@
         <div class="min-w-0 flex-1">
 
         <div class="grid grid-cols-2 gap-x-4">
-        @php $col = 0; $row = 0; @endphp
-        @foreach ($stammdatenAttributes as $field)
+        @php $stammdatenList = $stammdatenAttributes->values(); $col = 0; $row = 0; $isConsumedPartner = false; @endphp
+        @for ($i = 0; $i < $stammdatenList->count(); $i++)
             @php
+                $field = $stammdatenList[$i];
                 $wide = $isWideField($field);
-                if ($wide && $col !== 0) { $row++; $col = 0; }
+                $next = $stammdatenList->get($i + 1);
+                // Ralf: "teilt sich eine Zeile mit dem nächsten Feld" -
+                // robuste, explizite Paarung statt Zufalls-Parität. Hat
+                // Vorrang: erzwingt bei Bedarf einen Zeilenumbruch davor,
+                // damit das Feld sicher in Spalte 1 landet und sein
+                // Partner in Spalte 2 folgt. $isConsumedPartner verhindert,
+                // dass ein Feld, das gerade selbst als Partner des VORIGEN
+                // Feldes eingeteilt wurde, zusätzlich noch seinen EIGENEN
+                // Paarungswunsch erzwingt (sonst reißt eine Kette wie
+                // Version→Status, Status→Erstellungsstatus wieder auseinander).
+                $wantsPair = ! $wide && $field->same_row_as_next && $next && ! $isWideField($next);
+                if (! $isConsumedPartner && ($wide || $wantsPair) && $col !== 0) { $row++; $col = 0; }
                 $isFirstRow = $row === 0;
-                if ($wide) { $row++; $col = 0; } else { $col++; if ($col >= 2) { $col = 0; $row++; } }
+                if ($wide) { $row++; $col = 0; $isConsumedPartner = false; } else { $col++; $isConsumedPartner = $wantsPair; if ($col >= 2) { $col = 0; $row++; } }
             @endphp
             <div class="{{ $wide ? 'col-span-2' : '' }} {{ $isFirstRow ? '' : 'border-t border-gray-100 pt-2' }}">
                 @if ($field->system)
@@ -182,7 +194,7 @@
                     @include('projekte.partials.attribute-field', ['attribute' => $field])
                 @endif
             </div>
-        @endforeach
+        @endfor
         </div>
 
         </div>
@@ -214,13 +226,16 @@
         <div class="min-w-0 flex-1">
 
         <div class="grid grid-cols-2 gap-x-4">
-        @php $col = 0; $row = 0; @endphp
-        @foreach ($ablaufdatenAttributes as $field)
+        @php $ablaufdatenList = $ablaufdatenAttributes->values(); $col = 0; $row = 0; $isConsumedPartner = false; @endphp
+        @for ($i = 0; $i < $ablaufdatenList->count(); $i++)
             @php
+                $field = $ablaufdatenList[$i];
                 $wide = $isWideField($field);
-                if ($wide && $col !== 0) { $row++; $col = 0; }
+                $next = $ablaufdatenList->get($i + 1);
+                $wantsPair = ! $wide && $field->same_row_as_next && $next && ! $isWideField($next);
+                if (! $isConsumedPartner && ($wide || $wantsPair) && $col !== 0) { $row++; $col = 0; }
                 $isFirstRow = $row === 0;
-                if ($wide) { $row++; $col = 0; } else { $col++; if ($col >= 2) { $col = 0; $row++; } }
+                if ($wide) { $row++; $col = 0; $isConsumedPartner = false; } else { $col++; $isConsumedPartner = $wantsPair; if ($col >= 2) { $col = 0; $row++; } }
             @endphp
             <div class="{{ $wide ? 'col-span-2' : '' }} {{ $isFirstRow ? '' : 'border-t border-gray-100 pt-2' }}">
                 @if ($field->system)
@@ -229,7 +244,7 @@
                     @include('projekte.partials.attribute-field', ['attribute' => $field])
                 @endif
             </div>
-        @endforeach
+        @endfor
         </div>
 
         </div>
