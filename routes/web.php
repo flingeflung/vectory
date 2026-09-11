@@ -1,21 +1,21 @@
 <?php
 
+use App\Http\Controllers\Admin\AttributeController;
 use App\Http\Controllers\Admin\BusinessUnitController;
 use App\Http\Controllers\Admin\CompanyController;
 use App\Http\Controllers\Admin\ConfigController;
+use App\Http\Controllers\Admin\CopyTemplateController;
 use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\FunctionGroupController;
-use App\Http\Middleware\RememberLastAdminPage;
-use App\Http\Controllers\Admin\MarketController;
 use App\Http\Controllers\Admin\LegacyRoleController;
+use App\Http\Controllers\Admin\MailTemplateController;
+use App\Http\Controllers\Admin\MarketController;
 use App\Http\Controllers\Admin\PermissionController as AdminPermissionController;
 use App\Http\Controllers\Admin\PersonController as AdminPersonController;
 use App\Http\Controllers\Admin\ProjectTypeController;
-use App\Http\Controllers\Admin\AttributeController;
-use App\Http\Controllers\Admin\MailTemplateController;
-use App\Http\Controllers\Admin\WorkflowController;
 use App\Http\Controllers\Admin\SuperAdminController;
 use App\Http\Controllers\Admin\TenantController;
+use App\Http\Controllers\Admin\WorkflowController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DisplayFilterController;
 use App\Http\Controllers\FavoriteController;
@@ -23,12 +23,13 @@ use App\Http\Controllers\GraphicOrderController;
 use App\Http\Controllers\IllustrationOverviewController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
-use App\Http\Controllers\ProjectScheduleController;
 use App\Http\Controllers\ProjectDirectoryController;
+use App\Http\Controllers\ProjectScheduleController;
 use App\Http\Controllers\ProjectWorkflowStepController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TenantSwitchController;
+use App\Http\Middleware\RememberLastAdminPage;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -156,6 +157,16 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     Route::delete('/projektattribute/{attribute}', [AttributeController::class, 'destroy'])->name('projektattribute.destroy');
     Route::post('/projektattribute/{attribute}/pulldown', [AttributeController::class, 'updatePulldown'])->name('projektattribute.pulldown.update');
     Route::post('/projektattribute/{attribute}/projektart', [AttributeController::class, 'toggleProjectType'])->name('projektattribute.projektart.toggle');
+
+    Route::get('/projektkopie-vorlagen', [CopyTemplateController::class, 'index'])->name('projektkopie-vorlagen');
+    Route::post('/projektkopie-vorlagen', [CopyTemplateController::class, 'store'])->name('projektkopie-vorlagen.store');
+    Route::post('/projektkopie-vorlagen/max-kopien', [CopyTemplateController::class, 'updateMaxCopies'])->name('projektkopie-vorlagen.max-kopien.update');
+    Route::post('/projektkopie-vorlagen/{template}', [CopyTemplateController::class, 'update'])->name('projektkopie-vorlagen.update');
+    Route::delete('/projektkopie-vorlagen/{template}', [CopyTemplateController::class, 'destroy'])->name('projektkopie-vorlagen.destroy');
+    Route::post('/projektkopie-vorlagen/{template}/feld', [CopyTemplateController::class, 'toggleField'])->name('projektkopie-vorlagen.feld.toggle');
+    Route::post('/projektkopie-vorlagen/{template}/alle-markieren', [CopyTemplateController::class, 'markAll'])->name('projektkopie-vorlagen.alle-markieren');
+    Route::post('/projektkopie-vorlagen/{template}/keinen-markieren', [CopyTemplateController::class, 'markNone'])->name('projektkopie-vorlagen.keinen-markieren');
+
     Route::post('/workflows/{workflow}/veroeffentlichen', [WorkflowController::class, 'publish'])->name('workflows.publish');
     Route::post('/workflows/{workflow}', [WorkflowController::class, 'update'])->name('workflows.update');
     Route::delete('/workflows/{workflow}', [WorkflowController::class, 'destroy'])->name('workflows.destroy');
