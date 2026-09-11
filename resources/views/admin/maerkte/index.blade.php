@@ -73,6 +73,7 @@
                         {{ $selectedSet ? $selectedSet->name : __('Markt-Katalog') }}
                     </div>
                     <p class="text-xs text-gray-400">
+                        {{ __('Hier definieren, welche Zielmärkte relevant sind und wo Übersetzung/Lokalisierung dafür erstellt wird.') }}
                         {{ __('Ländercodes nach ISO 3166-1, Sprachcodes nach ISO 639-1.') }}
                     </p>
                 </div>
@@ -140,7 +141,10 @@
                                         @endphp
                                         <span
                                             class="mr-3 inline-flex items-center gap-1 py-0.5"
-                                            @if ($selectedSet) x-data="{ active: {{ $checkedPairs->contains($pairKey) ? 'true' : 'false' }} }" @endif
+                                            x-data="{
+                                                @if ($selectedSet) active: {{ $checkedPairs->contains($pairKey) ? 'true' : 'false' }}, @endif
+                                                @if ($existingMarket) translated: {{ $existingMarket->no_translation ? 'false' : 'true' }}, @endif
+                                            }"
                                         >
                                             <label class="inline-flex items-center gap-1">
                                                 @if ($selectedSet)
@@ -149,24 +153,25 @@
                                                 <span class="text-gray-700">{{ $language->name }} <span class="text-gray-400">{{ $language->code }}</span></span>
                                             </label>
                                             @if ($showNoTranslation)
-                                                <label
-                                                    class="inline-flex items-center gap-1 text-gray-400"
-                                                    title="{{ __('Für diesen Markt wird keine Übersetzung durchgeführt. Wirkt sofort, unabhängig vom Speichern-Button oben.') }}"
+                                                <button
+                                                    type="button"
+                                                    class="inline-flex items-center"
+                                                    :class="translated ? 'text-gray-700' : 'text-gray-300'"
+                                                    :title="(translated ? {{ \Illuminate\Support\Js::from(__('Wird übersetzt.')) }} : {{ \Illuminate\Support\Js::from(__('Wird nicht übersetzt.')) }}) + ' ' + {{ \Illuminate\Support\Js::from(__('Wirkt sofort, unabhängig vom Speichern-Button oben.')) }}"
                                                     @if ($selectedSet) x-show="active" @endif
+                                                    @click="
+                                                        translated = !translated;
+                                                        fetch({{ \Illuminate\Support\Js::from(route('admin.maerkte.keine-uebersetzung.toggle', $existingMarket->id)) }}, {
+                                                            method: 'POST',
+                                                            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Content-Type': 'application/x-www-form-urlencoded' },
+                                                        });
+                                                    "
                                                 >
-                                                    <input
-                                                        type="checkbox"
-                                                        class="rounded border-gray-300"
-                                                        @checked($existingMarket->no_translation)
-                                                        @click="
-                                                            fetch({{ \Illuminate\Support\Js::from(route('admin.maerkte.keine-uebersetzung.toggle', $existingMarket->id)) }}, {
-                                                                method: 'POST',
-                                                                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Content-Type': 'application/x-www-form-urlencoded' },
-                                                            });
-                                                        "
-                                                    >
-                                                    {{ __('keine Übersetzung') }}
-                                                </label>
+                                                    <svg class="h-4 w-auto" viewBox="0 0 135.71 110.4" xmlns="http://www.w3.org/2000/svg">
+                                                        <path fill="currentColor" d="M23.05,81.53l-7.49,22.68H5.93L30.43,32.1h11.23l24.61,72.11h-9.95l-7.7-22.68h-25.57ZM46.7,74.25l-7.06-20.76c-1.6-4.71-2.68-8.99-3.75-13.16h-.21c-1.07,4.28-2.25,8.67-3.64,13.05l-7.06,20.86h21.72Z"/>
+                                                        <path fill="currentColor" d="M122.24,23.52h7.54v-8h-29.04V6.19h-8v9.33h-29.04v8h50.48c-1.61,9.95-8.97,20.24-18.26,28.25-.16-.18-.33-.36-.49-.53-9.81-11.07-12.4-22.11-12.42-22.22l-3.9.87-3.91.86c.12.53,2.98,13.08,14.25,25.79.04.05.09.09.13.14-8.61,5.96-18.05,9.8-25.88,9.8v8c9.91,0,21.52-4.73,31.79-12.13,7.32,6.21,15.77,11.29,16.23,11.57l4.1-6.87c-.1-.06-7.41-4.46-13.96-9.8,10.67-9.42,18.85-21.61,20.37-33.73Z"/>
+                                                    </svg>
+                                                </button>
                                             @endif
                                         </span>
                                     @empty
