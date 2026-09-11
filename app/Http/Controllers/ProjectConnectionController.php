@@ -14,9 +14,7 @@ use Illuminate\View\View;
 /**
  * "Projektverknüpfungen" (Ralf, 2026-09-11) - Vietto-Vorbild:
  * projektverbindungen mit zwei freien Richtungs-Bezeichnungen je Zeile
- * (siehe ProjectConnection). Projekt-Auswahl läuft über den bereits
- * vorhandenen Schnellsuche-Endpunkt (ProjectController::quickSearch),
- * kein eigener Such-Endpunkt nötig.
+ * (siehe ProjectConnection).
  */
 class ProjectConnectionController extends Controller
 {
@@ -26,21 +24,28 @@ class ProjectConnectionController extends Controller
      * reißen im Browser das versteckte _method-Feld ins äußere Formular
      * mit rein, siehe gleiche Anmerkung bei den Mail-Vorlagen).
      *
-     * Struktur wie von Ralf konkret vorgegeben (Vietto-Vorbild "Verbundene
-     * Projekte", 2026-09-11): Suchfeld (PN/Bezeichnung) oben, darunter
-     * immer die bereits verknüpften Projekte (angehakt, mit Richtungstext),
-     * darunter die zur Suche passenden noch nicht verknüpften Projekte
-     * (nicht angehakt). Bewusst NICHT Viettos ungefiltert geladene
-     * Gesamtliste (Ralf selbst: "lädt bei inzwischen vielen Projekten
-     * sehr sehr langsam") - die untere Liste bleibt leer, bis gesucht
-     * wird, "Andere Projekte" ist also KEIN Vollständigkeits-Browser,
-     * sondern nur der Suchtreffer-Bereich. Bleibt beim Anhaken/Entfernen
-     * offen (lädt sich selbst neu) - mehrere Verknüpfungen lassen sich so
-     * nacheinander anlegen, ohne das Modal jedes Mal zu schließen.
+     * Struktur 1:1 aus Viettos ajax_getpnconnections.php übernommen (Ralf,
+     * 2026-09-11, nach mehreren Fehlversuchen meinerseits direkt im
+     * Vietto-Quellcode nachgeschaut statt weiter zu raten): EIN Query über
+     * ALLE Projekte dieses Mandanten (außer sich selbst), verknüpfte zuerst
+     * (angehakt, mit Richtungstext), dann alle anderen (nicht angehakt) -
+     * das Suchfeld filtert genau diese eine Liste (beide Abschnitte), ersetzt
+     * sie nicht durch eine separate Trefferliste. "q" leer = komplette
+     * Liste, wie in Vietto.
      */
-    public function form(Project $project): View
+    public function form(Project $project, Request $request): View
     {
         abort_unless($project->tenant_id === CurrentTenant::id(), 404);
+
+        $search = trim((string) $request->query('q', ''));
+
+        $query = Project::query()->where('tenant_id', $project->tenant_id)->where('id', '!=', $project->id);
+        if ($search !== '') {
+            $query->where(fn ($q) => $q->where('source_pn', 'like', "%{$search}%")->orWhere('title', 'like', "%{$search}%"));
+        }
+        $allProjects = $query->orderBy('source_pn')->get(['id', 'source_pn', 'title']);
+
+        $connections = $project->connections()->keyBy('otherProject.id');
 
         // Autovervollständigung für die Richtungs-Bezeichnungen (Vietto-
         // Vorbild) - bereits verwendete Texte dieses Mandanten, damit sich
@@ -54,7 +59,10 @@ class ProjectConnectionController extends Controller
 
         return view('projekte.partials.connection-add-body', [
             'project' => $project,
-            'connections' => $project->connections(),
+            'search' => $search,
+            'connectedProjects' => $allProjects->filter(fn ($p) => $connections->has($p->id))->values(),
+            'otherProjects' => $allProjects->reject(fn ($p) => $connections->has($p->id))->values(),
+            'connections' => $connections,
             'labelSuggestions' => $labelSuggestions,
         ]);
     }
