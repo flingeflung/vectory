@@ -113,13 +113,13 @@
                                             >
                                                 {{ __('Ändern') }}
                                             </button>
-                                            <form method="POST" action="{{ route('admin.projektattribute.destroy', $attribute) }}" x-ref="deleteForm" class="hidden">
+                                            <form method="POST" action="{{ route('admin.projektattribute.destroy', $attribute) }}" x-ref="deleteForm{{ $attribute->id }}" class="hidden">
                                                 @csrf
                                                 @method('DELETE')
                                             </form>
                                             <button
                                                 type="button"
-                                                @click="window.deleteWithConfirm($refs.deleteForm, {
+                                                @click="window.deleteWithConfirm($refs['deleteForm{{ $attribute->id }}'], {
                                                     message: {{ \Illuminate\Support\Js::from(__('Dieses Attribut wirklich endgültig löschen? Vorhandene Werte in Projekten gehen dabei verloren.')) }},
                                                 })"
                                                 class="shrink-0 rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
@@ -150,13 +150,13 @@
                                                 {{ __('Speichern') }}
                                             </button>
                                         </form>
-                                        <form method="POST" action="{{ route('admin.projektattribute.destroy', $attribute) }}" x-ref="deleteForm" class="hidden">
+                                        <form method="POST" action="{{ route('admin.projektattribute.destroy', $attribute) }}" x-ref="deleteForm{{ $attribute->id }}" class="hidden">
                                             @csrf
                                             @method('DELETE')
                                         </form>
                                         <button
                                             type="button"
-                                            @click="window.deleteWithConfirm($refs.deleteForm, {
+                                            @click="window.deleteWithConfirm($refs['deleteForm{{ $attribute->id }}'], {
                                                 message: {{ \Illuminate\Support\Js::from(__('Dieses Attribut wirklich endgültig löschen? Vorhandene Werte in Projekten gehen dabei verloren.')) }},
                                             })"
                                             class="shrink-0 rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
