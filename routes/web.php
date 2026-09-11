@@ -23,6 +23,7 @@ use App\Http\Controllers\GraphicOrderController;
 use App\Http\Controllers\IllustrationOverviewController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectCopyController;
 use App\Http\Controllers\ProjectDirectoryController;
 use App\Http\Controllers\ProjectScheduleController;
 use App\Http\Controllers\ProjectWorkflowStepController;
@@ -68,6 +69,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/projekte/{project}/verzeichnis', [ProjectDirectoryController::class, 'show'])->name('projekte.verzeichnis');
     Route::post('/projekte/{project}/verzeichnis', [ProjectDirectoryController::class, 'store'])->name('projekte.verzeichnis.store');
+
+    Route::get('/projekte/{project}/kopieren', [ProjectCopyController::class, 'form'])->name('projekte.kopieren.form');
+    Route::post('/projekte/{project}/kopieren', [ProjectCopyController::class, 'store'])->name('projekte.kopieren.store');
 
     Route::get('/favoriten', [FavoriteController::class, 'index'])->name('favoriten');
 

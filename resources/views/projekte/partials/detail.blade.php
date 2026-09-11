@@ -151,6 +151,15 @@
                     >
                         {{ __('Illustrationsauftrag') }}
                     </button>
+                    @can('project.create')
+                        <button
+                            type="button"
+                            @click="window.openProjectCopy({{ $project->id }})"
+                            class="{{ $secondaryBtn }}"
+                        >
+                            {{ __('Projekt kopieren') }}
+                        </button>
+                    @endcan
                     {{-- weitere Aktions-Buttons (Aufgabe zuweisen, -> Projekt-Pool, Fehlercheck, Sichtbarkeit, Sperrmail, ...) folgen später. --}}
                 </div>
             </div>

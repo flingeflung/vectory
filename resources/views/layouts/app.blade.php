@@ -1423,6 +1423,73 @@
         </script>
 
         {{--
+            Projekt kopieren (Ralf, 2026-09-11, Phase 2) - gleiches
+            Fetch-Muster wie project-create/illustration-orders.
+        --}}
+        <x-modal name="project-copy" max-width="md">
+            <div class="flex max-h-[85vh] flex-col">
+                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Projekt kopieren') }}</h3>
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-copy' }))"
+                        class="text-gray-400 hover:text-gray-600"
+                        aria-label="{{ __('Schließen') }}"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="project-copy-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
+                    {{ __('Lädt…') }}
+                </div>
+            </div>
+        </x-modal>
+
+        <script>
+            (function () {
+                const copyBody = () => document.getElementById('project-copy-body');
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
+                window.openProjectCopy = async (projectId) => {
+                    copyBody().innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
+                    window.dispatchEvent(new CustomEvent('open-modal', { detail: 'project-copy' }));
+                    copyBody().innerHTML = await fetch(`/projekte/${projectId}/kopieren`).then((r) => r.text());
+                };
+
+                document.addEventListener('submit', async (event) => {
+                    if (!copyBody() || !copyBody().contains(event.target)) {
+                        return;
+                    }
+
+                    event.preventDefault();
+
+                    const response = await fetch(event.target.action, {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': csrfToken },
+                        body: new FormData(event.target),
+                    });
+
+                    if (!response.ok) {
+                        await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Kopieren fehlgeschlagen. Bitte Eingaben prüfen und erneut versuchen.')) }});
+                        return;
+                    }
+
+                    const data = await response.json();
+                    window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-copy' }));
+
+                    if (data.ids.length > 1) {
+                        await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Kopien angelegt, das erste wird jetzt geöffnet:')) }} + ' ' + data.ids.length);
+                    }
+
+                    window.dispatchEvent(new CustomEvent('open-project', { detail: { id: data.ids[0] } }));
+                    window.refreshProjekteListInBackground?.();
+                });
+            })();
+        </script>
+
+        {{--
             Projektanfrage - für Nutzer ohne project.create (siehe
             "+ Neues Projekt"/"Projekt anfragen"-Button auf der
             Projektübersicht). Verschickt nur eine Mail, legt kein Projekt
