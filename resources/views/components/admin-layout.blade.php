@@ -94,6 +94,17 @@
                 @endcan
             </div>
 
+            {{-- Ralf: klein, aber sichtbar machen, für welchen Kunden die
+                 Einstellungen auf dieser Seite gerade gelten - nicht bei
+                 Personen (hat ihren eigenen Kunde-Filter/-Hinweis), Kunden
+                 (die Seite IST die Kundenverwaltung) und Superadmin
+                 (mandantenübergreifend, kein einzelner Kunde). --}}
+            @if (\App\Models\SystemSetting::multiTenantEnabled() && ! request()->routeIs('admin.personen*', 'admin.kunden*', 'admin.superadmin'))
+                <div class="mb-2 shrink-0 text-xs text-gray-400">
+                    {{ __('Gültig für Kunde: :tenant', ['tenant' => \App\Support\CurrentTenant::current()?->short_name ?? \App\Support\CurrentTenant::current()?->name ?? '?']) }}
+                </div>
+            @endif
+
             <div class="flex flex-1 min-h-0 flex-col">
                 {{ $slot }}
             </div>
