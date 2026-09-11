@@ -96,6 +96,27 @@
             </div>
         </div>
 
+        {{-- Ralf: "Ich habe ein Suchfeld, aber keinen Überblick" - zuletzt
+             selbst geöffnete Projekte als schneller Einstieg zum Anklicken,
+             solange noch nicht gesucht wird (bewusst NICHT Viettos
+             ungefilterte Gesamtliste, siehe Controller-Kommentar). --}}
+        @if ($recentProjects->isNotEmpty())
+            <div x-show="term.trim() === ''">
+                <div class="mb-1 text-[11px] text-gray-400">{{ __('Zuletzt geöffnet') }}</div>
+                <div class="max-h-32 overflow-y-auto rounded-md border border-gray-200 text-sm">
+                    @foreach ($recentProjects as $recent)
+                        <button
+                            type="button"
+                            @click="pick({{ \Illuminate\Support\Js::from(['id' => $recent->id, 'pn' => $recent->source_pn, 'title' => $recent->title]) }})"
+                            class="block w-full border-b border-gray-100 px-2 py-1.5 text-left last:border-0 hover:bg-gray-50"
+                        >
+                            <span class="font-medium">{{ $recent->source_pn }}</span> &ndash; {{ $recent->title }}
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
         <div>
             <label class="block text-xs text-gray-500">{{ __('Bezeichnung dieser Richtung (von diesem Projekt aus)') }}</label>
             <input type="text" name="label" required list="connection-label-suggestions" placeholder="{{ __('z. B. Vorlage für') }}" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">

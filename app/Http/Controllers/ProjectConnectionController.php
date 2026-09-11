@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use App\Models\ProjectConnection;
+use App\Models\RecentlyViewedProject;
 use App\Support\CurrentTenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -45,9 +46,28 @@ class ProjectConnectionController extends Controller
             ->sort()
             ->values();
 
+        $connections = $project->connections();
+
+        // Ralf: "Ich habe ein Suchfeld, aber keinen Überblick" - bewusst
+        // NICHT Viettos ungefilterte Gesamtliste (Ralf selbst: "lädt bei
+        // inzwischen vielen Projekten sehr sehr langsam"), sondern die
+        // zuletzt vom NUTZER geöffneten Projekte als schneller, personalisierter
+        // Einstieg zum Anklicken - Suche bleibt für alles andere.
+        $recentProjects = RecentlyViewedProject::query()
+            ->where('user_id', request()->user()->id)
+            ->where('project_id', '!=', $project->id)
+            ->whereNotIn('project_id', $connections->pluck('otherProject.id'))
+            ->with('project')
+            ->orderByDesc('viewed_at')
+            ->limit(8)
+            ->get()
+            ->pluck('project')
+            ->filter();
+
         return view('projekte.partials.connection-add-body', [
             'project' => $project,
-            'connections' => $project->connections(),
+            'connections' => $connections,
+            'recentProjects' => $recentProjects,
             'labelSuggestions' => $labelSuggestions,
         ]);
     }
