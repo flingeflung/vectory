@@ -63,13 +63,19 @@
             >
         </div>
         {{-- Bilder in Hilfeartikeln (siehe HelpArticleTranslation::bodyHtml())
-             sind per CSS auf max-h-80 begrenzt - Klick öffnet die Originaldatei
-             in Originalgröße in einem neuen Tab, kein eigener Lightbox-Aufwand
-             nötig. Event-Delegation, weil #help-results bei jeder Suche/jedem
-             Artikelwechsel per innerHTML ausgetauscht wird. --}}
+             sind per CSS klein gehalten - Klick öffnet die Originaldatei in
+             Originalgröße als eigenes Overlay ÜBER diesem Panel (siehe
+             components/help-image-lightbox.blade.php), bewusst kein neuer
+             Browser-Tab (Ralf: "macht wieder zu viel Arbeit, es zu erkennen
+             und wieder zu schließen"). Event-Delegation, weil #help-results
+             bei jeder Suche/jedem Artikelwechsel per innerHTML ausgetauscht
+             wird. --}}
         <div
             class="min-h-0 flex-1 overflow-y-auto px-4 py-3"
-            x-on:click="$event.target.tagName === 'IMG' && window.open($event.target.src, '_blank')"
+            x-on:click="if ($event.target.tagName === 'IMG') {
+                window.__helpLightboxSrc = $event.target.src;
+                window.dispatchEvent(new CustomEvent('open-modal', { detail: 'help-image-lightbox' }));
+            }"
         >
             <div id="help-results">{{ __('Lädt…') }}</div>
         </div>

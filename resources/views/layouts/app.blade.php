@@ -58,6 +58,7 @@
             window.currentHelpKey = {{ \Illuminate\Support\Js::from(\Illuminate\Support\Facades\Route::currentRouteName()) }};
         </script>
         <x-help-panel />
+        <x-help-image-lightbox />
 
         @if (session('error'))
             <script>
