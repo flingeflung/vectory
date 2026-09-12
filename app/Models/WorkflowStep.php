@@ -31,6 +31,24 @@ class WorkflowStep extends Model
     ];
 
     /**
+     * lifecycle_status wird dem Admin nur als "Kastenfarbe" angeboten
+     * (siehe admin/workflows/partials/content.blade.php), bestimmt aber
+     * zugleich den Projekt-Status, sobald der Schritt aktiviert wird
+     * (ProjectWorkflowStepController::activate(), lifecycle_status 1-4 ->
+     * Project.status 0-3) sowie den Startschritt beim Kopieren
+     * (ProjectCopyController). Diese Labels beschreiben genau diese
+     * Wirkung, nicht die Farbe - für die Abdeckungs-Warnung (fehlt ein
+     * Schritt mit diesem lifecycle_status, kann ein Projekt auf diesem
+     * Workflow nie automatisch in diesen Status gelangen).
+     */
+    public const LIFECYCLE_STATUS_LABELS = [
+        1 => 'Geplant',
+        2 => 'In Bearbeitung',
+        3 => 'Beendet',
+        4 => 'Verworfen',
+    ];
+
+    /**
      * Feste Auswahlliste statt Freitext für js_function - jeder Eintrag
      * braucht eigenen, handgebauten Code dahinter (siehe Vietto-Analyse:
      * dort 7 fest einprogrammierte Funktionen, nie admin-konfigurierbar).

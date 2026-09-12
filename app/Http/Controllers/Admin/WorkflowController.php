@@ -58,7 +58,7 @@ class WorkflowController extends Controller
     }
 
     /**
-     * @return array{workflows: \Illuminate\Support\Collection, selectedWorkflow: ?Workflow, steps: \Illuminate\Support\Collection, isPublished: bool, functionGroups: \Illuminate\Support\Collection, specialButtons: array, lifecycleColors: array}
+     * @return array{workflows: \Illuminate\Support\Collection, selectedWorkflow: ?Workflow, steps: \Illuminate\Support\Collection, isPublished: bool, functionGroups: \Illuminate\Support\Collection, specialButtons: array, lifecycleColors: array, lifecycleStatusLabels: array, missingLifecycleStatuses: \Illuminate\Support\Collection}
      */
     private function buildIndexData(Request $request, ?int $workflowId): array
     {
@@ -70,9 +70,19 @@ class WorkflowController extends Controller
 
         $steps = collect();
         $isPublished = false;
+        $missingLifecycleStatuses = collect();
         if ($selectedWorkflow) {
             $steps = WorkflowStep::query()->where('workflow_id', $selectedWorkflow->id)->orderBy('sort')->with('functionGroups')->get();
             $isPublished = $selectedWorkflow->isPublished();
+            // Ralf, 2026-09-12 ("WFS: alle 4 Lifecycle-Status abgedeckt?"):
+            // ohne mindestens einen Schritt je lifecycle_status kann ein
+            // Projekt auf diesem Workflow den betroffenen Status nie
+            // automatisch erreichen (siehe WorkflowStep::
+            // LIFECYCLE_STATUS_LABELS) - und "Projekt kopieren" findet
+            // ohne lifecycle_status=1 keinen Startschritt.
+            $missingLifecycleStatuses = collect(array_keys(WorkflowStep::LIFECYCLE_STATUS_LABELS))
+                ->diff($steps->pluck('lifecycle_status')->unique())
+                ->values();
         }
 
         // Alphabetisch statt nach sort - Funktionsgruppen werden überall
@@ -92,6 +102,8 @@ class WorkflowController extends Controller
             'functionGroups' => $functionGroups,
             'specialButtons' => WorkflowStep::SPECIAL_BUTTONS,
             'lifecycleColors' => WorkflowStep::LIFECYCLE_COLORS,
+            'lifecycleStatusLabels' => WorkflowStep::LIFECYCLE_STATUS_LABELS,
+            'missingLifecycleStatuses' => $missingLifecycleStatuses,
             'otherTenants' => $otherTenants,
         ];
     }

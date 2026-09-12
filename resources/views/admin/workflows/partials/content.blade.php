@@ -102,6 +102,7 @@
                     <div class="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
                         {{ __('Dieser Workflow wurde am :date veröffentlicht und ist deshalb eingefroren - Inhalte lassen sich nicht mehr ändern. Für Anpassungen bitte eine neue Version erstellen; bestehende Projekte bleiben unverändert auf dieser Version.', ['date' => $selectedWorkflow->published_at->format('d.m.Y')]) }}
                     </div>
+                    @include('admin.workflows.partials.lifecycle-coverage-warning')
                     <div x-data class="mt-2 flex justify-end gap-2">
                         <form method="POST" action="{{ route('admin.workflows.duplicate', $selectedWorkflow) }}" x-ref="duplicateForm" class="hidden">
                             @csrf
@@ -230,6 +231,10 @@
                         {{ __('Bitte die rot markierten Felder korrigieren, dann erneut speichern.') }}
                     </div>
                 @endif
+
+                <div class="shrink-0 px-3">
+                    @include('admin.workflows.partials.lifecycle-coverage-warning')
+                </div>
 
                 <div class="flex-1 min-h-0 overflow-y-auto p-3 space-y-2" x-data="{ newStep: false }">
                     <div class="flex items-center justify-between">
