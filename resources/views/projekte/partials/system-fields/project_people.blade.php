@@ -39,6 +39,20 @@
                 @endforeach
             </div>
         @endif
+
+        {{-- Ralf, 2026-09-12: eine inaktive zugeordnete Person soll auffallen,
+             nicht nur an der grauen Schrift/dem "[i]" im Namen erkennbar
+             sein - direkter roter Hinweis statt rein passiver Markierung. --}}
+        @php $inactivePeople = $project->projectPeople->filter(fn ($entry) => ! $entry->person->active)->pluck('person')->unique('id'); @endphp
+        @if ($inactivePeople->isNotEmpty())
+            <div class="mt-1 text-red-600">
+                @if ($inactivePeople->count() === 1)
+                    {{ __(':name ist inaktiv, bitte prüfen!', ['name' => $inactivePeople->first()->fullName()]) }}
+                @else
+                    {{ __(':names sind inaktiv, bitte prüfen!', ['names' => $inactivePeople->map->fullName()->join('; ')]) }}
+                @endif
+            </div>
+        @endif
     </div>
 
     <div x-show="editingPeople" x-cloak class="mt-0.5 max-h-56 overflow-y-auto rounded border border-gray-300 bg-white p-2 text-xs space-y-2">
