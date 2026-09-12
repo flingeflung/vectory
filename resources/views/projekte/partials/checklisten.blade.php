@@ -92,17 +92,28 @@
                 async save(e) {
                     this.saving = true;
                     const ids = [...this.$refs.list.querySelectorAll('input:checked')].map(el => el.value);
-                    const response = await fetch(e.target.action, {
-                        method: 'POST',
-                        headers: { 'X-Overlay': '1', 'X-CSRF-TOKEN': {{ \Illuminate\Support\Js::from(csrf_token()) }} },
-                        body: new URLSearchParams(ids.map(id => ['checklist_ids[]', id])),
-                    });
-                    const html = await response.text();
-                    document.getElementById('project-checklisten-{{ $project->id }}')?.replaceWith(
-                        new DOMParser().parseFromString(html, 'text/html').getElementById('project-checklisten-{{ $project->id }}')
-                    );
-                    this.saving = false;
-                    window.dispatchEvent(new CustomEvent('close-modal', { detail: 'checklisten-auswaehlen-{{ $project->id }}' }));
+                    try {
+                        const response = await fetch(e.target.action, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'X-Overlay': '1',
+                                'X-CSRF-TOKEN': {{ \Illuminate\Support\Js::from(csrf_token()) }},
+                            },
+                            body: new URLSearchParams(ids.map(id => ['checklist_ids[]', id])),
+                        });
+                        const html = await response.text();
+                        const fresh = new DOMParser().parseFromString(html, 'text/html').getElementById('project-checklisten-{{ $project->id }}');
+                        const current = document.getElementById('project-checklisten-{{ $project->id }}');
+                        if (! response.ok || ! fresh) {
+                            await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Speichern hat nicht funktioniert, bitte nochmal versuchen.')) }});
+                            return;
+                        }
+                        current.replaceWith(fresh);
+                        window.dispatchEvent(new CustomEvent('close-modal', { detail: 'checklisten-auswaehlen-{{ $project->id }}' }));
+                    } finally {
+                        this.saving = false;
+                    }
                 },
             }"
             @submit.prevent="save($event)"
