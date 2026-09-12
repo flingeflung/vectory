@@ -87,7 +87,7 @@ class Attribute extends Model
             'checklist' => 'Checkliste',
             'project_connections' => 'Projektverknüpfungen',
             'remarks_echo' => 'Bemerkungen',
-            'changes_vs_previous_version' => 'Änderungen zur Vorversion',
+            'change_log' => 'Änderungsprotokoll',
         ],
     ];
 

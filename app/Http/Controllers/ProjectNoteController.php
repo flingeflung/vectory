@@ -10,7 +10,7 @@ use Illuminate\Http\Response;
 use Illuminate\Validation\Rule;
 
 /**
- * "Bemerkungen" und "Änderungen zur Vorversion" (siehe ProjectNote) -
+ * "Bemerkungen" und "Änderungsprotokoll" (siehe ProjectNote) -
  * eigenständige Endpunkte statt Teil des großen Projekt-Formulars (Ralf,
  * 2026-09-12, wie schon bei den Projektverknüpfungen: sofort gespeichert,
  * kein Speichern-Button/Freigabe nötig - "wie eine E-Mail, die wird ja
@@ -48,15 +48,18 @@ class ProjectNoteController extends Controller
     }
 
     /**
-     * Löschen darf nur der Autor selbst oder ein Super-Admin (gleiches
-     * Prinzip wie bei anderen destruktiven Aktionen in diesem Codebase,
-     * siehe AttributeController::destroy()).
+     * Löschen darf nur der Autor selbst oder ein Admin/Super-Admin (Ralf,
+     * 2026-09-12: nicht nur Super-Admin) - "role" ist users.role, nicht das
+     * granulare Permission-System.
      */
     public function destroy(Request $request, Project $project, ProjectNote $note): Response
     {
         abort_unless($project->tenant_id === CurrentTenant::id(), 404);
         abort_unless($note->project_id === $project->id, 404);
-        abort_unless($note->created_by_user_id === $request->user()->id || $request->user()->role === 'super_admin', 403);
+        abort_unless(
+            $note->created_by_user_id === $request->user()->id || in_array($request->user()->role, ['admin', 'super_admin'], true),
+            403
+        );
 
         $note->delete();
 
