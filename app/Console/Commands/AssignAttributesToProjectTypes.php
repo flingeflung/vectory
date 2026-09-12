@@ -3,13 +3,14 @@
 namespace App\Console\Commands;
 
 use App\Models\Attribute;
+use App\Models\ProjectTypeSub;
 use App\Models\Tenant;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
 /**
  * Übernimmt aus Viettos attribute_projekttyp_cx (rein lesend), welche
- * unserer Katalog-Attribute zu welcher Projektart (project_type_sub)
+ * unserer Katalog-Attribute zu welcher Projektart (project_type_sub_id)
  * gehören. "format" fasst Viettos drei Size-Attribute zusammen.
  */
 class AssignAttributesToProjectTypes extends Command
@@ -40,6 +41,8 @@ class AssignAttributesToProjectTypes extends Command
         }
 
         $attributes = Attribute::query()->where('tenant_id', $tenant->id)->get()->keyBy('key');
+        $subIdsByLegacyId = ProjectTypeSub::query()->where('tenant_id', $tenant->id)
+            ->whereNotNull('legacy_id')->pluck('id', 'legacy_id');
 
         $allViettoKeys = collect(self::VIETTO_ATTR_MAP)->flatten()->all();
 
@@ -67,9 +70,17 @@ class AssignAttributesToProjectTypes extends Command
                 ->unique();
 
             foreach ($projectTypeSubs as $projectTypeSub) {
+                $projectTypeSubId = $subIdsByLegacyId[$projectTypeSub] ?? null;
+
+                if (! $projectTypeSubId) {
+                    $this->warn("Projektart-Legacy-Code '{$projectTypeSub}' nicht auflösbar, übersprungen.");
+
+                    continue;
+                }
+
                 DB::table('attribute_project_type')->updateOrInsert([
                     'attribute_id' => $attribute->id,
-                    'project_type_sub' => $projectTypeSub,
+                    'project_type_sub_id' => $projectTypeSubId,
                 ], [
                     'created_at' => now(),
                     'updated_at' => now(),
