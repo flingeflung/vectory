@@ -54,6 +54,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/projekte/anfrage', [ProjectController::class, 'requestForm'])->name('projekte.request-form');
     Route::post('/projekte/anfrage', [ProjectController::class, 'submitRequest'])->name('projekte.request-submit');
     Route::get('/projekte/{project}', [ProjectController::class, 'show'])->name('projekte.show');
+    Route::get('/projekte/{project}/projektbeteiligte', [ProjectController::class, 'peopleField'])->name('projekte.projektbeteiligte.show');
     Route::patch('/projekte/{project}', [ProjectController::class, 'update'])->name('projekte.update');
     Route::post('/projekte/{project}/favorite', [FavoriteController::class, 'toggle'])->name('projekte.favorite');
     Route::patch('/projekte/{project}/workflow-steps/{projectWorkflowStep}/due-date', [ProjectWorkflowStepController::class, 'updateDueDate'])->name('projekte.workflow-steps.due-date');

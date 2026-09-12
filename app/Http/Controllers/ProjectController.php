@@ -351,6 +351,29 @@ class ProjectController extends Controller
         return view('projekte.show', $data);
     }
 
+    /**
+     * Lädt NUR "Projektbeteiligte Personen" neu (Ralf, 2026-09-12: eine
+     * über den WFS-Personen-Picker hinzugefügte Person landet sofort in
+     * project_people, siehe ProjectWorkflowStepController::updatePeople() -
+     * dieses Feld sitzt aber in einem anderen Tab und gleicht sich sonst
+     * nicht von selbst ab, gleiches Live-Abgleich-Muster wie bei den
+     * Bemerkungen/Änderungsprotokoll-Boxen).
+     */
+    public function peopleField(Request $request, Project $project): View
+    {
+        abort_unless($request->user()->can('project.view'), 403);
+
+        $project->loadMissing(['projectPeople.person', 'projectPeople.functionGroup']);
+
+        return view('projekte.partials.system-fields.project_people', [
+            'project' => $project,
+            'allFunctionGroups' => FunctionGroup::query()->where('tenant_id', $project->tenant_id)->with(['members' => fn ($query) => $query->withoutGlobalScope('tenant')
+                ->visibleInTenant($project->tenant_id)
+                ->visibleToRole($request->user()->role)])->orderBy('sort')->get(),
+            'secondaryBtn' => 'inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover',
+        ]);
+    }
+
     public function update(Request $request, Project $project): RedirectResponse|Response
     {
         abort_unless($request->user()->can('project.edit'), 403);

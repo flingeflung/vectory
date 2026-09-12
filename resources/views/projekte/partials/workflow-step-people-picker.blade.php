@@ -24,6 +24,11 @@
                     return;
                 }
                 document.getElementById({{ \Illuminate\Support\Js::from('wfs-people-'.$pws->id) }}).outerHTML = await response.text();
+                // Ralf, 2026-09-12: eine hier neu zugewiesene Person landet
+                // sofort auch in project_people (siehe updatePeople()) - das
+                // Projektbeteiligte-Personen-Feld in Stammdaten muss das
+                // mitbekommen, sitzt aber in einem anderen Tab.
+                window.dispatchEvent(new CustomEvent('project-people-changed', { detail: { projectId: {{ $project->id }} } }));
             } finally {
                 this.saving = false;
             }

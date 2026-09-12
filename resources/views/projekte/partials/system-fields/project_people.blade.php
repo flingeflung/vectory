@@ -1,4 +1,32 @@
-<div x-data="{ editingPeople: false }">
+{{-- Ralf, 2026-09-12: eine über den WFS-Personen-Picker hinzugefügte
+     Person landet sofort in project_people, dieses Feld sitzt aber in
+     einem anderen Tab (Stammdaten) und gleicht sich sonst nicht von
+     selbst ab - hört deshalb auf dasselbe window-Event-Muster wie die
+     Bemerkungen/Änderungsprotokoll-Boxen (siehe project-notes.blade.php).
+     Lädt sich NICHT neu, während gerade editiert wird (sonst gingen
+     unfertige Änderungen verloren). --}}
+<div
+    id="project-people-field-{{ $project->id }}"
+    x-data="{
+        editingPeople: false,
+        init() {
+            this.onChanged = (e) => {
+                if (e.detail.projectId === {{ $project->id }} && ! this.editingPeople) {
+                    this.refresh();
+                }
+            };
+            window.addEventListener('project-people-changed', this.onChanged);
+        },
+        destroy() {
+            window.removeEventListener('project-people-changed', this.onChanged);
+        },
+        async refresh() {
+            const response = await fetch({{ \Illuminate\Support\Js::from(route('projekte.projektbeteiligte.show', $project)) }});
+            if (! response.ok) return;
+            document.getElementById({{ \Illuminate\Support\Js::from('project-people-field-'.$project->id) }}).outerHTML = await response.text();
+        },
+    }"
+>
     <div class="flex items-center gap-2">
         <label class="text-xs text-gray-500">{{ __('Projektbeteiligte Personen') }}</label>
         <button type="button" @click="editingPeople = !editingPeople" class="{{ $secondaryBtn }}">
