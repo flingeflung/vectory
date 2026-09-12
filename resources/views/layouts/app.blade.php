@@ -45,6 +45,41 @@
         <x-delete-confirm-dialog />
 
         {{--
+            Text in die Zwischenablage kopieren (Ralf, 2026-09-12: "das
+            brauchen wir noch an einigen Stellen") - siehe
+            components/copy-button.blade.php für die wiederverwendbare
+            Button-Komponente drumherum. navigator.clipboard braucht einen
+            sicheren Kontext (HTTPS oder localhost) UND eine vom Browser
+            gewährte Berechtigung - beides kann fehlschlagen (nicht nur
+            "API gibt's gar nicht"), deshalb try/catch statt nur Feature-
+            Detection. Fallback dann über ein unsichtbares Textfeld +
+            execCommand('copy').
+        --}}
+        <script>
+            window.copyToClipboard = async function (text) {
+                try {
+                    if (navigator.clipboard && window.isSecureContext) {
+                        await navigator.clipboard.writeText(text);
+                        return true;
+                    }
+                } catch (e) {
+                    // Berechtigung verweigert o.ä. - unten weiter zum Fallback.
+                }
+
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                const ok = document.execCommand('copy');
+                document.body.removeChild(textarea);
+
+                return ok;
+            };
+        </script>
+
+        {{--
             Hilfesystem (Ralf, 2026-09-12): welcher Hilfeartikel zur
             "aktuellen Seite" gehört, wird über den Laravel-Routennamen
             aufgelöst (siehe HelpController::results()). Bei einem per

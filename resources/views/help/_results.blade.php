@@ -42,7 +42,10 @@
             @if (($canManageHelp ?? false) && ($routeName ?? '') !== '')
                 <div class="rounded-md border border-gray-200 bg-gray-50 p-2 text-xs text-gray-600">
                     {{ __('Neue Hilfeseite dafür anlegen: bei "Seiten (Routennamen)" diesen Wert eintragen:') }}
-                    <code class="mt-1 block select-all rounded bg-white px-1.5 py-1 font-mono text-gray-800">{{ $routeName }}</code>
+                    <div class="mt-1 flex items-center gap-1 rounded bg-white px-1.5 py-1">
+                        <code class="flex-1 select-all font-mono text-gray-800">{{ $routeName }}</code>
+                        <x-copy-button :text="$routeName" />
+                    </div>
                     <a href="{{ route('admin.hilfeseiten') }}" target="_blank" class="mt-1 inline-block text-indigo-600 hover:underline">{{ __('Zu den Hilfeseiten') }} &rarr;</a>
                 </div>
             @endif
