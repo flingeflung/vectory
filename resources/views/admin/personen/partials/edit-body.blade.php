@@ -208,6 +208,39 @@
                         </select>
                     </div>
                     <div>
+                        <div class="flex items-center justify-between">
+                            <label class="block text-xs text-gray-500">{{ __('Rechte-Gruppe') }}</label>
+                            <a
+                                href="{{ route('admin.rechte', ['person' => $person->id]) }}"
+                                class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                            >{{ __('verwalten') }}</a>
+                        </div>
+                        <select id="person-permission-template-id" name="permission_template_id" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                            <option value="">{{ __('– nicht zugewiesen –') }}</option>
+                            @foreach ($permissionTemplates as $template)
+                                <option value="{{ $template->id }}" @selected($person->permission_template_id === $template->id)>{{ $template->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <label class="block text-xs text-gray-500">{{ __('Funktionsgruppe(n)') }}</label>
+                            <a
+                                href="{{ route('admin.function-groups', ['person' => $person->id]) }}"
+                                class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                            >{{ __('verwalten') }}</a>
+                        </div>
+                        {{-- Ralf, 2026-09-12: ohne Funktionsgruppen-Zuordnung
+                             taucht eine Person nirgends in den
+                             Workflow-Schritten auf - deshalb direkt hier statt
+                             nur über die separate Funktionsgruppen-Seite. --}}
+                        <select id="person-function-group-ids" name="function_group_ids[]" multiple size="4" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                            @foreach ($functionGroups as $group)
+                                <option value="{{ $group->id }}" @selected($person->functionGroups->contains('id', $group->id))>{{ $group->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
                         <label class="block text-xs text-gray-500">{{ __('Im Unternehmen seit') }}</label>
                         <input type="date" name="start_date" value="{{ old('start_date', $person->start_date?->format('Y-m-d')) }}" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                     </div>
@@ -241,19 +274,6 @@
                     </button>
                 </div>
             </form>
-
-            <div class="rounded-lg border border-gray-200 bg-white p-4">
-                <div class="mb-2 text-xs font-semibold text-gray-500">{{ __('Rechte-Set') }}</div>
-                <div class="text-sm text-gray-700">
-                    {{ $person->permissionTemplate?->name ?? __('– nicht zugewiesen –') }}
-                    <a
-                        href="{{ route('admin.rechte', ['person' => $person->id]) }}"
-                        class="ml-2 inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
-                    >
-                        {{ __('ändern') }}
-                    </a>
-                </div>
-            </div>
 
             <div class="rounded-lg border border-gray-200 bg-white p-4">
                 <div class="mb-2 text-xs font-semibold text-gray-500">{{ __('Login-Zugang') }}</div>

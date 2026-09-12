@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\BusinessUnit;
 use App\Models\Company;
 use App\Models\Department;
+use App\Models\FunctionGroup;
 use App\Models\LegacyRole;
 use App\Models\PermissionTemplate;
 use App\Models\Person;
@@ -25,13 +26,22 @@ use Illuminate\View\View;
 /**
  * Personenverwaltung - angelehnt an Viettos personen.php: Liste mit Filtern,
  * Bearbeiten als globales Overlay (gleiches Muster wie das Projekt-Overlay -
- * per X-Overlay-Header erkannt, siehe isOverlayRequest()). Rechte selbst
- * werden bewusst NICHT hier verwaltet, sondern bleiben in der Rechte-
- * Verwaltung (Rechte-Set je Person) - keine doppelte Pflegestelle für
- * dieselbe Sache. "Rolle" hier ist die importierte Vietto-Rolle (LegacyRole,
- * fachliche Funktion wie TR/PM-PT), eine andere Achse als das Rechte-Set.
- * Firma/Abteilung/Geschäftsbereich hier vorerst nur als Auswahl, deren
- * eigene Verwaltung (Neuanlage) kommt als Schritt 2.
+ * per X-Overlay-Header erkannt, siehe isOverlayRequest()). "Rolle" hier ist
+ * die importierte Vietto-Rolle (LegacyRole, fachliche Funktion wie
+ * TR/PM-PT), eine andere Achse als das Rechte-Set. Firma/Abteilung/
+ * Geschäftsbereich hier vorerst nur als Auswahl, deren eigene Verwaltung
+ * (Neuanlage) kommt als Schritt 2.
+ *
+ * Rechte-Set und Funktionsgruppen sind hier zusätzlich als schnelle
+ * Zuweisung mit dabei (Ralf, 2026-09-12: "ich hab das nämlich schon wieder
+ * vergessen und mich gewundert, warum ich die Person bei den WFS nicht
+ * sehe" - ohne Funktionsgruppen-Zuordnung taucht eine Person nirgends in
+ * den Workflow-Schritten auf, das darf kein separat zu merkender
+ * Extra-Schritt sein). Die eigentliche Detailverwaltung (Rechte-Sets
+ * anlegen, "gilt für X Personen"-Übersicht bzw. Funktionsgruppen anlegen)
+ * bleibt weiterhin in PermissionController/FunctionGroupController - hier
+ * nur die Zuweisung selbst, per "verwalten"-Link dorthin verlinkt (gleiches
+ * Muster wie Firma/Abteilung/Geschäftsbereich/Rolle).
  */
 class PersonController extends Controller
 {
@@ -154,6 +164,9 @@ class PersonController extends Controller
             'department_id' => ['nullable', 'integer', Rule::exists('departments', 'id')->where('tenant_id', $person->tenant_id)],
             'business_unit_id' => ['nullable', 'integer', Rule::exists('business_units', 'id')->where('tenant_id', $person->tenant_id)],
             'legacy_role_id' => ['nullable', 'integer', Rule::exists('legacy_roles', 'id')->where('tenant_id', $person->tenant_id)],
+            'permission_template_id' => ['nullable', 'integer', Rule::exists('permission_templates', 'id')->where('tenant_id', $person->tenant_id)],
+            'function_group_ids' => ['array'],
+            'function_group_ids.*' => ['integer', Rule::exists('function_groups', 'id')->where('tenant_id', $person->tenant_id)],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date'],
             'remarks' => ['nullable', 'string'],
@@ -172,7 +185,23 @@ class PersonController extends Controller
 
         $validated = $validator->validated();
         $validated['active'] = $request->boolean('active');
+        $functionGroupIds = collect($validated['function_group_ids'] ?? []);
+        unset($validated['function_group_ids']);
         $person->update($validated);
+
+        // Rolle (users.role) folgt dem Rechte-Set, wenn die Person einen
+        // Login hat - gleiche Logik wie PermissionController::
+        // assignTemplate(), hier dupliziert statt extrahiert, weil beide
+        // Stellen bewusst unabhängige, kleine Aufrufer bleiben sollen.
+        if ($person->user && $person->permission_template_id) {
+            $person->user->update(['role' => PermissionTemplate::query()->find($person->permission_template_id)?->role ?? 'user']);
+        }
+
+        // function_group_member.tenant_id ist NOT NULL ohne Default - sync()
+        // füllt Pivot-Spalten sonst nicht automatisch, deshalb explizit je
+        // Zeile mitgeben (gleiches Muster wie FunctionGroupController::
+        // updatePersonGroups()).
+        $person->functionGroups()->sync($functionGroupIds->mapWithKeys(fn ($id) => [$id => ['tenant_id' => $person->tenant_id]]));
 
         if ($isOverlay) {
             $request->session()->flash('status', 'person-updated');
@@ -371,7 +400,7 @@ class PersonController extends Controller
     }
 
     /**
-     * @return array{person: Person, companies: \Illuminate\Support\Collection, departments: \Illuminate\Support\Collection, businessUnits: \Illuminate\Support\Collection, legacyRoles: \Illuminate\Support\Collection, filters: array, previousPerson: ?Person, nextPerson: ?Person}
+     * @return array{person: Person, companies: \Illuminate\Support\Collection, departments: \Illuminate\Support\Collection, businessUnits: \Illuminate\Support\Collection, legacyRoles: \Illuminate\Support\Collection, permissionTemplates: \Illuminate\Support\Collection, functionGroups: \Illuminate\Support\Collection, filters: array, previousPerson: ?Person, nextPerson: ?Person}
      */
     private function editData(Request $request, Person $person): array
     {
@@ -400,12 +429,22 @@ class PersonController extends Controller
                 'businessUnit' => $withoutTenantScope,
                 'permissionTemplate' => $withoutTenantScope,
                 'legacyRole' => $withoutTenantScope,
+                'functionGroups',
                 'user', 'accessibleTenants', 'tenant',
             ]),
             'companies' => Company::query()->where('tenant_id', $personTenantId)->orderBy('name')->get(),
             'departments' => Department::query()->where('tenant_id', $personTenantId)->where('active', true)->orderBy('name')->get(),
             'businessUnits' => BusinessUnit::query()->where('tenant_id', $personTenantId)->where('active', true)->orderBy('name')->get(),
             'legacyRoles' => LegacyRole::query()->where('tenant_id', $personTenantId)->orderBy('name')->get(),
+            'permissionTemplates' => PermissionTemplate::query()->where('tenant_id', $personTenantId)->orderBy('sort')->get(),
+            // Inaktive Gruppen bleiben in der Liste, wenn die Person schon
+            // Mitglied ist (gleiches Prinzip wie Abteilung/Geschäftsbereich
+            // bei den vier "klitzekleinen" Verwalten-Overlays) - sonst würde
+            // ein Speichern eine bestehende Mitgliedschaft in einer
+            // inzwischen deaktivierten Gruppe stillschweigend entfernen.
+            'functionGroups' => FunctionGroup::query()->where('tenant_id', $personTenantId)
+                ->where(fn ($query) => $query->where('active', true)->orWhereIn('id', $person->functionGroups->pluck('id')))
+                ->orderBy('name')->get(),
             'multiTenantEnabled' => $multiTenantEnabled,
             'otherTenants' => $multiTenantEnabled ? Tenant::query()->where('id', '!=', $personTenantId)->orderBy('name')->get() : collect(),
             'actingUserIsSuperAdmin' => $request->user()->role === 'super_admin',
