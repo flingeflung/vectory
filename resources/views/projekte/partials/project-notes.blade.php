@@ -1,10 +1,16 @@
 @php
-    $boxId = 'project-notes-'.$type.'-'.($editable ? 'edit' : 'echo').'-'.$project->id;
+    // boxKey unterscheidet die Box, wenn derselbe $type mehrfach im
+    // Overlay erscheint (Ralf, 2026-09-12: "Bemerkungen" gibt es
+    // gleichwertig editierbar in Stammdaten UND Ablaufdaten) - reicht
+    // nicht, nur nach editable/echo zu unterscheiden, seit beide
+    // editierbar sind.
+    $boxId = 'project-notes-'.$boxKey.'-'.$project->id;
+    $smallBtn = 'rounded border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-[11px] font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:cursor-not-allowed disabled:opacity-50';
 @endphp
 
 {{-- Ralf, 2026-09-12 (Vietto-Vorbild "bemerkungen", intTyp 1=Bemerkung/
-     2=Änderung zur Vorversion): gemeinsame Komponente für beide Felder,
-     $type unterscheidet die Datenbank-Zeilen (ProjectNote::TYPE_REMARK/
+     2=Änderungsprotokoll): gemeinsame Komponente für beide Felder, $type
+     unterscheidet die Datenbank-Zeilen (ProjectNote::TYPE_REMARK/
      TYPE_CHANGE). Jeder Eintrag trägt Autor + Zeitpunkt und wird sofort
      gespeichert bzw. gelöscht (kein Speichern-Button, kein Freigabe-
      Workflow - Ralf: "wie eine E-Mail, die wird ja auch nicht
@@ -12,11 +18,19 @@
      Projekt-Formulars (gleicher Grund wie bei den Projektverknüpfungen:
      ein <form> im <form> reißt sonst Felder ins äußere Formular mit rein).
 
-     $editable=false (Ablaufdaten-Duplikat von "Bemerkungen", siehe
-     system-fields/remarks_echo.blade.php) zeigt nur die beim Laden des
-     Overlays vorhandenen Einträge, ohne Neu/Löschen - wie beim bisherigen
-     Duplikat ist das eine Momentaufnahme, kein Live-Abgleich mit der
-     editierbaren Stammdaten-Box.
+     "Bemerkungen" erscheint zweimal im selben Overlay (editierbar in
+     Stammdaten, siehe system-fields/remarks.blade.php, UND editierbar in
+     Ablaufdaten, siehe system-fields/remarks_echo.blade.php - Ralf,
+     2026-09-12: beide sollen gleichwertig bedienbar sein, nicht nur eine
+     read-only Kopie). Damit ein in der einen Box angelegter/gelöschter
+     Eintrag auch in der anderen sofort auftaucht, feuert jede Box nach
+     einer Änderung ein window-Event "project-notes-changed" mit
+     {type, projectId}; jede Box lauscht selbst darauf (auch die, die die
+     Änderung ausgelöst hat) und lädt ihren Inhalt dann per
+     ProjectNoteController::index() neu - einfacher und robuster als
+     Fragment-Einfügen mit Sonderfällen für "war das schon die letzte
+     Zeile" o.ä., und bei der kleinen Anzahl Einträge performt das genauso
+     unauffällig.
 
      WICHTIG für Änderungen an diesem x-data-Block: KEINE geraden
      Anführungszeichen in JS-Kommentaren dort verwenden - die beenden das
@@ -28,6 +42,27 @@
             adding: false,
             text: '',
             saving: false,
+            init() {
+                this.onChanged = (e) => {
+                    if (e.detail.type === {{ \Illuminate\Support\Js::from($type) }} && e.detail.projectId === {{ $project->id }}) {
+                        this.refresh();
+                    }
+                };
+                window.addEventListener('project-notes-changed', this.onChanged);
+            },
+            destroy() {
+                window.removeEventListener('project-notes-changed', this.onChanged);
+            },
+            async refresh() {
+                const url = {{ \Illuminate\Support\Js::from(route('projekte.notizen.index', $project)) }} + `?type=` + encodeURIComponent({{ \Illuminate\Support\Js::from($type) }}) + `&box_id=` + encodeURIComponent({{ \Illuminate\Support\Js::from($boxId) }});
+                const response = await fetch(url);
+                if (! response.ok) return;
+                const box = document.getElementById({{ \Illuminate\Support\Js::from($boxId) }});
+                if (box) box.innerHTML = await response.text();
+            },
+            notifyChanged() {
+                window.dispatchEvent(new CustomEvent('project-notes-changed', { detail: { type: {{ \Illuminate\Support\Js::from($type) }}, projectId: {{ $project->id }} } }));
+            },
             async addNote() {
                 if (! this.text.trim()) return;
                 this.saving = true;
@@ -35,18 +70,15 @@
                     const response = await fetch({{ \Illuminate\Support\Js::from(route('projekte.notizen.store', $project)) }}, {
                         method: 'POST',
                         headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: new URLSearchParams({ type: {{ \Illuminate\Support\Js::from($type) }}, text: this.text, box_id: {{ \Illuminate\Support\Js::from($boxId) }} }),
+                        body: new URLSearchParams({ type: {{ \Illuminate\Support\Js::from($type) }}, text: this.text }),
                     });
                     if (! response.ok) {
                         window.notifyDialog({{ \Illuminate\Support\Js::from(__('Speichern fehlgeschlagen. Bitte erneut versuchen.')) }});
                         return;
                     }
-                    const box = document.getElementById({{ \Illuminate\Support\Js::from($boxId) }});
-                    box.querySelector('.project-notes-empty')?.remove();
-                    const html = await response.text();
-                    box.insertAdjacentHTML('beforeend', html);
                     this.text = '';
                     this.adding = false;
+                    this.notifyChanged();
                 } finally {
                     this.saving = false;
                 }
@@ -58,13 +90,7 @@
                         method: 'DELETE',
                         headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
                     });
-                    if (response.ok) {
-                        const box = document.getElementById({{ \Illuminate\Support\Js::from($boxId) }});
-                        document.getElementById(`{{ $boxId }}-${id}`)?.remove();
-                        if (! box.querySelector('.project-note-row')) {
-                            box.insertAdjacentHTML('beforeend', {{ \Illuminate\Support\Js::from('<div class="project-notes-empty py-0.5 text-xs text-gray-400">'.e(__('– noch keine Einträge –')).'</div>') }});
-                        }
-                    }
+                    if (response.ok) this.notifyChanged();
                 });
             },
         }"
@@ -73,22 +99,18 @@
     <label class="block text-xs text-gray-500">{{ $label }}</label>
 
     <div id="{{ $boxId }}" class="mt-0.5 max-h-32 overflow-y-auto rounded-md border border-gray-200 bg-gray-50 px-2 py-1">
-        @forelse ($notes as $note)
-            @include('projekte.partials.project-note-row', ['note' => $note, 'editable' => $editable, 'idPrefix' => $boxId])
-        @empty
-            <div class="project-notes-empty py-0.5 text-xs text-gray-400">{{ __('– noch keine Einträge –') }}</div>
-        @endforelse
+        @include('projekte.partials.project-notes-rows', ['notes' => $notes, 'editable' => $editable, 'boxId' => $boxId])
     </div>
 
     @if ($editable)
         <div class="mt-1" x-show="! adding">
-            <button type="button" @click="adding = true" class="{{ $secondaryBtn }}">{{ __('Neu') }}</button>
+            <button type="button" @click="adding = true" class="{{ $smallBtn }}">{{ __('Neu') }}</button>
         </div>
         <div class="mt-1 space-y-1" x-show="adding" x-cloak>
             <textarea x-model="text" rows="2" :disabled="saving" placeholder="{{ __('Text eingeben…') }}" class="w-full rounded-md border-gray-300 text-xs disabled:bg-gray-50"></textarea>
             <div class="flex justify-end gap-2">
-                <button type="button" @click="adding = false; text = ''" :disabled="saving" class="{{ $secondaryBtn }}">{{ __('Abbrechen') }}</button>
-                <button type="button" @click="addNote()" :disabled="saving" class="inline-flex items-center rounded-md bg-btn-primary px-2.5 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover disabled:cursor-not-allowed disabled:opacity-50">{{ __('Speichern') }}</button>
+                <button type="button" @click="adding = false; text = ''" :disabled="saving" class="{{ $smallBtn }}">{{ __('Abbrechen') }}</button>
+                <button type="button" @click="addNote()" :disabled="saving" class="rounded bg-btn-primary px-2 py-0.5 text-[11px] font-medium text-white hover:bg-btn-primary-hover disabled:cursor-not-allowed disabled:opacity-50">{{ __('Speichern') }}</button>
             </div>
         </div>
     @endif

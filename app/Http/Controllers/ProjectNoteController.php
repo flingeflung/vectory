@@ -14,11 +14,33 @@ use Illuminate\Validation\Rule;
  * eigenständige Endpunkte statt Teil des großen Projekt-Formulars (Ralf,
  * 2026-09-12, wie schon bei den Projektverknüpfungen: sofort gespeichert,
  * kein Speichern-Button/Freigabe nötig - "wie eine E-Mail, die wird ja
- * auch nicht freigegeben"). store()/destroy() geben nur die betroffene
- * Zeile bzw. 204 zurück, kein Neuladen der ganzen Liste.
+ * auch nicht freigegeben"). "Bemerkungen" erscheint zweimal im selben
+ * Overlay (Stammdaten + Ablaufdaten, beide editierbar) - index() liefert
+ * einer Box den aktuellen Stand, wenn die jeweils andere Box etwas
+ * geändert hat (siehe project-notes.blade.php: refresh()).
  */
 class ProjectNoteController extends Controller
 {
+    public function index(Request $request, Project $project): Response
+    {
+        abort_unless($project->tenant_id === CurrentTenant::id(), 404);
+
+        $validated = $request->validate([
+            'type' => ['required', 'string', Rule::in([ProjectNote::TYPE_REMARK, ProjectNote::TYPE_CHANGE])],
+            'box_id' => ['required', 'string', 'regex:/^[a-z0-9-]+$/'],
+        ]);
+
+        $notes = $project->notes->where('type', $validated['type']);
+
+        $html = view('projekte.partials.project-notes-rows', [
+            'notes' => $notes,
+            'editable' => true,
+            'boxId' => $validated['box_id'],
+        ])->render();
+
+        return response($html);
+    }
+
     public function store(Request $request, Project $project): Response
     {
         abort_unless($project->tenant_id === CurrentTenant::id(), 404);
@@ -26,10 +48,9 @@ class ProjectNoteController extends Controller
         $validated = $request->validate([
             'type' => ['required', 'string', Rule::in([ProjectNote::TYPE_REMARK, ProjectNote::TYPE_CHANGE])],
             'text' => ['required', 'string', 'max:2000'],
-            'box_id' => ['required', 'string', 'regex:/^[a-z0-9-]+$/'],
         ]);
 
-        $note = ProjectNote::query()->create([
+        ProjectNote::query()->create([
             'tenant_id' => $project->tenant_id,
             'project_id' => $project->id,
             'type' => $validated['type'],
@@ -38,13 +59,7 @@ class ProjectNoteController extends Controller
             'created_at' => now(),
         ]);
 
-        $html = view('projekte.partials.project-note-row', [
-            'note' => $note,
-            'editable' => true,
-            'idPrefix' => $validated['box_id'],
-        ])->render();
-
-        return response($html);
+        return response('', 201);
     }
 
     /**

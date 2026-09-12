@@ -10,6 +10,7 @@
 @include('projekte.partials.project-notes', [
     'project' => $project,
     'type' => \App\Models\ProjectNote::TYPE_REMARK,
+    'boxKey' => 'remarks',
     'label' => __('Bemerkungen'),
     'notes' => $project->notes->where('type', \App\Models\ProjectNote::TYPE_REMARK),
     'editable' => true,

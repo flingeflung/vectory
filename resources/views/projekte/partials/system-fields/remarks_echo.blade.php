@@ -1,13 +1,14 @@
 {{--
-    Ralf, 2026-09-11/12: Duplikat des Stammdaten-Bemerkungen-Felds, hier nur
-    zusätzlich lesend in Ablaufdaten sichtbar (bearbeitet wird weiterhin
-    ausschließlich in Stammdaten) - Momentaufnahme beim Laden des Overlays,
-    kein Live-Abgleich mit der editierbaren Box.
+    Ralf, 2026-09-12: zusätzlich zur Stammdaten-Bemerkungen-Box auch hier in
+    Ablaufdaten sichtbar UND gleichwertig bedienbar (nicht nur lesend) -
+    beide Boxen gleichen sich über ein window-Event live ab, siehe
+    project-notes.blade.php.
 --}}
 @include('projekte.partials.project-notes', [
     'project' => $project,
     'type' => \App\Models\ProjectNote::TYPE_REMARK,
+    'boxKey' => 'remarks-echo',
     'label' => __('Bemerkungen'),
     'notes' => $project->notes->where('type', \App\Models\ProjectNote::TYPE_REMARK),
-    'editable' => false,
+    'editable' => true,
 ])

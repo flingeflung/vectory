@@ -81,6 +81,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/projekte/{project}/verknuepfungen', [ProjectConnectionController::class, 'store'])->name('projekte.verknuepfungen.store');
     Route::delete('/projekte/{project}/verknuepfungen/{connection}', [ProjectConnectionController::class, 'destroy'])->name('projekte.verknuepfungen.destroy');
 
+    Route::get('/projekte/{project}/notizen', [ProjectNoteController::class, 'index'])->name('projekte.notizen.index');
     Route::post('/projekte/{project}/notizen', [ProjectNoteController::class, 'store'])->name('projekte.notizen.store');
     Route::delete('/projekte/{project}/notizen/{note}', [ProjectNoteController::class, 'destroy'])->name('projekte.notizen.destroy');
 

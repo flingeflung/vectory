@@ -10,6 +10,7 @@
 @include('projekte.partials.project-notes', [
     'project' => $project,
     'type' => \App\Models\ProjectNote::TYPE_CHANGE,
+    'boxKey' => 'change-log',
     'label' => __('Änderungsprotokoll'),
     'notes' => $project->notes->where('type', \App\Models\ProjectNote::TYPE_CHANGE),
     'editable' => true,
