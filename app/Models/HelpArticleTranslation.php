@@ -44,6 +44,18 @@ class HelpArticleTranslation extends Model
     private const BUTTON_QUOTE_CLASSES = 'inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-1.5 py-0.5 text-xs font-medium text-gray-700';
 
     /**
+     * Verweis auf eine andere Hilfeseite (Ralf, 2026-09-12: "wenn ich einen
+     * Link einfügen möchte, um dorthin zu springen, was muss ich angeben?")
+     * - "[[Titel]]" statt einer technischen Adresse, damit Ralf nur den ihm
+     * sichtbaren Artikel-Titel braucht, nie den intern erzeugten "key"
+     * (siehe HelpArticle::search()). Klick springt im selben Panel zum
+     * Zielartikel (window.helpOpenArticle(), siehe help-panel.blade.php -
+     * gleiches Muster wie ein Klick auf einen Suchtreffer), statt aus dem
+     * Panel raus auf die rohe Fragment-Route zu navigieren.
+     */
+    private const ARTICLE_LINK_PATTERN = '/\[\[([^\[\]]+)\]\]/';
+
+    /**
      * Markdown -> HTML, html_input "strip" statt "escape" (Ralf tippt hier
      * frei, versehentlich eingefügtes "<" soll nicht als kaputtes Tag im
      * Ergebnis auftauchen) - kein Freigabe-Workflow, Bearbeitung ist
@@ -59,11 +71,25 @@ class HelpArticleTranslation extends Model
 
         $html = (string) Str::markdown($body, ['html_input' => 'strip']);
 
-        return (string) preg_replace(
+        $html = (string) preg_replace(
             self::BUTTON_QUOTE_PATTERN,
             '<span class="'.self::BUTTON_QUOTE_CLASSES.'">$1</span>',
             $html
         );
+
+        return (string) preg_replace_callback(self::ARTICLE_LINK_PATTERN, function (array $match): string {
+            $title = trim($match[1]);
+
+            $target = self::query()->where('locale', $this->locale)
+                ->whereRaw('LOWER(title) = ?', [mb_strtolower($title)])
+                ->first();
+
+            if (! $target) {
+                return '<span class="text-red-500 underline decoration-dotted" title="'.e(__('Kein Hilfeartikel mit diesem Titel gefunden.')).'">'.e($title).'</span>';
+            }
+
+            return '<a href="#" data-help-key="'.e($target->article->key).'">'.e($title).'</a>';
+        }, $html);
     }
 
     private function imageBaseUrl(): string

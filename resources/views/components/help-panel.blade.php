@@ -67,14 +67,19 @@
              Originalgröße als eigenes Overlay ÜBER diesem Panel (siehe
              components/help-image-lightbox.blade.php), bewusst kein neuer
              Browser-Tab (Ralf: "macht wieder zu viel Arbeit, es zu erkennen
-             und wieder zu schließen"). Event-Delegation, weil #help-results
-             bei jeder Suche/jedem Artikelwechsel per innerHTML ausgetauscht
-             wird. --}}
+             und wieder zu schließen"). "[[Artikel-Titel]]"-Verweise
+             (data-help-key, siehe HelpArticleTranslation::bodyHtml())
+             springen im selben Panel zum Zielartikel statt echt zu
+             navigieren. Event-Delegation, weil #help-results bei jeder
+             Suche/jedem Artikelwechsel per innerHTML ausgetauscht wird. --}}
         <div
             class="min-h-0 flex-1 overflow-y-auto px-4 py-3"
             x-on:click="if ($event.target.tagName === 'IMG') {
                 window.__helpLightboxSrc = $event.target.src;
                 window.dispatchEvent(new CustomEvent('open-modal', { detail: 'help-image-lightbox' }));
+            } else if ($event.target.closest('[data-help-key]')) {
+                $event.preventDefault();
+                window.helpOpenArticle($event.target.closest('[data-help-key]').dataset.helpKey);
             }"
         >
             <div id="help-results">{{ __('Lädt…') }}</div>

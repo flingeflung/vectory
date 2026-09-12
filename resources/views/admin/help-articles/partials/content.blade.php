@@ -110,6 +110,9 @@
                                 <p class="mt-1 text-xs text-gray-400">
                                     {{ __('Bild einfügen: Datei nach public/images/hilfe/ legen, dann im Text z. B. :placeholder schreiben - erscheint als eigener Block, Folgetext kommt automatisch darunter. Empfohlene Bildgröße: max. ca. 1200 px breit, unter 500 KB (wird angezeigt verkleinert, bei Klick in Originalgröße).', ['placeholder' => '[screenshot_dashboard1.png]']) }}
                                 </p>
+                                <p class="mt-1 text-xs text-gray-400">
+                                    {{ __('Zu einer anderen Hilfeseite verlinken: :placeholder schreiben, genau der Titel der Zielseite (wie links in der Liste zu sehen) - springt beim Klick direkt dorthin.', ['placeholder' => '[[Kunden klonen]]']) }}
+                                </p>
                             </div>
                         </div>
                     @endforeach
