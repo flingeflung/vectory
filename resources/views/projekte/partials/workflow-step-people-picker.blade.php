@@ -37,23 +37,24 @@
 >
     <div class="mb-2 text-xs text-gray-500">{{ __(':group – Zuständige für diesen Schritt', ['group' => $group->name]) }}</div>
 
-    @if ($members->isEmpty())
-        <div class="text-xs text-gray-400">{{ __('Diese Funktionsgruppe hat noch keine Mitglieder.') }}</div>
+    {{-- Ralf, 2026-09-12: "Wenn Pauline inaktiv ist, möchte ich sie auch
+         nicht mehr zur Zuweisung sehen" - eine inaktive Person taucht hier
+         nur noch auf, wenn sie diesem Schritt schon zugewiesen ist (dann
+         bleibt sie sichtbar/entfernbar, sonst würde ein Speichern sie
+         stillschweigend rauswerfen). Alle anderen inaktiven Mitglieder
+         werden komplett ausgeblendet, nicht nur gesperrt. --}}
+    @php $visibleMembers = $members->filter(fn ($person) => $person->active || $currentPersonIds->contains($person->id)); @endphp
+
+    @if ($visibleMembers->isEmpty())
+        <div class="text-xs text-gray-400">{{ __('Diese Funktionsgruppe hat aktuell keine wählbaren Mitglieder.') }}</div>
     @else
         <div class="space-y-1" x-ref="list">
-            {{-- Ralf, 2026-09-12: "Inaktiv heißt, sie steht nicht mehr zur
-                 Verfügung!" - inaktive Personen sind für eine NEUE Zuweisung
-                 gesperrt, gleiches Prinzip wie bei inaktiven Funktionsgruppen
-                 (project_people.blade.php: nicht neu zuweisbar, aber
-                 bestehende Zuordnung bleibt sichtbar/entfernbar, damit ein
-                 Speichern sie nicht stillschweigend rauswirft). --}}
-            @foreach ($members as $person)
-                @php $newAssignmentBlocked = ! $person->active && ! $currentPersonIds->contains($person->id); @endphp
+            @foreach ($visibleMembers as $person)
                 <label class="flex items-center gap-1.5 text-sm {{ $person->active ? 'text-gray-700' : 'text-gray-400' }}">
                     <input
                         type="checkbox"
                         value="{{ $person->id }}"
-                        :disabled="saving || {{ $newAssignmentBlocked ? 'true' : 'false' }}"
+                        :disabled="saving"
                         @change="save()"
                         @checked($currentPersonIds->contains($person->id))
                         class="shrink-0 rounded border-gray-300"

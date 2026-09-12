@@ -94,28 +94,27 @@
             @php
                 $currentEntries = $project->projectPeople->where('function_group_id', $group->id);
             @endphp
+            @php
+                $currentPersonIds = $currentEntries->pluck('person_id')->all();
+                $currentPrimaryId = optional($currentEntries->firstWhere('is_primary', true))->person_id;
+                // Ralf, 2026-09-12: "Wenn Pauline inaktiv ist, möchte ich sie
+                // auch nicht mehr zur Zuweisung sehen" - eine inaktive
+                // Person taucht hier nur noch auf, wenn sie schon zugeordnet
+                // ist (dann bleibt sie sichtbar/entfernbar, sonst würde ein
+                // Speichern sie stillschweigend rauswerfen).
+                $visibleMembers = $group->members->filter(fn ($person) => $person->active || in_array($person->id, $currentPersonIds, true));
+            @endphp
             {{-- Inaktive Funktionsgruppen werden für NEUE Zuordnungen
                  nicht mehr angeboten, bleiben aber sichtbar/editierbar,
                  wenn hier im Projekt schon jemand darüber zugeordnet
                  ist - sonst würde ein Speichern diese Zuordnung
                  stillschweigend entfernen (ihre Checkboxen kämen ja
                  gar nicht mehr im Formular vor). --}}
-            @if ($group->members->isNotEmpty() && ($group->active || $currentEntries->isNotEmpty()))
-                @php
-                    $currentPersonIds = $currentEntries->pluck('person_id')->all();
-                    $currentPrimaryId = optional($currentEntries->firstWhere('is_primary', true))->person_id;
-                @endphp
+            @if ($visibleMembers->isNotEmpty() && ($group->active || $currentEntries->isNotEmpty()))
                 <div>
                     <div class="mb-0.5 font-medium text-gray-600">{{ $group->name }}</div>
                     <div class="grid grid-cols-2 gap-x-3 gap-y-0.5">
-                        {{-- Ralf, 2026-09-12: "Inaktiv heißt, sie steht nicht
-                             mehr zur Verfügung!" - gleiches Prinzip wie bei
-                             inaktiven Funktionsgruppen oben: für eine NEUE
-                             Zuweisung gesperrt, eine bestehende bleibt aber
-                             änderbar/entfernbar (sonst würde ein Speichern
-                             sie stillschweigend rauswerfen). --}}
-                        @foreach ($group->members as $person)
-                            @php $newAssignmentBlocked = ! $person->active && ! in_array($person->id, $currentPersonIds, true); @endphp
+                        @foreach ($visibleMembers as $person)
                             <label class="flex items-center gap-1 {{ $person->active ? 'text-gray-600' : 'text-gray-400' }}">
                                 <input
                                     type="checkbox"
@@ -123,7 +122,6 @@
                                     value="{{ $person->id }}"
                                     class="shrink-0 rounded border-gray-300"
                                     @checked(in_array($person->id, $currentPersonIds, true))
-                                    @disabled($newAssignmentBlocked)
                                 >
                                 <input
                                     type="radio"
@@ -133,7 +131,6 @@
                                     title="{{ __('Als Erstansprechpartner markieren') }}"
                                     onclick="this.previousElementSibling.checked = true"
                                     @checked($currentPrimaryId === $person->id)
-                                    @disabled($newAssignmentBlocked)
                                 >
                                 {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }}
                             </label>
