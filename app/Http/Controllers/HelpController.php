@@ -46,6 +46,12 @@ class HelpController extends Controller
             'results' => null,
             'article' => $article,
             'translation' => $article?->translation($locale),
+            // Für den Super-Admin: fehlt hier ein Artikel, zeigt der leere
+            // Zustand direkt den Routennamen an, den er bei "Seiten
+            // (Routennamen)" in der Hilfeseiten-Verwaltung einträgt - sonst
+            // müsste er dafür jedes Mal fragen, welche Route das gerade ist.
+            'routeName' => $routeName,
+            'canManageHelp' => $request->user()?->role === 'super_admin',
         ]);
     }
 
