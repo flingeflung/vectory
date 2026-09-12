@@ -13,7 +13,7 @@
     was hier die eigentliche Seiten-URL überschreiben würde. Eigene,
     schlanke Debounce-Funktion ohne History-Nebenwirkung stattdessen.
 --}}
-<x-modal name="help-panel" max-width="lg">
+<x-modal name="help-panel" max-width="lg" :draggable="true">
     <div
         class="flex max-h-[80vh] flex-col"
         x-data="{
@@ -39,7 +39,11 @@
             $nextTick(() => $refs.searchInput.focus());
         }"
     >
-        <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+        <div
+            class="flex shrink-0 cursor-move items-center justify-between border-b border-gray-200 px-4 py-3"
+            data-drag-handle
+            title="{{ __('Ziehen zum Verschieben') }}"
+        >
             <h3 class="text-sm font-semibold text-gray-900">{{ __('Hilfe') }}</h3>
             <button
                 type="button"
