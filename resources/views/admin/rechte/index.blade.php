@@ -195,7 +195,7 @@
                                     :href="navUrl({ person: {{ $person->id }} })"
                                     class="flex-1 {{ $person->active ? 'text-gray-700 hover:underline' : 'text-gray-400 hover:underline' }}"
                                 >
-                                    {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }} <x-department-tag :person="$person" />
+                                    {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }} <x-absence-icon :person="$person" /> <x-department-tag :person="$person" />
                                 </a>
                             </div>
                         @endforeach
@@ -211,7 +211,7 @@
                             x-show="(showInactive || {{ $person->active || $selectedPerson?->id === $person->id ? 'true' : 'false' }}) && (!search || {{ \Illuminate\Support\Js::from(mb_strtolower($person->fullName())) }}.includes(search.toLowerCase())) && (!departmentFilter || {{ \Illuminate\Support\Js::from($person->department?->name ?? '') }} === departmentFilter)"
                             class="block rounded px-2 py-1 {{ $selectedPerson?->id === $person->id ? 'bg-indigo-50 font-medium text-indigo-700' : ($person->active ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-400 hover:bg-gray-50') }}"
                         >
-                            {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }} <x-department-tag :person="$person" />
+                            {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }} <x-absence-icon :person="$person" /> <x-department-tag :person="$person" />
                         </a>
                     @endforeach
                 @endif
@@ -288,7 +288,7 @@
                         <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm">
                             @forelse ($templatePeople as $person)
                                 <div class="px-1 py-1 {{ $person->active ? 'text-gray-700' : 'text-gray-400' }}">
-                                    {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }} <x-department-tag :person="$person" />
+                                    {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }} <x-absence-icon :person="$person" /> <x-department-tag :person="$person" />
                                 </div>
                             @empty
                                 <div class="px-1 py-1 text-gray-400">{{ __('Niemand.') }}</div>
@@ -319,7 +319,7 @@
                 </div>
             @elseif ($selectedPerson)
                 <div class="shrink-0 border-b border-gray-100 p-3 text-sm font-medium text-gray-900">
-                    {{ $selectedPerson->fullName() }} <x-department-tag :person="$selectedPerson" />
+                    {{ $selectedPerson->fullName() }}{{ ! $selectedPerson->active ? ' [i]' : '' }} <x-absence-icon :person="$selectedPerson" /> <x-department-tag :person="$selectedPerson" />
                 </div>
 
                 @if ($selectedPersonIsHomeTenant)

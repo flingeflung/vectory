@@ -27,7 +27,7 @@
             <div class="text-xs text-gray-500">{{ __('Empfänger') }}</div>
             @forelse ($recipients as $recipient)
                 <div class="{{ $recipient->active ? 'text-gray-700' : 'text-gray-400' }}">
-                    {{ $recipient->fullName() }}{{ ! $recipient->active ? ' [i]' : '' }}{{ ! $recipient->email ? ' ('.__('keine E-Mail hinterlegt').')' : '' }}
+                    {{ $recipient->fullName() }}{{ ! $recipient->active ? ' [i]' : '' }} <x-absence-icon :person="$recipient" />{{ ! $recipient->email ? ' ('.__('keine E-Mail hinterlegt').')' : '' }}
                 </div>
             @empty
                 <div class="text-amber-600">{{ __('Keine Person für diesen Schritt zugewiesen!') }}</div>

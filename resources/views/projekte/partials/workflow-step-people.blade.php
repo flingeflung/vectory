@@ -73,7 +73,7 @@
                 </div>
                 @forelse ($groupPeople as $person)
                     <div class="text-gray-700">
-                        {{ $person->fullName() }}@if ($primaryPersonIdByGroup->get($group->id) === $person->id)<span class="text-amber-500" title="{{ __('Erstansprechpartner') }}">&#9733;</span>@endif
+                        {{ $person->fullName() }}<x-absence-icon :person="$person" />@if ($primaryPersonIdByGroup->get($group->id) === $person->id)<span class="text-amber-500" title="{{ __('Erstansprechpartner') }}">&#9733;</span>@endif
                     </div>
                 @empty
                     <div class="text-gray-400">&ndash;</div>

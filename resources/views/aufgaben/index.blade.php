@@ -116,9 +116,14 @@
                                             {{-- Ralf: "Nachname, Vorname" pro Person UND ", " zwischen
                                                  mehreren Personen war zweideutig - Trennzeichen zwischen
                                                  Personen deshalb Semikolon statt Komma. --}}
-                                            {{ ($wfsPeopleByTask->get($task->id) ?? collect())->map->fullName()->implode('; ') ?: '–' }}
+                                            @forelse (($wfsPeopleByTask->get($task->id) ?? collect()) as $wfsPerson)
+                                                {{ $wfsPerson->fullName() }}<x-absence-icon :person="$wfsPerson" />@if (! $loop->last); @endif
+                                            @empty
+                                                &ndash;
+                                            @endforelse
                                         @else
                                             {{ $task->person?->fullName() ?? '–' }}
+                                            @if ($task->person)<x-absence-icon :person="$task->person" />@endif
                                         @endif
                                     </td>
                                     <td class="px-4 py-2 text-gray-900">

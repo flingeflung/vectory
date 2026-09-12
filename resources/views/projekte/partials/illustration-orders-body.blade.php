@@ -63,7 +63,7 @@
             <div class="flex items-start justify-between gap-2">
                 <div>
                     <span class="font-semibold">Illu-{{ $order->id }}</span>
-                    <span class="text-xs text-gray-500">{{ __('von') }} {{ $order->initiatedBy?->fullName() ?? '–' }}, {{ $order->created_at->format('d.m.Y H:i') }}</span>
+                    <span class="text-xs text-gray-500">{{ __('von') }} {{ $order->initiatedBy?->fullName() ?? '–' }}@if ($order->initiatedBy)<x-absence-icon :person="$order->initiatedBy" />@endif, {{ $order->created_at->format('d.m.Y H:i') }}</span>
                 </div>
                 <button
                     type="button"
@@ -74,7 +74,7 @@
                 </button>
             </div>
             <div class="mt-1">{{ __('Status') }}: {{ $order->status?->label() }}</div>
-            <div>{{ __('Illustrator') }}: {{ $order->illustrator?->fullName() ?? '–' }}{{ $order->illustrator && ! $order->illustrator->active ? ' [i]' : '' }}</div>
+            <div>{{ __('Illustrator') }}: {{ $order->illustrator?->fullName() ?? '–' }}{{ $order->illustrator && ! $order->illustrator->active ? ' [i]' : '' }}@if ($order->illustrator)<x-absence-icon :person="$order->illustrator" />@endif</div>
             @if ($order->description)
                 <div class="mt-1 whitespace-pre-line text-gray-700">{{ $order->description }}</div>
             @endif
@@ -86,7 +86,7 @@
             </div>
             @if ($order->done_at)
                 <div class="mt-1 text-xs text-gray-600">
-                    {{ __('erledigt von') }} {{ $order->completedBy?->fullName() ?? '–' }} {{ __('am') }} {{ $order->done_at->format('d.m.Y') }}
+                    {{ __('erledigt von') }} {{ $order->completedBy?->fullName() ?? '–' }}@if ($order->completedBy)<x-absence-icon :person="$order->completedBy" />@endif {{ __('am') }} {{ $order->done_at->format('d.m.Y') }}
                 </div>
             @endif
 

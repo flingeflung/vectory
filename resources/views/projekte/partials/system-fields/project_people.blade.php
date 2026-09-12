@@ -63,7 +63,7 @@
                                 {{-- Ralf: "Nachname, Vorname" pro Person UND ", " zwischen mehreren
                                      Personen war zweideutig lesbar - Trennzeichen zwischen Personen
                                      deshalb Semikolon statt Komma. --}}
-                                <span class="{{ $entry->person->active ? '' : 'text-gray-400' }}">{{ $entry->person->fullName() }}{{ ! $entry->person->active ? ' [i]' : '' }}</span>@if ($entry->is_primary)<span class="text-amber-500" title="{{ __('Erstansprechpartner') }}">&#9733;</span>@endif @if (! $loop->last); @endif
+                                <span class="{{ $entry->person->active ? '' : 'text-gray-400' }}">{{ $entry->person->fullName() }}{{ ! $entry->person->active ? ' [i]' : '' }}</span><x-absence-icon :person="$entry->person" />@if ($entry->is_primary)<span class="text-amber-500" title="{{ __('Erstansprechpartner') }}">&#9733;</span>@endif @if (! $loop->last); @endif
                             @endforeach
                         </div>
                     @endif
@@ -133,6 +133,7 @@
                                     @checked($currentPrimaryId === $person->id)
                                 >
                                 {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }}
+                                <x-absence-icon :person="$person" />
                             </label>
                         @endforeach
                     </div>

@@ -160,11 +160,12 @@
                                     <td class="px-2 py-2 whitespace-nowrap text-gray-500">{{ $order->due_date?->format('d.m.Y') ?? '–' }}</td>
                                     <td class="px-2 py-2 whitespace-nowrap text-gray-500">
                                         {{ $order->initiatedBy?->fullName() ?? '–' }}
+                                        @if ($order->initiatedBy)<x-absence-icon :person="$order->initiatedBy" />@endif
                                         <div class="text-xs text-gray-400">{{ $order->created_at?->format('d.m.Y') }}</div>
                                     </td>
                                     <td class="px-2 py-2 whitespace-nowrap text-gray-500">
                                         @if ($order->illustrator)
-                                            <span @class(['text-gray-400' => ! $order->illustrator->active])>{{ $order->illustrator->fullName() }}{{ ! $order->illustrator->active ? ' [i]' : '' }}</span>
+                                            <span @class(['text-gray-400' => ! $order->illustrator->active])>{{ $order->illustrator->fullName() }}{{ ! $order->illustrator->active ? ' [i]' : '' }}</span> <x-absence-icon :person="$order->illustrator" />
                                         @else
                                             &ndash;
                                         @endif

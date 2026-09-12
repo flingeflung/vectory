@@ -18,7 +18,7 @@
         @if ($isOverlay) data-drag-handle title="{{ __('Ziehen zum Verschieben') }}" @endif
     >
         @if ($isOverlay)
-            <span class="min-w-0 truncate text-sm font-semibold text-gray-900">{{ $person->fullName() }}</span>
+            <span class="min-w-0 truncate text-sm font-semibold text-gray-900">{{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }} <x-absence-icon :person="$person" /></span>
         @else
             <a href="{{ route('admin.personen') }}" class="text-sm text-gray-500 hover:text-gray-700">&laquo; {{ __('Zur Liste') }}</a>
         @endif

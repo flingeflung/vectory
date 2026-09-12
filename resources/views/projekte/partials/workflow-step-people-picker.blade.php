@@ -59,7 +59,7 @@
                         @checked($currentPersonIds->contains($person->id))
                         class="shrink-0 rounded border-gray-300"
                     >
-                    {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }}@if ($primaryPersonId === $person->id)<span class="text-amber-500" title="{{ __('Erstansprechpartner') }}">&#9733;</span>@endif
+                    {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }} <x-absence-icon :person="$person" />@if ($primaryPersonId === $person->id)<span class="text-amber-500" title="{{ __('Erstansprechpartner') }}">&#9733;</span>@endif
                 </label>
             @endforeach
         </div>
