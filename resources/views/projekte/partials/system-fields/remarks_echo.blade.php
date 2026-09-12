@@ -1,9 +1,13 @@
 {{--
-    Ralf, 2026-09-11: Duplikat des Stammdaten-Bemerkungen-Felds, hier nur
+    Ralf, 2026-09-11/12: Duplikat des Stammdaten-Bemerkungen-Felds, hier nur
     zusätzlich lesend in Ablaufdaten sichtbar (bearbeitet wird weiterhin
-    ausschließlich in Stammdaten). Nicht editierbar.
+    ausschließlich in Stammdaten) - Momentaufnahme beim Laden des Overlays,
+    kein Live-Abgleich mit der editierbaren Box.
 --}}
-<div>
-    <label class="block text-xs text-gray-500">{{ __('Bemerkungen') }}</label>
-    <div class="mt-0.5 whitespace-pre-wrap text-gray-700">{{ $project->remarks ?: '–' }}</div>
-</div>
+@include('projekte.partials.project-notes', [
+    'project' => $project,
+    'type' => \App\Models\ProjectNote::TYPE_REMARK,
+    'label' => __('Bemerkungen'),
+    'notes' => $project->notes->where('type', \App\Models\ProjectNote::TYPE_REMARK),
+    'editable' => false,
+])

@@ -26,6 +26,7 @@ use App\Http\Controllers\ProjectConnectionController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectCopyController;
 use App\Http\Controllers\ProjectDirectoryController;
+use App\Http\Controllers\ProjectNoteController;
 use App\Http\Controllers\ProjectScheduleController;
 use App\Http\Controllers\ProjectWorkflowStepController;
 use App\Http\Controllers\SettingsController;
@@ -79,6 +80,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/projekte/{project}/verknuepfungen/mehr', [ProjectConnectionController::class, 'moreOtherProjects'])->name('projekte.verknuepfungen.mehr');
     Route::post('/projekte/{project}/verknuepfungen', [ProjectConnectionController::class, 'store'])->name('projekte.verknuepfungen.store');
     Route::delete('/projekte/{project}/verknuepfungen/{connection}', [ProjectConnectionController::class, 'destroy'])->name('projekte.verknuepfungen.destroy');
+
+    Route::post('/projekte/{project}/notizen', [ProjectNoteController::class, 'store'])->name('projekte.notizen.store');
+    Route::delete('/projekte/{project}/notizen/{note}', [ProjectNoteController::class, 'destroy'])->name('projekte.notizen.destroy');
 
     Route::get('/favoriten', [FavoriteController::class, 'index'])->name('favoriten');
 

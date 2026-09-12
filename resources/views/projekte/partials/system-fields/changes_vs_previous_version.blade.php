@@ -1,9 +1,14 @@
 {{--
-    Ralf, 2026-09-11: neues Feld ohne Vietto-Vorbild/eigene Datenquelle -
-    bewusst nur als Platzhalter angelegt, bis geklärt ist, wie/wo der Text
-    gepflegt wird.
+    Ralf, 2026-09-12 (Vietto-Vorbild "bemerkungen", intTyp=2): im
+    Unterschied zu "Bemerkungen" (nur in Vectory sichtbar) können diese
+    Einträge auch nach außen gehen (Hotline, QM, Vertrieb) - wohin genau,
+    ist kundenspezifisch und bewusst noch nicht gebaut (Ralf, 2026-09-12:
+    "erst mal bauen, mehr nicht"). Kein Freigabeprozess pro Eintrag.
 --}}
-<div>
-    <label class="block text-xs text-gray-500">{{ __('Änderungen zur Vorversion') }}</label>
-    <div class="mt-0.5 text-gray-400">{{ __('– noch nicht verfügbar –') }}</div>
-</div>
+@include('projekte.partials.project-notes', [
+    'project' => $project,
+    'type' => \App\Models\ProjectNote::TYPE_CHANGE,
+    'label' => __('Änderungen zur Vorversion'),
+    'notes' => $project->notes->where('type', \App\Models\ProjectNote::TYPE_CHANGE),
+    'editable' => true,
+])

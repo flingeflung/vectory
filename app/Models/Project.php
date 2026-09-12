@@ -162,6 +162,11 @@ class Project extends Model
         return $this->hasMany(ProjectWorkflowStep::class)->orderBy('sort');
     }
 
+    public function notes(): HasMany
+    {
+        return $this->hasMany(ProjectNote::class)->orderBy('created_at');
+    }
+
     public function connectionsFrom(): HasMany
     {
         return $this->hasMany(ProjectConnection::class, 'project_id');
