@@ -110,6 +110,9 @@
                             <div>
                                 <label class="block text-xs text-gray-500">{{ __('Text (Markdown: # Überschrift, **fett**, - Liste, [Link](url))') }}</label>
                                 <textarea name="translations[{{ $localeCode }}][body]" rows="14" class="mt-0.5 w-full rounded-md border-gray-300 font-mono text-sm">{{ $t?->body }}</textarea>
+                                <p class="mt-1 text-xs text-gray-400">
+                                    {{ __('Bild einfügen: Datei nach public/images/hilfe/ legen, dann im Text z. B. :placeholder schreiben - erscheint als eigener Block, Folgetext kommt automatisch darunter. Empfohlene Bildgröße: max. ca. 1200 px breit, unter 500 KB (wird angezeigt verkleinert, bei Klick in Originalgröße).', ['placeholder' => '[screenshot_dashboard1.png]']) }}
+                                </p>
                             </div>
                         </div>
                     @endforeach
