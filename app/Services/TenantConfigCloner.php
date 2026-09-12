@@ -80,20 +80,28 @@ class TenantConfigCloner
      * immer leer) - der Check bleibt trotzdem als Absicherung bestehen,
      * falls das Kopieren später auch für bestehende Kunden angeboten wird.
      */
+    /**
+     * legacy_id wird bewusst NICHT mitkopiert (Ralf, 2026-09-12): der neue
+     * Kunde war nie in Vietto, geerbte Vietto-Codes wären irreführende
+     * Metadaten. Verhindert außerdem, dass ein künftiges "where legacy_id =
+     * X"-Skript versehentlich auch geklonte Kunden trifft (genau das Muster,
+     * das schon einmal echten Ärger gemacht hat, siehe Migration
+     * 2026_09_11_130001_add_is_illustration_group_to_function_groups_table).
+     */
     public function clone(Tenant $source, Tenant $target): void
     {
         abort_if($this->hasAnyConfigData($target), 422, __('Dieser Kunde hat bereits eigene Konfiguration - Kopieren ist nur in einen leeren Kunden möglich.'));
 
         DB::transaction(function () use ($source, $target) {
-            $departmentMap = $this->copySimple(Department::class, $source->id, $target->id, ['legacy_id', 'name', 'short_name', 'sort', 'active']);
-            $this->copySimple(LegacyRole::class, $source->id, $target->id, ['legacy_id', 'name', 'sort']);
+            $departmentMap = $this->copySimple(Department::class, $source->id, $target->id, ['name', 'short_name', 'sort', 'active']);
+            $this->copySimple(LegacyRole::class, $source->id, $target->id, ['name', 'sort']);
             $this->copySimple(BusinessUnit::class, $source->id, $target->id, ['name', 'sort', 'active']);
-            $functionGroupMap = $this->copySimple(FunctionGroup::class, $source->id, $target->id, ['legacy_id', 'name', 'short_name', 'sort', 'active', 'is_illustration_group']);
+            $functionGroupMap = $this->copySimple(FunctionGroup::class, $source->id, $target->id, ['name', 'short_name', 'sort', 'active', 'is_illustration_group']);
             $marketMap = $this->copySimple(Market::class, $source->id, $target->id, [
-                'legacy_id', 'country_iso', 'country_name', 'country_short_name', 'language_code', 'language_name', 'no_translation', 'sort',
+                'country_iso', 'country_name', 'country_short_name', 'language_code', 'language_name', 'no_translation', 'sort',
             ]);
             $attributeMap = $this->copyAttributes($source->id, $target->id);
-            $projectTypeMainMap = $this->copySimple(ProjectTypeMain::class, $source->id, $target->id, ['legacy_id', 'name', 'sort']);
+            $projectTypeMainMap = $this->copySimple(ProjectTypeMain::class, $source->id, $target->id, ['name', 'sort']);
 
             $projectTypeSubMap = $this->copyProjectTypeSubs($source->id, $target->id, $projectTypeMainMap);
             $this->copyMarketSets($source->id, $target->id, $marketMap);
@@ -163,7 +171,6 @@ class TenantConfigCloner
                 $new = ProjectTypeSub::query()->create([
                     'tenant_id' => $targetTenantId,
                     'project_type_main_id' => $projectTypeMainMap[$row->project_type_main_id] ?? null,
-                    'legacy_id' => $row->legacy_id,
                     'name' => $row->name,
                     'color' => $row->color,
                     'symbol' => $row->symbol,
@@ -224,7 +231,6 @@ class TenantConfigCloner
             ->each(function (MarketSet $row) use ($targetTenantId, $marketMap) {
                 $new = MarketSet::query()->create([
                     'tenant_id' => $targetTenantId,
-                    'legacy_id' => $row->legacy_id,
                     'name' => $row->name,
                     'sort' => $row->sort,
                 ]);
@@ -283,7 +289,6 @@ class TenantConfigCloner
         $sourceWorkflows->each(function (Workflow $row) use ($targetTenantId, &$map) {
             $new = Workflow::query()->create([
                 'tenant_id' => $targetTenantId,
-                'legacy_id' => $row->legacy_id,
                 'short_name' => $row->short_name,
                 'name' => $row->name,
                 'description' => $row->description,
@@ -318,7 +323,6 @@ class TenantConfigCloner
                 $new = WorkflowStep::query()->create([
                     'tenant_id' => $targetTenantId,
                     'workflow_id' => $workflowMap[$row->workflow_id],
-                    'legacy_id' => $row->legacy_id,
                     'title' => $row->title,
                     'short_title' => $row->short_title,
                     'milestone_title' => $row->milestone_title,
