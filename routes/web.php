@@ -238,6 +238,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/einstellungen', [SettingsController::class, 'index'])->name('settings');
     Route::post('/einstellungen', [SettingsController::class, 'update'])->name('settings.update');
+    Route::post('/einstellungen/abwesenheit', [SettingsController::class, 'updateAbsence'])->name('settings.absence.update');
 });
 
 require __DIR__.'/auth.php';
