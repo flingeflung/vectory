@@ -13,7 +13,7 @@
             <span class="font-medium text-gray-700">{{ $note->createdByUser->name }}</span>,
             {{ $note->created_at->format('d.m.Y, H:i:s') }} {{ __('Uhr') }}
         </div>
-        @if ($editable && (auth()->id() === $note->created_by_user_id || auth()->user()->role === 'super_admin'))
+        @if ($editable && (auth()->id() === $note->created_by_user_id || in_array(auth()->user()->role, ['admin', 'super_admin'], true)))
             <button
                 type="button"
                 @click="deleteNote({{ $note->id }})"

@@ -84,7 +84,12 @@
                 }
             },
             deleteNote(id) {
-                window.confirmDialog({{ \Illuminate\Support\Js::from(__('Eintrag wirklich löschen?')) }}).then(async (ok) => {
+                window.confirmDialog({
+                    title: {{ \Illuminate\Support\Js::from(__('Eintrag löschen?')) }},
+                    message: {{ \Illuminate\Support\Js::from(__('Diesen Eintrag wirklich löschen?')) }},
+                    confirmLabel: {{ \Illuminate\Support\Js::from(__('Löschen')) }},
+                    cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
+                }).then(async (ok) => {
                     if (! ok) return;
                     const response = await fetch(`/projekte/{{ $project->id }}/notizen/${id}`, {
                         method: 'DELETE',
@@ -104,10 +109,10 @@
 
     @if ($editable)
         <div class="mt-1" x-show="! adding">
-            <button type="button" @click="adding = true" class="{{ $smallBtn }}">{{ __('Neu') }}</button>
+            <button type="button" @click="adding = true; $nextTick(() => $refs.newNoteText.focus())" class="{{ $smallBtn }}">{{ __('Neu') }}</button>
         </div>
         <div class="mt-1 space-y-1" x-show="adding" x-cloak>
-            <textarea x-model="text" rows="2" :disabled="saving" placeholder="{{ __('Text eingeben…') }}" class="w-full rounded-md border-gray-300 text-xs disabled:bg-gray-50"></textarea>
+            <textarea x-ref="newNoteText" x-model="text" rows="2" :disabled="saving" placeholder="{{ __('Text eingeben…') }}" class="w-full rounded-md border-gray-300 text-xs disabled:bg-gray-50"></textarea>
             <div class="flex justify-end gap-2">
                 <button type="button" @click="adding = false; text = ''" :disabled="saving" class="{{ $smallBtn }}">{{ __('Abbrechen') }}</button>
                 <button type="button" @click="addNote()" :disabled="saving" class="rounded bg-btn-primary px-2 py-0.5 text-[11px] font-medium text-white hover:bg-btn-primary-hover disabled:cursor-not-allowed disabled:opacity-50">{{ __('Speichern') }}</button>
