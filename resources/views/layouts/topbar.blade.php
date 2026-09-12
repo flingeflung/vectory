@@ -55,6 +55,18 @@
             </div>
         @endif
 
+        {{-- Hilfesystem (Ralf, 2026-09-12): auf jeder Seite erreichbar, fester
+             Platz unabhängig davon, ob der Mandanten-Umschalter daneben
+             angezeigt wird. --}}
+        <button
+            type="button"
+            onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'help-panel' }))"
+            class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-white/20 text-sm font-medium hover:bg-white/10 focus:outline-none"
+            title="{{ __('Hilfe zu dieser Seite') }}"
+        >
+            ?
+        </button>
+
         <div x-data="{ open: false }" @click.outside="open = false" class="relative">
             <button @click="open = !open" class="flex items-center gap-2 text-sm font-medium hover:text-white/80 focus:outline-none">
                 {{ Auth::user()->person?->fullName() ?? Auth::user()->name }}

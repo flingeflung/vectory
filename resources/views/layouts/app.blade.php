@@ -44,6 +44,21 @@
         <x-confirm-dialog />
         <x-delete-confirm-dialog />
 
+        {{--
+            Hilfesystem (Ralf, 2026-09-12): welcher Hilfeartikel zur
+            "aktuellen Seite" gehört, wird über den Laravel-Routennamen
+            aufgelöst (siehe HelpController::results()). Bei einem per
+            fetch() nachgeladenen Overlay/Fragment (Projekt-/Personen-
+            Overlay, ...) läuft KEIN vollständiger Seitenaufruf mehr, dieser
+            Wert bleibt also korrekt auf der zuletzt echt aufgerufenen
+            Seite stehen - genau richtig, ein Overlay hat (noch) keinen
+            eigenen Hilfeartikel.
+        --}}
+        <script>
+            window.currentHelpKey = {{ \Illuminate\Support\Js::from(\Illuminate\Support\Facades\Route::currentRouteName()) }};
+        </script>
+        <x-help-panel />
+
         @if (session('error'))
             <script>
                 window.addEventListener('DOMContentLoaded', () => window.notifyDialog({{ \Illuminate\Support\Js::from(session('error')) }}, {{ \Illuminate\Support\Js::from(__('Geht nicht')) }}));

@@ -19,7 +19,9 @@ use App\Http\Controllers\Admin\WorkflowController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DisplayFilterController;
 use App\Http\Controllers\FavoriteController;
+use App\Http\Controllers\Admin\HelpArticleController;
 use App\Http\Controllers\GraphicOrderController;
+use App\Http\Controllers\HelpController;
 use App\Http\Controllers\IllustrationOverviewController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectConnectionController;
@@ -218,6 +220,11 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
 Route::middleware(['auth', 'verified', 'can:access-superadmin', RememberLastAdminPage::class])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/superadmin', [SuperAdminController::class, 'index'])->name('superadmin');
     Route::post('/superadmin', [SuperAdminController::class, 'update'])->name('superadmin.update');
+
+    Route::get('/hilfeseiten', [HelpArticleController::class, 'index'])->name('hilfeseiten');
+    Route::post('/hilfeseiten', [HelpArticleController::class, 'store'])->name('hilfeseiten.store');
+    Route::post('/hilfeseiten/{helpArticle}', [HelpArticleController::class, 'update'])->name('hilfeseiten.update');
+    Route::delete('/hilfeseiten/{helpArticle}', [HelpArticleController::class, 'destroy'])->name('hilfeseiten.destroy');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -239,6 +246,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/einstellungen', [SettingsController::class, 'index'])->name('settings');
     Route::post('/einstellungen', [SettingsController::class, 'update'])->name('settings.update');
     Route::post('/einstellungen/abwesenheit', [SettingsController::class, 'updateAbsence'])->name('settings.absence.update');
+
+    // Hilfesystem: für jeden eingeloggten Nutzer erreichbar (erklärt das
+    // Tool selbst), Pflege der Artikel läuft separat unter Admin (siehe
+    // unten, Super-Admin-only).
+    Route::get('/hilfe', [HelpController::class, 'results'])->name('hilfe');
+    Route::get('/hilfe/artikel/{helpArticle:key}', [HelpController::class, 'show'])->name('hilfe.artikel');
 });
 
 require __DIR__.'/auth.php';

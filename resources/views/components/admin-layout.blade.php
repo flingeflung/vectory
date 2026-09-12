@@ -93,6 +93,13 @@
                 @can('access-superadmin')
                     <a
                         onclick="return window.navigateOrConfirm(event)"
+                        href="{{ route('admin.hilfeseiten') }}"
+                        class="pb-2 {{ request()->routeIs('admin.hilfeseiten*') ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700' }}"
+                    >
+                        {{ __('Hilfeseiten') }}
+                    </a>
+                    <a
+                        onclick="return window.navigateOrConfirm(event)"
                         href="{{ route('admin.superadmin') }}"
                         class="pb-2 {{ request()->routeIs('admin.superadmin') ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700' }}"
                     >
@@ -106,7 +113,7 @@
                  Personen (hat ihren eigenen Kunde-Filter/-Hinweis), Kunden
                  (die Seite IST die Kundenverwaltung) und Superadmin
                  (mandantenübergreifend, kein einzelner Kunde). --}}
-            @if (\App\Models\SystemSetting::multiTenantEnabled() && ! request()->routeIs('admin.personen*', 'admin.kunden*', 'admin.superadmin'))
+            @if (\App\Models\SystemSetting::multiTenantEnabled() && ! request()->routeIs('admin.personen*', 'admin.kunden*', 'admin.superadmin', 'admin.hilfeseiten*'))
                 <div class="mb-2 shrink-0 text-xs text-gray-400">
                     {{ __('Gültig für Kunde: :tenant', ['tenant' => \App\Support\CurrentTenant::current()?->short_name ?? \App\Support\CurrentTenant::current()?->name ?? '?']) }}
                 </div>
