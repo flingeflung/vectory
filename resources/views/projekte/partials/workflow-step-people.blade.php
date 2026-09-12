@@ -9,6 +9,18 @@
     diesen einen Schritt-Block neu laden kann, braucht $pws.
 --}}
 @if ($pws->workflowStep->functionGroups->isNotEmpty())
+    @php
+        // Erstansprechpartner (★) ist ein projektweites Konzept
+        // (project_people.is_primary), unabhängig davon, ob die
+        // tatsächliche Zuständigkeit an diesem Schritt aus dem Override
+        // oder dem Fallback kommt - Ralf, 2026-09-12: fehlte hier bisher
+        // ganz, sowohl in dieser Anzeige als auch im Zuweisen-Dialog
+        // (siehe workflow-step-people-picker.blade.php).
+        $primaryPersonIdByGroup = \App\Models\ProjectPerson::query()
+            ->where('project_id', $pws->project_id)
+            ->where('is_primary', true)
+            ->pluck('person_id', 'function_group_id');
+    @endphp
     <div class="shrink-0 text-xs" id="wfs-people-{{ $pws->id }}">
         @foreach ($pws->workflowStep->functionGroups as $group)
             @php $groupPeople = \App\Models\Task::assignedPeopleFor($pws, $group); @endphp
@@ -30,7 +42,9 @@
                     </button>
                 </div>
                 @forelse ($groupPeople as $person)
-                    <div class="text-gray-700">{{ $person->fullName() }}</div>
+                    <div class="text-gray-700">
+                        {{ $person->fullName() }}@if ($primaryPersonIdByGroup->get($group->id) === $person->id)<span class="text-amber-500" title="{{ __('Erstansprechpartner') }}">&#9733;</span>@endif
+                    </div>
                 @empty
                     <div class="text-gray-400">&ndash;</div>
                 @endforelse

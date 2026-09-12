@@ -8,6 +8,7 @@ use App\Models\Activity;
 use App\Models\FunctionGroup;
 use App\Models\Person;
 use App\Models\Project;
+use App\Models\ProjectPerson;
 use App\Models\ProjectWorkflowStep;
 use App\Models\ProjectWorkflowStepPerson;
 use App\Models\Task;
@@ -208,6 +209,14 @@ class ProjectWorkflowStepController extends Controller
             'group' => $functionGroup,
             'members' => $members,
             'currentPersonIds' => Task::assignedPeopleFor($projectWorkflowStep, $functionGroup)->pluck('id'),
+            // Erstansprechpartner (★) ist ein projektweites Konzept
+            // (project_people.is_primary) - auch hier zeigen, damit beim
+            // Zuweisen sichtbar ist, wer das aktuell ist (Ralf, 2026-09-12).
+            'primaryPersonId' => ProjectPerson::query()
+                ->where('project_id', $project->id)
+                ->where('function_group_id', $functionGroup->id)
+                ->where('is_primary', true)
+                ->value('person_id'),
         ]);
     }
 
@@ -240,6 +249,20 @@ class ProjectWorkflowStepController extends Controller
         foreach ($validIds as $personId) {
             ProjectWorkflowStepPerson::query()->firstOrCreate([
                 'project_workflow_step_id' => $projectWorkflowStep->id,
+                'function_group_id' => $functionGroup->id,
+                'person_id' => $personId,
+            ], ['tenant_id' => $project->tenant_id]);
+
+            // Wechselwirkung (Ralf, 2026-09-12): wer einem WFS hinzugefügt
+            // wird, muss auch unter "Projektbeteiligte Personen" auftauchen
+            // - sonst wäre die Person am Projekt beteiligt, ohne dass das an
+            // der zentralen Stelle sichtbar ist. Nur die Zuweisung selbst
+            // wird ergänzt (is_primary bleibt unangetastet) - keine
+            // Rückrichtung: Entfernen aus einem einzelnen Schritt-Override
+            // entfernt die Person NICHT aus project_people (sie kann über
+            // den Fallback an anderen Schritten weiter relevant sein).
+            ProjectPerson::query()->firstOrCreate([
+                'project_id' => $project->id,
                 'function_group_id' => $functionGroup->id,
                 'person_id' => $personId,
             ], ['tenant_id' => $project->tenant_id]);
