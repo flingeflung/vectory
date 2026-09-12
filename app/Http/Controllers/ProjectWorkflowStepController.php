@@ -240,6 +240,14 @@ class ProjectWorkflowStepController extends Controller
         // Bug wie bei FunctionGroupController::updateMembers() vorher.
         $validIds = Person::query()->withoutGlobalScope('tenant')->visibleInTenant($project->tenant_id)->whereIn('id', $personIds)->pluck('id');
 
+        // Vor der Änderung merken, wer HIER effektiv zuständig war (Override
+        // ODER Fallback) - Ralf, 2026-09-12: "wenn ich bei 260001 die beiden
+        // PM komplett beim WFS rausnehme, bleiben sie drin stehen [in
+        // Projektbeteiligte Personen]". Ursache: waren nur über den Fallback
+        // zuständig (kein eigener Override), ihr Rausnehmen hier löschte
+        // also gar keine Override-Zeile - project_people blieb unberührt.
+        $previouslyEffectiveIds = Task::assignedPeopleFor($projectWorkflowStep, $functionGroup)->pluck('id');
+
         ProjectWorkflowStepPerson::query()
             ->where('project_workflow_step_id', $projectWorkflowStep->id)
             ->where('function_group_id', $functionGroup->id)
@@ -256,16 +264,37 @@ class ProjectWorkflowStepController extends Controller
             // Wechselwirkung (Ralf, 2026-09-12): wer einem WFS hinzugefügt
             // wird, muss auch unter "Projektbeteiligte Personen" auftauchen
             // - sonst wäre die Person am Projekt beteiligt, ohne dass das an
-            // der zentralen Stelle sichtbar ist. Nur die Zuweisung selbst
-            // wird ergänzt (is_primary bleibt unangetastet) - keine
-            // Rückrichtung: Entfernen aus einem einzelnen Schritt-Override
-            // entfernt die Person NICHT aus project_people (sie kann über
-            // den Fallback an anderen Schritten weiter relevant sein).
+            // der zentralen Stelle sichtbar ist. is_primary bleibt
+            // unangetastet, falls die Zeile schon existiert.
             ProjectPerson::query()->firstOrCreate([
                 'project_id' => $project->id,
                 'function_group_id' => $functionGroup->id,
                 'person_id' => $personId,
             ], ['tenant_id' => $project->tenant_id]);
+        }
+
+        // Gleiche Wechselwirkung in die andere Richtung: wer hier abgehakt
+        // wurde und für diese Funktionsgruppe an KEINEM anderen Schritt
+        // dieses Projekts mehr per Override auftaucht, fällt auch aus
+        // "Projektbeteiligte Personen" raus - sonst bliebe die Person dort
+        // trotz "rausgenommen" stehen (Vietto macht das identisch, siehe
+        // ajax_workflow_editperson.php). Einzeln statt Bulk-delete(), damit
+        // ProjectPersonObserver (Aufgaben-Rebuild) pro Zeile feuert.
+        foreach ($previouslyEffectiveIds->diff($validIds) as $removedPersonId) {
+            $stillNeededElsewhere = ProjectWorkflowStepPerson::query()
+                ->where('function_group_id', $functionGroup->id)
+                ->where('person_id', $removedPersonId)
+                ->whereHas('projectWorkflowStep', fn ($query) => $query->where('project_id', $project->id))
+                ->exists();
+
+            if (! $stillNeededElsewhere) {
+                ProjectPerson::query()
+                    ->where('project_id', $project->id)
+                    ->where('function_group_id', $functionGroup->id)
+                    ->where('person_id', $removedPersonId)
+                    ->get()
+                    ->each->delete();
+            }
         }
 
         $html = view('projekte.partials.workflow-step-people', [

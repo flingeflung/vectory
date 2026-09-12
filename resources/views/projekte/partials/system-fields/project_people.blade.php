@@ -24,6 +24,9 @@
             const response = await fetch({{ \Illuminate\Support\Js::from(route('projekte.projektbeteiligte.show', $project)) }});
             if (! response.ok) return;
             document.getElementById({{ \Illuminate\Support\Js::from('project-people-field-'.$project->id) }}).outerHTML = await response.text();
+            // Verhindert eine fälschliche Ungespeichert-Meldung beim
+            // Schließen (siehe Kommentar bei window.resnapshotProjectOverlay).
+            window.resnapshotProjectOverlay?.();
         },
     }"
 >

@@ -1103,6 +1103,16 @@
                     return current !== null && current !== savedSnapshot;
                 };
 
+                // Ralf, 2026-09-12: ein Hintergrund-Abgleich, der Teile des
+                // großen Formulars neu lädt (z.B. "Projektbeteiligte
+                // Personen" nach einer Änderung im WFS-Personen-Picker,
+                // siehe project_people.blade.php), ändert die serialisierten
+                // Formularwerte, OHNE dass der Nutzer selbst etwas getan hat
+                // - ohne diesen Re-Snapshot zeigte "Schließen" danach
+                // fälschlich "Ungespeicherte Änderungen", obwohl nichts
+                // manuell geändert wurde (Ralf-Bug-Report).
+                window.resnapshotProjectOverlay = () => snapshot();
+
                 // PHP-kompatible bracket-Notation (filter[key]=x, filter[key][from]=y) für URLSearchParams.
                 const appendNested = (params, prefix, value) => {
                     if (value === null || value === undefined || value === '') {
