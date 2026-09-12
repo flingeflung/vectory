@@ -61,6 +61,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/projekte/{project}/workflow-steps/{projectWorkflowStep}/freigabe', [ProjectWorkflowStepController::class, 'toggleFreigabe'])->name('projekte.workflow-steps.freigabe');
     Route::get('/projekte/{project}/workflow-steps/{projectWorkflowStep}/activate', [ProjectWorkflowStepController::class, 'activateForm'])->name('projekte.workflow-steps.activate-form');
     Route::post('/projekte/{project}/workflow-steps/{projectWorkflowStep}/activate', [ProjectWorkflowStepController::class, 'activate'])->name('projekte.workflow-steps.activate');
+    Route::get('/projekte/{project}/workflow-steps/{projectWorkflowStep}/personen-anzeige', [ProjectWorkflowStepController::class, 'peopleSummary'])->name('projekte.workflow-steps.personen.summary');
     Route::get('/projekte/{project}/workflow-steps/{projectWorkflowStep}/personen/{functionGroup}', [ProjectWorkflowStepController::class, 'peopleForm'])->name('projekte.workflow-steps.personen.form');
     Route::post('/projekte/{project}/workflow-steps/{projectWorkflowStep}/personen/{functionGroup}', [ProjectWorkflowStepController::class, 'updatePeople'])->name('projekte.workflow-steps.personen.update');
     Route::get('/projekte/{project}/termine', [ProjectScheduleController::class, 'form'])->name('projekte.termine.form');

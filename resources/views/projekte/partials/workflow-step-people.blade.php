@@ -5,8 +5,17 @@
     Möglichkeit, den Schritt-Override direkt hier zu ändern (Vietto-
     Vorbild: Klick auf die Funktionsgruppe öffnet eine Checkbox-Liste
     aller Gruppenmitglieder). Eigene Partial, damit
-    ProjectWorkflowStepPersonController::toggle() nach dem Umschalten NUR
-    diesen einen Schritt-Block neu laden kann, braucht $pws.
+    ProjectWorkflowStepController::updatePeople() nach dem Speichern NUR
+    diesen einen Schritt-Block neu laden kann, braucht $project/$pws.
+
+    Hört zusätzlich auf "project-people-changed" (wie das
+    Projektbeteiligte-Personen-Feld, siehe project_people.blade.php) und
+    lädt sich dann selbst neu - sonst bliebe DIESER Schritt stehen, wenn
+    sich die projektweite Zuweisung durch eine Änderung an EINEM ANDEREN
+    Schritt ändert, obwohl dieser Schritt sie nur über den Fallback
+    übernimmt (Ralf-Bug-Report mit Screenshot: Schritt 2 zeigte weiterhin
+    "–", obwohl Schritt 4 die Personen per Override bereits hatte und die
+    Wechselwirkung project_people schon korrekt aktualisiert hatte).
 --}}
 @if ($pws->workflowStep->functionGroups->isNotEmpty())
     @php
@@ -21,7 +30,28 @@
             ->where('is_primary', true)
             ->pluck('person_id', 'function_group_id');
     @endphp
-    <div class="shrink-0 text-xs" id="wfs-people-{{ $pws->id }}">
+    <div
+        class="shrink-0 text-xs"
+        id="wfs-people-{{ $pws->id }}"
+        x-data="{
+            init() {
+                this.onChanged = (e) => {
+                    if (e.detail.projectId === {{ $project->id }}) {
+                        this.refresh();
+                    }
+                };
+                window.addEventListener('project-people-changed', this.onChanged);
+            },
+            destroy() {
+                window.removeEventListener('project-people-changed', this.onChanged);
+            },
+            async refresh() {
+                const response = await fetch({{ \Illuminate\Support\Js::from(route('projekte.workflow-steps.personen.summary', [$project, $pws])) }});
+                if (! response.ok) return;
+                document.getElementById({{ \Illuminate\Support\Js::from('wfs-people-'.$pws->id) }}).outerHTML = await response.text();
+            },
+        }"
+    >
         @foreach ($pws->workflowStep->functionGroups as $group)
             @php $groupPeople = \App\Models\Task::assignedPeopleFor($pws, $group); @endphp
             <div class="mb-1">

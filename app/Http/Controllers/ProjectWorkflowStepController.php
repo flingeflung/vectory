@@ -306,6 +306,30 @@ class ProjectWorkflowStepController extends Controller
     }
 
     /**
+     * Lädt NUR die Zuständigkeits-Box EINES Schritts neu (Ralf, 2026-09-12:
+     * Schritt 2 zeigte "–", obwohl Schritt 4 (per Override) Paul/Peter
+     * zuständig hatte und die dabei ausgelöste Wechselwirkung die beiden
+     * korrekt in project_people aufgenommen hatte - Schritt 2 hätte sie
+     * über den Fallback also längst zeigen müssen, tat es aber nicht, weil
+     * nur die EINE bearbeitete Schritt-Box und "Projektbeteiligte Personen"
+     * selbst neu geladen wurden, nicht die ANDEREN, nur über den Fallback
+     * betroffenen Schritte). Jede Schritt-Box hört jetzt selbst auf
+     * "project-people-changed" (siehe workflow-step-people.blade.php) und
+     * ruft sich darüber neu ab.
+     */
+    public function peopleSummary(Project $project, ProjectWorkflowStep $projectWorkflowStep): Response
+    {
+        abort_unless($projectWorkflowStep->project_id === $project->id, 404);
+
+        $html = view('projekte.partials.workflow-step-people', [
+            'project' => $project,
+            'pws' => $projectWorkflowStep->fresh(['workflowStep.functionGroups', 'people']),
+        ])->render();
+
+        return response($html);
+    }
+
+    /**
      * Wer für diesen Schritt zuständig ist, über alle seine Funktionsgruppen
      * hinweg (Override pro Schritt hat Vorrang, sonst projektweite
      * Zuweisung) - reine Wiederverwendung von Task::assignedPeopleFor().
