@@ -337,9 +337,6 @@
                                              über den schmalen Container hinweg in die
                                              Funktionsgruppen-Box (Ralf-Bug-Report). --}}
                                         <div class="break-words font-medium text-gray-900">{{ $step->title }}</div>
-                                        @if ($step->functionGroups->isNotEmpty())
-                                            <div class="text-xs text-gray-600">{{ $step->functionGroups->pluck('short_name')->implode(', ') }}</div>
-                                        @endif
 
                                         @if ($step->description)
                                             <div class="mt-0.5 text-xs text-gray-700">
