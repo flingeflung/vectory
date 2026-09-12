@@ -174,12 +174,15 @@ class ProjectWorkflowStepController extends Controller
      * Schritt (Ralf, 2026-09-12: "analog zu Vietto" - dort öffnet ein
      * Klick auf die Funktionsgruppe im WFS genau so eine Liste, siehe
      * ajax_workflow_getfktpers.php). Angeboten werden alle Mitglieder der
-     * Funktionsgruppe (nicht nur schon projektweit zugewiesene) - eine
-     * Übernahme hier ist bewusst nur eine Schritt-Ausnahme
-     * (project_workflow_step_people) und schreibt NICHT automatisch in
-     * project_people zurück (anders als Vietto - siehe
-     * Task::syncWorkflowTasksForProject()-Docblock: genau dieses
-     * automatische Zurückschreiben war dort eine Fehlerquelle).
+     * Funktionsgruppe (nicht nur schon projektweit zugewiesene). Vorangehakt
+     * ist, wer AKTUELL zuständig ist (Override falls vorhanden, sonst der
+     * projektweite Fallback, siehe Task::assignedPeopleFor()) - Ralfs
+     * Bug-Report zur Vorversion: eine leere Checkliste trotz sichtbar
+     * zuständiger Person wirkte wie ein Fehler. Speichern (updatePeople())
+     * übernimmt immer den KOMPLETTEN angehakten Zustand als neue
+     * Schritt-Ausnahme, nicht einzelne Häkchen - sonst würde das erste
+     * Anhaken einer zusätzlichen Person die vorbelegten (nur über den
+     * Fallback zuständigen) Personen stillschweigend rauswerfen.
      */
     public function peopleForm(Request $request, Project $project, ProjectWorkflowStep $projectWorkflowStep, FunctionGroup $functionGroup): View
     {
@@ -199,56 +202,47 @@ class ProjectWorkflowStepController extends Controller
             ->visibleToRole($request->user()->role)
             ->get();
 
-        $override = $projectWorkflowStep->people->where('function_group_id', $functionGroup->id);
-
         return view('projekte.partials.workflow-step-people-picker', [
             'project' => $project,
             'pws' => $projectWorkflowStep,
             'group' => $functionGroup,
             'members' => $members,
-            'currentPersonIds' => $override->pluck('person_id'),
-            // Ralf, 2026-09-12: ohne eigene Auswahl hier gilt die projektweite
-            // Zuweisung (project_people) - das muss sichtbar sein, sonst wirkt
-            // eine leere Checkliste wie "niemand zuständig", obwohl über den
-            // Fallback tatsächlich schon jemand zuständig ist (siehe
-            // Task::assignedPeopleFor()). Absichtlich NICHT vorangehakt: ein
-            // Häkchen hier würde beim Speichern eine echte Schritt-Ausnahme
-            // anlegen, die den Fallback komplett ersetzt (nicht ergänzt) -
-            // vorangehakte Fallback-Personen würden beim ersten unabhängigen
-            // Toggle sonst überraschend aus der Zuständigkeit fallen.
-            'usesProjectDefault' => $override->isEmpty(),
-            'projectDefaultPeople' => Task::assignedPeopleFor($projectWorkflowStep, $functionGroup),
+            'currentPersonIds' => Task::assignedPeopleFor($projectWorkflowStep, $functionGroup)->pluck('id'),
         ]);
     }
 
     /**
-     * Umschalten (an/aus) statt add/remove - gleiches Vietto-Vorbild
-     * (ajax_workflow_editperson.php: "Eintragungen werden getoggelt").
-     * Gibt nur den aktualisierten Zuständigkeits-Block dieses EINEN
-     * Schritts zurück (siehe workflow-step-people.blade.php), nicht das
-     * ganze Projekt neu.
+     * Speichert den KOMPLETTEN angehakten Zustand als neue Schritt-Ausnahme
+     * (project_workflow_step_people) - kein Einzel-Toggle mehr (siehe
+     * peopleForm()). Gibt nur den aktualisierten Zuständigkeits-Block
+     * dieses EINEN Schritts zurück (workflow-step-people.blade.php), nicht
+     * das ganze Projekt neu.
      */
-    public function togglePerson(Request $request, Project $project, ProjectWorkflowStep $projectWorkflowStep, FunctionGroup $functionGroup, Person $person): Response
+    public function updatePeople(Request $request, Project $project, ProjectWorkflowStep $projectWorkflowStep, FunctionGroup $functionGroup): Response
     {
         abort_unless($projectWorkflowStep->project_id === $project->id, 404);
         abort_unless($functionGroup->tenant_id === $project->tenant_id, 404);
         abort_unless($request->user()->can('project.people.manage'), 403);
 
-        $existing = ProjectWorkflowStepPerson::query()
+        $personIds = collect($request->array('person_ids'))->map(fn ($id) => (int) $id);
+        // withoutGlobalScope + visibleInTenant: sonst würden per
+        // Kundenzugriff freigegebene Personen beim Speichern stillschweigend
+        // wieder rausfallen (angehakt, aber nicht übernommen) - gleicher
+        // Bug wie bei FunctionGroupController::updateMembers() vorher.
+        $validIds = Person::query()->withoutGlobalScope('tenant')->visibleInTenant($project->tenant_id)->whereIn('id', $personIds)->pluck('id');
+
+        ProjectWorkflowStepPerson::query()
             ->where('project_workflow_step_id', $projectWorkflowStep->id)
             ->where('function_group_id', $functionGroup->id)
-            ->where('person_id', $person->id)
-            ->first();
+            ->whereNotIn('person_id', $validIds)
+            ->delete();
 
-        if ($existing) {
-            $existing->delete();
-        } else {
-            ProjectWorkflowStepPerson::query()->create([
-                'tenant_id' => $project->tenant_id,
+        foreach ($validIds as $personId) {
+            ProjectWorkflowStepPerson::query()->firstOrCreate([
                 'project_workflow_step_id' => $projectWorkflowStep->id,
                 'function_group_id' => $functionGroup->id,
-                'person_id' => $person->id,
-            ]);
+                'person_id' => $personId,
+            ], ['tenant_id' => $project->tenant_id]);
         }
 
         $html = view('projekte.partials.workflow-step-people', [
