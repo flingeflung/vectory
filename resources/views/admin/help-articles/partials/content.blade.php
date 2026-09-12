@@ -69,15 +69,9 @@
                 >
                 @csrf
                 <div class="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs text-gray-500">{{ __('Schlüssel') }}</label>
-                            <input type="text" name="key" value="{{ $selected->key }}" required class="mt-0.5 w-full rounded-md border-gray-300 font-mono text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-xs text-gray-500">{{ __('Seiten (Routennamen), zu denen dieser Artikel automatisch angezeigt wird') }}</label>
-                            <input type="text" name="route_names" value="{{ implode(', ', $selected->route_names ?? []) }}" placeholder="{{ __('z. B. admin.kunden') }}" class="mt-0.5 w-full rounded-md border-gray-300 font-mono text-sm">
-                        </div>
+                    <div>
+                        <label class="block text-xs text-gray-500">{{ __('Seiten (Routennamen), zu denen dieser Artikel automatisch angezeigt wird') }}</label>
+                        <input type="text" name="route_names" value="{{ implode(', ', $selected->route_names ?? []) }}" placeholder="{{ __('z. B. admin.kunden') }}" class="mt-0.5 w-full rounded-md border-gray-300 font-mono text-sm">
                     </div>
 
                     <div class="border-b border-gray-200">

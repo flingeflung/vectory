@@ -60,16 +60,14 @@ class HelpArticleController extends Controller
         return redirect()->route('admin.hilfeseiten', ['article' => $article->id])->with('status', 'help-article-updated');
     }
 
+    /**
+     * "key" ist rein interne Link-Adresse (siehe HelpArticle-Docblock),
+     * wird beim Anlegen einmalig erzeugt (uniqueKey()) und danach nie mehr
+     * angefasst/angezeigt - Ralf: "warum muss ich das sehen" - Bedeutung
+     * erklären UND Dopplungs-Risiko fallen damit beide weg.
+     */
     public function update(Request $request, HelpArticle $helpArticle): RedirectResponse
     {
-        $key = trim((string) $request->string('key'));
-        abort_if($key === '', 422);
-        abort_if(
-            HelpArticle::query()->where('key', $key)->where('id', '!=', $helpArticle->id)->exists(),
-            422,
-            __('Dieser Schlüssel wird schon von einem anderen Artikel verwendet.')
-        );
-
         // Freie Routennamen-Liste (ein Name pro Zeile oder Komma-getrennt) -
         // bewusst kein Pulldown über alle bekannten Routen, die Liste wäre
         // riesig und meist irrelevant; Ralf kennt die Routennamen aus dem
@@ -81,10 +79,7 @@ class HelpArticleController extends Controller
             ->values()
             ->all();
 
-        $helpArticle->update([
-            'key' => $key,
-            'route_names' => $routeNames,
-        ]);
+        $helpArticle->update(['route_names' => $routeNames]);
 
         foreach (HelpArticle::AVAILABLE_LOCALES as $locale => $label) {
             $title = trim((string) $request->string("translations.{$locale}.title"));
