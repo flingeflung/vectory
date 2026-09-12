@@ -22,7 +22,7 @@
                     <input type="text" name="name" x-ref="newChecklistName" placeholder="{{ __('Name') }}" class="w-full min-w-0 flex-1 rounded-md border-gray-300 text-xs" required>
                     @csrf
                     <button type="submit" class="shrink-0 rounded-md bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
-                        {{ __('Anlegen') }}
+                        {{ __('Speichern') }}
                     </button>
                 </form>
 
@@ -214,7 +214,7 @@
                             @csrf
                             <input type="hidden" name="checklist_section_id" value="{{ $section->id }}">
                             <input type="text" name="title" x-ref="newPointTitle{{ $section->id }}" placeholder="{{ __('Punkt') }}" required class="min-w-0 flex-1 rounded-md border-gray-300 text-xs">
-                            <button type="submit" class="shrink-0 rounded-md bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">{{ __('Anlegen') }}</button>
+                            <button type="submit" class="shrink-0 rounded-md bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
                         </form>
                         <button
                             type="button"
@@ -232,7 +232,7 @@
                     <input type="hidden" name="checklist_id" value="{{ $selectedChecklist->id }}">
                     <input type="text" name="title" x-ref="newSectionTitle" placeholder="{{ __('Abschnitt') }}" required class="flex-1 rounded-md border-gray-300 text-sm">
                     <button type="button" @click="newSection = false" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Abbrechen') }}</button>
-                    <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">{{ __('Anlegen') }}</button>
+                    <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
                 </form>
                 <button
                     type="button"
