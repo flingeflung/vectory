@@ -171,7 +171,13 @@ class PersonController extends Controller
             'end_date' => ['nullable', 'date'],
             'remarks' => ['nullable', 'string'],
             'active' => ['boolean'],
-        ], [], ['short_name' => __('Kürzel')]);
+            'is_absent' => ['boolean'],
+            'absent_until' => ['nullable', 'date', 'after_or_equal:today'],
+        ], [
+            // Gleiche eigene Meldung wie SettingsController::updateAbsence()
+            // (Laravels Standardtext übersetzt "today" nicht).
+            'absent_until.after_or_equal' => __('Das Datum darf nicht in der Vergangenheit liegen.'),
+        ], ['short_name' => __('Kürzel'), 'absent_until' => __('Abwesend bis')]);
 
         if ($validator->fails()) {
             if ($isOverlay) {
@@ -185,6 +191,7 @@ class PersonController extends Controller
 
         $validated = $validator->validated();
         $validated['active'] = $request->boolean('active');
+        $validated['is_absent'] = $request->boolean('is_absent');
         $functionGroupIds = collect($validated['function_group_ids'] ?? []);
         unset($validated['function_group_ids']);
         $person->update($validated);

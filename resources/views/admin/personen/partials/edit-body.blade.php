@@ -260,6 +260,31 @@
                     {{ __('Aktiv') }}
                 </label>
 
+                {{-- Abwesenheits-Markierung (Ralf, 2026-09-12): auch hier
+                     statt nur in den eigenen Einstellungen pflegbar, damit
+                     z. B. ein Admin die Person bei Krankheit selbst markieren
+                     kann. Gleiche Felder/Logik wie
+                     SettingsController::updateAbsence(), hier nur Teil des
+                     ohnehin vorhandenen Speichern-Buttons dieses Formulars. --}}
+                <div class="flex flex-wrap items-end gap-3">
+                    <label class="flex items-center gap-2 text-sm text-gray-700">
+                        <input type="checkbox" name="is_absent" value="1" @checked(old('is_absent', $person->is_absent)) class="rounded border-gray-300">
+                        {{ __('Abwesend') }}
+                    </label>
+                    <div>
+                        <label class="block text-xs text-gray-500">{{ __('Abwesend bis (optional)') }}</label>
+                        <input
+                            type="date"
+                            name="absent_until"
+                            value="{{ old('absent_until', $person->absent_until?->format('Y-m-d')) }}"
+                            class="mt-0.5 rounded-md border-gray-300 text-sm @error('absent_until') border-red-300 @enderror"
+                        >
+                        @error('absent_until')
+                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
+
                 @csrf
                 {{-- Sticky statt fest am Ende: das Formular hier ist oft länger
                      als der sichtbare Bereich (Ralf: Speichern-Button "nicht im
