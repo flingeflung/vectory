@@ -104,7 +104,7 @@
                             <div>
                                 <label class="block text-xs text-gray-500">{{ __('Text (Markdown)') }}</label>
                                 <p class="mt-0.5 text-xs text-gray-400">
-                                    {{ __('# Überschrift · ## Unterüberschrift · **fett** · *kursiv* · - Punkt (Liste) · 1. Punkt (nummeriert) · [Linktext](https://…) · > Zitat') }}
+                                    {{ __('# Überschrift · ## Unterüberschrift · **fett** · *kursiv* · - Punkt (Liste) · 1. Punkt (nummeriert) · [Linktext](https://…) · > Zitat · :button für einen Button/UI-Element wie im Tool', ['button' => '{+Neu}']) }}
                                 </p>
                                 <textarea name="translations[{{ $localeCode }}][body]" rows="14" class="mt-0.5 w-full rounded-md border-gray-300 font-mono text-sm">{{ $t?->body }}</textarea>
                                 <p class="mt-1 text-xs text-gray-400">

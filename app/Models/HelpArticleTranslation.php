@@ -30,6 +30,20 @@ class HelpArticleTranslation extends Model
     private const IMAGE_PLACEHOLDER_PATTERN = '/\[([\w\-. ]+\.(?:png|jpe?g|gif|webp|svg))\](?!\()/i';
 
     /**
+     * Button-/UI-Element-Zitat (Ralf, 2026-09-12): "{+Neu}" wird zu einem
+     * kleinen, nicht klickbaren Abzeichen im selben Look wie die echten
+     * Sekundär-Buttons im Tool (CLAUDE.md-Konvention) - z.B. "drücke {+Neu}"
+     * in einer Anleitung. Geschweifte statt eckiger Klammer, weil eckige
+     * schon für den Bild-Platzhalter oben vergeben ist. Läuft NACH der
+     * Markdown-Konvertierung (auf dem fertigen HTML), nicht davor wie beim
+     * Bild - sonst würde html_input=strip das selbst eingefügte <span>
+     * gleich wieder rausstreichen.
+     */
+    private const BUTTON_QUOTE_PATTERN = '/\{([^{}\n]+)\}/';
+
+    private const BUTTON_QUOTE_CLASSES = 'inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-1.5 py-0.5 text-xs font-medium text-gray-700';
+
+    /**
      * Markdown -> HTML, html_input "strip" statt "escape" (Ralf tippt hier
      * frei, versehentlich eingefügtes "<" soll nicht als kaputtes Tag im
      * Ergebnis auftauchen) - kein Freigabe-Workflow, Bearbeitung ist
@@ -43,7 +57,13 @@ class HelpArticleTranslation extends Model
             (string) $this->body
         );
 
-        return (string) Str::markdown($body, ['html_input' => 'strip']);
+        $html = (string) Str::markdown($body, ['html_input' => 'strip']);
+
+        return (string) preg_replace(
+            self::BUTTON_QUOTE_PATTERN,
+            '<span class="'.self::BUTTON_QUOTE_CLASSES.'">$1</span>',
+            $html
+        );
     }
 
     private function imageBaseUrl(): string
