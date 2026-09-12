@@ -161,6 +161,16 @@ class Project extends Model
         return $this->hasMany(ProjectWorkflowStep::class)->orderBy('sort');
     }
 
+    public function projectChecklists(): HasMany
+    {
+        return $this->hasMany(ProjectChecklist::class)->with('checklist.sections.points');
+    }
+
+    public function projectChecklistPoints(): HasMany
+    {
+        return $this->hasMany(ProjectChecklistPoint::class);
+    }
+
     public function notes(): HasMany
     {
         return $this->hasMany(ProjectNote::class)->orderBy('created_at');

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AttributeController;
 use App\Http\Controllers\Admin\BusinessUnitController;
+use App\Http\Controllers\Admin\ChecklistController;
 use App\Http\Controllers\Admin\CompanyController;
 use App\Http\Controllers\Admin\ConfigController;
 use App\Http\Controllers\Admin\CopyTemplateController;
@@ -24,6 +25,7 @@ use App\Http\Controllers\GraphicOrderController;
 use App\Http\Controllers\HelpController;
 use App\Http\Controllers\IllustrationOverviewController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProjectChecklistController;
 use App\Http\Controllers\ProjectConnectionController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectCopyController;
@@ -66,6 +68,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/projekte/{project}/workflow-steps/{projectWorkflowStep}/personen-anzeige', [ProjectWorkflowStepController::class, 'peopleSummary'])->name('projekte.workflow-steps.personen.summary');
     Route::get('/projekte/{project}/workflow-steps/{projectWorkflowStep}/personen/{functionGroup}', [ProjectWorkflowStepController::class, 'peopleForm'])->name('projekte.workflow-steps.personen.form');
     Route::post('/projekte/{project}/workflow-steps/{projectWorkflowStep}/personen/{functionGroup}', [ProjectWorkflowStepController::class, 'updatePeople'])->name('projekte.workflow-steps.personen.update');
+    Route::post('/projekte/{project}/checklisten', [ProjectChecklistController::class, 'update'])->name('projekte.checklisten.update');
+    Route::patch('/projekte/{project}/checklisten/punkte/{point}', [ProjectChecklistController::class, 'togglePoint'])->name('projekte.checklisten.punkte.toggle');
     Route::get('/projekte/{project}/termine', [ProjectScheduleController::class, 'form'])->name('projekte.termine.form');
     Route::post('/projekte/{project}/termine/berechnen', [ProjectScheduleController::class, 'recalculate'])->name('projekte.termine.recalculate');
     Route::post('/projekte/{project}/termine/uebernehmen', [ProjectScheduleController::class, 'apply'])->name('projekte.termine.apply');
@@ -163,6 +167,24 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     Route::post('/workflows/{workflow}/neue-version', [WorkflowController::class, 'newVersion'])->name('workflows.new-version');
     Route::post('/workflows/{workflow}/kopieren', [WorkflowController::class, 'duplicate'])->name('workflows.duplicate');
     Route::post('/workflows/{workflow}/kopieren-zu', [WorkflowController::class, 'copyToTenant'])->name('workflows.copy-to-tenant');
+
+    Route::get('/checklisten', [ChecklistController::class, 'index'])->name('checklisten');
+    Route::post('/checklisten', [ChecklistController::class, 'store'])->name('checklisten.store');
+    // Feste Pfade (reorder/abschnitte/punkte) vor den {checklist}/{section}/
+    // {point}-Wildcards registriert - sonst würden sie als ID interpretiert
+    // (gleiche Falle wie bei Projektkategorien/Workflows).
+    Route::post('/checklisten/reorder', [ChecklistController::class, 'reorder'])->name('checklisten.reorder');
+    Route::post('/checklisten/abschnitte', [ChecklistController::class, 'sectionStore'])->name('checklisten.abschnitte.store');
+    Route::post('/checklisten/abschnitte/reorder', [ChecklistController::class, 'sectionReorder'])->name('checklisten.abschnitte.reorder');
+    Route::post('/checklisten/abschnitte/{section}', [ChecklistController::class, 'sectionUpdate'])->name('checklisten.abschnitte.update');
+    Route::delete('/checklisten/abschnitte/{section}', [ChecklistController::class, 'sectionDestroy'])->name('checklisten.abschnitte.destroy');
+    Route::post('/checklisten/punkte', [ChecklistController::class, 'pointStore'])->name('checklisten.punkte.store');
+    Route::post('/checklisten/punkte/reorder', [ChecklistController::class, 'pointReorder'])->name('checklisten.punkte.reorder');
+    Route::post('/checklisten/punkte/{point}', [ChecklistController::class, 'pointUpdate'])->name('checklisten.punkte.update');
+    Route::delete('/checklisten/punkte/{point}', [ChecklistController::class, 'pointDestroy'])->name('checklisten.punkte.destroy');
+    Route::post('/checklisten/{checklist}/kopieren-zu', [ChecklistController::class, 'copyToTenant'])->name('checklisten.copy-to-tenant');
+    Route::post('/checklisten/{checklist}', [ChecklistController::class, 'update'])->name('checklisten.update');
+    Route::delete('/checklisten/{checklist}', [ChecklistController::class, 'destroy'])->name('checklisten.destroy');
 
     Route::get('/mail-vorlagen', [MailTemplateController::class, 'index'])->name('mail-vorlagen');
     Route::post('/mail-vorlagen', [MailTemplateController::class, 'store'])->name('mail-vorlagen.store');

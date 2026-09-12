@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Attribute;
+use App\Models\Checklist;
 use App\Models\DisplayFilterSet;
 use App\Models\FunctionGroup;
 use App\Models\Market;
@@ -635,7 +636,13 @@ class ProjectController extends Controller
         $filters = $this->filtersFromRequest($request);
 
         return [
-            'project' => $project->loadMissing(['markets', 'projectPeople.person', 'projectPeople.functionGroup', 'workflow', 'activities.user', 'projectWorkflowSteps.workflowStep.functionGroups', 'projectWorkflowSteps.people.functionGroup', 'projectWorkflowSteps.people.person', 'graphicOrders.initiatedBy', 'graphicOrders.illustrator']),
+            'project' => $project->loadMissing(['markets', 'projectPeople.person', 'projectPeople.functionGroup', 'workflow', 'activities.user', 'projectWorkflowSteps.workflowStep.functionGroups', 'projectWorkflowSteps.people.functionGroup', 'projectWorkflowSteps.people.person', 'graphicOrders.initiatedBy', 'graphicOrders.illustrator', 'projectChecklists.checklist.sections.points', 'projectChecklists.activatedBy', 'projectChecklistPoints.doneBy']),
+            // Für den "Checklisten auswählen"-Dialog - der aktuell zugewiesene
+            // Katalog, gleiches Prinzip wie bei availableWorkflows unten (auch
+            // inaktive Checklisten bleiben sichtbar, wenn schon zugewiesen).
+            'allChecklists' => Checklist::query()->where('tenant_id', $project->tenant_id)
+                ->where(fn (Builder $query) => $query->where('active', true)->orWhereIn('id', $project->projectChecklists->pluck('checklist_id')))
+                ->orderBy('sort')->get(),
             'attributes' => $project->relevantAttributes(),
             'stammdatenAttributes' => $project->sectionAttributes(\App\Models\Attribute::SECTION_STAMMDATEN),
             'ablaufdatenAttributes' => $project->sectionAttributes(\App\Models\Attribute::SECTION_ABLAUFDATEN),

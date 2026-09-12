@@ -7,6 +7,7 @@ use App\Models\Activity;
 use App\Models\Attribute;
 use App\Models\CopyTemplate;
 use App\Models\Project;
+use App\Models\ProjectChecklist;
 use App\Models\ProjectConnection;
 use App\Models\ProjectPerson;
 use App\Models\ProjectWorkflowStep;
@@ -45,7 +46,7 @@ class ProjectCopyController extends Controller
      * gleiche Liste würde sich sonst mit Feldern füllen, die so oder so
      * nichts tun.
      */
-    private const NO_EFFECT_KEYS = ['archived', 'date_progress', 'progress', 'checklist', 'project_connections', 'remarks_echo', 'change_log'];
+    private const NO_EFFECT_KEYS = ['archived', 'date_progress', 'progress', 'project_connections', 'remarks_echo', 'change_log'];
 
     public function form(Project $project): View
     {
@@ -198,6 +199,25 @@ class ProjectCopyController extends Controller
                             'function_group_id' => $projectPerson->function_group_id,
                             'person_id' => $projectPerson->person_id,
                             'is_primary' => $projectPerson->is_primary,
+                        ]);
+                    }
+                }
+
+                // Ralf, 2026-09-12 (nach Vietto-Analyse): "die Zuordnung mit
+                // übernehmen, aber den Fortschritt natürlich nicht, das
+                // ergibt keinen Sinn" - anders als Vietto, wo genau
+                // umgekehrt nur der Abhak-Stand (checklist_items) kopiert
+                // wurde, aber NICHT die Zuordnung selbst (checklist_
+                // projekt_cx), was zu "unsichtbaren" Häkchen führte, die
+                // erst bei erneutem manuellem Zuweisen wieder auftauchten.
+                if (in_array('checklist', $checkedKeys, true)) {
+                    foreach ($sourceProject->projectChecklists as $projectChecklist) {
+                        ProjectChecklist::query()->create([
+                            'tenant_id' => $tenantId,
+                            'project_id' => $newProject->id,
+                            'checklist_id' => $projectChecklist->checklist_id,
+                            'activated_by_person_id' => $projectChecklist->activated_by_person_id,
+                            'activated_at' => now(),
                         ]);
                     }
                 }
