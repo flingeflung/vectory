@@ -20,6 +20,7 @@ use App\Models\Tenant;
 use App\Models\ProjectTypeMain;
 use App\Models\ProjectTypeSub;
 use App\Models\ProjectWorkflowStep;
+use App\Models\ProjectWorkflowStepPerson;
 use App\Models\Workflow;
 use App\Models\WorkflowStep;
 use App\Services\ProjectDirectoryLocator;
@@ -575,6 +576,29 @@ class ProjectController extends Controller
                     'is_primary' => (int) ($primaryInput[$groupId] ?? null) === (int) $personId,
                 ]);
             }
+        }
+
+        // Wechselwirkung in die andere Richtung (Ralf, 2026-09-12,
+        // Screenshot-Bug-Report): wird eine Person hier komplett aus einer
+        // Funktionsgruppe entfernt, muss sie auch aus jedem Schritt-Override
+        // (project_workflow_step_people) dieser Gruppe verschwinden - sonst
+        // bleibt sie an genau dem Schritt "hängen", an dem sie mal per
+        // WFS-Picker explizit zugewiesen wurde, obwohl sie projektweit
+        // gerade entfernt wurde (wirkte wie eine Karteileiche). Einzeln
+        // statt Bulk-delete(), damit ProjectWorkflowStepPersonObserver
+        // (Aufgaben-Rebuild) pro Zeile feuert.
+        foreach ($currentPeopleByGroup as $groupId => $oldPersonIds) {
+            $removedPersonIds = array_diff($oldPersonIds, $incomingPeopleByGroup[$groupId] ?? []);
+            if (empty($removedPersonIds)) {
+                continue;
+            }
+
+            ProjectWorkflowStepPerson::query()
+                ->where('function_group_id', $groupId)
+                ->whereIn('person_id', $removedPersonIds)
+                ->whereHas('projectWorkflowStep', fn ($query) => $query->where('project_id', $project->id))
+                ->get()
+                ->each->delete();
         }
 
         return $this->respondAfterSave($request, $project);
