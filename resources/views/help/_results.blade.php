@@ -31,7 +31,7 @@
                  stattdessen mit ein paar gezielten Arbitrary-Variants
                  lesbar machen (Preflight setzt sonst list-style:none, ohne
                  sichtbare Aufzählungszeichen/Nummerierung). --}}
-            <div class="max-w-none space-y-2 text-sm text-gray-700 [&_a]:text-indigo-600 [&_a]:underline [&_h1]:mt-3 [&_h1]:text-base [&_h1]:font-semibold [&_h1]:text-gray-900 [&_h2]:mt-3 [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:text-gray-900 [&_img]:my-1 [&_img]:max-h-32 [&_img]:cursor-zoom-in [&_img]:rounded-md [&_img]:border [&_img]:border-gray-200 [&_ol]:list-decimal [&_ol]:space-y-0.5 [&_ol]:pl-5 [&_p]:leading-relaxed [&_ul]:list-disc [&_ul]:space-y-0.5 [&_ul]:pl-5">{!! $translation->bodyHtml() !!}</div>
+            <div class="max-w-none space-y-2 text-sm text-gray-700 [&_a]:text-indigo-600 [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-gray-300 [&_blockquote]:pl-2 [&_blockquote]:text-gray-500 [&_code]:rounded [&_code]:bg-gray-100 [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-xs [&_h1]:mt-3 [&_h1]:text-base [&_h1]:font-semibold [&_h1]:text-gray-900 [&_h2]:mt-3 [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:text-gray-900 [&_img]:my-1 [&_img]:max-h-32 [&_img]:cursor-zoom-in [&_img]:rounded-md [&_img]:border [&_img]:border-gray-200 [&_ol]:list-decimal [&_ol]:space-y-0.5 [&_ol]:pl-5 [&_p]:leading-relaxed [&_ul]:list-disc [&_ul]:space-y-0.5 [&_ul]:pl-5">{!! $translation->bodyHtml() !!}</div>
         </div>
     @else
         <div class="space-y-2 px-1 py-2 text-sm text-gray-400">
