@@ -26,7 +26,10 @@
         @endif
     @elseif ($article && $translation)
         <div class="space-y-2">
-            <h3 class="text-sm font-semibold text-gray-900">{{ $translation->title }}</h3>
+            {{-- Bewusst gedeckter als eine echte Überschrift im Markdown-Text
+                 (text-gray-500 statt -900) - Ralf: von einer "echten" ÜS1 im
+                 Text kaum zu unterscheiden gewesen. --}}
+            <h3 class="text-sm font-semibold text-gray-500">{{ $translation->title }}</h3>
             {{-- Kein @tailwindcss/typography installiert - Markdown-Ausgabe
                  stattdessen mit ein paar gezielten Arbitrary-Variants
                  lesbar machen (Preflight setzt sonst list-style:none, ohne
