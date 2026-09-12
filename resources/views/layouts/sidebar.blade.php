@@ -192,6 +192,21 @@
             >
                 {{ __('Admin') }}
             </a>
+
+            @if (request()->routeIs('admin.*'))
+                <div class="ml-3 space-y-1 border-l border-gray-200 pl-2">
+                    @foreach (\App\Support\AdminNav::visibleGroups() as $groupLabel => $items)
+                        @php($groupActive = $items->contains(fn ($item) => request()->routeIs($item['match'])))
+                        <a
+                            onclick="return window.navigateOrConfirm(event)"
+                            href="{{ route($items->first()['route']) }}"
+                            class="block px-3 py-1.5 rounded-md text-sm {{ $groupActive ? 'bg-sidebar-active text-sidebar-active-content' : 'text-sidebar-content hover:bg-sidebar-hover hover:text-sidebar-content-hover' }}"
+                        >
+                            {{ $groupLabel }}
+                        </a>
+                    @endforeach
+                </div>
+            @endif
         @endcan
     </nav>
 </aside>
