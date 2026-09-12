@@ -194,7 +194,7 @@
             </a>
 
             @if (request()->routeIs('admin.*'))
-                <div class="ml-3 space-y-1 border-l border-gray-200 pl-2">
+                <div class="ml-3 space-y-1 border-l border-gray-200 pl-4">
                     @foreach (\App\Support\AdminNav::visibleGroups() as $groupLabel => $items)
                         @php($groupActive = $items->contains(fn ($item) => request()->routeIs($item['match'])))
                         <a
