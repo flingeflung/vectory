@@ -116,7 +116,12 @@
                     }
                 },
             }"
-            @submit.prevent="save($event)"
+            {{-- stopPropagation: sonst fängt zusätzlich der globale
+                 document-Submit-Handler im Overlay (app.blade.php) dasselbe
+                 Submit ab und schickt es nochmal ab (FormData ohne
+                 name-Attribute an den Checkboxen -> leerer Payload), was den
+                 gerade gespeicherten Stand sofort wieder löscht. --}}
+            @submit.prevent="$event.stopPropagation(); save($event)"
             class="min-h-0 flex-1 overflow-y-auto p-4"
         >
             @if ($allChecklists->isEmpty())
