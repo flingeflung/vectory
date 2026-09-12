@@ -28,6 +28,11 @@ class MailTemplateController extends Controller
         'start_date' => 'Start',
         'end_date' => 'Ende',
         'publication_date' => 'Publikation',
+        // Ralf, 2026-09-12: bewusst NUR das Änderungsprotokoll, nicht die
+        // Bemerkungen (die bleiben rein intern, siehe ProjectNote) - beim
+        // Einfügen immer das komplette, aktuelle Protokoll (alle Einträge),
+        // kein einzelner Eintrag.
+        'change_log' => 'Änderungsprotokoll',
     ];
 
     public function index(Request $request): View
