@@ -6,11 +6,14 @@ use App\Enums\ActivityType;
 use App\Mail\WorkflowStepActivatedMail;
 use App\Models\Activity;
 use App\Models\FunctionGroup;
+use App\Models\Person;
 use App\Models\Project;
 use App\Models\ProjectWorkflowStep;
+use App\Models\ProjectWorkflowStepPerson;
 use App\Models\Task;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
@@ -164,6 +167,96 @@ class ProjectWorkflowStepController extends Controller
         }
 
         return response()->json(['open_graphic_orders_count' => $openGraphicOrdersCount]);
+    }
+
+    /**
+     * Checkbox-Liste aller Mitglieder EINER Funktionsgruppe für EINEN
+     * Schritt (Ralf, 2026-09-12: "analog zu Vietto" - dort öffnet ein
+     * Klick auf die Funktionsgruppe im WFS genau so eine Liste, siehe
+     * ajax_workflow_getfktpers.php). Angeboten werden alle Mitglieder der
+     * Funktionsgruppe (nicht nur schon projektweit zugewiesene) - eine
+     * Übernahme hier ist bewusst nur eine Schritt-Ausnahme
+     * (project_workflow_step_people) und schreibt NICHT automatisch in
+     * project_people zurück (anders als Vietto - siehe
+     * Task::syncWorkflowTasksForProject()-Docblock: genau dieses
+     * automatische Zurückschreiben war dort eine Fehlerquelle).
+     */
+    public function peopleForm(Request $request, Project $project, ProjectWorkflowStep $projectWorkflowStep, FunctionGroup $functionGroup): View
+    {
+        abort_unless($projectWorkflowStep->project_id === $project->id, 404);
+        abort_unless($functionGroup->tenant_id === $project->tenant_id, 404);
+
+        $projectWorkflowStep->loadMissing('workflowStep.functionGroups', 'people');
+        abort_unless($projectWorkflowStep->workflowStep->functionGroups->contains('id', $functionGroup->id), 404);
+
+        // withoutGlobalScope('tenant') + visibleInTenant(): sonst wären per
+        // Kundenzugriff freigegebene Mitglieder (anderer Heimat-Mandant)
+        // unsichtbar - gleiches Muster wie ProjectController::detailData()
+        // (allFunctionGroups), sonst identischer Bug an zweiter Stelle.
+        $members = $functionGroup->members()
+            ->withoutGlobalScope('tenant')
+            ->visibleInTenant($project->tenant_id)
+            ->visibleToRole($request->user()->role)
+            ->get();
+
+        $override = $projectWorkflowStep->people->where('function_group_id', $functionGroup->id);
+
+        return view('projekte.partials.workflow-step-people-picker', [
+            'project' => $project,
+            'pws' => $projectWorkflowStep,
+            'group' => $functionGroup,
+            'members' => $members,
+            'currentPersonIds' => $override->pluck('person_id'),
+            // Ralf, 2026-09-12: ohne eigene Auswahl hier gilt die projektweite
+            // Zuweisung (project_people) - das muss sichtbar sein, sonst wirkt
+            // eine leere Checkliste wie "niemand zuständig", obwohl über den
+            // Fallback tatsächlich schon jemand zuständig ist (siehe
+            // Task::assignedPeopleFor()). Absichtlich NICHT vorangehakt: ein
+            // Häkchen hier würde beim Speichern eine echte Schritt-Ausnahme
+            // anlegen, die den Fallback komplett ersetzt (nicht ergänzt) -
+            // vorangehakte Fallback-Personen würden beim ersten unabhängigen
+            // Toggle sonst überraschend aus der Zuständigkeit fallen.
+            'usesProjectDefault' => $override->isEmpty(),
+            'projectDefaultPeople' => Task::assignedPeopleFor($projectWorkflowStep, $functionGroup),
+        ]);
+    }
+
+    /**
+     * Umschalten (an/aus) statt add/remove - gleiches Vietto-Vorbild
+     * (ajax_workflow_editperson.php: "Eintragungen werden getoggelt").
+     * Gibt nur den aktualisierten Zuständigkeits-Block dieses EINEN
+     * Schritts zurück (siehe workflow-step-people.blade.php), nicht das
+     * ganze Projekt neu.
+     */
+    public function togglePerson(Request $request, Project $project, ProjectWorkflowStep $projectWorkflowStep, FunctionGroup $functionGroup, Person $person): Response
+    {
+        abort_unless($projectWorkflowStep->project_id === $project->id, 404);
+        abort_unless($functionGroup->tenant_id === $project->tenant_id, 404);
+        abort_unless($request->user()->can('project.people.manage'), 403);
+
+        $existing = ProjectWorkflowStepPerson::query()
+            ->where('project_workflow_step_id', $projectWorkflowStep->id)
+            ->where('function_group_id', $functionGroup->id)
+            ->where('person_id', $person->id)
+            ->first();
+
+        if ($existing) {
+            $existing->delete();
+        } else {
+            ProjectWorkflowStepPerson::query()->create([
+                'tenant_id' => $project->tenant_id,
+                'project_workflow_step_id' => $projectWorkflowStep->id,
+                'function_group_id' => $functionGroup->id,
+                'person_id' => $person->id,
+            ]);
+        }
+
+        $html = view('projekte.partials.workflow-step-people', [
+            'project' => $project,
+            'pws' => $projectWorkflowStep->fresh(['workflowStep.functionGroups', 'people']),
+        ])->render();
+
+        return response($html);
     }
 
     /**

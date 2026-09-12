@@ -1696,6 +1696,46 @@
         </script>
 
         {{--
+            Ralf, 2026-09-12 ("analog zu Vietto"): welche Person(en) für eine
+            Funktionsgruppe an EINEM Schritt zuständig sind, direkt im
+            Workflow-Schritte-Tab änderbar - Klick auf die Funktionsgruppe
+            öffnet dieses Modal, Checkboxen speichern sofort (siehe
+            workflow-step-people-picker.blade.php).
+        --}}
+        <x-modal name="workflow-step-people" max-width="sm">
+            <div class="flex max-h-[85vh] flex-col">
+                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Zuständige Personen') }}</h3>
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'workflow-step-people' }))"
+                        class="text-gray-400 hover:text-gray-600"
+                        aria-label="{{ __('Schließen') }}"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="workflow-step-people-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
+                    {{ __('Lädt…') }}
+                </div>
+            </div>
+        </x-modal>
+
+        <script>
+            (function () {
+                const peopleBody = () => document.getElementById('workflow-step-people-body');
+
+                window.openWorkflowStepPeople = async (projectId, projectWorkflowStepId, functionGroupId) => {
+                    peopleBody().innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
+                    window.dispatchEvent(new CustomEvent('open-modal', { detail: 'workflow-step-people' }));
+                    peopleBody().innerHTML = await fetch(`/projekte/${projectId}/workflow-steps/${projectWorkflowStepId}/personen/${functionGroupId}`).then((r) => r.text());
+                };
+            })();
+        </script>
+
+        {{--
             Terminberechnung (Vietto-Vorbild: ajax_workflow_edittermine.php) -
             gleiches Muster wie das Aktivieren-Modal: eigenständig, global,
             lädt/aktualisiert seinen Inhalt per fetch(). window.reloadProjectSchedule()

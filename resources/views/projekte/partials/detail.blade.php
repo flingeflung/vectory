@@ -322,9 +322,6 @@
                                 $step = $pws->workflowStep;
                                 $isDone = $pws->completed_at !== null;
                             @endphp
-                            @php
-                                $peopleByGroup = $pws->people->groupBy('function_group_id');
-                            @endphp
                             <div class="flex w-full items-start gap-3">
                             <div
                                 x-data="{ expanded: false }"
@@ -425,21 +422,7 @@
                                     </div>
                                 </div>
 
-                                @if ($step->functionGroups->isNotEmpty())
-                                    <div class="shrink-0 text-xs">
-                                        @foreach ($step->functionGroups as $group)
-                                            @php $groupPeople = $peopleByGroup->get($group->id, collect()); @endphp
-                                            <div class="mb-1">
-                                                <div class="font-semibold text-gray-800">{{ $group->name }}</div>
-                                                @forelse ($groupPeople as $entry)
-                                                    <div class="text-gray-700">{{ $entry->person->fullName() }}</div>
-                                                @empty
-                                                    <div class="text-gray-400">&ndash;</div>
-                                                @endforelse
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @endif
+                                @include('projekte.partials.workflow-step-people', ['pws' => $pws])
                                 </div>
 
                                 {{-- Sonderbutton INNERHALB der Schritt-Box, nicht daneben (Ralf:

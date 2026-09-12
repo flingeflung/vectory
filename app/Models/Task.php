@@ -169,7 +169,13 @@ class Task extends Model
         $override = $step->people->where('function_group_id', $functionGroup->id);
 
         if ($override->isNotEmpty()) {
-            return Person::query()->whereIn('id', $override->pluck('person_id'))->get();
+            // withoutGlobalScope('tenant'): eine per Kundenzugriff freigegebene
+            // Person (anderer Heimat-Mandant) wäre sonst unsichtbar - gleicher
+            // Bug wie bei ProjectPerson::person() etc., hier bisher unbemerkt,
+            // weil project_workflow_step_people mangels UI praktisch nie
+            // befüllt war (Ralf, 2026-09-12, beim ersten echten Testen mit
+            // der neuen Zuweisungs-UI gefunden).
+            return Person::withoutGlobalScope('tenant')->whereIn('id', $override->pluck('person_id'))->get();
         }
 
         return ProjectPerson::query()

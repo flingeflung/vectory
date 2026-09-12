@@ -1,0 +1,40 @@
+{{--
+    Ralf, 2026-09-12: Wer an diesem Schritt je Funktionsgruppe zuständig
+    ist (Override pro Schritt hat Vorrang, sonst Fallback auf die
+    projektweite Zuweisung - siehe Task::assignedPeopleFor()), MIT
+    Möglichkeit, den Schritt-Override direkt hier zu ändern (Vietto-
+    Vorbild: Klick auf die Funktionsgruppe öffnet eine Checkbox-Liste
+    aller Gruppenmitglieder). Eigene Partial, damit
+    ProjectWorkflowStepPersonController::toggle() nach dem Umschalten NUR
+    diesen einen Schritt-Block neu laden kann, braucht $pws.
+--}}
+@if ($pws->workflowStep->functionGroups->isNotEmpty())
+    <div class="shrink-0 text-xs" id="wfs-people-{{ $pws->id }}">
+        @foreach ($pws->workflowStep->functionGroups as $group)
+            @php $groupPeople = \App\Models\Task::assignedPeopleFor($pws, $group); @endphp
+            <div class="mb-1">
+                <div class="flex items-center gap-1">
+                    <span class="font-semibold text-gray-800">{{ $group->name }}</span>
+                    {{-- Klickbares sieht wie ein Button aus, kein Text-Link
+                         (CLAUDE.md-Konvention) - gleiches kompaktes
+                         Icon-Button-Muster wie "Termine berechnen" oben. --}}
+                    <button
+                        type="button"
+                        @click.stop="window.openWorkflowStepPeople({{ $project->id }}, {{ $pws->id }}, {{ $group->id }})"
+                        class="text-gray-400 hover:text-gray-700"
+                        title="{{ __('Zuständige Person(en) ändern') }}"
+                    >
+                        <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
+                        </svg>
+                    </button>
+                </div>
+                @forelse ($groupPeople as $person)
+                    <div class="text-gray-700">{{ $person->fullName() }}</div>
+                @empty
+                    <div class="text-gray-400">&ndash;</div>
+                @endforelse
+            </div>
+        @endforeach
+    </div>
+@endif
