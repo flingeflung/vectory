@@ -113,6 +113,9 @@
                                 <p class="mt-1 text-xs text-gray-400">
                                     {{ __('Zu einer anderen Hilfeseite verlinken: :placeholder schreiben, genau der Titel der Zielseite (wie links in der Liste zu sehen) - springt beim Klick direkt dorthin.', ['placeholder' => '[[Kunden klonen]]']) }}
                                 </p>
+                                <p class="mt-1 text-xs text-gray-400">
+                                    {{ __('Zu einer echten Seite im Tool verlinken: :placeholder - der Routenname ist derselbe technische Wert, den dieses Panel zeigt, wenn für eine Seite noch keine Hilfeseite existiert. Kein fest eingetippter Pfad, funktioniert dadurch in jeder Umgebung.', ['placeholder' => '[Zur Kundenverwaltung](route:admin.kunden)']) }}
+                                </p>
                             </div>
                         </div>
                     @endforeach

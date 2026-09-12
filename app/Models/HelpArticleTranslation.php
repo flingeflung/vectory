@@ -5,7 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
+use Throwable;
 
 #[Fillable(['help_article_id', 'locale', 'title', 'keywords', 'body'])]
 class HelpArticleTranslation extends Model
@@ -56,6 +58,20 @@ class HelpArticleTranslation extends Model
     private const ARTICLE_LINK_PATTERN = '/\[\[([^\[\]]+)\]\]/';
 
     /**
+     * Link zu einer echten Tool-Seite (Ralf, 2026-09-12: "das ist ja dann
+     * eine absolute URL, keine relative. In einer anderen Umgebung
+     * funktioniert er ja nicht!") - normale Markdown-Link-Syntax
+     * "[Text](route:admin.kunden)" statt eines fest eingetippten Pfads.
+     * "route:" ist kein echtes URL-Schema, nur ein Marker, den wir NACH der
+     * Markdown-Konvertierung selbst durch die per route()-Helper (also
+     * umgebungsunabhängig) erzeugte echte Adresse ersetzen. Der Routenname
+     * ist derselbe technische Wert, den das Hilfe-Panel schon anzeigt, wenn
+     * für eine Seite noch keine Hilfeseite existiert (siehe
+     * HelpController::results()).
+     */
+    private const ROUTE_LINK_PATTERN = '/<a href="route:([a-zA-Z0-9_.\-]+)">(.*?)<\/a>/';
+
+    /**
      * Markdown -> HTML, html_input "strip" statt "escape" (Ralf tippt hier
      * frei, versehentlich eingefügtes "<" soll nicht als kaputtes Tag im
      * Ergebnis auftauchen) - kein Freigabe-Workflow, Bearbeitung ist
@@ -76,6 +92,22 @@ class HelpArticleTranslation extends Model
             '<span class="'.self::BUTTON_QUOTE_CLASSES.'">$1</span>',
             $html
         );
+
+        $html = (string) preg_replace_callback(self::ROUTE_LINK_PATTERN, function (array $match): string {
+            [, $routeName, $label] = $match;
+
+            if (Route::has($routeName)) {
+                try {
+                    return '<a href="'.e(route($routeName)).'">'.$label.'</a>';
+                } catch (Throwable) {
+                    // Route erwartet Parameter (z.B. projekte.show) - aus
+                    // generischem Hilfetext heraus nicht sinnvoll auflösbar,
+                    // fällt unten durch wie ein unbekannter Routenname.
+                }
+            }
+
+            return '<span class="text-red-500 underline decoration-dotted" title="'.e(__('Keine Seite mit diesem Routennamen gefunden.')).'">'.$label.'</span>';
+        }, $html);
 
         return (string) preg_replace_callback(self::ARTICLE_LINK_PATTERN, function (array $match): string {
             $title = trim($match[1]);
