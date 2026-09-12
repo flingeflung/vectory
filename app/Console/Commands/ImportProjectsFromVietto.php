@@ -3,6 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Models\Project;
+use App\Models\ProjectTypeMain;
+use App\Models\ProjectTypeSub;
 use App\Models\Tenant;
 use Faker\Factory as FakerFactory;
 use Illuminate\Console\Command;
@@ -25,6 +27,20 @@ class ImportProjectsFromVietto extends Command
 
     protected $description = 'Projekte aus der Vietto-Referenz-DB anonymisiert nach Vectory importieren';
 
+    /**
+     * Für Sanitär in Vietto inaktive Arten, auf neue Arten umgehängt
+     * (Ralf-Entscheidung 2026-09-09, vormals in BackfillProjectTypeIds).
+     *
+     * @var array<int, array<int, string>>
+     */
+    private array $subOverridesByTenant = [
+        1 => [
+            10 => 'Fachbuch',
+            17 => 'Fachbuch',
+            20 => 'Datenblatt',
+        ],
+    ];
+
     public function handle(): int
     {
         $tenant = Tenant::first();
@@ -34,6 +50,17 @@ class ImportProjectsFromVietto extends Command
 
             return self::FAILURE;
         }
+
+        // Direkt auf die echten FKs auflösen statt auf rohe Vietto-Codes -
+        // project_type_main_id/project_type_sub_id sind gescoped auf den
+        // Mandanten, ein Legacy-Code ist nur innerhalb eines Mandanten
+        // eindeutig.
+        $mainsByLegacyId = ProjectTypeMain::query()->where('tenant_id', $tenant->id)
+            ->whereNotNull('legacy_id')->pluck('id', 'legacy_id');
+        $subsByLegacyId = ProjectTypeSub::query()->where('tenant_id', $tenant->id)
+            ->whereNotNull('legacy_id')->pluck('id', 'legacy_id');
+        $subsByName = ProjectTypeSub::query()->where('tenant_id', $tenant->id)->pluck('id', 'name');
+        $subOverrides = $this->subOverridesByTenant[$tenant->id] ?? [];
 
         $query = DB::connection('vietto')->table('projekte')->orderBy('pn');
 
@@ -60,13 +87,19 @@ class ImportProjectsFromVietto extends Command
         foreach ($rows as $row) {
             $faker->seed(crc32($row->pn));
 
+            // Legacy-Wert 0 bedeutet in Vietto "nichts ausgewählt".
+            $subOverrideName = $subOverrides[$row->projIDsub] ?? null;
+            $projectTypeSubId = $subOverrideName
+                ? ($subsByName[$subOverrideName] ?? null)
+                : ($row->projIDsub ? ($subsByLegacyId[$row->projIDsub] ?? null) : null);
+
             Project::updateOrCreate(
                 ['tenant_id' => $tenant->id, 'source_pn' => $row->pn],
                 [
                     'title' => $row->strTitle ?: $faker->sentence(4),
                     'codename' => $row->strCodename !== null && $row->strCodename !== '' ? $faker->word() : null,
-                    'project_type_main' => $row->projIDmain,
-                    'project_type_sub' => $row->projIDsub,
+                    'project_type_main_id' => $row->projIDmain ? ($mainsByLegacyId[$row->projIDmain] ?? null) : null,
+                    'project_type_sub_id' => $projectTypeSubId,
                     'version' => $row->intVersion,
                     'status' => $row->intBearbStatus,
                     'archived' => (bool) $row->blnIsInArchiv,

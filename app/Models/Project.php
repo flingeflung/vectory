@@ -15,7 +15,7 @@ use Illuminate\Support\Collection;
 
 #[Fillable([
     'tenant_id', 'source_pn', 'title', 'codename', 'initiator', 'system_model',
-    'construction_year', 'project_type_main', 'project_type_sub', 'project_type_main_id', 'project_type_sub_id', 'version',
+    'construction_year', 'project_type_main_id', 'project_type_sub_id', 'version',
     'status', 'creation_type', 'archived', 'localization', 'publication_date', 'start_date', 'end_date', 'remarks',
     'attributes', 'workflow_id',
 ])]
@@ -71,11 +71,10 @@ class Project extends Model
     }
 
     /**
-     * Echte Zuordnung zur Projektart - anders als project_type_sub (roher
-     * Vietto-Legacy-Code, siehe unten) ein echter Fremdschlüssel, der auch
-     * für nicht aus Vietto stammende Arten funktioniert. project_type_sub
-     * selbst bleibt unverändert bestehen (wird noch für
-     * attribute_project_type/relevantAttributes() gebraucht).
+     * Echte Zuordnung zur Projektart - ein echter Fremdschlüssel, der auch
+     * für nicht aus Vietto stammende Arten funktioniert (anders als die
+     * inzwischen entfernten rohen Vietto-Legacy-Codes project_type_main/
+     * project_type_sub).
      */
     public function projectTypeSub(): BelongsTo
     {
