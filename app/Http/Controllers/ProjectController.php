@@ -15,6 +15,7 @@ use App\Models\GraphicOrder;
 use App\Models\Market;
 use App\Models\MarketSet;
 use App\Models\Project;
+use App\Models\ProjectGroup;
 use App\Models\ProjectPerson;
 use App\Models\ProjectTypeMain;
 use App\Models\ProjectTypeSub;
@@ -122,7 +123,23 @@ class ProjectController extends Controller
             ? array_values(array_unique([...ProjectFilterCatalog::activeFieldsFor($user), ...array_keys($filters)]))
             : ProjectFilterCatalog::activeFieldsFor($user);
 
+        // Ralf-Bug-Report, 2026-09-13: "Projekte dieser Gruppe anzeigen"
+        // (reopen_group) öffnete das Gruppieren-Panel bisher per Nach-Laden
+        // (Fetch nach dem ersten Render) - das verursachte ein sichtbares
+        // "Flush und neu laden" des Panel-Inhalts. Bei reopen_group werden
+        // Gruppenliste + Mitglieder-IDs jetzt direkt mit dieser Seite selbst
+        // mitgerendert (kein zweiter Request mehr nötig für den ersten
+        // Anblick), siehe project-group-modal.blade.php.
+        $reopenGroups = null;
+        $reopenMemberIds = collect();
+        if ($request->filled('reopen_group')) {
+            $reopenGroups = $user->projectGroups()->withCount(['projects', 'viewers'])->orderBy('name')->get();
+            $reopenMemberIds = ProjectGroup::query()->find($request->integer('reopen_group'))?->projects()->pluck('projects.id') ?? collect();
+        }
+
         return view('projekte.index', [
+            'reopenGroups' => $reopenGroups,
+            'reopenMemberIds' => $reopenMemberIds,
             ...$this->rowData($projects, $visibleColumns, $user),
             'columns' => $visibleColumns,
             'allColumns' => $allColumns,

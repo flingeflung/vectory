@@ -182,25 +182,13 @@
                 document.getElementById('project-group-panel-body-{{ $project?->id ?? 'uebersicht' }}').innerHTML = html;
             },
         }"
-        {{--
-            Ralf (nach Vietto-Vorbild): Häkchen-Spalte blendet sich aus,
-            sobald das Panel geschlossen wird - nicht nur beim Öffnen an.
-            Das $watch hier greift auf "show" der äußeren <x-modal>-
-            Komponente zu (Alpines verschachtelte x-data-Scopes reichen
-            Eltern-Properties automatisch an Kind-Scopes durch).
-
-            Zweiter Teil (nur bei $reopen): die Panel-BOX selbst startet
-            dank :show-Prop schon offen (kein Flackern mehr, siehe
-            projekte/index.blade.php), aber ihr INHALT (Gruppen-Auswahl
-            usw.) kommt normalerweise erst durch den open-modal-Event
-            rein - der wird bei einem bereits offenen Panel nie gefeuert.
-            Deshalb hier direkt selbst laden.
-        --}}
+        {{-- Ralf (nach Vietto-Vorbild): Häkchen-Spalte blendet sich aus,
+             sobald das Panel geschlossen wird - nicht nur beim Öffnen an.
+             Das $watch hier greift auf "show" der äußeren <x-modal>-
+             Komponente zu (Alpines verschachtelte x-data-Scopes reichen
+             Eltern-Properties automatisch an Kind-Scopes durch). --}}
         @if (! $project)
-            x-init="$watch('show', (value) => { if (! value) { $store.projectGrouping.active = false; } });
-                @if ($reopen ?? false)
-                    (async () => { await $store.projectGrouping.loadMembers(); await refresh(); })();
-                @endif"
+            x-init="$watch('show', (value) => { if (! value) { $store.projectGrouping.active = false; } })"
         @endif
         @open-modal.window="$event.detail === '{{ $modalName }}' && refresh()"
     >
@@ -225,7 +213,21 @@
         </div>
 
         <div class="min-h-0 flex-1 overflow-y-auto p-4 text-sm">
-            <div id="project-group-panel-body-{{ $project?->id ?? 'uebersicht' }}">{{ __('Lädt…') }}</div>
+            <div id="project-group-panel-body-{{ $project?->id ?? 'uebersicht' }}">
+                {{--
+                    Ralf-Bug-Report: der Panel-Inhalt "flusht und lädt neu",
+                    weil er bisher IMMER per Fetch nachgeladen wurde, auch
+                    wenn das Panel dank $reopen schon offen startet. Bei
+                    $reopen kommt der Inhalt jetzt direkt mit demselben
+                    Seitenaufruf mit (siehe ProjectController::index()) -
+                    kein zweiter Request mehr für den ersten Anblick.
+                --}}
+                @if (($reopen ?? false) && $reopenGroups)
+                    @include('projekte.partials.project-group-panel', ['groups' => $reopenGroups, 'project' => $project, 'memberGroupIds' => collect()])
+                @else
+                    {{ __('Lädt…') }}
+                @endif
+            </div>
         </div>
     </div>
 </x-modal>

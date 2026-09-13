@@ -296,7 +296,7 @@
                     // direkt den richtigen Zustand, kein Umschalten mehr nötig.
                     active: window.__projectGroupingInitial?.active ?? false,
                     groupId: window.__projectGroupingInitial?.groupId ?? '',
-                    memberIds: [],
+                    memberIds: window.__projectGroupingInitial?.memberIds ?? [],
                     toggleColumn() {
                         this.active = !this.active;
                     },

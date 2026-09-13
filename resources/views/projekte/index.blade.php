@@ -171,24 +171,31 @@
         </div>
     </div>
 
-    @include('projekte.partials.project-group-modal', ['project' => null, 'reopen' => request()->filled('reopen_group')])
+    @include('projekte.partials.project-group-modal', [
+        'project' => null,
+        'reopen' => request()->filled('reopen_group'),
+        'reopenGroups' => $reopenGroups,
+    ])
 
     @if (request()->filled('reopen_group'))
         {{--
-            Ralf-Bug-Report: "Projekte dieser Gruppe anzeigen" ist ein
-            normaler Seitenaufruf (neuer gefilterter Filter) - das Panel
-            + die Häkchen-Spalte per JS erst NACH dem ersten Rendern wieder
-            einzuschalten ließ beides sichtbar aufflackern. Dieses Script
-            läuft synchron beim Parsen, also VOR Alpine.start() - der
-            allererste Render von Häkchen-Spalte (Store-Seed) und Panel-Box
-            (:show-Prop, siehe project-group-modal.blade.php) zeigt dadurch
-            direkt den richtigen Zustand. Nur der eigentliche Panel-INHALT
-            (Gruppen-Auswahl usw.) lädt weiterhin kurz nach (unvermeidbar,
-            echter Server-Request) - das ist der bekannte "Lädt…"-Zustand,
-            kein Flackern des ganzen Panels/der Tabelle mehr.
+            Ralf-Bug-Report (zwei Runden): "Projekte dieser Gruppe anzeigen"
+            ist ein normaler Seitenaufruf (neuer gefilterter Filter) - das
+            Panel ging dabei zu, und ein erster Fix-Versuch (Panel-Inhalt
+            per Fetch NACH dem ersten Rendern nachladen) ließ ihn sichtbar
+            "flushen und neu laden". Jetzt kommt der komplette Anfangs-
+            zustand (Häkchen-Spalte, Panel-Box, Panel-INHALT inkl.
+            Mitgliederliste) direkt mit diesem Seitenaufruf mit - kein
+            zweiter Request mehr nötig für den ersten Anblick, dadurch kein
+            Nachladen/Flackern mehr. Dieses Script läuft synchron beim
+            Parsen, also VOR Alpine.start().
         --}}
         <script>
-            window.__projectGroupingInitial = { active: true, groupId: '{{ (int) request()->query('reopen_group') }}' };
+            window.__projectGroupingInitial = {
+                active: true,
+                groupId: '{{ (int) request()->query('reopen_group') }}',
+                memberIds: @json($reopenMemberIds),
+            };
         </script>
     @endif
 
