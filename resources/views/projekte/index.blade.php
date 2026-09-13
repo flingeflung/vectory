@@ -121,7 +121,15 @@
                             const response = await fetch(url);
                             if (! response.ok) return;
                             const html = await response.text();
-                            document.getElementById('projekte-rows').insertAdjacentHTML('beforeend', html);
+                            const rowsEl = document.getElementById('projekte-rows');
+                            const beforeCount = rowsEl.children.length;
+                            rowsEl.insertAdjacentHTML('beforeend', html);
+                            // Ralf-Bug-Report: Häkchen bei nachgeladenen Zeilen
+                            // (Gruppieren-Spalte) reagierten nicht - insertAdjacentHTML
+                            // fügt reines HTML ein, Alpine bindet :checked/@change/
+                            // :disabled aber nur beim initialen Scan. Neu eingefügte
+                            // Zeilen müssen explizit nachinitialisiert werden.
+                            Array.from(rowsEl.children).slice(beforeCount).forEach((row) => Alpine.initTree(row));
                             this.hasMore = response.headers.get('X-Has-More') === '1';
                             this.offset += {{ $pageSize }};
                         } finally {
@@ -163,7 +171,26 @@
         </div>
     </div>
 
-    @include('projekte.partials.project-group-modal', ['project' => null])
+    @include('projekte.partials.project-group-modal', ['project' => null, 'reopen' => request()->filled('reopen_group')])
+
+    @if (request()->filled('reopen_group'))
+        {{--
+            Ralf-Bug-Report: "Projekte dieser Gruppe anzeigen" ist ein
+            normaler Seitenaufruf (neuer gefilterter Filter) - das Panel
+            + die Häkchen-Spalte per JS erst NACH dem ersten Rendern wieder
+            einzuschalten ließ beides sichtbar aufflackern. Dieses Script
+            läuft synchron beim Parsen, also VOR Alpine.start() - der
+            allererste Render von Häkchen-Spalte (Store-Seed) und Panel-Box
+            (:show-Prop, siehe project-group-modal.blade.php) zeigt dadurch
+            direkt den richtigen Zustand. Nur der eigentliche Panel-INHALT
+            (Gruppen-Auswahl usw.) lädt weiterhin kurz nach (unvermeidbar,
+            echter Server-Request) - das ist der bekannte "Lädt…"-Zustand,
+            kein Flackern des ganzen Panels/der Tabelle mehr.
+        --}}
+        <script>
+            window.__projectGroupingInitial = { active: true, groupId: '{{ (int) request()->query('reopen_group') }}' };
+        </script>
+    @endif
 
     <x-modal name="anzeigefilter" max-width="xl" :show="$errors->any()" :dirty-check="'anzeigefilterIsDirty'">
         @include('projekte.partials.anzeigefilter-form')

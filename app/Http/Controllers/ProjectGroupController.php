@@ -224,13 +224,18 @@ class ProjectGroupController extends Controller
     }
 
     /**
-     * "Nur diese Gruppe anzeigen" - setzt den Übersichtsfilter.
+     * "Nur diese Gruppe anzeigen" - setzt den Übersichtsfilter. Ralf-Bug-
+     * Report, 2026-09-13: das Gruppieren-Panel schloss sich dabei einfach
+     * (normaler Seitenaufruf) und die Häkchen-Spalte verschwand - "reopen_
+     * group" lässt die Übersicht das Panel mit derselben Gruppe direkt
+     * wieder öffnen, analog zum bestehenden "reopen_filter" fürs
+     * Projektfilter-Modal.
      */
     public function showInOverview(ProjectGroup $group): RedirectResponse
     {
         $this->authorizeViewer($group);
 
-        return redirect()->route('projekte', ['filter' => ['project_group_id' => $group->id]]);
+        return redirect()->route('projekte', ['filter' => ['project_group_id' => $group->id], 'reopen_group' => $group->id]);
     }
 
     private function authorizeViewer(ProjectGroup $group): void

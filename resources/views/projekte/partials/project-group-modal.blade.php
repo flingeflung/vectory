@@ -20,7 +20,7 @@
     <x-modal>-Doku). Im Einzelprojekt-Modus gibt's dahinter keine
     Häkchen-Spalte, bleibt beim normalen (blockierenden) Verhalten.
 --}}
-<x-modal name="{{ $modalName }}" max-width="sm" :blocking="$project !== null" :draggable="true">
+<x-modal name="{{ $modalName }}" max-width="sm" :blocking="$project !== null" :draggable="true" :show="$reopen ?? false">
     <div
         class="flex max-h-[70vh] flex-col"
         x-data="{
@@ -182,18 +182,25 @@
                 document.getElementById('project-group-panel-body-{{ $project?->id ?? 'uebersicht' }}').innerHTML = html;
             },
         }"
-        {{-- Ralf (nach Vietto-Vorbild): Häkchen-Spalte blendet sich aus,
-             sobald das Panel geschlossen wird - nicht nur beim Öffnen an.
-             Das $watch hier greift auf "show" der äußeren <x-modal>-
-             Komponente zu (Alpines verschachtelte x-data-Scopes reichen
-             Eltern-Properties automatisch an Kind-Scopes durch). --}}
-        {{-- Ralf (nach Vietto-Vorbild): Häkchen-Spalte blendet sich aus,
-             sobald das Panel geschlossen wird - nicht nur beim Öffnen an.
-             Das $watch hier greift auf "show" der äußeren <x-modal>-
-             Komponente zu (Alpines verschachtelte x-data-Scopes reichen
-             Eltern-Properties automatisch an Kind-Scopes durch). --}}
+        {{--
+            Ralf (nach Vietto-Vorbild): Häkchen-Spalte blendet sich aus,
+            sobald das Panel geschlossen wird - nicht nur beim Öffnen an.
+            Das $watch hier greift auf "show" der äußeren <x-modal>-
+            Komponente zu (Alpines verschachtelte x-data-Scopes reichen
+            Eltern-Properties automatisch an Kind-Scopes durch).
+
+            Zweiter Teil (nur bei $reopen): die Panel-BOX selbst startet
+            dank :show-Prop schon offen (kein Flackern mehr, siehe
+            projekte/index.blade.php), aber ihr INHALT (Gruppen-Auswahl
+            usw.) kommt normalerweise erst durch den open-modal-Event
+            rein - der wird bei einem bereits offenen Panel nie gefeuert.
+            Deshalb hier direkt selbst laden.
+        --}}
         @if (! $project)
-            x-init="$watch('show', (value) => { if (! value) { $store.projectGrouping.active = false; } })"
+            x-init="$watch('show', (value) => { if (! value) { $store.projectGrouping.active = false; } });
+                @if ($reopen ?? false)
+                    (async () => { await $store.projectGrouping.loadMembers(); await refresh(); })();
+                @endif"
         @endif
         @open-modal.window="$event.detail === '{{ $modalName }}' && refresh()"
     >

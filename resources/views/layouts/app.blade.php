@@ -287,8 +287,15 @@
         <script>
             document.addEventListener('alpine:init', () => {
                 Alpine.store('projectGrouping', {
-                    active: false,
-                    groupId: '',
+                    // Ralf-Bug-Report: "Projekte dieser Gruppe anzeigen" -
+                    // Häkchen-Spalte + Panel per JS NACH dem ersten Rendern
+                    // einzuschalten ließ beides sichtbar aufflackern (erst zu,
+                    // dann auf). Seed-Werte kommen jetzt schon VOR Alpine-Start
+                    // vom Server (window.__projectGroupingInitial, siehe
+                    // projekte/index.blade.php) - der allererste Render zeigt
+                    // direkt den richtigen Zustand, kein Umschalten mehr nötig.
+                    active: window.__projectGroupingInitial?.active ?? false,
+                    groupId: window.__projectGroupingInitial?.groupId ?? '',
                     memberIds: [],
                     toggleColumn() {
                         this.active = !this.active;
