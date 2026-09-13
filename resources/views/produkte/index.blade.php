@@ -36,9 +36,9 @@
                 <label class="flex items-center gap-1.5">
                     <span class="text-gray-500">{{ __('Projektverknüpfung') }}:</span>
                     <select x-model="linked" @change="onLinkedChange()" class="rounded-md border-gray-300 py-1 text-sm">
-                        <option value="">{{ __('Alle anzeigen') }}</option>
-                        <option value="yes">{{ __('mit Projektverknüpfung') }}</option>
-                        <option value="no">{{ __('ohne Projektverknüpfung') }}</option>
+                        <option value="">{{ __('– Alle –') }}</option>
+                        <option value="yes">{{ __('mit') }}</option>
+                        <option value="no">{{ __('ohne') }}</option>
                     </select>
                 </label>
             </div>
