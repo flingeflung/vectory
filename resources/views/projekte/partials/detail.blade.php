@@ -317,7 +317,7 @@
                 @if ($currentSteps->isEmpty())
                     <div class="text-gray-400">&ndash; {{ __('Keine Schritte vorhanden') }} &ndash;</div>
                 @else
-                    <div class="flex flex-col items-start">
+                    <div class="flex flex-col items-center">
                         @foreach ($currentSteps as $pws)
                             @php
                                 $step = $pws->workflowStep;
