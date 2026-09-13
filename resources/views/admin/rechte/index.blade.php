@@ -67,7 +67,7 @@
                         <input type="text" name="name" placeholder="{{ __('Name des neuen Sets') }}" class="w-full rounded-md border-gray-300 text-xs" required>
                         @csrf
                         <button type="submit" class="w-full rounded-md bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
-                            {{ __('Anlegen') }}
+                            {{ __('Speichern') }}
                         </button>
                     </form>
 

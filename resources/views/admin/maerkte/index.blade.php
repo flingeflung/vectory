@@ -29,7 +29,7 @@
                         <input type="text" name="name" x-ref="newSetName" placeholder="{{ __('Name') }}" class="w-full min-w-0 flex-1 rounded-md border-gray-300 text-xs" required>
                         @csrf
                         <button type="submit" class="shrink-0 rounded-md bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
-                            {{ __('Anlegen') }}
+                            {{ __('Speichern') }}
                         </button>
                     </form>
 

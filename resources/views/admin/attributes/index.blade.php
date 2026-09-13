@@ -71,7 +71,7 @@
                                     {{ __('Abbrechen') }}
                                 </button>
                                 <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
-                                    {{ __('Anlegen') }}
+                                    {{ __('Speichern') }}
                                 </button>
                             </div>
                         </form>

@@ -23,7 +23,7 @@
                     <input type="text" name="name" x-ref="newWorkflowName" placeholder="{{ __('Name') }}" class="w-full min-w-0 flex-1 rounded-md border-gray-300 text-xs" required>
                     @csrf
                     <button type="submit" class="shrink-0 rounded-md bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
-                        {{ __('Anlegen') }}
+                        {{ __('Speichern') }}
                     </button>
                 </form>
 
@@ -259,7 +259,7 @@
                         <input type="hidden" name="workflow_id" value="{{ $selectedWorkflow->id }}">
                         <input type="text" name="title" x-ref="newStepTitle" placeholder="{{ __('Titel') }}" required class="flex-1 rounded-md border-gray-300 text-sm">
                         <button type="button" @click="newStep = false" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Abbrechen') }}</button>
-                        <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">{{ __('Anlegen') }}</button>
+                        <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
                     </form>
 
                     @if ($steps->isEmpty())
