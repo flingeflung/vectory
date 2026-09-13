@@ -90,7 +90,12 @@
                 await this.refresh();
             },
             async leaveGroup() {
-                if (! await window.confirmDialog({{ \Illuminate\Support\Js::from(__('Diese Gruppe wirklich verlassen? Andere Personen, die sie sehen, behalten weiter Zugriff.')) }})) return;
+                if (! await window.confirmDialog({
+                    title: {{ \Illuminate\Support\Js::from(__('Gruppe verlassen?')) }},
+                    message: {{ \Illuminate\Support\Js::from(__('Diese Gruppe wirklich verlassen? Andere Personen, die sie sehen, behalten weiter Zugriff.')) }},
+                    confirmLabel: {{ \Illuminate\Support\Js::from(__('Verlassen')) }},
+                    cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
+                })) return;
                 await fetch('/projektgruppen/' + $store.projectGrouping.groupId + '/verlassen', {
                     method: 'DELETE', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
                 });
@@ -99,7 +104,12 @@
                 await this.refresh();
             },
             async clearGroup() {
-                if (! await window.confirmDialog({{ \Illuminate\Support\Js::from(__('Wirklich alle Projekte aus dieser Gruppe entfernen? Die Gruppe selbst bleibt bestehen.')) }})) return;
+                if (! await window.confirmDialog({
+                    title: {{ \Illuminate\Support\Js::from(__('Gruppe leeren?')) }},
+                    message: {{ \Illuminate\Support\Js::from(__('Wirklich alle Projekte aus dieser Gruppe entfernen? Die Gruppe selbst bleibt bestehen.')) }},
+                    confirmLabel: {{ \Illuminate\Support\Js::from(__('Leeren')) }},
+                    cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
+                })) return;
                 await fetch('/projektgruppen/' + $store.projectGrouping.groupId + '/leeren', {
                     method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
                 });
