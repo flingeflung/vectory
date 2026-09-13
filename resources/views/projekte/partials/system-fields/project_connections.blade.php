@@ -25,9 +25,7 @@
 >
     <div class="flex items-center gap-2">
         <label class="text-xs text-gray-500">{{ __('Projektverknüpfungen') }}</label>
-        <button type="button" onclick="window.openProjectConnectionAdd({{ $project->id }})" class="{{ $secondaryBtn }}">
-            {{ __('Verknüpfen') }}
-        </button>
+        <x-edit-icon-button onclick="window.openProjectConnectionAdd({{ $project->id }})" :title="__('Verknüpfen')" />
     </div>
 
     @php $connections = $project->connections(); @endphp

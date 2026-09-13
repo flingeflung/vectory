@@ -1,9 +1,9 @@
 <div x-data="{ editingWorkflow: false }">
     <div class="flex items-center gap-2">
         <label class="text-xs text-gray-500">{{ __('Workflow') }}</label>
-        <button type="button" @click="editingWorkflow = !editingWorkflow" class="{{ $secondaryBtn }}">
-            <span x-show="!editingWorkflow">{{ __('Ändern') }}</span>
-            <span x-show="editingWorkflow" x-cloak>{{ __('Fertig') }}</span>
+        <x-edit-icon-button x-show="!editingWorkflow" @click="editingWorkflow = true" :title="__('Ändern')" />
+        <button type="button" x-show="editingWorkflow" x-cloak @click="editingWorkflow = false" class="{{ $secondaryBtn }}">
+            {{ __('Fertig') }}
         </button>
     </div>
 

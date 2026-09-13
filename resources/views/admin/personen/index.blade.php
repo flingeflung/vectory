@@ -35,7 +35,7 @@
                 <div>
                     <div class="flex items-center gap-1">
                         <label class="block text-xs text-gray-500">{{ \App\Models\SystemSetting::companyLabel() }}</label>
-                        <x-manage-lookup-button modal="company-manager" :title="\App\Models\SystemSetting::companyLabelPlural().' verwalten'" />
+                        <x-edit-icon-button modal="company-manager" :title="\App\Models\SystemSetting::companyLabelPlural().' verwalten'" />
                     </div>
                     <select id="filter-company_id" name="company_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-sm">
                         <option value="">{{ __('– Alle –') }}</option>
@@ -48,7 +48,7 @@
                 <div>
                     <div class="flex items-center gap-1">
                         <label class="block text-xs text-gray-500">{{ __('Abteilung') }}</label>
-                        <x-manage-lookup-button modal="department-manager" :title="__('Abteilungen verwalten')" />
+                        <x-edit-icon-button modal="department-manager" :title="__('Abteilungen verwalten')" />
                     </div>
                     <select id="filter-department_id" name="department_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-sm">
                         <option value="">{{ __('– Alle –') }}</option>
@@ -61,7 +61,7 @@
                 <div>
                     <div class="flex items-center gap-1">
                         <label class="block text-xs text-gray-500">{{ __('Geschäftsbereich') }}</label>
-                        <x-manage-lookup-button modal="business-unit-manager" :title="__('Geschäftsbereiche verwalten')" />
+                        <x-edit-icon-button modal="business-unit-manager" :title="__('Geschäftsbereiche verwalten')" />
                     </div>
                     <select id="filter-business_unit_id" name="business_unit_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-sm">
                         <option value="">{{ __('– Alle –') }}</option>
@@ -84,7 +84,7 @@
                 <div>
                     <div class="flex items-center gap-1">
                         <label class="block text-xs text-gray-500">{{ __('Rolle') }}</label>
-                        <x-manage-lookup-button modal="legacy-role-manager" :title="__('Rollen verwalten')" />
+                        <x-edit-icon-button modal="legacy-role-manager" :title="__('Rollen verwalten')" />
                     </div>
                     <select id="filter-legacy_role_id" name="legacy_role_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-sm">
                         <option value="">{{ __('– Alle –') }}</option>

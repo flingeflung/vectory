@@ -6,24 +6,58 @@
     nachgebaut, Ralf). Sofort-Toggle wie im Vorbild - kein Speichern-Button.
     Caption bleibt pro Kunde änderbar (Attribute::LABEL_EDITABLE_SYSTEM_
     FIELDS), das ist $field->label hier.
+
+    Ralf, 2026-09-13 (Nachtrag): Textbutton durch das kleine wiederverwend-
+    bare Stift-Symbol ersetzt (x-edit-icon-button, "nicht so aufdringlich
+    wie Textbuttons"), plus Ketten-Symbol pro verknüpftem Produkt - zeigt
+    per Klick, mit welchen ANDEREN Projekten dasselbe Produkt noch
+    verknüpft ist (analog Viettos pruefe_conn() in ajax_getmodelle.php,
+    dort nur im Picker sichtbar - hier direkt an der Feldzeile).
 --}}
 <div id="project-products-{{ $project->id }}">
-    <label class="block text-xs text-gray-500">{{ $field->label }}</label>
-    <div class="mt-0.5 text-gray-700">
+    <div class="flex items-center gap-1.5">
+        <label class="text-xs text-gray-500">{{ $field->label }}</label>
+        <x-edit-icon-button modal="produkte-verknuepfen-{{ $project->id }}" :title="__('Verknüpfte Produkte verwalten')" />
+    </div>
+    <div class="mt-0.5 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-gray-700">
         @forelse ($project->products as $product)
-            {{ $product->name }} ({{ $product->product_number }}){{ ! $loop->last ? ', ' : '' }}
+            @php($otherProjects = $product->projects->where('id', '!=', $project->id)->values())
+            <span class="inline-flex items-center gap-0.5">
+                {{ $product->name }} ({{ $product->product_number }})
+                @if ($otherProjects->isNotEmpty())
+                    <span x-data="{ open: false }" class="relative inline-block">
+                        <button
+                            type="button"
+                            @click="open = !open"
+                            @click.outside="open = false"
+                            title="{{ trans_choice('Auch verknüpft mit :count weiterem Projekt|Auch verknüpft mit :count weiteren Projekten', $otherProjects->count(), ['count' => $otherProjects->count()]) }}"
+                            class="text-gray-400 hover:text-gray-600"
+                        >
+                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                            </svg>
+                        </button>
+                        <div x-show="open" x-cloak class="absolute left-0 top-full z-10 mt-1 w-max max-w-xs rounded-md border border-gray-200 bg-white p-2 text-xs shadow-lg">
+                            <div class="mb-1 font-medium text-gray-500">{{ __('Auch verknüpft mit:') }}</div>
+                            @foreach ($otherProjects as $otherProject)
+                                <div>
+                                    <a
+                                        href="#"
+                                        onclick="event.preventDefault(); window.dispatchEvent(new CustomEvent('open-project', { detail: { id: {{ $otherProject->id }} } }))"
+                                        class="text-indigo-600 hover:underline"
+                                    >{{ $otherProject->source_pn }}</a>
+                                    <span class="text-gray-400">{{ $otherProject->title }}</span>
+                                </div>
+                            @endforeach
+                        </div>
+                    </span>
+                @endif
+                {{ ! $loop->last ? ',' : '' }}
+            </span>
         @empty
             <span class="text-gray-400">{{ __('– nicht zugewiesen –') }}</span>
         @endforelse
     </div>
-    <button
-        type="button"
-        x-data
-        @click="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'produkte-verknuepfen-{{ $project->id }}' })); window.dispatchEvent(new CustomEvent('produkte-picker-open-{{ $project->id }}'))"
-        class="mt-1 inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
-    >
-        {{ __('Verknüpfte Produkte verwalten') }}
-    </button>
 </div>
 
 <x-modal name="produkte-verknuepfen-{{ $project->id }}" max-width="md">
@@ -85,7 +119,7 @@
                 if (fresh && current) { current.replaceWith(fresh); }
             },
         }"
-        @produkte-picker-open-{{ $project->id }}.window="runSearch()"
+        @open-modal.window="$event.detail === 'produkte-verknuepfen-{{ $project->id }}' && runSearch()"
     >
         <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
             <h3 class="text-sm font-semibold text-gray-900">{{ __('Verknüpfte Produkte') }}</h3>

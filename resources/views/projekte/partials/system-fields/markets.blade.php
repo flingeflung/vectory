@@ -22,9 +22,9 @@
 >
     <div class="flex items-center gap-2">
         <label class="text-xs text-gray-500">{{ __('Markt') }}</label>
-        <button type="button" @click="editingMarkets = !editingMarkets" class="{{ $secondaryBtn }}">
-            <span x-show="!editingMarkets">{{ __('Ändern') }}</span>
-            <span x-show="editingMarkets" x-cloak>{{ __('Fertig') }}</span>
+        <x-edit-icon-button x-show="!editingMarkets" @click="editingMarkets = true" :title="__('Ändern')" />
+        <button type="button" x-show="editingMarkets" x-cloak @click="editingMarkets = false" class="{{ $secondaryBtn }}">
+            {{ __('Fertig') }}
         </button>
     </div>
 

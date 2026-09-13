@@ -32,9 +32,9 @@
 >
     <div class="flex items-center gap-2">
         <label class="text-xs text-gray-500">{{ __('Projektbeteiligte Personen') }}</label>
-        <button type="button" @click="editingPeople = !editingPeople" class="{{ $secondaryBtn }}">
-            <span x-show="!editingPeople">{{ __('Ändern') }}</span>
-            <span x-show="editingPeople" x-cloak>{{ __('Fertig') }}</span>
+        <x-edit-icon-button x-show="!editingPeople" @click="editingPeople = true" :title="__('Ändern')" />
+        <button type="button" x-show="editingPeople" x-cloak @click="editingPeople = false" class="{{ $secondaryBtn }}">
+            {{ __('Fertig') }}
         </button>
     </div>
 

@@ -74,7 +74,7 @@ class ProjectProductController extends Controller
         }
 
         return response()->view('projekte.partials.system-fields.system_model', [
-            'project' => $project->fresh(['products']),
+            'project' => $project->fresh(['products.projects:id,source_pn,title']),
             'field' => Attribute::query()->where('tenant_id', $project->tenant_id)->where('key', 'system_model')->first(),
         ]);
     }

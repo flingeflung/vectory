@@ -638,7 +638,7 @@ class ProjectController extends Controller
         $filters = $this->filtersFromRequest($request);
 
         return [
-            'project' => $project->loadMissing(['markets', 'projectPeople.person', 'projectPeople.functionGroup', 'workflow', 'activities.user', 'projectWorkflowSteps.workflowStep.functionGroups', 'projectWorkflowSteps.people.functionGroup', 'projectWorkflowSteps.people.person', 'graphicOrders.initiatedBy', 'graphicOrders.illustrator', 'projectChecklists.checklist.sections.points', 'projectChecklists.activatedBy', 'projectChecklistPoints.doneBy', 'products.productGroup']),
+            'project' => $project->loadMissing(['markets', 'projectPeople.person', 'projectPeople.functionGroup', 'workflow', 'activities.user', 'projectWorkflowSteps.workflowStep.functionGroups', 'projectWorkflowSteps.people.functionGroup', 'projectWorkflowSteps.people.person', 'graphicOrders.initiatedBy', 'graphicOrders.illustrator', 'projectChecklists.checklist.sections.points', 'projectChecklists.activatedBy', 'projectChecklistPoints.doneBy', 'products.productGroup', 'products.projects:id,source_pn,title']),
             // Für den "Checklisten auswählen"-Dialog - der aktuell zugewiesene
             // Katalog, gleiches Prinzip wie bei availableWorkflows unten (auch
             // inaktive Checklisten bleiben sichtbar, wenn schon zugewiesen).
