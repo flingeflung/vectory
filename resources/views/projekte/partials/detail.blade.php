@@ -166,7 +166,7 @@
             </div>
         </div>
 
-        <div class="{{ $isOverlay ? 'min-h-0 flex-1 overflow-y-auto px-4 pb-3' : '' }}">
+        <div class="{{ $isOverlay ? 'min-h-0 flex-1 overflow-y-auto px-4 pt-1 pb-3' : '' }}">
         <div x-show="activeTab === 'details'">
         <form id="project-detail-form" method="POST" action="{{ route('projekte.update', $project) }}" class="space-y-4 text-sm">
         <div>
