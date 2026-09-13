@@ -67,6 +67,20 @@
                     @else
                         {{ $project->products->pluck('name')->implode(', ') }}
                     @endif
+                @elseif ($column['key'] === 'product_group_number')
+                    @php $groupNumbers = $project->products->pluck('productGroup.number')->filter()->unique(); @endphp
+                    @if ($groupNumbers->isEmpty())
+                        <span class="text-gray-400">&ndash;</span>
+                    @else
+                        {{ $groupNumbers->implode(', ') }}
+                    @endif
+                @elseif ($column['key'] === 'product_group_name')
+                    @php $groupNames = $project->products->pluck('productGroup.name')->filter()->unique(); @endphp
+                    @if ($groupNames->isEmpty())
+                        <span class="text-gray-400">&ndash;</span>
+                    @else
+                        {{ $groupNames->implode(', ') }}
+                    @endif
                 @elseif ($column['progress'] ?? false)
                     @php $progress = $project->progressPercent(); @endphp
                     @if ($progress !== null)

@@ -36,6 +36,11 @@ class ProjectColumnCatalog
             // attribute:-Schleife unten (die würde den leeren attributes-
             // JSON-Wert lesen, siehe ProjectController::customSectionAttributes()).
             ['key' => 'system_model', 'label' => Attribute::query()->where('tenant_id', $tenantId)->where('key', 'system_model')->value('label') ?? __('Modell/System'), 'long_text' => false],
+            // Ralf, 2026-09-13: eigene, unabhängig abwählbare Spalten für
+            // die Produktgruppe(n) der verknüpften Produkte - getrennt von
+            // "system_model" oben (das zeigt die einzelnen Produkte).
+            ['key' => 'product_group_number', 'label' => __('Produktgruppennr.'), 'long_text' => false],
+            ['key' => 'product_group_name', 'label' => __('Produktgruppenbezeichnung'), 'long_text' => false],
             ['key' => 'version', 'label' => __('Version'), 'long_text' => false],
             ['key' => 'start_date', 'label' => __('Start'), 'long_text' => false],
             ['key' => 'end_date', 'label' => __('Ende'), 'long_text' => false],

@@ -180,8 +180,8 @@ class ProjectController extends Controller
         if (array_any($visibleColumns, fn (array $column) => in_array($column['key'], ['progress', 'workflow'], true))) {
             $query->with('projectWorkflowSteps.workflowStep');
         }
-        if (array_any($visibleColumns, fn (array $column) => $column['key'] === 'system_model')) {
-            $query->with('products');
+        if (array_any($visibleColumns, fn (array $column) => in_array($column['key'], ['system_model', 'product_group_number', 'product_group_name'], true))) {
+            $query->with('products.productGroup');
         }
 
         return $query;
