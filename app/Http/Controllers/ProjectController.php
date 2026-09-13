@@ -113,6 +113,9 @@ class ProjectController extends Controller
         if (array_any($visibleColumns, fn (array $column) => in_array($column['key'], ['progress', 'workflow'], true))) {
             $query->with('projectWorkflowSteps.workflowStep');
         }
+        if (array_any($visibleColumns, fn (array $column) => $column['key'] === 'system_model')) {
+            $query->with('products');
+        }
         $projects = $query->paginate(25)->withQueryString();
 
         $graphicOrderSummaries = array_any($visibleColumns, fn (array $column) => $column['key'] === 'graphic_orders_summary')
@@ -834,6 +837,12 @@ class ProjectController extends Controller
 
             if ($key === 'workflow_id') {
                 $query->where('workflow_id', $value);
+
+                continue;
+            }
+
+            if ($key === 'system_model') {
+                $query->whereHas('products', fn (Builder $query) => $query->where('name', 'like', "%{$value}%")->orWhere('product_number', 'like', "%{$value}%"));
 
                 continue;
             }

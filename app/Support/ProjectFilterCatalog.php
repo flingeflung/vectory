@@ -45,6 +45,11 @@ class ProjectFilterCatalog
             ['key' => 'project_type', 'label' => __('Projekttyp/-art'), 'type' => 'grouped_multiselect', 'groups' => self::projectTypeGroups($tenantId)],
             ['key' => 'version', 'label' => __('Version'), 'type' => 'select', 'options' => self::versionOptions($tenantId)],
             ['key' => 'workflow_id', 'label' => __('Workflow'), 'type' => 'select', 'options' => self::workflowOptions($tenantId)],
+            // Ralf, 2026-09-13: label_editable-System-Feld, aber eine echte
+            // n:m-Produktverknüpfung statt Freitext - eigener fester
+            // Eintrag statt über die generische attribute:-Schleife unten,
+            // siehe gleiche Begründung in ProjectColumnCatalog.
+            ['key' => 'system_model', 'label' => Attribute::query()->where('tenant_id', $tenantId)->where('key', 'system_model')->value('label') ?? __('Modell/System'), 'type' => 'text'],
             ['key' => 'remarks', 'label' => __('Bemerkungen'), 'type' => 'text'],
             ['key' => 'markets', 'label' => __('Märkte/Subsprachen'), 'type' => 'multiselect', 'columns' => 2, 'options' => self::marketOptions($tenantId)],
             ['key' => 'graphic_orders', 'label' => __('Grafikaufträge'), 'type' => 'select', 'options' => [
@@ -62,6 +67,7 @@ class ProjectFilterCatalog
         $attributes = Attribute::query()
             ->where('tenant_id', $tenantId)
             ->where(fn ($query) => $query->where('system', false)->orWhere('label_editable', true))
+            ->where('key', '!=', 'system_model')
             ->orderBy('sort')
             ->get()
             ->map(fn (Attribute $attribute) => [

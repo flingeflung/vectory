@@ -30,6 +30,12 @@ class ProjectColumnCatalog
             ['key' => 'status', 'label' => __('Status'), 'long_text' => false],
             ['key' => 'project_type', 'label' => __('Projekttyp/-art'), 'long_text' => false, 'type_icon' => true],
             ['key' => 'workflow', 'label' => __('Workflow'), 'long_text' => false],
+            // Ralf, 2026-09-13: label_editable-System-Feld, aber eine echte
+            // n:m-Produktverknüpfung statt Freitext - deshalb wie "workflow"
+            // ein eigener fester Eintrag statt über die generische
+            // attribute:-Schleife unten (die würde den leeren attributes-
+            // JSON-Wert lesen, siehe ProjectController::customSectionAttributes()).
+            ['key' => 'system_model', 'label' => Attribute::query()->where('tenant_id', $tenantId)->where('key', 'system_model')->value('label') ?? __('Modell/System'), 'long_text' => false],
             ['key' => 'version', 'label' => __('Version'), 'long_text' => false],
             ['key' => 'start_date', 'label' => __('Start'), 'long_text' => false],
             ['key' => 'end_date', 'label' => __('Ende'), 'long_text' => false],
@@ -42,6 +48,7 @@ class ProjectColumnCatalog
         $attributes = Attribute::query()
             ->where('tenant_id', $tenantId)
             ->where(fn ($query) => $query->where('system', false)->orWhere('label_editable', true))
+            ->where('key', '!=', 'system_model')
             ->orderBy('sort')
             ->get()
             ->map(fn (Attribute $attribute) => [
@@ -84,7 +91,12 @@ class ProjectColumnCatalog
         $columns = $activeSet->config['columns'] ?? self::defaultConfig();
         $configByKey = collect($columns)->keyBy('key');
 
-        return collect(self::available($user->tenant_id))
+        // Ralf-Bug-Report (2026-09-13, beim Testen der neuen "Modell/
+        // System"-Spalte entdeckt): CurrentTenant::id() statt
+        // $user->tenant_id (Heimat-Mandant) - sonst sahen Admins/DL-Nutzer,
+        // die gerade zu einem ANDEREN Kunden gewechselt haben, hier die
+        // Spalten/Labels ihres Heimat-Mandanten statt des aktiven.
+        return collect(self::available(CurrentTenant::id()))
             ->map(function (array $column) use ($configByKey, $user) {
                 $saved = $configByKey->get($column['key']);
 

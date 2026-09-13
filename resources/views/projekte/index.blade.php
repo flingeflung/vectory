@@ -150,6 +150,12 @@
                                                 @else
                                                     <span class="text-gray-400" title="{{ __('– Kein Workflow zugewiesen –') }}">&ndash;</span>
                                                 @endif
+                                            @elseif ($column['key'] === 'system_model')
+                                                @if ($project->products->isEmpty())
+                                                    <span class="text-gray-400">&ndash;</span>
+                                                @else
+                                                    {{ $project->products->pluck('name')->implode(', ') }}
+                                                @endif
                                             @elseif ($column['progress'] ?? false)
                                                 @php $progress = $project->progressPercent(); @endphp
                                                 @if ($progress !== null)

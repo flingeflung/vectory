@@ -101,11 +101,15 @@ class ProjectCopyController extends Controller
 
         $template = CopyTemplate::query()->with('fields')->findOrFail($validated['template_id']);
         $checkedKeys = $template->fields->pluck('key')->all();
-        // label_editable-System-Felder (aktuell nur "Modell/System") liegen
-        // wie echte Zusatzfelder im attributes-JSON statt in einer eigenen
-        // DB-Spalte und haben keinen eigenen switch-case unten - laufen
-        // deshalb über denselben generischen Kopierpfad wie Zusatzfelder.
-        $customFieldKeys = $template->fields->filter(fn (Attribute $field) => ! $field->system || $field->label_editable)->pluck('key')->all();
+        // label_editable-System-Felder liegen NICHT im attributes-JSON wie
+        // normale Zusatzfelder (Ausnahme aktuell: "Modell/System" - das ist
+        // eine echte n:m-Verknüpfung, eigener switch-case unten, siehe
+        // 'system_model') - deshalb hier explizit ausgeschlossen, damit der
+        // generische JSON-Kopierpfad sie nicht fälschlich mitzunehmen
+        // versucht (und dabei nichts täte, weil dort kein Wert liegt).
+        $customFieldKeys = $template->fields
+            ->filter(fn (Attribute $field) => (! $field->system || $field->label_editable) && $field->key !== 'system_model')
+            ->pluck('key')->all();
 
         $sourceProject = $project;
         $tenantId = $sourceProject->tenant_id;
@@ -224,6 +228,15 @@ class ProjectCopyController extends Controller
                             'activated_at' => now(),
                         ]);
                     }
+                }
+
+                // Ralf, 2026-09-13: Produkt-Verknüpfung (Feld "Modell/
+                // System") ist eine echte n:m-Relation, kein Zusatzfeld -
+                // eigener Kopierpfad statt des generischen attributes-JSON-
+                // Merges oben (der hier nichts täte).
+                if (in_array('system_model', $checkedKeys, true)) {
+                    $productIds = $sourceProject->products()->pluck('products.id');
+                    $newProject->products()->attach($productIds);
                 }
 
                 if (in_array('workflow_id', $checkedKeys, true) && $sourceProject->workflow_id) {
