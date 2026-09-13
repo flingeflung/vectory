@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\ConfigController;
 use App\Http\Controllers\Admin\CopyTemplateController;
 use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\FunctionGroupController;
+use App\Http\Controllers\Admin\HelpArticleController;
 use App\Http\Controllers\Admin\LegacyRoleController;
 use App\Http\Controllers\Admin\MailTemplateController;
 use App\Http\Controllers\Admin\MarketController;
@@ -20,10 +21,10 @@ use App\Http\Controllers\Admin\WorkflowController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DisplayFilterController;
 use App\Http\Controllers\FavoriteController;
-use App\Http\Controllers\Admin\HelpArticleController;
 use App\Http\Controllers\GraphicOrderController;
 use App\Http\Controllers\HelpController;
 use App\Http\Controllers\IllustrationOverviewController;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectChecklistController;
 use App\Http\Controllers\ProjectConnectionController;
@@ -98,6 +99,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/favoriten', [FavoriteController::class, 'index'])->name('favoriten');
 
     Route::get('/illustrationen', [IllustrationOverviewController::class, 'index'])->name('illustrationen');
+
+    Route::get('/produkte', [ProductController::class, 'index'])->name('produkte');
 
     Route::get('/aufgaben', [TaskController::class, 'index'])->name('aufgaben');
     Route::post('/aufgaben/{task}/sichtbarkeit', [TaskController::class, 'toggleVisibility'])->name('aufgaben.visibility');

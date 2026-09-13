@@ -181,6 +181,13 @@
         >
             {{ __('Illustrationen') }}
         </a>
+        <a
+            onclick="return window.navigateOrConfirm(event)"
+            href="{{ route('produkte') }}"
+            class="flex items-center px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('produkte') ? 'bg-sidebar-active text-sidebar-active-content' : 'text-sidebar-content hover:bg-sidebar-hover hover:text-sidebar-content-hover' }}"
+        >
+            {{ __('Produkte') }}
+        </a>
 
         @can('access-admin')
             <div class="my-2 border-t border-gray-100"></div>
