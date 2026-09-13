@@ -123,19 +123,46 @@
             showUrl() {
                 return $store.projectGrouping.groupId ? '/projektgruppen/' + $store.projectGrouping.groupId + '/anzeigen' : '#';
             },
+            {{--
+                Ralf-Bug-Report: "der Button zeigt keine Reaktion" - beide
+                Aktionen liefen serverseitig, aber ohne Fehler-Check und ohne
+                jede Rückmeldung wirkte ein Klick, bei dem sich nichts
+                sichtbar ändert (z.B. weil alle angezeigten Projekte schon
+                Mitglied waren), wie ein wirkungsloser Button. Jetzt:
+                Fehler-Meldung bei fehlgeschlagenem Request, sonst immer
+                eine kurze Bestätigung mit der tatsächlichen Anzahl.
+            --}}
             async addAllFiltered() {
-                await fetch('/projektgruppen/' + $store.projectGrouping.groupId + '/alle' + window.location.search, {
+                const before = $store.projectGrouping.memberIds.length;
+                const response = await fetch('/projektgruppen/' + $store.projectGrouping.groupId + '/alle' + window.location.search, {
                     method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
                 });
+                if (! response.ok) {
+                    await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Fehler beim Hinzufügen. Bitte erneut versuchen.')) }});
+                    return;
+                }
                 await $store.projectGrouping.loadMembers();
                 await this.refresh();
+                const added = $store.projectGrouping.memberIds.length - before;
+                await window.notifyDialog(added > 0
+                    ? {{ \Illuminate\Support\Js::from(__(':count Projekt(e) hinzugefügt.')) }}.replace(':count', added)
+                    : {{ \Illuminate\Support\Js::from(__('Alle angezeigten Projekte waren bereits Mitglied.')) }});
             },
             async removeAllFiltered() {
-                await fetch('/projektgruppen/' + $store.projectGrouping.groupId + '/alle' + window.location.search, {
+                const before = $store.projectGrouping.memberIds.length;
+                const response = await fetch('/projektgruppen/' + $store.projectGrouping.groupId + '/alle' + window.location.search, {
                     method: 'DELETE', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
                 });
+                if (! response.ok) {
+                    await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Fehler beim Entfernen. Bitte erneut versuchen.')) }});
+                    return;
+                }
                 await $store.projectGrouping.loadMembers();
                 await this.refresh();
+                const removed = before - $store.projectGrouping.memberIds.length;
+                await window.notifyDialog(removed > 0
+                    ? {{ \Illuminate\Support\Js::from(__(':count Projekt(e) entfernt.')) }}.replace(':count', removed)
+                    : {{ \Illuminate\Support\Js::from(__('Keines der angezeigten Projekte war Mitglied.')) }});
             },
             @endif
             async openShare() {
