@@ -18,7 +18,16 @@ class MultichangeFieldCatalog
     {
         return [
             ['key' => 'title', 'label' => __('Bezeichnung'), 'type' => 'text', 'required' => true],
-            ['key' => 'initiator', 'label' => __('Initiator'), 'type' => 'text'],
+            // Ralf-Bug-Report, 2026-09-13: "Der Initiator wird nicht
+            // geändert" - Initiator ist (anders als die übrigen Felder
+            // hier) KEINE echte projects-Spalte mehr, sondern ein ganz
+            // normales, pro Kunde löschbares Zusatzfeld (siehe
+            // Attribute::SYSTEM_FIELDS-Docblock: "auf Ralfs Wunsch zu
+            // normalen Zusatzfeldern geworden"), der Wert lebt im
+            // attributes-JSON. 'storage' => 'attribute' steuert in
+            // MultichangeController, dass dort statt der Spalte
+            // geschrieben wird.
+            ['key' => 'initiator', 'label' => __('Initiator'), 'type' => 'text', 'storage' => 'attribute'],
             ['key' => 'remarks', 'label' => __('Bemerkungen'), 'type' => 'textarea'],
             ['key' => 'start_date', 'label' => __('Start'), 'type' => 'date'],
             ['key' => 'end_date', 'label' => __('Ende'), 'type' => 'date'],

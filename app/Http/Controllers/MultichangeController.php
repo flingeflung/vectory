@@ -108,7 +108,7 @@ class MultichangeController extends Controller
 
         $applied = DB::transaction(function () use ($preview, $field, $value) {
             foreach ($preview['applicable'] as $project) {
-                $project->{$field['key']} = $value;
+                $this->applyValue($project, $field, $value);
                 $project->save();
 
                 Activity::log($project, ActivityType::ProjectMultichanged, $this->describeChange($field, $value));
@@ -231,6 +231,31 @@ class MultichangeController extends Controller
         }
 
         return ['applicable' => $applicable, 'skipped' => $skipped];
+    }
+
+    /**
+     * Die meisten Felder hier sind echte projects-Spalten, aber "Initiator"
+     * ist ein normales Zusatzfeld (siehe MultichangeFieldCatalog) - dessen
+     * Wert lebt im attributes-JSON, nicht in einer eigenen Spalte.
+     */
+    private function applyValue(Project $project, array $field, mixed $value): void
+    {
+        if (($field['storage'] ?? 'column') === 'attribute') {
+            $attributes = $project->attributes ?? [];
+            // Gleiche Konvention wie beim normalen Zusatzfeld-Speichern
+            // (ProjectController::update()): leerer Wert entfernt den
+            // Schlüssel komplett statt einen leeren String zu speichern.
+            if ($value === null || $value === '') {
+                unset($attributes[$field['key']]);
+            } else {
+                $attributes[$field['key']] = $value;
+            }
+            $project->attributes = $attributes;
+
+            return;
+        }
+
+        $project->{$field['key']} = $value;
     }
 
     private function describeChange(array $field, mixed $value): string
