@@ -79,14 +79,30 @@ class ProjectProductController extends Controller
         ]);
     }
 
+    /**
+     * Ralf-Bug-Report: Suche nach "heiß" fand "Heißluftfritteusen" nicht -
+     * durchsuchte nur Produktname/-nummer, nicht die Produktgruppe (anders
+     * als ProductController::baseQuery() auf der Produkte-Seite selbst,
+     * wo das schon korrekt war). Jetzt derselbe Suchumfang wie dort.
+     */
     private function otherQuery(Project $project, string $search): Builder
     {
         $linkedIds = $project->products()->pluck('products.id');
 
-        $query = Product::query()->whereNotIn('id', $linkedIds)->with('productGroup')->orderBy('name');
+        $query = Product::query()
+            ->leftJoin('product_groups', 'product_groups.id', '=', 'products.product_group_id')
+            ->select('products.*')
+            ->whereNotIn('products.id', $linkedIds)
+            ->with('productGroup')
+            ->orderBy('products.name');
 
         if ($search !== '') {
-            $query->where(fn (Builder $query) => $query->where('name', 'like', "%{$search}%")->orWhere('product_number', 'like', "%{$search}%"));
+            $query->where(function (Builder $query) use ($search) {
+                $query->where('products.name', 'like', "%{$search}%")
+                    ->orWhere('products.product_number', 'like', "%{$search}%")
+                    ->orWhere('product_groups.number', 'like', "%{$search}%")
+                    ->orWhere('product_groups.name', 'like', "%{$search}%");
+            });
         }
 
         return $query;
