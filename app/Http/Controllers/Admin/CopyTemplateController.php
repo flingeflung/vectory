@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\ProjectCopyController;
 use App\Models\Attribute;
 use App\Models\CopyTemplate;
 use App\Support\CurrentTenant;
@@ -31,7 +32,13 @@ class CopyTemplateController extends Controller
             ? $templates->firstWhere('id', (int) $request->query('vorlage'))
             : null;
 
-        $attributesBySection = Attribute::query()->where('tenant_id', $tenant->id)->orderBy('sort')->get()->groupBy('section');
+        // Ralf, 2026-09-13: Felder ohne Kopier-Wirkung (siehe ProjectCopy-
+        // Controller::NO_EFFECT_KEYS) auch hier ausblenden, nicht nur im
+        // Kopieren-Dialog selbst - sonst wirken die Haken hier, als würden
+        // sie etwas tun.
+        $attributesBySection = Attribute::query()->where('tenant_id', $tenant->id)
+            ->whereNotIn('key', ProjectCopyController::NO_EFFECT_KEYS)
+            ->orderBy('sort')->get()->groupBy('section');
 
         $selectedFieldIds = $selectedTemplate
             ? $selectedTemplate->fields()->pluck('attributes.id')->all()

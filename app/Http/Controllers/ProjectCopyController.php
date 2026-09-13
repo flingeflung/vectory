@@ -46,7 +46,7 @@ class ProjectCopyController extends Controller
      * gleiche Liste würde sich sonst mit Feldern füllen, die so oder so
      * nichts tun.
      */
-    private const NO_EFFECT_KEYS = ['archived', 'date_progress', 'progress', 'project_connections', 'remarks_echo', 'change_log'];
+    public const NO_EFFECT_KEYS = ['archived', 'date_progress', 'progress', 'project_connections', 'remarks_echo', 'change_log'];
 
     public function form(Project $project): View
     {
