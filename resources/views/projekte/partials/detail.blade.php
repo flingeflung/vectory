@@ -263,9 +263,9 @@
             class="text-xs text-gray-600"
         >
             @if ($activityCategories->count() > 1)
-                <div class="mb-2 flex flex-wrap gap-3">
+                <div class="mb-2 flex flex-wrap gap-x-5 gap-y-1">
                     @foreach ($activityCategories as $category)
-                        <label class="flex items-center gap-1">
+                        <label class="flex items-center gap-1.5">
                             <input type="checkbox" value="{{ $category->value }}" x-model="activeCategories" class="rounded border-gray-300">
                             <span class="inline-block h-2 w-2 rounded-full {{ $category->dotClass() }}"></span>
                             {{ $category->label() }}
