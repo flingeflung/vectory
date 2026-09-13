@@ -934,6 +934,12 @@ class ProjectController extends Controller
                 continue;
             }
 
+            if ($key === 'product_group_id') {
+                $query->whereHas('products', fn (Builder $query) => $query->where('products.product_group_id', $value));
+
+                continue;
+            }
+
             $query->where($key, 'like', "%{$value}%");
         }
     }

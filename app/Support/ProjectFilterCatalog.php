@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Attribute;
 use App\Models\Market;
+use App\Models\ProductGroup;
 use App\Models\Project;
 use App\Models\ProjectTypeMain;
 use App\Models\User;
@@ -50,6 +51,11 @@ class ProjectFilterCatalog
             // Eintrag statt über die generische attribute:-Schleife unten,
             // siehe gleiche Begründung in ProjectColumnCatalog.
             ['key' => 'system_model', 'label' => Attribute::query()->where('tenant_id', $tenantId)->where('key', 'system_model')->value('label') ?? __('Modell/System'), 'type' => 'text'],
+            // Ralf, 2026-09-13: "Produktgruppe als Dropdown, Text bleibt für
+            // Produktname/-nummer" - eigenes Kriterium zusätzlich zum
+            // Freitext oben, NICHT zu verwechseln mit project_group_id
+            // ("Meine Projektgruppen", eine ganz andere Sache).
+            ['key' => 'product_group_id', 'label' => __('Produktgruppe'), 'type' => 'select', 'options' => self::productGroupOptions($tenantId)],
             // Ralf, 2026-09-13: "Meine Projektgruppen" - hauptsächlich über
             // den "Nur diese Gruppe anzeigen"-Link gesetzt (ProjectGroup-
             // Controller::showInOverview()), aber auch normal manuell
@@ -119,6 +125,14 @@ class ProjectFilterCatalog
     private static function projectGroupOptions(): array
     {
         return auth()->user()?->projectGroups()->orderBy('name')->pluck('name', 'project_groups.id')->all() ?? [];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private static function productGroupOptions(int $tenantId): array
+    {
+        return ProductGroup::query()->where('tenant_id', $tenantId)->orderBy('sort')->pluck('name', 'id')->all();
     }
 
     private static function workflowOptions(int $tenantId): array
