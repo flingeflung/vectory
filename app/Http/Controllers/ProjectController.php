@@ -938,10 +938,28 @@ class ProjectController extends Controller
         $value = $column === 'workflow' ? $current->workflow?->sort : $current->{$column};
         $this->applyFilters($query, $filters);
 
+        // MySQL sortiert NULL wie den kleinsten Wert: bei ASC zuerst, bei
+        // DESC zuletzt. Ein simpler </>-Vergleich im WHERE hätte NULL-
+        // Zeilen aber IMMER ausgeschlossen (jeder Vergleich mit NULL ist in
+        // SQL "unbekannt", selbst mit passendem Operator) - dadurch waren
+        // Projekte mit leerem Sortierfeld (z.B. kein Start-Datum bei der
+        // Standardsortierung "Start" DESC) über "weiter/zurück" nie
+        // erreichbar, obwohl sie in der Liste selbst einen klaren Platz
+        // haben (Ralf-Bug-Report: Blättern blieb beim vorletzten Projekt
+        // stehen). $nullsSortLast folgt genau dieser MySQL-Regel.
+        $nullsSortLast = $queryDirection === 'desc';
+
         return $query
-            ->where(function ($query) use ($sortColumn, $idColumn, $operator, $value, $current) {
+            ->where(function ($query) use ($sortColumn, $idColumn, $operator, $value, $current, $nullsSortLast) {
                 if ($value === null) {
-                    $query->whereNotNull($sortColumn);
+                    // Aktuelles Projekt liegt schon in der NULL-Zone (zuletzt bei
+                    // DESC, zuerst bei ASC) - "weiter" bleibt zunächst dort (andere
+                    // NULL-Zeilen), erst danach kommen echte Werte (nur bei ASC,
+                    // da dort die NULL-Zone VOR den echten Werten liegt).
+                    $query->where(fn ($query) => $query->whereNull($sortColumn)->where($idColumn, $operator, $current->id));
+                    if (! $nullsSortLast) {
+                        $query->orWhereNotNull($sortColumn);
+                    }
 
                     return;
                 }
@@ -950,6 +968,12 @@ class ProjectController extends Controller
                     ->orWhere(function ($query) use ($sortColumn, $idColumn, $value, $operator, $current) {
                         $query->where($sortColumn, $value)->where($idColumn, $operator, $current->id);
                     });
+
+                if ($nullsSortLast) {
+                    // DESC: NULL-Zeilen sortieren nach JEDEM echten Wert - von
+                    // einem echten Wert aus immer gültige "weiter"-Kandidaten.
+                    $query->orWhereNull($sortColumn);
+                }
             })
             ->orderBy($sortColumn, $queryDirection)
             ->orderBy($idColumn, $queryDirection)
