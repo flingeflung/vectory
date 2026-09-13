@@ -229,6 +229,19 @@
                 groupId: '{{ (int) request()->query('reopen_group') }}',
                 memberIds: @json($reopenMemberIds),
             };
+            // Ralf-Bug-Report: "reopen_group" blieb dauerhaft in der URL
+            // stehen - ein SPÄTERER Reload (z.B. "Schließen" nach einem
+            // erfolgreichen Multichange-Lauf, der die Seite neu lädt) öffnete
+            // das Gruppieren-Panel dadurch ungewollt erneut, obwohl das gar
+            // nichts mehr mit dem ursprünglichen "Projekte dieser Gruppe
+            // anzeigen"-Klick zu tun hatte. Einmalig aus der URL entfernen,
+            // sobald der Wert ausgelesen ist - alles andere (Filter usw.)
+            // bleibt unangetastet.
+            (function () {
+                const url = new URL(window.location.href);
+                url.searchParams.delete('reopen_group');
+                window.history.replaceState(window.history.state, '', url);
+            })();
         </script>
     @endif
 
