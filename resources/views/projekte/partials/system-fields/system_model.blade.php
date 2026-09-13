@@ -37,7 +37,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                             </svg>
                         </button>
-                        <div x-show="open" x-cloak class="absolute left-0 top-full z-10 mt-1 w-max max-w-xs rounded-md border border-gray-200 bg-white p-2 text-xs shadow-lg">
+                        <div x-show="open" x-cloak class="absolute left-0 top-full z-10 mt-1 w-max max-w-sm rounded-md border border-gray-200 bg-white p-2 text-xs shadow-lg whitespace-nowrap">
                             <div class="mb-1 font-medium text-gray-500">{{ __('Auch verknüpft mit:') }}</div>
                             @foreach ($otherProjects as $otherProject)
                                 <div>
