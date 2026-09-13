@@ -54,6 +54,12 @@ class MultichangeController extends Controller
             'groups' => $this->availableGroups(),
             'fields' => MultichangeFieldCatalog::available(),
             'selectedGroupId' => $request->integer('group_id') ?: '',
+            // Ralf: "Wenn ich auf Zurück klicke, werde ich bestraft und muss
+            // nochmal von vorne beginnen" - Feld+Wert bleiben beim
+            // Zurück-Klick jetzt erhalten (siehe "Zurück"-Button in
+            // multichange-body.blade.php), nicht nur die Gruppe.
+            'selectedField' => (string) $request->string('field'),
+            'selectedValue' => (string) $request->string('value'),
         ]);
     }
 
@@ -63,12 +69,12 @@ class MultichangeController extends Controller
 
         $group = $this->resolveGroup($request);
         if ($group === null) {
-            return $this->invalidInputResponse(new MessageBag(['group' => [__('Bitte eine Gruppe auswählen.')]]));
+            return $this->invalidInputResponse($request, new MessageBag(['group' => [__('Bitte eine Gruppe auswählen.')]]));
         }
 
         $validation = $this->validateInput($request);
         if ($validation['errors']) {
-            return $this->invalidInputResponse($validation['errors'], $group, $validation['field']);
+            return $this->invalidInputResponse($request, $validation['errors'], $group, $validation['field']);
         }
         [$field, $value] = [$validation['field'], $validation['value']];
         $preview = $this->buildPreview($group, $field, $value);
@@ -90,12 +96,12 @@ class MultichangeController extends Controller
 
         $group = $this->resolveGroup($request);
         if ($group === null) {
-            return $this->invalidInputResponse(new MessageBag(['group' => [__('Bitte eine Gruppe auswählen.')]]));
+            return $this->invalidInputResponse($request, new MessageBag(['group' => [__('Bitte eine Gruppe auswählen.')]]));
         }
 
         $validation = $this->validateInput($request);
         if ($validation['errors']) {
-            return $this->invalidInputResponse($validation['errors'], $group, $validation['field']);
+            return $this->invalidInputResponse($request, $validation['errors'], $group, $validation['field']);
         }
         [$field, $value] = [$validation['field'], $validation['value']];
         $preview = $this->buildPreview($group, $field, $value);
@@ -159,7 +165,7 @@ class MultichangeController extends Controller
         return ['field' => $field, 'value' => $value, 'errors' => null];
     }
 
-    private function invalidInputResponse(MessageBag $errors, ?ProjectGroup $group = null, ?array $field = null): Response
+    private function invalidInputResponse(Request $request, MessageBag $errors, ?ProjectGroup $group = null, ?array $field = null): Response
     {
         return response()
             ->view('projekte.partials.multichange-body', [
@@ -168,6 +174,9 @@ class MultichangeController extends Controller
                 'formErrors' => $errors,
                 'selectedGroupId' => $group?->id ?? '',
                 'selectedField' => $field['key'] ?? '',
+                // Eingegebener Wert bleibt auch bei einem Validierungsfehler
+                // erhalten, gleicher Grund wie beim "Zurück"-Button.
+                'selectedValue' => (string) $request->string('value'),
             ])
             ->setStatusCode(422);
     }

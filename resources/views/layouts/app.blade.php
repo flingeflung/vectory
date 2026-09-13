@@ -1932,10 +1932,17 @@
                 const multichangeBody = () => document.getElementById('multichange-body');
                 const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 
-                window.openMultichange = async (groupId) => {
+                window.openMultichange = async (groupId, field, value) => {
                     multichangeBody().innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
                     window.dispatchEvent(new CustomEvent('open-modal', { detail: 'multichange' }));
-                    const query = groupId ? `?group_id=${groupId}` : '';
+                    // field/value: nur beim "Zurück"-Klick aus der Vorschau
+                    // gesetzt, damit die Auswahl erhalten bleibt (Ralf: "werde
+                    // ich bestraft und muss nochmal von vorne beginnen").
+                    const params = new URLSearchParams();
+                    if (groupId) params.set('group_id', groupId);
+                    if (field) params.set('field', field);
+                    if (value) params.set('value', value);
+                    const query = params.toString() ? `?${params.toString()}` : '';
                     multichangeBody().innerHTML = await fetch(`/projekte/multichange${query}`).then((r) => r.text());
                 };
 

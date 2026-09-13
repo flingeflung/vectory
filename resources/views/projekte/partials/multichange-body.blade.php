@@ -31,9 +31,19 @@
             </div>
         @endif
 
+        {{--
+            Ralf-Bug-Report: "habe die Bezeichnungen geändert, aber die
+            Übersicht wird nicht aktualisiert" - die Tabelle dahinter ist
+            normales, einmal beim Seitenaufruf gerendertes HTML, kein
+            reaktiver Zustand. Statt eines einzelnen Zeilen-Refreshs (müsste
+            wissen, welche Spalten gerade sichtbar sind usw.) hier bewusst
+            der einfache, robuste Weg: kompletter Reload beim Schließen -
+            nur an dieser Stelle sinnvoll, weil $result nur nach einem
+            ERFOLGREICHEN Anwenden gesetzt wird.
+        --}}
         <button
             type="button"
-            onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'multichange' }))"
+            onclick="window.location.reload()"
             class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover"
         >
             {{ __('Schließen') }}
@@ -47,8 +57,16 @@
             {{ __(':field wird auf „:value" gesetzt.', ['field' => $field['label'], 'value' => $valueLabel]) }}
         </div>
 
+        @php
+            $applicableCount = $preview['applicable']->count();
+            $totalCount = $applicableCount + $preview['skipped']->count();
+        @endphp
         <div class="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 font-medium text-gray-700">
-            {{ trans_choice(':count Projekt wird geändert.|:count Projekte werden geändert.', $preview['applicable']->count(), ['count' => $preview['applicable']->count()]) }}
+            {{ trans_choice(
+                ':applicable von :total Projekt dieser Gruppe wird geändert.|:applicable von :total Projekten dieser Gruppe werden geändert.',
+                $totalCount,
+                ['applicable' => $applicableCount, 'total' => $totalCount]
+            ) }}
         </div>
 
         @if ($preview['skipped']->isNotEmpty())
@@ -88,7 +106,7 @@
         >
             <button
                 type="button"
-                onclick="window.openMultichange({{ $group->id }})"
+                onclick="window.openMultichange({{ $group->id }}, {{ \Illuminate\Support\Js::from($field['key']) }}, {{ \Illuminate\Support\Js::from((string) $value) }})"
                 class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
             >
                 {{ __('Zurück') }}
@@ -106,7 +124,7 @@
     </div>
 @else
     <form
-        x-data="{ groupId: {{ \Illuminate\Support\Js::from((string) ($selectedGroupId ?? '')) }}, field: {{ \Illuminate\Support\Js::from($selectedField ?? '') }}, value: '' }"
+        x-data="{ groupId: {{ \Illuminate\Support\Js::from((string) ($selectedGroupId ?? '')) }}, field: {{ \Illuminate\Support\Js::from($selectedField ?? '') }}, value: {{ \Illuminate\Support\Js::from($selectedValue ?? '') }} }"
         @submit.prevent="window.reloadMultichange({{ \Illuminate\Support\Js::from(route('projekte.multichange.preview')) }}, { group_id: groupId, field, value })"
         class="space-y-3"
     >
