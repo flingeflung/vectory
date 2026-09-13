@@ -54,6 +54,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/projekte', [ProjectController::class, 'index'])->name('projekte');
+    Route::get('/projekte/mehr', [ProjectController::class, 'more'])->name('projekte.mehr');
     Route::get('/schnellsuche', [ProjectController::class, 'quickSearch'])->name('projekte.schnellsuche');
 
     Route::get('/projektgruppen', [ProjectGroupController::class, 'panel'])->name('projektgruppen.panel');

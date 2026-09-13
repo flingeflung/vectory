@@ -71,7 +71,7 @@
                 <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
                     <span>{{ __('Projekte gesamt') }}: <strong class="text-gray-800">{{ $totalCount }}</strong></span>
                     @if (! empty($filters))
-                        <span>{{ __('gefiltert') }}: <strong class="text-gray-800">{{ $projects->total() }}</strong></span>
+                        <span>{{ __('gefiltert') }}: <strong class="text-gray-800">{{ $totalFiltered }}</strong></span>
                     @endif
                 </div>
 
@@ -100,8 +100,37 @@
                 @endif
             </div>
 
-            <div class="bg-white shadow-sm sm:rounded-lg flex flex-1 min-h-0 flex-col" x-data>
-                <div class="flex-1 min-h-0 overflow-auto">
+            <div
+                class="bg-white shadow-sm sm:rounded-lg flex flex-1 min-h-0 flex-col"
+                x-data="{
+                    offset: {{ $projects->count() }},
+                    hasMore: {{ $hasMore ? 'true' : 'false' }},
+                    loadingMore: false,
+                    initScrollSentinel(el) {
+                        new IntersectionObserver((entries) => {
+                            if (entries[0].isIntersecting) { this.loadMore(); }
+                        }, { root: el.closest('[data-scroll-root]'), rootMargin: '300px' }).observe(el);
+                    },
+                    async loadMore() {
+                        if (this.loadingMore || ! this.hasMore) return;
+                        this.loadingMore = true;
+                        try {
+                            const params = new URLSearchParams(window.location.search);
+                            params.set('offset', this.offset);
+                            const url = {{ \Illuminate\Support\Js::from(route('projekte.mehr')) }} + '?' + params.toString();
+                            const response = await fetch(url);
+                            if (! response.ok) return;
+                            const html = await response.text();
+                            document.getElementById('projekte-rows').insertAdjacentHTML('beforeend', html);
+                            this.hasMore = response.headers.get('X-Has-More') === '1';
+                            this.offset += {{ $pageSize }};
+                        } finally {
+                            this.loadingMore = false;
+                        }
+                    },
+                }"
+            >
+                <div data-scroll-root class="flex-1 min-h-0 overflow-auto">
                     <table class="min-w-full divide-y divide-gray-200 text-sm">
                         <thead class="bg-gray-50">
                             <tr>
@@ -116,147 +145,19 @@
                                 @endforeach
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-100">
-                            @forelse ($projects as $project)
-                                <tr class="hover:bg-gray-50">
-                                    <td x-show="$store.projectGrouping.active" x-cloak class="px-2 py-2">
-                                        <input
-                                            type="checkbox"
-                                            class="rounded border-gray-300"
-                                            :checked="$store.projectGrouping.memberIds.includes({{ $project->id }})"
-                                            :disabled="! $store.projectGrouping.groupId"
-                                            @change="$store.projectGrouping.toggleProject({{ $project->id }}, $event.target.checked)"
-                                        >
-                                    </td>
-                                    <td class="px-4 py-2 whitespace-nowrap text-gray-500">
-                                        <span class="inline-flex items-center gap-1">
-                                            <x-pn-link :project="$project" :sort="$sort" :direction="$direction" :filters="$filters" />
-                                            @if (in_array($project->id, $favoriteProjectIds, true))
-                                                <x-favorite-star :project="$project" :is-favorite="true" size="h-3.5 w-3.5" />
-                                            @endif
-                                            <x-project-directory-status :project="$project" :status="$directoryStatuses[$project->id]" />
-                                        </span>
-                                    </td>
-                                    @foreach ($columns as $column)
-                                        <td class="px-4 py-2 {{ ($column['icons'] ?? false) ? 'text-gray-500' : ($column['long_text'] ? 'text-gray-900 max-w-xs' : 'whitespace-nowrap text-gray-500') }}">
-                                            @if ($column['type_icon'] ?? false)
-                                                @php $typeSub = $project->project_type_sub_model; @endphp
-                                                @if ($typeSub)
-                                                    <div class="flex items-center gap-2">
-                                                        @if ($typeSub->symbol)
-                                                            <img src="{{ asset('images/project-type-icons/'.$typeSub->symbol) }}" alt="" class="h-5 w-auto shrink-0">
-                                                        @endif
-                                                        <div class="leading-tight">
-                                                            <div class="text-xs text-gray-500">{{ $typeSub->main->name }}:</div>
-                                                            <div class="text-gray-900">{{ $typeSub->name }}</div>
-                                                        </div>
-                                                    </div>
-                                                @else
-                                                    <span class="text-gray-400">&ndash;</span>
-                                                @endif
-                                            @elseif ($column['graphic_summary'] ?? false)
-                                                @php
-                                                    $summary = $graphicOrderSummaries->get($project->id);
-                                                    $goTotal = $summary->total ?? 0;
-                                                    $goDone = $summary->done ?? 0;
-                                                    $goImages = $summary->images ?? 0;
-                                                @endphp
-                                                <span title="{{ $goTotal }} {{ $goTotal == 1 ? __('Illustrationsauftrag') : __('Illustrationsaufträge') }}, {{ $goDone }} {{ __('erledigt') }}, {{ $goImages }} {{ $goImages == 1 ? __('Bild') : __('Bilder') }} {{ __('ges.') }}">{{ $goTotal }}/{{ $goDone }}/{{ $goImages }}</span>
-                                            @elseif ($column['key'] === 'status')
-                                                <x-status-icon :status="$project->status" />
-                                            @elseif ($column['key'] === 'workflow')
-                                                @if ($project->workflow)
-                                                    <div title="{{ $project->workflow->name }}">{{ $project->workflow->id }} - {{ $project->workflow->short_name }}</div>
-                                                    @if ($project->progressStepLabel())
-                                                        <div class="text-xs text-gray-400" title="{{ $project->currentStepTitle() }}">{{ $project->progressStepLabel() }}</div>
-                                                    @endif
-                                                @else
-                                                    <span class="text-gray-400" title="{{ __('– Kein Workflow zugewiesen –') }}">&ndash;</span>
-                                                @endif
-                                            @elseif ($column['key'] === 'system_model')
-                                                @if ($project->products->isEmpty())
-                                                    <span class="text-gray-400">&ndash;</span>
-                                                @else
-                                                    {{ $project->products->pluck('name')->implode(', ') }}
-                                                @endif
-                                            @elseif ($column['progress'] ?? false)
-                                                @php $progress = $project->progressPercent(); @endphp
-                                                @if ($progress !== null)
-                                                    <div class="flex items-center gap-1.5" title="{{ $progress }} %">
-                                                        <div class="h-1.5 w-16 overflow-hidden rounded-full bg-gray-200">
-                                                            <div class="h-full rounded-full bg-blue-500" style="width: {{ $progress }}%"></div>
-                                                        </div>
-                                                        <span class="text-xs">{{ $progress }}%</span>
-                                                    </div>
-                                                @else
-                                                    <span class="text-gray-400">&ndash;</span>
-                                                @endif
-                                            @elseif ($column['icons'] ?? false)
-                                                @php $marketPreviewCount = 5; $marketList = $project->markets; @endphp
-                                                @if ($marketList->count() > $marketPreviewCount)
-                                                    <span x-data="{ expanded: false }">
-                                                        <span
-                                                            x-show="!expanded"
-                                                            @click="expanded = true"
-                                                            class="inline-flex max-w-[180px] flex-wrap items-center gap-y-0.5 cursor-pointer"
-                                                            title="{{ __('Klicken zum Erweitern') }}"
-                                                        >
-                                                            @foreach ($marketList->take($marketPreviewCount) as $market)
-                                                                <x-market-icon :market="$market" />
-                                                            @endforeach
-                                                            <span class="text-[10px] text-gray-400">+{{ $marketList->count() - $marketPreviewCount }} {{ __('weitere') }}</span>
-                                                        </span>
-                                                        <span
-                                                            x-show="expanded"
-                                                            x-cloak
-                                                            @click="expanded = false"
-                                                            class="inline-flex max-w-[220px] flex-wrap items-center gap-y-0.5 cursor-pointer"
-                                                        >
-                                                            @foreach ($marketList as $market)
-                                                                <x-market-icon :market="$market" />
-                                                            @endforeach
-                                                        </span>
-                                                    </span>
-                                                @else
-                                                    @foreach ($marketList as $market)
-                                                        <x-market-icon :market="$market" />
-                                                    @endforeach
-                                                @endif
-                                            @else
-                                                @php $value = $project->columnValue($column['key']); @endphp
-                                                @if ($column['long_text'] && ! $column['show_long_text'] && \Illuminate\Support\Str::length((string) $value) > $column['short_length'])
-                                                    <span x-data="{ expanded: false }">
-                                                        <span
-                                                            x-show="!expanded"
-                                                            @click="expanded = true"
-                                                            class="cursor-pointer"
-                                                            title="{{ __('Klicken zum Erweitern') }}"
-                                                        >{{ \Illuminate\Support\Str::limit($value, $column['short_length']) }}</span>
-                                                        <span
-                                                            x-show="expanded"
-                                                            x-cloak
-                                                            @click="expanded = false"
-                                                            class="cursor-pointer"
-                                                        >{{ $value }}</span>
-                                                    </span>
-                                                @else
-                                                    {{ $value }}
-                                                @endif
-                                            @endif
-                                        </td>
-                                    @endforeach
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="{{ count($columns) + 1 }}" class="px-4 py-6 text-center text-gray-500">{{ __('Keine Projekte vorhanden.') }}</td>
-                                </tr>
-                            @endforelse
+                        <tbody id="projekte-rows" class="divide-y divide-gray-100">
+                            @include('projekte.partials.rows')
                         </tbody>
                     </table>
-                </div>
 
-                <div class="shrink-0 px-4 py-3 border-t border-gray-100">
-                    {{ $projects->links() }}
+                    {{-- Sentinel MUSS innerhalb des scrollenden Bereichs stehen
+                         (nicht als Geschwister daneben) - sonst ist er permanent
+                         sichtbar und der Observer feuert sofort statt erst beim
+                         Herunterscrollen ans Listenende (gleiche Lektion wie bei
+                         Produkte/Verknüpfen-Modal). --}}
+                    <div x-show="hasMore" x-cloak x-init="initScrollSentinel($el)" class="py-2 text-center text-xs text-gray-400">
+                        <span x-show="loadingMore" x-cloak>{{ __('Lädt…') }}</span>
+                    </div>
                 </div>
             </div>
         </div>

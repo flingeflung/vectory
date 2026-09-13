@@ -56,6 +56,17 @@ class ProjectController extends Controller
 
     private const BOOL_FIELDS = ['archived'];
 
+    /**
+     * Ralf, 2026-09-13: "Hatten wir das nicht umgestellt auf automatisch
+     * nachladen?" - war bisher klassische Seiten-Pagination (25/Seite),
+     * jetzt automatisches Nachladen beim Scrollen wie bei Produkte/den
+     * Verknüpfen-Pickern. Batchgröße bewusst bei 25 belassen (nicht wie
+     * dort 500) - hier ist jede Zeile deutlich schwerer (viele Spalten,
+     * Märkte-Icons, Workflow-Fortschritt), 500 auf einmal wäre spürbar
+     * langsamer beim Rendern.
+     */
+    private const PAGE_SIZE = 25;
+
     public function __construct(
         private readonly ProjectDirectoryLocator $directoryLocator,
         private readonly ProjectNumberAllocator $numberAllocator,
@@ -103,7 +114,63 @@ class ProjectController extends Controller
         $allColumns = ProjectColumnCatalog::effectiveFor($user);
         $visibleColumns = array_values(array_filter($allColumns, fn (array $column) => $column['visible']));
 
-        $query = $this->orderedQuery($sort, $direction, $filters);
+        $totalFiltered = $this->orderedQuery($sort, $direction, $filters)->count();
+        $query = $this->eagerLoadForColumns($this->orderedQuery($sort, $direction, $filters), $visibleColumns);
+        $projects = $query->take(self::PAGE_SIZE)->get();
+
+        $activeFilterFields = ! empty($filters) || $request->has('projektfilter_submitted')
+            ? array_values(array_unique([...ProjectFilterCatalog::activeFieldsFor($user), ...array_keys($filters)]))
+            : ProjectFilterCatalog::activeFieldsFor($user);
+
+        return view('projekte.index', [
+            ...$this->rowData($projects, $visibleColumns, $user),
+            'columns' => $visibleColumns,
+            'allColumns' => $allColumns,
+            'sets' => DisplayFilterSet::query()->where('user_id', $user->id)->orderBy('name')->get(),
+            'sort' => $sort,
+            'direction' => $direction,
+            'filters' => $filters,
+            'filterFields' => ProjectFilterCatalog::available(CurrentTenant::id()),
+            'activeFilterFields' => $activeFilterFields,
+            'filterChips' => ProjectFilterCatalog::describeFilters($filters, CurrentTenant::id()),
+            'totalCount' => Project::query()->count(),
+            'totalFiltered' => $totalFiltered,
+            'pageSize' => self::PAGE_SIZE,
+            'hasMore' => $totalFiltered > $projects->count(),
+        ]);
+    }
+
+    /**
+     * Nachladen ab $offset (siehe PAGE_SIZE-Docblock) - liefert nur die
+     * Zeilen-Fragmente, "weitere vorhanden?" steckt im X-Has-More-Header.
+     * Gleiches Muster wie ProductController::more()/ProjectConnection
+     * Controller::moreOtherProjects().
+     */
+    public function more(Request $request): Response
+    {
+        [$sort, $direction] = $this->sortFromRequest($request);
+        $filters = $this->filtersFromRequest($request);
+        $user = $request->user();
+        $offset = max(0, $request->integer('offset'));
+
+        $visibleColumns = array_values(array_filter(ProjectColumnCatalog::effectiveFor($user), fn (array $column) => $column['visible']));
+
+        $query = $this->eagerLoadForColumns($this->orderedQuery($sort, $direction, $filters), $visibleColumns);
+        $projects = $query->skip($offset)->take(self::PAGE_SIZE)->get();
+
+        $html = view('projekte.partials.rows', [
+            ...$this->rowData($projects, $visibleColumns, $user),
+            'columns' => $visibleColumns,
+            'sort' => $sort,
+            'direction' => $direction,
+            'filters' => $filters,
+        ])->render();
+
+        return response($html)->header('X-Has-More', $projects->count() === self::PAGE_SIZE ? '1' : '0');
+    }
+
+    private function eagerLoadForColumns(Builder $query, array $visibleColumns): Builder
+    {
         if (array_any($visibleColumns, fn (array $column) => $column['key'] === 'markets')) {
             $query->with('markets');
         }
@@ -116,32 +183,26 @@ class ProjectController extends Controller
         if (array_any($visibleColumns, fn (array $column) => $column['key'] === 'system_model')) {
             $query->with('products');
         }
-        $projects = $query->paginate(25)->withQueryString();
 
+        return $query;
+    }
+
+    /**
+     * @param  Collection<int, Project>  $projects
+     * @return array{favoriteProjectIds: array, graphicOrderSummaries: Collection, directoryStatuses: array}
+     */
+    private function rowData(Collection $projects, array $visibleColumns, $user): array
+    {
         $graphicOrderSummaries = array_any($visibleColumns, fn (array $column) => $column['key'] === 'graphic_orders_summary')
             ? $this->graphicOrderSummaries($projects->pluck('id'))
             : collect();
 
-        $activeFilterFields = ! empty($filters) || $request->has('projektfilter_submitted')
-            ? array_values(array_unique([...ProjectFilterCatalog::activeFieldsFor($user), ...array_keys($filters)]))
-            : ProjectFilterCatalog::activeFieldsFor($user);
-
-        return view('projekte.index', [
+        return [
             'projects' => $projects,
-            'columns' => $visibleColumns,
-            'allColumns' => $allColumns,
-            'sets' => DisplayFilterSet::query()->where('user_id', $user->id)->orderBy('name')->get(),
-            'sort' => $sort,
-            'direction' => $direction,
-            'filters' => $filters,
-            'filterFields' => ProjectFilterCatalog::available(CurrentTenant::id()),
-            'activeFilterFields' => $activeFilterFields,
-            'filterChips' => ProjectFilterCatalog::describeFilters($filters, CurrentTenant::id()),
-            'totalCount' => Project::query()->count(),
             'favoriteProjectIds' => Favorite::where('user_id', $user->id)->pluck('project_id')->all(),
             'graphicOrderSummaries' => $graphicOrderSummaries,
-            'directoryStatuses' => $this->directoryLocator->statusesForProjects($projects->getCollection(), CurrentTenant::id()),
-        ]);
+            'directoryStatuses' => $this->directoryLocator->statusesForProjects($projects, CurrentTenant::id()),
+        ];
     }
 
     /**
