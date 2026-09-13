@@ -28,8 +28,8 @@
                         type="search"
                         x-model="term"
                         @input="onInput()"
-                        placeholder="{{ __('Produktnr., -bezeichnung, Gruppe...') }}"
-                        class="w-64 rounded-md border-gray-300 py-1 text-sm"
+                        placeholder="{{ __('Produktnr./-bezeichnung oder Produktgrp./-bezeichnung') }}"
+                        class="w-[28rem] rounded-md border-gray-300 py-1 text-sm"
                     >
                 </label>
 
