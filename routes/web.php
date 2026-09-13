@@ -73,9 +73,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/projektgruppen/{group}/personen/{user}', [ProjectGroupController::class, 'share'])->name('projektgruppen.personen.share');
     Route::delete('/projektgruppen/{group}/personen/{user}', [ProjectGroupController::class, 'unshare'])->name('projektgruppen.personen.unshare');
     Route::get('/projektgruppen/{group}/anzeigen', [ProjectGroupController::class, 'showInOverview'])->name('projektgruppen.anzeigen');
-    Route::get('/projektgruppen/{group}/multichange', [MultichangeController::class, 'form'])->name('projektgruppen.multichange.form');
-    Route::post('/projektgruppen/{group}/multichange/vorschau', [MultichangeController::class, 'preview'])->name('projektgruppen.multichange.preview');
-    Route::post('/projektgruppen/{group}/multichange/anwenden', [MultichangeController::class, 'apply'])->name('projektgruppen.multichange.apply');
+    // Ralf, 2026-09-13: "Das Gruppieren soll losgelöst sein davon" -
+    // Multichange wählt seine Zielgruppe selbst im Formular, deshalb kein
+    // {group}-Routenparameter (anders als alle /projektgruppen/{group}/...-
+    // Routen oben). Vor /projekte/{project} registriert - sonst würde
+    // "multichange" als Projekt-ID interpretiert.
+    Route::get('/projekte/multichange', [MultichangeController::class, 'form'])->name('projekte.multichange.form');
+    Route::post('/projekte/multichange/vorschau', [MultichangeController::class, 'preview'])->name('projekte.multichange.preview');
+    Route::post('/projekte/multichange/anwenden', [MultichangeController::class, 'apply'])->name('projekte.multichange.apply');
     // Vor /projekte/{project} registriert - sonst würde "neu" als Projekt-ID interpretiert.
     Route::get('/projekte/neu', [ProjectController::class, 'createForm'])->name('projekte.create-form');
     Route::post('/projekte', [ProjectController::class, 'store'])->name('projekte.store');

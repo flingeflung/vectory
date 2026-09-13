@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\MessageBag;
@@ -35,32 +36,47 @@ use Illuminate\Validation\Rule;
  */
 class MultichangeController extends Controller
 {
-    public function form(Request $request, ProjectGroup $group): Response
+    /**
+     * Ralf, 2026-09-13: "Das Gruppieren soll losgelöst sein davon, quasi
+     * die Grundlage. Das macht man auch nicht ständig... Multichange kann
+     * immer mal wieder dazwischen vorkommen." Multichange ist deshalb ein
+     * eigener, immer sichtbarer Button in der Übersicht (nicht mehr im
+     * Gruppieren-Panel versteckt) und wählt seine Zielgruppe selbst -
+     * unabhängig davon, ob/welche Gruppe im Gruppieren-Store gerade aktiv
+     * ist. Gruppen-Auswahl ist deshalb Teil DIESES Formulars, nicht mehr
+     * Teil der Route (kein {group}-Routenparameter mehr).
+     */
+    public function form(Request $request): Response
     {
-        $group->authorizeViewer();
         abort_unless($request->user()->can('project.multichange'), 403);
 
         return response()->view('projekte.partials.multichange-body', [
-            'group' => $group,
+            'groups' => $this->availableGroups(),
             'fields' => MultichangeFieldCatalog::available(),
+            'selectedGroupId' => $request->integer('group_id') ?: '',
         ]);
     }
 
-    public function preview(Request $request, ProjectGroup $group): Response
+    public function preview(Request $request): Response
     {
-        $group->authorizeViewer();
         abort_unless($request->user()->can('project.multichange'), 403);
+
+        $group = $this->resolveGroup($request);
+        if ($group === null) {
+            return $this->invalidInputResponse(new MessageBag(['group' => [__('Bitte eine Gruppe auswählen.')]]));
+        }
 
         $validation = $this->validateInput($request);
         if ($validation['errors']) {
-            return $this->invalidInputResponse($group, $validation);
+            return $this->invalidInputResponse($validation['errors'], $group, $validation['field']);
         }
         [$field, $value] = [$validation['field'], $validation['value']];
         $preview = $this->buildPreview($group, $field, $value);
 
         return response()->view('projekte.partials.multichange-body', [
-            'group' => $group,
+            'groups' => $this->availableGroups(),
             'fields' => MultichangeFieldCatalog::available(),
+            'group' => $group,
             'preview' => $preview,
             'field' => $field,
             'value' => $value,
@@ -68,14 +84,18 @@ class MultichangeController extends Controller
         ]);
     }
 
-    public function apply(Request $request, ProjectGroup $group): Response
+    public function apply(Request $request): Response
     {
-        $group->authorizeViewer();
         abort_unless($request->user()->can('project.multichange'), 403);
+
+        $group = $this->resolveGroup($request);
+        if ($group === null) {
+            return $this->invalidInputResponse(new MessageBag(['group' => [__('Bitte eine Gruppe auswählen.')]]));
+        }
 
         $validation = $this->validateInput($request);
         if ($validation['errors']) {
-            return $this->invalidInputResponse($group, $validation);
+            return $this->invalidInputResponse($validation['errors'], $group, $validation['field']);
         }
         [$field, $value] = [$validation['field'], $validation['value']];
         $preview = $this->buildPreview($group, $field, $value);
@@ -139,16 +159,48 @@ class MultichangeController extends Controller
         return ['field' => $field, 'value' => $value, 'errors' => null];
     }
 
-    private function invalidInputResponse(ProjectGroup $group, array $validation): Response
+    private function invalidInputResponse(MessageBag $errors, ?ProjectGroup $group = null, ?array $field = null): Response
     {
         return response()
             ->view('projekte.partials.multichange-body', [
-                'group' => $group,
+                'groups' => $this->availableGroups(),
                 'fields' => MultichangeFieldCatalog::available(),
-                'formErrors' => $validation['errors'],
-                'selectedField' => $validation['field']['key'] ?? '',
+                'formErrors' => $errors,
+                'selectedGroupId' => $group?->id ?? '',
+                'selectedField' => $field['key'] ?? '',
             ])
             ->setStatusCode(422);
+    }
+
+    /**
+     * @return Collection<int, ProjectGroup>
+     */
+    private function availableGroups(): Collection
+    {
+        return Auth::user()->projectGroups()->withCount('projects')->orderBy('name')->get();
+    }
+
+    /**
+     * Liest+prüft die Zielgruppe aus dem Request statt aus einem
+     * Routen-Parameter (siehe Klassen-Docblock: Gruppen-Auswahl ist Teil
+     * des Formulars, damit der Multichange-Button unabhängig vom
+     * Gruppieren-Panel funktioniert).
+     */
+    private function resolveGroup(Request $request): ?ProjectGroup
+    {
+        $groupId = $request->integer('group_id');
+        if (! $groupId) {
+            return null;
+        }
+
+        $group = ProjectGroup::query()->find($groupId);
+        if ($group === null) {
+            return null;
+        }
+
+        $group->authorizeViewer();
+
+        return $group;
     }
 
     /**

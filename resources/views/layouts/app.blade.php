@@ -1935,7 +1935,8 @@
                 window.openMultichange = async (groupId) => {
                     multichangeBody().innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
                     window.dispatchEvent(new CustomEvent('open-modal', { detail: 'multichange' }));
-                    multichangeBody().innerHTML = await fetch(`/projektgruppen/${groupId}/multichange`).then((r) => r.text());
+                    const query = groupId ? `?group_id=${groupId}` : '';
+                    multichangeBody().innerHTML = await fetch(`/projekte/multichange${query}`).then((r) => r.text());
                 };
 
                 window.reloadMultichange = async (url, params) => {

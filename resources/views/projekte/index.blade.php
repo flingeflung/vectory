@@ -65,6 +65,26 @@
                 >
                     {{ __('Gruppieren') }}
                 </button>
+
+                @can('project.multichange')
+                    {{--
+                        Ralf, 2026-09-13: "Das Gruppieren soll losgelöst sein
+                        davon, quasi die Grundlage. Das macht man auch nicht
+                        ständig... Multichange kann immer mal wieder
+                        dazwischen vorkommen, daher muss das prominenter
+                        sichtbar sein." Deshalb eigener, immer sichtbarer
+                        Button statt im Gruppieren-Panel versteckt - wählt
+                        seine Zielgruppe selbst im Formular (kein
+                        Zusammenhang mit $store.projectGrouping).
+                    --}}
+                    <button
+                        type="button"
+                        onclick="window.openMultichange()"
+                        class="inline-flex items-center rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-800 hover:bg-amber-100"
+                    >
+                        {{ __('Multichange') }}
+                    </button>
+                @endcan
             </div>
 
             <div class="mb-3 shrink-0 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
