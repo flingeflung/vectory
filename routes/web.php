@@ -31,6 +31,7 @@ use App\Http\Controllers\ProjectConnectionController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectCopyController;
 use App\Http\Controllers\ProjectDirectoryController;
+use App\Http\Controllers\ProjectGroupController;
 use App\Http\Controllers\ProjectNoteController;
 use App\Http\Controllers\ProjectProductController;
 use App\Http\Controllers\ProjectScheduleController;
@@ -54,6 +55,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/projekte', [ProjectController::class, 'index'])->name('projekte');
     Route::get('/schnellsuche', [ProjectController::class, 'quickSearch'])->name('projekte.schnellsuche');
+
+    Route::get('/projektgruppen', [ProjectGroupController::class, 'panel'])->name('projektgruppen.panel');
+    Route::post('/projektgruppen', [ProjectGroupController::class, 'store'])->name('projektgruppen.store');
+    Route::patch('/projektgruppen/{group}', [ProjectGroupController::class, 'update'])->name('projektgruppen.update');
+    Route::delete('/projektgruppen/{group}', [ProjectGroupController::class, 'destroy'])->name('projektgruppen.destroy');
+    Route::delete('/projektgruppen/{group}/verlassen', [ProjectGroupController::class, 'leave'])->name('projektgruppen.leave');
+    Route::post('/projektgruppen/{group}/leeren', [ProjectGroupController::class, 'clear'])->name('projektgruppen.clear');
+    Route::put('/projektgruppen/{group}/projekte/{project}', [ProjectGroupController::class, 'addProject'])->name('projektgruppen.projekte.add');
+    Route::delete('/projektgruppen/{group}/projekte/{project}', [ProjectGroupController::class, 'removeProject'])->name('projektgruppen.projekte.remove');
+    Route::post('/projektgruppen/{group}/alle', [ProjectGroupController::class, 'addAllFiltered'])->name('projektgruppen.alle.add');
+    Route::delete('/projektgruppen/{group}/alle', [ProjectGroupController::class, 'removeAllFiltered'])->name('projektgruppen.alle.remove');
+    Route::get('/projektgruppen/{group}/mitglieder', [ProjectGroupController::class, 'memberIds'])->name('projektgruppen.mitglieder');
+    Route::get('/projektgruppen/{group}/personen', [ProjectGroupController::class, 'shareOptions'])->name('projektgruppen.personen');
+    Route::post('/projektgruppen/{group}/personen/{user}', [ProjectGroupController::class, 'share'])->name('projektgruppen.personen.share');
+    Route::delete('/projektgruppen/{group}/personen/{user}', [ProjectGroupController::class, 'unshare'])->name('projektgruppen.personen.unshare');
+    Route::get('/projektgruppen/{group}/anzeigen', [ProjectGroupController::class, 'showInOverview'])->name('projektgruppen.anzeigen');
     // Vor /projekte/{project} registriert - sonst würde "neu" als Projekt-ID interpretiert.
     Route::get('/projekte/neu', [ProjectController::class, 'createForm'])->name('projekte.create-form');
     Route::post('/projekte', [ProjectController::class, 'store'])->name('projekte.store');

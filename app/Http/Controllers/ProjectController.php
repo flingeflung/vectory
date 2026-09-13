@@ -867,6 +867,12 @@ class ProjectController extends Controller
                 continue;
             }
 
+            if ($key === 'project_group_id') {
+                $query->whereHas('projectGroups', fn (Builder $query) => $query->where('project_groups.id', $value));
+
+                continue;
+            }
+
             $query->where($key, 'like', "%{$value}%");
         }
     }
@@ -918,6 +924,22 @@ class ProjectController extends Controller
     private function effectiveOrder(?string $sort, string $direction): array
     {
         return $sort ? [$sort, $direction] : ['start_date', 'desc'];
+    }
+
+    /**
+     * Projekt-IDs, die der aktuelle Übersichtsfilter liefert - für "Alle
+     * angezeigten Projekte" in ProjectGroupController (siehe dort: bezieht
+     * sich bewusst auf ALLE gefilterten Treffer, nicht nur die aktuelle
+     * Seite).
+     *
+     * @return Collection<int, int>
+     */
+    public function filteredIdsForGroups(array $filters): Collection
+    {
+        $query = Project::query();
+        $this->applyFilters($query, $filters);
+
+        return $query->pluck('id');
     }
 
     private function orderedQuery(?string $sort, string $direction, array $filters = []): Builder

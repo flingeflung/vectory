@@ -186,6 +186,11 @@ class Project extends Model
         return $this->belongsToMany(Product::class, 'project_products')->withTimestamps()->orderBy('name');
     }
 
+    public function projectGroups(): BelongsToMany
+    {
+        return $this->belongsToMany(ProjectGroup::class, 'project_group_project')->withTimestamps();
+    }
+
     public function connectionsFrom(): HasMany
     {
         return $this->hasMany(ProjectConnection::class, 'project_id');

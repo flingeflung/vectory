@@ -52,6 +52,19 @@
                 >
                     {{ __('Anzeigefilter') }}
                 </button>
+
+                {{-- "Meine Projektgruppen" (Ralf, 2026-09-13, analog Viettos
+                     Gruppieren-Funktion) - Häkchen-Spalte in der Tabelle
+                     ein-/ausblenden + Verwaltungs-Modal öffnen. --}}
+                <button
+                    type="button"
+                    x-data
+                    @click="$store.projectGrouping.toggleColumn(); $dispatch('open-modal', 'projektgruppen-panel-uebersicht')"
+                    class="inline-flex items-center rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-btn-secondary-hover"
+                    :class="$store.projectGrouping.active ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : 'border-btn-secondary-border bg-btn-secondary text-gray-700'"
+                >
+                    {{ __('Gruppieren') }}
+                </button>
             </div>
 
             <div class="mb-3 shrink-0 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
@@ -87,11 +100,12 @@
                 @endif
             </div>
 
-            <div class="bg-white shadow-sm sm:rounded-lg flex flex-1 min-h-0 flex-col">
+            <div class="bg-white shadow-sm sm:rounded-lg flex flex-1 min-h-0 flex-col" x-data>
                 <div class="flex-1 min-h-0 overflow-auto">
                     <table class="min-w-full divide-y divide-gray-200 text-sm">
                         <thead class="bg-gray-50">
                             <tr>
+                                <th x-show="$store.projectGrouping.active" x-cloak class="sticky top-0 z-10 bg-gray-50 px-2 py-3"></th>
                                 <x-sortable-th field="source_pn" :sort="$sort" :direction="$direction">{{ __('PN') }}</x-sortable-th>
                                 @foreach ($columns as $column)
                                     @if (in_array($column['key'], ['title', 'version', 'status', 'workflow'], true))
@@ -105,6 +119,15 @@
                         <tbody class="divide-y divide-gray-100">
                             @forelse ($projects as $project)
                                 <tr class="hover:bg-gray-50">
+                                    <td x-show="$store.projectGrouping.active" x-cloak class="px-2 py-2">
+                                        <input
+                                            type="checkbox"
+                                            class="rounded border-gray-300"
+                                            :checked="$store.projectGrouping.memberIds.includes({{ $project->id }})"
+                                            :disabled="! $store.projectGrouping.groupId"
+                                            @change="$store.projectGrouping.toggleProject({{ $project->id }}, $event.target.checked)"
+                                        >
+                                    </td>
                                     <td class="px-4 py-2 whitespace-nowrap text-gray-500">
                                         <span class="inline-flex items-center gap-1">
                                             <x-pn-link :project="$project" :sort="$sort" :direction="$direction" :filters="$filters" />
@@ -238,6 +261,8 @@
             </div>
         </div>
     </div>
+
+    @include('projekte.partials.project-group-modal', ['project' => null])
 
     <x-modal name="anzeigefilter" max-width="xl" :show="$errors->any()" :dirty-check="'anzeigefilterIsDirty'">
         @include('projekte.partials.anzeigefilter-form')

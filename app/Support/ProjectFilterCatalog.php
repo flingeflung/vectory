@@ -50,6 +50,11 @@ class ProjectFilterCatalog
             // Eintrag statt über die generische attribute:-Schleife unten,
             // siehe gleiche Begründung in ProjectColumnCatalog.
             ['key' => 'system_model', 'label' => Attribute::query()->where('tenant_id', $tenantId)->where('key', 'system_model')->value('label') ?? __('Modell/System'), 'type' => 'text'],
+            // Ralf, 2026-09-13: "Meine Projektgruppen" - hauptsächlich über
+            // den "Nur diese Gruppe anzeigen"-Link gesetzt (ProjectGroup-
+            // Controller::showInOverview()), aber auch normal manuell
+            // wählbar wie jeder andere Filter.
+            ['key' => 'project_group_id', 'label' => __('Projektgruppe'), 'type' => 'select', 'options' => self::projectGroupOptions()],
             ['key' => 'remarks', 'label' => __('Bemerkungen'), 'type' => 'text'],
             ['key' => 'markets', 'label' => __('Märkte/Subsprachen'), 'type' => 'multiselect', 'columns' => 2, 'options' => self::marketOptions($tenantId)],
             ['key' => 'graphic_orders', 'label' => __('Grafikaufträge'), 'type' => 'select', 'options' => [
@@ -108,6 +113,14 @@ class ProjectFilterCatalog
      *
      * @return array<int, array{label: string, inactive: bool}>
      */
+    /**
+     * @return array<int, string>
+     */
+    private static function projectGroupOptions(): array
+    {
+        return auth()->user()?->projectGroups()->orderBy('name')->pluck('name', 'project_groups.id')->all() ?? [];
+    }
+
     private static function workflowOptions(int $tenantId): array
     {
         return Workflow::query()

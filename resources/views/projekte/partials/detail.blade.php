@@ -161,9 +161,18 @@
                             {{ __('Projekt kopieren') }}
                         </button>
                     @endcan
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'projektgruppen-panel-{{ $project->id }}' }))"
+                        class="{{ $secondaryBtn }}"
+                    >
+                        {{ __('Gruppieren') }}
+                    </button>
                     {{-- weitere Aktions-Buttons (Aufgabe zuweisen, -> Projekt-Pool, Fehlercheck, Sichtbarkeit, Sperrmail, ...) folgen später. --}}
                 </div>
             </div>
+
+            @include('projekte.partials.project-group-modal', ['project' => $project])
         </div>
 
         <div class="{{ $isOverlay ? 'min-h-0 flex-1 overflow-y-auto px-4 pt-1 pb-3' : '' }}">

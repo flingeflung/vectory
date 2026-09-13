@@ -275,6 +275,46 @@
         </script>
 
         {{--
+            "Meine Projektgruppen" (Ralf, 2026-09-13) - geteilter Zustand
+            zwischen der Häkchen-Spalte in der Projektübersicht (Tabelle)
+            und dem Gruppieren-Modal (project-group-modal.blade.php),
+            Geschwister-Komponenten ohne gemeinsames x-data. Über
+            alpine:init statt x-init registriert (anders als das
+            workflowStepsDirty-Vorbild), weil dieser Store schon VOR der
+            ersten Zeile der Tabelle existieren muss - x-init auf einem
+            bestimmten Element wäre reihenfolgeabhängig.
+        --}}
+        <script>
+            document.addEventListener('alpine:init', () => {
+                Alpine.store('projectGrouping', {
+                    active: false,
+                    groupId: '',
+                    memberIds: [],
+                    toggleColumn() {
+                        this.active = !this.active;
+                    },
+                    async loadMembers() {
+                        if (!this.groupId) {
+                            this.memberIds = [];
+                            return;
+                        }
+                        this.memberIds = await fetch('/projektgruppen/' + this.groupId + '/mitglieder').then((r) => r.json());
+                    },
+                    async toggleProject(projectId, checked) {
+                        if (!this.groupId) return;
+                        await fetch('/projektgruppen/' + this.groupId + '/projekte/' + projectId, {
+                            method: checked ? 'PUT' : 'DELETE',
+                            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                        });
+                        this.memberIds = checked
+                            ? [...new Set([...this.memberIds, projectId])]
+                            : this.memberIds.filter((id) => id !== projectId);
+                    },
+                });
+            });
+        </script>
+
+        {{--
             Neu laden einer "klitzekleine Unterbereiche"-Verwalten-Liste
             (Firma/Abteilung/Geschäftsbereich/Rolle), OHNE ungespeicherte
             Eingaben in anderen Zeilen zu verlieren: jede Zeile hat ihr

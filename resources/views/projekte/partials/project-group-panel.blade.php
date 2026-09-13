@@ -1,0 +1,58 @@
+{{--
+    Fragment, per fetch() in #project-group-panel-body geladen (siehe
+    project-group-modal.blade.php) - kein <x-modal> hier, das bleibt außen
+    bestehen. $project ist null im Übersichts-Modus (mode='uebersicht'),
+    gesetzt im Einzelprojekt-Modus (mode='projekt').
+--}}
+<div>
+    <label class="block text-xs text-gray-500">{{ __('Meine Projektgruppen') }}</label>
+    <select x-model="$store.projectGrouping.groupId" @change="onGroupChange()" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+        <option value="">{{ __('– Gruppe auswählen –') }}</option>
+        @foreach ($groups as $group)
+            <option value="{{ $group->id }}" data-viewers="{{ $group->viewers_count }}">{{ $group->name }} ({{ $group->projects_count }})</option>
+        @endforeach
+    </select>
+</div>
+
+<div x-show="$store.projectGrouping.groupId" x-cloak class="mt-3 space-y-1.5 border-t border-gray-100 pt-2 text-xs">
+    @if ($project)
+        <button type="button" @click="addThisProject()" class="block w-full rounded border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-left font-medium text-gray-700 hover:bg-btn-secondary-hover">
+            {{ __('Dieses Projekt zur gewählten Gruppe hinzufügen') }}
+        </button>
+        <button type="button" @click="removeThisProject()" class="block w-full rounded border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-left font-medium text-gray-700 hover:bg-btn-secondary-hover">
+            {{ __('Dieses Projekt aus gewählter Gruppe entfernen') }}
+        </button>
+    @else
+        <a :href="showUrl()" class="block rounded border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-left font-medium text-gray-700 hover:bg-btn-secondary-hover">
+            {{ __('Projekte dieser Gruppe anzeigen') }}
+        </a>
+        <button type="button" @click="addAllFiltered()" class="block w-full rounded border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-left font-medium text-gray-700 hover:bg-btn-secondary-hover">
+            {{ __('Alle angezeigten Projekte zur gewählten Gruppe hinzufügen') }}
+        </button>
+        <button type="button" @click="removeAllFiltered()" class="block w-full rounded border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-left font-medium text-gray-700 hover:bg-btn-secondary-hover">
+            {{ __('Alle angezeigten Projekte aus gewählter Gruppe entfernen') }}
+        </button>
+        <button type="button" @click="clearGroup()" class="block w-full rounded border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-left font-medium text-gray-700 hover:bg-btn-secondary-hover">
+            {{ __('Gruppe leeren') }}
+        </button>
+    @endif
+
+    <div class="flex items-center gap-1 border-t border-gray-100 pt-2">
+        <input type="text" x-model="renameValue" x-init="renameValue = {{ \Illuminate\Support\Js::from($groups->pluck('name', 'id')) }}[$store.projectGrouping.groupId] ?? ''" class="min-w-0 flex-1 rounded border-gray-300 py-1 text-xs">
+        <button type="button" @click="renameGroup()" title="{{ __('Umbenennen') }}" class="shrink-0 rounded border border-gray-300 bg-btn-secondary p-1 text-gray-500 hover:bg-btn-secondary-hover">
+            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+        </button>
+    </div>
+    <div class="flex flex-wrap gap-1.5">
+        <button type="button" @click="openShare()" class="rounded border border-gray-300 px-2 py-0.5 text-gray-600 hover:bg-gray-50">{{ __('Teilen') }}</button>
+        <button type="button" @click="leaveGroup()" class="rounded border border-gray-300 px-2 py-0.5 text-gray-600 hover:bg-gray-50">{{ __('Gruppe verlassen') }}</button>
+        <button type="button" @click="deleteGroup()" class="rounded border border-red-300 px-2 py-0.5 text-red-600 hover:bg-red-50">{{ __('Gruppe löschen') }}</button>
+    </div>
+</div>
+
+<div class="mt-3 flex items-center gap-1.5 border-t border-gray-200 pt-2">
+    <input type="text" x-model="newGroupName" placeholder="{{ __('Neue Gruppe...') }}" class="min-w-0 flex-1 rounded-md border-gray-300 text-xs">
+    <button type="button" @click="createGroup()" class="shrink-0 rounded-md bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
+        {{ __('Speichern') }}
+    </button>
+</div>
