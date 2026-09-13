@@ -40,17 +40,21 @@ class ProjectCopyController extends Controller
     /**
      * Feste Felder, deren Haken in der Vorlage aktuell KEINE Auswirkung
      * hat (siehe store()-Dispatch): Archiviert wird immer fest auf "nein"
-     * gesetzt, die übrigen sind reine Platzhalter ohne Datenquelle (siehe
-     * Attribute::SYSTEM_FIELDS-Docblock). "publication_date" hätte
-     * technisch eine Datenquelle, ist aber bewusst ausgenommen (Ralf,
-     * 2026-09-13): "Das ist aus meiner Sicht eine Sache für Multichange.
-     * Ich möchte vermeiden, dass man die Kopierfunktion nutzt, um Aktionen
-     * zu tätigen, die eigentlich Multichange leisten soll." Alle bewusst
-     * aus der Kopieren-Übersicht ausgeblendet, damit dort nur steht, was
+     * gesetzt, "start_date" hatte im Dispatch nie einen eigenen Zweig
+     * (Start/Ende kommen aus dem Workflow-Schritt, siehe system-fields/
+     * start_date.blade.php - der Haken war von Anfang an wirkungslos,
+     * gleicher Fehler wie bei date_progress/progress), die übrigen sind
+     * reine Platzhalter ohne Datenquelle (siehe Attribute::SYSTEM_FIELDS-
+     * Docblock). "publication_date" hätte technisch eine Datenquelle,
+     * ist aber bewusst ausgenommen (Ralf, 2026-09-13): "Das ist aus
+     * meiner Sicht eine Sache für Multichange. Ich möchte vermeiden,
+     * dass man die Kopierfunktion nutzt, um Aktionen zu tätigen, die
+     * eigentlich Multichange leisten soll." Alle bewusst aus der
+     * Kopieren-Übersicht ausgeblendet, damit dort nur steht, was
      * wirklich zählt - gleiche Liste würde sich sonst mit Feldern füllen,
      * die so oder so nichts tun.
      */
-    public const NO_EFFECT_KEYS = ['archived', 'date_progress', 'progress', 'project_connections', 'remarks_echo', 'change_log', 'publication_date'];
+    public const NO_EFFECT_KEYS = ['archived', 'date_progress', 'progress', 'project_connections', 'remarks_echo', 'change_log', 'publication_date', 'start_date'];
 
     public function form(Project $project): View
     {
