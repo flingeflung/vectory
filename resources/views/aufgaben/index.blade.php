@@ -133,7 +133,7 @@
                                             {{ $step?->short_title ?? $step?->title ?? '–' }}
                                         @endif
                                     </td>
-                                    <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ $task->created_at?->format('d.m.Y') }}</td>
+                                    <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ $task->created_at?->local()->format('d.m.Y') }}</td>
                                 </tr>
                             @empty
                                 <tr>

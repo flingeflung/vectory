@@ -100,7 +100,7 @@
                         </form>
                     </div>
                     <div class="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                        {{ __('Dieser Workflow wurde am :date veröffentlicht und ist deshalb eingefroren - Inhalte lassen sich nicht mehr ändern. Für Anpassungen bitte eine neue Version erstellen; bestehende Projekte bleiben unverändert auf dieser Version.', ['date' => $selectedWorkflow->published_at->format('d.m.Y')]) }}
+                        {{ __('Dieser Workflow wurde am :date veröffentlicht und ist deshalb eingefroren - Inhalte lassen sich nicht mehr ändern. Für Anpassungen bitte eine neue Version erstellen; bestehende Projekte bleiben unverändert auf dieser Version.', ['date' => $selectedWorkflow->published_at->local()->format('d.m.Y')]) }}
                     </div>
                     @include('admin.workflows.partials.lifecycle-coverage-warning')
                     <div x-data class="mt-2 flex justify-end gap-2">

@@ -6,6 +6,8 @@ use App\Mail\Transport\FileLogTransport;
 use App\Models\Permission;
 use App\Models\Person;
 use App\Models\User;
+use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
@@ -27,6 +29,18 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Mail::extend('filelog', fn (array $config) => new FileLogTransport($config['path'] ?? storage_path('logs/mails.log')));
+
+        // Ralf-Bug-Report, 2026-09-13: Zeitstempel wurden roh in UTC
+        // angezeigt (Speicherung bleibt bewusst UTC), z.B. "Angelegt am"
+        // im Projekt-Footer 2 Std. hinter Ralfs tatsächlicher Uhrzeit.
+        // Zentraler Umrechnungspunkt statt Einzelfixes je Anzeigestelle -
+        // ->format(...) an Anzeigestellen wird zu ->local()->format(...).
+        // Feste Zeitzone für jetzt (Option 2, echte pro-Nutzer/-Mandant-
+        // Zeitzone, ist auf dem Backlog, siehe Internationalisierung).
+        Carbon::macro('local', function () {
+            /** @var CarbonInterface $this */
+            return $this->copy()->setTimezone(config('app.display_timezone'));
+        });
 
         // Rechtekonzept: Nur Super-Admin darf immer alles. Jede andere Rolle
         // (auch Admin) läuft über Person::hasPermission() - deren Rechte

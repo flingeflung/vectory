@@ -161,7 +161,7 @@
                                     <td class="px-2 py-2 whitespace-nowrap text-gray-500">
                                         {{ $order->initiatedBy?->fullName() ?? '–' }}
                                         @if ($order->initiatedBy)<x-absence-icon :person="$order->initiatedBy" />@endif
-                                        <div class="text-xs text-gray-400">{{ $order->created_at?->format('d.m.Y') }}</div>
+                                        <div class="text-xs text-gray-400">{{ $order->created_at?->local()->format('d.m.Y') }}</div>
                                     </td>
                                     <td class="px-2 py-2 whitespace-nowrap text-gray-500">
                                         @if ($order->illustrator)
@@ -171,7 +171,7 @@
                                         @endif
                                     </td>
                                     <td class="px-2 py-2 whitespace-nowrap text-gray-500">{{ $order->illustrator?->company?->short_name ?? '–' }}</td>
-                                    <td class="px-2 py-2 whitespace-nowrap text-gray-500">{{ $order->done_at?->format('d.m.Y') ?? '–' }}</td>
+                                    <td class="px-2 py-2 whitespace-nowrap text-gray-500">{{ $order->done_at?->local()->format('d.m.Y') ?? '–' }}</td>
                                     <td class="sticky right-0 whitespace-nowrap bg-white px-2 py-2">
                                         <button
                                             type="button"

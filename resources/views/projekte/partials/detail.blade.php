@@ -287,7 +287,7 @@
                 @forelse ($project->activities as $activity)
                     <div x-show="activeCategories.includes('{{ $activity->type->category()->value }}')">
                         <span class="inline-block h-2 w-2 rounded-full {{ $activity->type->category()->dotClass() }}" title="{{ $activity->type->category()->label() }}"></span>
-                        <span class="text-gray-400">{{ $activity->created_at->format('d.m.Y H:i') }}</span>
+                        <span class="text-gray-400">{{ $activity->created_at->local()->format('d.m.Y H:i') }}</span>
                         {{ $activity->message }}
                         @if ($activity->user)
                             <span class="text-gray-400">({{ $activity->user->name }})</span>
@@ -406,11 +406,11 @@
 
                                         <div class="mt-0.5 text-xs text-gray-600">
                                             @if ($isDone)
-                                                {{ __('Erledigt') }}: {{ $pws->completed_at->format('d.m.Y') }}
+                                                {{ __('Erledigt') }}: {{ $pws->completed_at->local()->format('d.m.Y') }}
                                             @elseif ($pws->is_current)
                                                 <span class="font-medium text-blue-700">{{ __('Aktuell') }}</span>
                                                 @if ($pws->started_at)
-                                                    &middot; {{ __('seit') }} {{ $pws->started_at->format('d.m.Y') }}
+                                                    &middot; {{ __('seit') }} {{ $pws->started_at->local()->format('d.m.Y') }}
                                                 @endif
                                             @endif
                                         </div>

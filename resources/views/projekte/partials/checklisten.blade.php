@@ -27,7 +27,7 @@
                     @endif
                 </div>
                 @if ($projectChecklist->activatedBy)
-                    <span class="text-xs text-gray-400">{{ __('aktiviert von :name am :date', ['name' => $projectChecklist->activatedBy->fullName(), 'date' => $projectChecklist->activated_at?->format('d.m.Y')]) }}</span>
+                    <span class="text-xs text-gray-400">{{ __('aktiviert von :name am :date', ['name' => $projectChecklist->activatedBy->fullName(), 'date' => $projectChecklist->activated_at?->local()->format('d.m.Y')]) }}</span>
                 @endif
             </div>
 
@@ -57,7 +57,7 @@
                                 <span>
                                     {{ $point->title }}
                                     @if ($state?->done && $state->doneBy)
-                                        <span class="text-xs text-gray-400">{{ __(', erledigt von :name am :date um :time', ['name' => $state->doneBy->fullName(), 'date' => $state->done_at?->format('d.m.Y'), 'time' => $state->done_at?->format('H:i')]) }}</span>
+                                        <span class="text-xs text-gray-400">{{ __(', erledigt von :name am :date um :time', ['name' => $state->doneBy->fullName(), 'date' => $state->done_at?->local()->format('d.m.Y'), 'time' => $state->done_at?->local()->format('H:i')]) }}</span>
                                     @endif
                                 </span>
                             </label>

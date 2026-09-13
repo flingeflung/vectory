@@ -69,6 +69,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Display Timezone
+    |--------------------------------------------------------------------------
+    |
+    | Storage/business logic stays on 'timezone' (UTC) above - this is only
+    | for converting timestamps at display time (see Carbon::local() macro,
+    | AppServiceProvider). Fixed single value for now (Ralf, 2026-09-13):
+    | real per-user/per-tenant timezone is on the backlog, tied to the
+    | broader internationalization effort.
+    |
+    */
+
+    'display_timezone' => env('DISPLAY_TIMEZONE', 'Europe/Berlin'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |

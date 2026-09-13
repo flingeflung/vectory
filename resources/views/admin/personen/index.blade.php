@@ -188,7 +188,7 @@
                             <td class="px-3 py-2 text-gray-600">{{ $person->businessUnit?->name ?? '–' }}</td>
                             <td class="px-3 py-2 text-gray-600">{{ $person->permissionTemplate?->name ?? '–' }}</td>
                             <td class="px-3 py-2 text-gray-600">{{ $person->email ?? '–' }}</td>
-                            <td class="px-3 py-2 text-gray-600">{{ $person->last_login_at?->format('d.m.Y H:i') ?? '–' }}</td>
+                            <td class="px-3 py-2 text-gray-600">{{ $person->last_login_at?->local()->format('d.m.Y H:i') ?? '–' }}</td>
                         </tr>
                     @empty
                         <tr>

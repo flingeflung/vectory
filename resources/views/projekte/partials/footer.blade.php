@@ -17,14 +17,14 @@
         {{ __('Angelegt') }}:
         {{ $creatorName ?? __('unbekannt') }}
         @if ($project->createdByUser?->person)<x-absence-icon :person="$project->createdByUser->person" />@endif
-        {{ __('am') }} {{ $project->created_at->format('d.m.Y, H:i:s') }} {{ __('Uhr') }}
+        {{ __('am') }} {{ $project->created_at->local()->format('d.m.Y, H:i:s') }} {{ __('Uhr') }}
     </div>
     <div>
         {{ __('Zuletzt geändert') }}:
         @if ($editorName)
             {{ $editorName }}
             @if ($project->updatedByUser?->person)<x-absence-icon :person="$project->updatedByUser->person" />@endif
-            {{ __('am') }} {{ $project->updated_at->format('d.m.Y, H:i:s') }} {{ __('Uhr') }}
+            {{ __('am') }} {{ $project->updated_at->local()->format('d.m.Y, H:i:s') }} {{ __('Uhr') }}
         @else
             &ndash;
         @endif
