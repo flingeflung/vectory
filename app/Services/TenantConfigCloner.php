@@ -59,6 +59,7 @@ class TenantConfigCloner
                         'tenant_id' => $tenant->id,
                         'section' => $section,
                         'system' => true,
+                        'label_editable' => in_array($key, Attribute::LABEL_EDITABLE_SYSTEM_FIELDS, true),
                         'key' => $key,
                         'label' => $label,
                         'data_type' => Attribute::DATA_TYPE_TEXT,

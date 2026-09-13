@@ -101,7 +101,11 @@ class ProjectCopyController extends Controller
 
         $template = CopyTemplate::query()->with('fields')->findOrFail($validated['template_id']);
         $checkedKeys = $template->fields->pluck('key')->all();
-        $customFieldKeys = $template->fields->where('system', false)->pluck('key')->all();
+        // label_editable-System-Felder (aktuell nur "Modell/System") liegen
+        // wie echte Zusatzfelder im attributes-JSON statt in einer eigenen
+        // DB-Spalte und haben keinen eigenen switch-case unten - laufen
+        // deshalb über denselben generischen Kopierpfad wie Zusatzfelder.
+        $customFieldKeys = $template->fields->filter(fn (Attribute $field) => ! $field->system || $field->label_editable)->pluck('key')->all();
 
         $sourceProject = $project;
         $tenantId = $sourceProject->tenant_id;

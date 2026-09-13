@@ -335,15 +335,20 @@ class Project extends Model
     }
 
     /**
-     * Wie sectionAttributes(), aber ohne die system=true-Zeilen (Bezeichnung,
-     * Start, Workflow, ...) - die haben eigene, fest verdrahtete
-     * Validierung/Schreiblogik in ProjectController::update() und dürfen
-     * nicht über den generischen attributes-JSON-Merge laufen.
+     * Wie sectionAttributes(), aber ohne die reinen system=true-Zeilen
+     * (Bezeichnung, Start, Workflow, ...) - die haben eigene, fest
+     * verdrahtete Validierung/Schreiblogik in ProjectController::update()
+     * und dürfen nicht über den generischen attributes-JSON-Merge laufen.
+     * label_editable-System-Felder (aktuell nur "Modell/System") bleiben
+     * dagegen drin - ihr Wert liegt wie bei einem echten Zusatzfeld im
+     * attributes-JSON und hat keine eigene Schreiblogik.
      *
      * @return Collection<int, Attribute>
      */
     public function customSectionAttributes(string $section): Collection
     {
-        return $this->sectionAttributes($section)->where('system', false)->values();
+        return $this->sectionAttributes($section)
+            ->filter(fn (Attribute $attribute) => ! $attribute->system || $attribute->label_editable)
+            ->values();
     }
 }

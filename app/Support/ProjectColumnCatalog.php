@@ -41,7 +41,7 @@ class ProjectColumnCatalog
 
         $attributes = Attribute::query()
             ->where('tenant_id', $tenantId)
-            ->where('system', false)
+            ->where(fn ($query) => $query->where('system', false)->orWhere('label_editable', true))
             ->orderBy('sort')
             ->get()
             ->map(fn (Attribute $attribute) => [

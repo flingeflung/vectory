@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['tenant_id', 'section', 'system', 'key', 'label', 'data_type', 'multiple', 'sort', 'available_in_mail_templates'])]
+#[Fillable(['tenant_id', 'section', 'system', 'label_editable', 'key', 'label', 'data_type', 'multiple', 'sort', 'available_in_mail_templates'])]
 #[ObservedBy(AttributeObserver::class)]
 class Attribute extends Model
 {
@@ -31,18 +31,25 @@ class Attribute extends Model
     public const SECTIONS = [self::SECTION_STAMMDATEN, self::SECTION_ABLAUFDATEN, self::SECTION_TYPSPEZIFISCH];
 
     /**
+     * System-Felder, deren Bezeichnung (anders als bei den übrigen System-
+     * Feldern) pro Kunde änderbar ist - existieren/löschbar bleiben wie
+     * jedes System-Feld fest, siehe SYSTEM_FIELDS-Docblock und Migration
+     * 2026_09_13_053552.
+     */
+    public const LABEL_EDITABLE_SYSTEM_FIELDS = ['system_model'];
+
+    /**
      * Feste Felder, die es schon vor der Attribut-Verwaltung gab (Ralf,
      * 2026-09-10: "frei mischbar mit Zusatzfeldern") - bekommen jetzt
      * eigene Attribute-Zeilen (system=true) statt nur einer hartkodierten
      * Anzeigeliste, damit sie einen echten, pro Kunde änderbaren sort-Wert
      * tragen und sich frei mit den Zusatzfeldern mischen lassen. Nur die
      * Reihenfolge ist über die Verwaltungsseite änderbar, nicht
-     * Bezeichnung/Löschen. Baujahr/Initiator/Übersetzung-Lokalisierung und
-     * Modell/System sind bewusst NICHT hier drin - die sind auf Ralfs
-     * Wunsch zu normalen Zusatzfeldern geworden (siehe attributes-
-     * Migration/Datenmigration). Modell/System explizit deshalb, weil die
-     * Caption je Kunde variiert ("bei Viega Modell, anderswo Typ") und das
-     * Feld später ohnehin per PIM-Anbindung befüllt wird, nicht manuell.
+     * Bezeichnung/Löschen - AUSSER bei den Feldern in
+     * LABEL_EDITABLE_SYSTEM_FIELDS (siehe dort). Baujahr/Initiator/
+     * Übersetzung-Lokalisierung sind bewusst NICHT hier drin - die sind auf
+     * Ralfs Wunsch zu normalen Zusatzfeldern geworden (siehe attributes-
+     * Migration/Datenmigration) und dürfen auch fehlen/gelöscht werden.
      */
     public const SYSTEM_FIELDS = [
         self::SECTION_STAMMDATEN => [
@@ -62,6 +69,14 @@ class Attribute extends Model
             'version' => 'Version',
             'status' => 'Status/Erstellungsstatus',
             'markets' => 'Markt',
+            // Ralf, 2026-09-13: erst als normales (löschbares) Zusatzfeld
+            // gebaut, weil nur Zusatzfelder eine änderbare Bezeichnung
+            // hatten - falscher Trade-off, siehe Migration
+            // 2026_09_13_053552: Existenz muss garantiert sein wie bei
+            // jedem anderen System-Feld, nur die Caption bleibt pro Kunde
+            // frei ("bei Viega Modell, anderswo Typ/Produkt"). Feld wird
+            // später ohnehin per PIM-Anbindung befüllt, nicht manuell.
+            'system_model' => 'Modell/System',
             'remarks' => 'Bemerkungen',
         ],
         self::SECTION_ABLAUFDATEN => [
@@ -123,6 +138,7 @@ class Attribute extends Model
     {
         return [
             'system' => 'boolean',
+            'label_editable' => 'boolean',
             'multiple' => 'boolean',
             'available_in_mail_templates' => 'boolean',
         ];

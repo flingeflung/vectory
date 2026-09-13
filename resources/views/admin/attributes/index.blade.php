@@ -100,11 +100,33 @@
                                     $deletionLocked = $valueCount > 0 && auth()->user()->role !== 'super_admin';
                                 @endphp
                                 <div x-sort:item="{{ $attribute->id }}" class="rounded-md border border-gray-200 px-2 py-0.5">
-                                    @if ($attribute->system)
+                                    @if ($attribute->system && ! $attribute->label_editable)
                                         <div class="flex items-center gap-2">
                                             <span x-sort:handle class="shrink-0 cursor-move text-gray-300 hover:text-gray-500" title="{{ __('Verschieben') }}">⠿</span>
                                             <span class="shrink-0 text-gray-300" title="{{ __('Festes Feld - nur die Reihenfolge ist änderbar') }}">🔒</span>
                                             <span class="flex-1 text-sm text-gray-700">{{ $attribute->label }}</span>
+                                        </div>
+                                    @elseif ($attribute->system && $attribute->label_editable)
+                                        {{-- Ralf, 2026-09-13: festes Feld (garantiert vorhanden, nicht
+                                             löschbar), aber Bezeichnung pro Kunde änderbar - z.B.
+                                             "Modell/System" heißt bei anderen Kunden "Typ"/"Produkt". --}}
+                                        <div class="flex items-center gap-2">
+                                            <span x-sort:handle class="shrink-0 cursor-move text-gray-300 hover:text-gray-500" title="{{ __('Verschieben') }}">⠿</span>
+                                            <form
+                                                method="POST"
+                                                action="{{ route('admin.projektattribute.update', $attribute) }}"
+                                                class="flex flex-1 items-center gap-2"
+                                                x-data="{ dirty: false }"
+                                                @input="dirty = window.formIsDirty($el, window.__attributesDirtyForms)"
+                                                @submit="dirty = false; window.__attributesDirtyForms.delete($el)"
+                                            >
+                                                @csrf
+                                                <input type="text" name="label" value="{{ $attribute->label }}" required class="flex-1 rounded-md border-gray-300 py-1 text-sm">
+                                                <span class="shrink-0 text-gray-300" title="{{ __('Festes Feld - Bezeichnung anpassbar, nicht löschbar') }}">🔒</span>
+                                                <button type="submit" x-show="dirty" x-cloak class="shrink-0 rounded-md bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
+                                                    {{ __('Speichern') }}
+                                                </button>
+                                            </form>
                                         </div>
                                     @elseif ($attribute->data_type === 'select')
                                         {{-- Ralf, 2026-09-11: Pulldown-Name+Optionen werden nicht mehr

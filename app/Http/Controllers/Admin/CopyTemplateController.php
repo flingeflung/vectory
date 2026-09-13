@@ -86,7 +86,7 @@ class CopyTemplateController extends Controller
             ->where(function ($query) {
                 $query->whereIn('key', self::DEFAULT_CHECKED_KEYS)
                     ->orWhere(function ($query) {
-                        $query->where('system', false)
+                        $query->where(fn ($query) => $query->where('system', false)->orWhere('label_editable', true))
                             ->whereNotIn('data_type', [Attribute::DATA_TYPE_TEXTAREA, Attribute::DATA_TYPE_DATE]);
                     });
             })

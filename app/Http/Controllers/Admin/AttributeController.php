@@ -114,7 +114,7 @@ class AttributeController extends Controller
     public function update(Request $request, Attribute $attribute): RedirectResponse
     {
         abort_unless($attribute->tenant_id === CurrentTenant::id(), 404);
-        abort_if($attribute->system, 403);
+        abort_if($attribute->system && ! $attribute->label_editable, 403);
 
         $label = trim((string) $request->string('label'));
         abort_if($label === '', 422);

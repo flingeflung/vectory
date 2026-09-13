@@ -8,6 +8,7 @@ use App\Models\Project;
 use App\Models\ProjectTypeMain;
 use App\Models\User;
 use App\Models\Workflow;
+use Illuminate\Support\Carbon;
 
 /**
  * Verfügbare Kriterien für den Projektfilter: feste Felder + variable
@@ -60,7 +61,7 @@ class ProjectFilterCatalog
 
         $attributes = Attribute::query()
             ->where('tenant_id', $tenantId)
-            ->where('system', false)
+            ->where(fn ($query) => $query->where('system', false)->orWhere('label_editable', true))
             ->orderBy('sort')
             ->get()
             ->map(fn (Attribute $attribute) => [
@@ -210,8 +211,8 @@ class ProjectFilterCatalog
                 ->pluck('label')
                 ->implode(', '),
             'date_range' => collect([
-                isset($value['from']) ? \Illuminate\Support\Carbon::parse($value['from'])->format('d.m.Y') : null,
-                isset($value['to']) ? \Illuminate\Support\Carbon::parse($value['to'])->format('d.m.Y') : null,
+                isset($value['from']) ? Carbon::parse($value['from'])->format('d.m.Y') : null,
+                isset($value['to']) ? Carbon::parse($value['to'])->format('d.m.Y') : null,
             ])->filter()->implode(' – '),
             default => (string) $value,
         };
