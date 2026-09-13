@@ -7,6 +7,7 @@ use App\Models\Department;
 use App\Models\Permission;
 use App\Models\PermissionTemplate;
 use App\Models\Person;
+use App\Models\Tenant;
 use App\Support\CurrentTenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -97,6 +98,9 @@ class PermissionController extends Controller
             // Rechte app-weit, nicht nur für diesen Kunden (siehe
             // assignPerson()).
             'selectedPersonIsHomeTenant' => $selectedPerson?->tenant_id === $tenantId,
+            'selectedPersonHomeTenantName' => $selectedPerson && $selectedPerson->tenant_id !== $tenantId
+                ? Tenant::query()->find($selectedPerson->tenant_id)?->name
+                : null,
             'grantedPermissionIds' => $grantedPermissionIds,
             'templatePeople' => $templatePeople,
         ]);

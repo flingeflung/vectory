@@ -341,7 +341,7 @@
                 @else
                     <div class="flex-1 min-h-0 overflow-y-auto p-3">
                         <div class="text-xs text-gray-500">
-                            {{ __('Diese Person ist bei einem anderen Kunden zuhause und nur per Kundenzugriff-Freigabe hier sichtbar. Ihr Rechte-Set gilt für die ganze Person, nicht nur für diesen Kunden, und kann deshalb nur bei ihrem Heimat-Kunden geändert werden.') }}
+                            {{ __('Diese Person gehört zum Kunden „:name" und ist hier nur über eine Kundenzugriff-Freigabe sichtbar. Ihr Rechte-Set gilt für die ganze Person, nicht nur für diesen Kunden, und lässt sich deshalb nur bei „:name" ändern.', ['name' => $selectedPersonHomeTenantName ?? __('einem anderen Kunden')]) }}
                         </div>
                         <div class="mt-3 text-sm text-gray-700">
                             {{ __('Aktuelles Rechte-Set') }}: <span class="font-medium">{{ $selectedPerson->permissionTemplate?->name ?? __('– nicht zugewiesen –') }}</span>
