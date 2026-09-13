@@ -7,7 +7,14 @@
 --}}
 @forelse ($projects as $project)
     <tr class="hover:bg-gray-50">
-        <td x-show="$store.projectGrouping.active" x-cloak class="px-2 py-2">
+        {{-- x-cloak nur, wenn die Spalte nicht schon von Anfang an sichtbar
+             sein soll (reopen_group) - siehe gleiche Begründung beim <th>
+             in projekte/index.blade.php. --}}
+        <td
+            x-show="$store.projectGrouping.active"
+            @unless (request()->filled('reopen_group')) x-cloak @endunless
+            class="px-2 py-2"
+        >
             <input
                 type="checkbox"
                 class="rounded border-gray-300"

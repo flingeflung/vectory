@@ -215,7 +215,9 @@ $storageKey = "vectory-modal-size-{$name}";
 
     <div
         x-show="show"
-        x-cloak
+        @unless ($show)
+            x-cloak
+        @endunless
         x-ref="box"
         data-modal-box
         x-on:mousedown="$event.target.closest('[data-drag-handle]') && startDrag($event)"

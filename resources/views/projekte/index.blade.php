@@ -142,7 +142,20 @@
                     <table class="min-w-full divide-y divide-gray-200 text-sm">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th x-show="$store.projectGrouping.active" x-cloak class="sticky top-0 z-10 bg-gray-50 px-2 py-3"></th>
+                                {{--
+                                    Ralf-Bug-Report: bei reopen_group ist active von
+                                    Anfang an true (server-geseedet), aber x-cloak
+                                    versteckt die Spalte trotzdem kurz, bis Alpine
+                                    beim Initialisieren hier ankommt - sichtbares
+                                    Aus-/Wieder-Einblenden samt Sprung der Tabelle.
+                                    x-cloak nur setzen, wenn wir NICHT schon wissen,
+                                    dass die Spalte von Anfang an sichtbar sein soll.
+                                --}}
+                                <th
+                                    x-show="$store.projectGrouping.active"
+                                    @unless (request()->filled('reopen_group')) x-cloak @endunless
+                                    class="sticky top-0 z-10 bg-gray-50 px-2 py-3"
+                                ></th>
                                 <x-sortable-th field="source_pn" :sort="$sort" :direction="$direction">{{ __('PN') }}</x-sortable-th>
                                 @foreach ($columns as $column)
                                     @if (in_array($column['key'], ['title', 'version', 'status', 'workflow'], true))
