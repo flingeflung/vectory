@@ -223,7 +223,20 @@ $storageKey = "vectory-modal-size-{$name}";
         x-on:mousedown="$event.target.closest('[data-drag-handle]') && startDrag($event)"
         :class="(dragPos ? '' : 'sm:mx-auto') + (dragging ? ' select-none' : '') + (resizable ? ' resize' : '')"
         :style="`${(dragging || resizing) ? 'transition: none;' : ''}${dragPos ? `position: fixed; left: ${dragPos.x}px; top: ${dragPos.y}px; width: ${dragBox.width}px; margin: 0;` : ''}${resizable && dragBox ? `height: ${dragBox.height}px;` : ''}{{ $heightStyle }}{{ $resizable ? 'min-width: 480px; min-height: 320px; max-width: 95vw; max-height: 92vh;' : '' }}`"
-        class="pointer-events-auto mb-6 bg-white rounded-lg {{ $boxOverflowClass }} shadow-xl transform transition-all {{ $resizable ? '' : 'sm:w-full '.$maxWidth }}"
+        {{--
+            Ralf-Bug-Report: "Overlay springt ganz nach links an den
+            Bildrand" - "sm:mx-auto" (Zentrierung) kam bisher NUR über
+            die :class-Alpine-Bindung oben, stand also NICHT im rohen
+            Server-HTML. Solange x-cloak die Box versteckte, fiel das nie
+            auf (Alpine hatte :class längst ausgewertet, bevor überhaupt
+            etwas sichtbar wurde). Ohne x-cloak (siehe :show-Fälle wie
+            reopen_group) ist der allererste Browser-Render aber genau
+            dieser unzentrierte Rohzustand - deshalb "sm:mx-auto" jetzt
+            zusätzlich statisch mitgeben. Harmlos bei echtem Ziehen
+            (dragPos gesetzt): position:fixed mit explizitem left/top
+            überschreibt einen simplen Auto-Margin ohnehin.
+        --}}
+        class="pointer-events-auto sm:mx-auto mb-6 bg-white rounded-lg {{ $boxOverflowClass }} shadow-xl transform transition-all {{ $resizable ? '' : 'sm:w-full '.$maxWidth }}"
         @if (! $show)
             x-transition:enter="ease-out duration-300"
             x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
