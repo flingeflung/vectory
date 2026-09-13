@@ -40,11 +40,19 @@
                 if (! this.newGroupName.trim()) return;
                 const fd = new FormData();
                 fd.append('name', this.newGroupName.trim());
-                const html = await fetch({{ \Illuminate\Support\Js::from(route('projektgruppen.store')) }}, {
+                const response = await fetch({{ \Illuminate\Support\Js::from(route('projektgruppen.store')) }}, {
                     method: 'POST', body: fd, headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
-                }).then((r) => r.text());
+                });
+                const html = await response.text();
+                // Neue Gruppe direkt auswählen (Ralf, 2026-09-13) - Store VOR
+                // dem Einfügen setzen, damit das frisch eingefügte <select>
+                // (x-model auf den Store) sie gleich als ausgewählt anzeigt.
+                $store.projectGrouping.groupId = response.headers.get('X-Created-Group-Id') || '';
                 document.getElementById('project-group-panel-body-{{ $project?->id ?? 'uebersicht' }}').innerHTML = html;
                 this.newGroupName = '';
+                @if (! $project)
+                    await $store.projectGrouping.loadMembers();
+                @endif
             },
             async renameGroup() {
                 if (! $store.projectGrouping.groupId || ! this.renameValue.trim()) return;

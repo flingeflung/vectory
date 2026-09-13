@@ -71,7 +71,10 @@ class ProjectGroupController extends Controller
         $group = ProjectGroup::query()->create(['tenant_id' => CurrentTenant::id(), 'name' => $name]);
         $group->viewers()->attach(Auth::id());
 
-        return $this->panel($request);
+        // Neue Gruppe soll direkt ausgewählt sein (Ralf, 2026-09-13) - der
+        // Header transportiert die neue ID zum Client, der Rest der Antwort
+        // bleibt das normale Panel-Fragment.
+        return $this->panel($request)->header('X-Created-Group-Id', (string) $group->id);
     }
 
     public function update(Request $request, ProjectGroup $group): Response
