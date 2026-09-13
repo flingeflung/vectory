@@ -20,7 +20,7 @@
     <x-modal>-Doku). Im Einzelprojekt-Modus gibt's dahinter keine
     Häkchen-Spalte, bleibt beim normalen (blockierenden) Verhalten.
 --}}
-<x-modal name="{{ $modalName }}" max-width="sm" :blocking="$project !== null">
+<x-modal name="{{ $modalName }}" max-width="sm" :blocking="$project !== null" :draggable="true">
     <div
         class="flex max-h-[70vh] flex-col"
         x-data="{
@@ -160,12 +160,17 @@
              Das $watch hier greift auf "show" der äußeren <x-modal>-
              Komponente zu (Alpines verschachtelte x-data-Scopes reichen
              Eltern-Properties automatisch an Kind-Scopes durch). --}}
+        {{-- Ralf (nach Vietto-Vorbild): Häkchen-Spalte blendet sich aus,
+             sobald das Panel geschlossen wird - nicht nur beim Öffnen an.
+             Das $watch hier greift auf "show" der äußeren <x-modal>-
+             Komponente zu (Alpines verschachtelte x-data-Scopes reichen
+             Eltern-Properties automatisch an Kind-Scopes durch). --}}
         @if (! $project)
             x-init="$watch('show', (value) => { if (! value) { $store.projectGrouping.active = false; } })"
         @endif
         @open-modal.window="$event.detail === '{{ $modalName }}' && refresh()"
     >
-        <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+        <div class="flex shrink-0 cursor-move select-none items-center justify-between rounded-t-lg border-b border-gray-200 bg-gray-100 px-4 py-2" data-drag-handle title="{{ __('Ziehen zum Verschieben') }}">
             <h3 class="text-sm font-semibold text-gray-900">{{ $project ? __('Projekt gruppieren') : __('Projekte gruppieren') }}</h3>
             <button
                 type="button"
