@@ -10,7 +10,7 @@
             <input type="checkbox" checked class="rounded border-gray-300" @change="toggle({{ $product->id }})">
             <span class="font-medium">{{ $product->product_number }}</span>
             {{ $product->name }}
-            <span class="text-xs text-gray-400">({{ $product->productGroup?->name }})</span>
+            <span class="text-xs text-gray-400">({{ $product->productGroup?->number }} {{ $product->productGroup?->name }})</span>
         </label>
     @empty
         <div class="text-xs text-gray-400">{{ __('Keine Produkte verknüpft.') }}</div>

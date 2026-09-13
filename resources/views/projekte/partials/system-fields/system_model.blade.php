@@ -142,7 +142,7 @@
                 type="search"
                 x-model="term"
                 @input="onSearchInput()"
-                placeholder="{{ __('Produktnr. oder -bezeichnung') }}"
+                placeholder="{{ __('Produktnr./-bezeichnung oder Produktgrp./-bezeichnung') }}"
                 class="w-full rounded-md border-gray-300 text-sm"
             >
         </div>
