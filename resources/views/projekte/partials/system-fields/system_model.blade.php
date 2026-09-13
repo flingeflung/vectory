@@ -134,13 +134,16 @@
         </div>
 
         <div class="shrink-0 border-b border-gray-100 px-4 py-2">
+            {{-- KEIN :disabled="loading" hier (Ralf-Bug-Report, zweites
+                 Auftreten, siehe connection-add-body.blade.php): ein
+                 fokussiertes Input verliert in jedem Browser sofort den
+                 Fokus, sobald es disabled wird. --}}
             <input
                 type="search"
                 x-model="term"
                 @input="onSearchInput()"
-                :disabled="loading"
                 placeholder="{{ __('Produktnr. oder -bezeichnung') }}"
-                class="w-full rounded-md border-gray-300 text-sm disabled:bg-gray-50"
+                class="w-full rounded-md border-gray-300 text-sm"
             >
         </div>
 

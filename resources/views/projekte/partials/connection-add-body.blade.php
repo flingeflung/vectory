@@ -161,7 +161,13 @@
     <div class="flex items-end gap-2">
         <div class="flex-1">
             <label class="block text-xs text-gray-500">{{ __('Projekt suchen (PN oder Bezeichnung)') }}</label>
-            <input type="text" x-model="term" @input="onSearchInput()" :disabled="loading" autocomplete="off" class="mt-0.5 w-full rounded-md border-gray-300 text-sm disabled:bg-gray-50">
+            {{-- KEIN :disabled="loading" hier (Ralf-Bug-Report, zweites
+                 Auftreten): ein fokussiertes Input verliert in jedem
+                 Browser sofort den Fokus, sobald es disabled wird - der
+                 Cursor sprang beim Tippen nach jedem Suche-Fetch weg.
+                 Andere Elemente im Picker (Buttons, Checkboxen) dürfen das
+                 weiterhin, nur nicht das Live-Suchfeld selbst. --}}
+            <input type="text" x-model="term" @input="onSearchInput()" autocomplete="off" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
         </div>
         {{-- Ralf, 2026-09-11: Sortierrichtung nach PN umkehrbar, damit auch
              hohe PNs (die neuesten Projekte) oben stehen können, ohne
