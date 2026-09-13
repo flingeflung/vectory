@@ -170,7 +170,15 @@
         @endif
         @open-modal.window="$event.detail === '{{ $modalName }}' && refresh()"
     >
-        <div class="flex shrink-0 cursor-move select-none items-center justify-between rounded-t-lg border-b border-gray-200 bg-gray-100 px-4 py-2" data-drag-handle title="{{ __('Ziehen zum Verschieben') }}">
+        {{--
+            Ralf: "kannst du die beiden Grautöne voneinander abheben?" - ohne
+            abgedunkelten Backdrop (blocking=false) lag der übliche helle
+            Panel-Kopf (bg-gray-100) optisch zu nah am ebenfalls hellgrauen
+            Filter-Infobalken der Seite dahinter (bg-gray-50), wirkte wie
+            EIN durchgehender Balken. Deutlich dunklerer Kopf + kräftigerer
+            Rahmen, damit die Box sich klar vom Hintergrund abhebt.
+        --}}
+        <div class="flex shrink-0 cursor-move select-none items-center justify-between rounded-t-lg border-b border-gray-300 bg-gray-300 px-4 py-2" data-drag-handle title="{{ __('Ziehen zum Verschieben') }}">
             <h3 class="text-sm font-semibold text-gray-900">{{ $project ? __('Projekt gruppieren') : __('Projekte gruppieren') }}</h3>
             <button
                 type="button"
