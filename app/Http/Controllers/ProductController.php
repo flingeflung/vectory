@@ -34,11 +34,12 @@ class ProductController extends Controller
     public function index(Request $request): View
     {
         $search = trim((string) $request->query('q', ''));
+        $linked = $this->linkedFromRequest($request);
         [$sort, $direction] = $this->sortFromRequest($request);
 
         $totalCount = Product::query()->count();
-        $total = (clone $this->baseQuery($search))->count();
-        $products = $this->baseQuery($search)
+        $total = (clone $this->baseQuery($search, $linked))->count();
+        $products = $this->baseQuery($search, $linked)
             ->orderBy($this->sortColumn($sort), $direction)->orderBy('products.id', $direction)
             ->with(['productGroup', 'projects:id,source_pn,title'])
             ->take(self::PAGE_SIZE)
@@ -52,6 +53,7 @@ class ProductController extends Controller
             'sort' => $sort,
             'direction' => $direction,
             'search' => $search,
+            'linked' => $linked,
         ]);
     }
 
@@ -62,10 +64,11 @@ class ProductController extends Controller
     public function more(Request $request): Response
     {
         $search = trim((string) $request->query('q', ''));
+        $linked = $this->linkedFromRequest($request);
         $offset = max(0, $request->integer('offset'));
         [$sort, $direction] = $this->sortFromRequest($request);
 
-        $products = $this->baseQuery($search)
+        $products = $this->baseQuery($search, $linked)
             ->orderBy($this->sortColumn($sort), $direction)->orderBy('products.id', $direction)
             ->with(['productGroup', 'projects:id,source_pn,title'])
             ->skip($offset)->take(self::PAGE_SIZE)
@@ -76,7 +79,7 @@ class ProductController extends Controller
         return response($html)->header('X-Has-More', $products->count() === self::PAGE_SIZE ? '1' : '0');
     }
 
-    private function baseQuery(string $search): Builder
+    private function baseQuery(string $search, ?string $linked): Builder
     {
         $query = Product::query()
             ->leftJoin('product_groups', 'product_groups.id', '=', 'products.product_group_id')
@@ -91,7 +94,18 @@ class ProductController extends Controller
             });
         }
 
+        if ($linked === 'yes') {
+            $query->whereHas('projects');
+        } elseif ($linked === 'no') {
+            $query->whereDoesntHave('projects');
+        }
+
         return $query;
+    }
+
+    private function linkedFromRequest(Request $request): ?string
+    {
+        return in_array($request->query('linked'), ['yes', 'no'], true) ? $request->query('linked') : null;
     }
 
     private function sortColumn(?string $sort): string

@@ -7,18 +7,22 @@
 
     <div class="h-full flex flex-col p-4 sm:p-6 lg:p-8">
         <div class="w-full max-w-7xl mx-auto flex flex-1 min-h-0 flex-col">
-            <div class="mb-3 flex shrink-0 flex-wrap items-center gap-3 text-sm">
-                <label
-                    class="flex items-center gap-1.5"
-                    x-data="{
-                        term: {{ \Illuminate\Support\Js::from($search) }},
-                        searchTimer: null,
-                        onInput() {
-                            clearTimeout(this.searchTimer);
-                            this.searchTimer = setTimeout(() => this.$dispatch('produkte-search', this.term), 400);
-                        },
-                    }"
-                >
+            <div
+                class="mb-3 flex shrink-0 flex-wrap items-center gap-3 text-sm"
+                x-data="{
+                    term: {{ \Illuminate\Support\Js::from($search) }},
+                    linked: {{ \Illuminate\Support\Js::from($linked ?? '') }},
+                    searchTimer: null,
+                    onInput() {
+                        clearTimeout(this.searchTimer);
+                        this.searchTimer = setTimeout(() => this.$dispatch('produkte-search', { term: this.term, linked: this.linked }), 400);
+                    },
+                    onLinkedChange() {
+                        this.$dispatch('produkte-search', { term: this.term, linked: this.linked });
+                    },
+                }"
+            >
+                <label class="flex items-center gap-1.5">
                     <span class="text-gray-500">{{ __('Suche') }}:</span>
                     <input
                         type="search"
@@ -27,6 +31,15 @@
                         placeholder="{{ __('Produktnr., -bezeichnung, Gruppe...') }}"
                         class="w-64 rounded-md border-gray-300 py-1 text-sm"
                     >
+                </label>
+
+                <label class="flex items-center gap-1.5">
+                    <span class="text-gray-500">{{ __('Projektverknüpfung') }}:</span>
+                    <select x-model="linked" @change="onLinkedChange()" class="rounded-md border-gray-300 py-1 text-sm">
+                        <option value="">{{ __('Alle anzeigen') }}</option>
+                        <option value="yes">{{ __('mit Projektverknüpfung') }}</option>
+                        <option value="no">{{ __('ohne Projektverknüpfung') }}</option>
+                    </select>
                 </label>
             </div>
 
@@ -50,10 +63,14 @@
                     offset: {{ $products->count() }},
                     hasMore: {{ $hasMore ? 'true' : 'false' }},
                     loadingMore: false,
-                    async runSearch(term) {
+                    term: {{ \Illuminate\Support\Js::from($search) }},
+                    linked: {{ \Illuminate\Support\Js::from($linked ?? '') }},
+                    async runSearch({ term, linked }) {
+                        this.term = term;
+                        this.linked = linked;
                         this.loading = true;
                         try {
-                            const url = {{ \Illuminate\Support\Js::from(route('produkte')) }} + '?q=' + encodeURIComponent(term) + '&sort={{ $sort }}&direction={{ $direction }}';
+                            const url = {{ \Illuminate\Support\Js::from(route('produkte')) }} + '?q=' + encodeURIComponent(term) + '&linked=' + encodeURIComponent(linked) + '&sort={{ $sort }}&direction={{ $direction }}';
                             const html = await fetch(url).then((r) => r.text());
                             const fresh = new DOMParser().parseFromString(html, 'text/html').getElementById('produkte-list');
                             const current = document.getElementById('produkte-list');
@@ -78,7 +95,8 @@
                         try {
                             const url = {{ \Illuminate\Support\Js::from(route('produkte.mehr')) }}
                                 + '?offset=' + this.offset
-                                + '&q=' + encodeURIComponent({{ \Illuminate\Support\Js::from($search) }})
+                                + '&q=' + encodeURIComponent(this.term)
+                                + '&linked=' + encodeURIComponent(this.linked)
                                 + '&sort={{ $sort }}&direction={{ $direction }}';
                             const response = await fetch(url);
                             if (! response.ok) return;
@@ -96,7 +114,7 @@
                 <div class="mb-3 shrink-0 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
                     <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
                         <span>{{ __('Produkte gesamt') }}: <strong class="text-gray-800">{{ $totalCount }}</strong></span>
-                        @if ($search !== '')
+                        @if ($search !== '' || $linked !== null)
                             <span>{{ __('gefiltert') }}: <strong class="text-gray-800">{{ $total }}</strong></span>
                         @endif
                     </div>
