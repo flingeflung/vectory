@@ -44,6 +44,7 @@ class ProjectColumnCatalog
             ['key' => 'version', 'label' => __('Version'), 'long_text' => false],
             ['key' => 'start_date', 'label' => __('Start'), 'long_text' => false],
             ['key' => 'end_date', 'label' => __('Ende'), 'long_text' => false],
+            ['key' => 'publication_date', 'label' => __('Publikationsdatum'), 'long_text' => false],
             ['key' => 'remarks', 'label' => __('Bemerkungen'), 'long_text' => true],
             ['key' => 'markets', 'label' => __('Märkte/Subsprachen'), 'long_text' => false, 'icons' => true],
             ['key' => 'graphic_orders_summary', 'label' => __('Illustration'), 'long_text' => false, 'graphic_summary' => true],

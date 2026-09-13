@@ -53,6 +53,7 @@ class Project extends Model
             'workflow' => $this->workflow?->name,
             'start_date' => $this->start_date?->format('d.m.Y'),
             'end_date' => $this->end_date?->format('d.m.Y'),
+            'publication_date' => $this->publication_date?->format('d.m.Y'),
             default => $this->getAttribute($key),
         };
     }
