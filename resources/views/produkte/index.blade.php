@@ -7,29 +7,102 @@
 
     <div class="h-full flex flex-col p-4 sm:p-6 lg:p-8">
         <div class="w-full max-w-7xl mx-auto flex flex-1 min-h-0 flex-col">
-            <form method="GET" action="{{ route('produkte') }}" class="mb-3 flex shrink-0 flex-wrap items-center gap-3 text-sm">
-                <input type="hidden" name="sort" value="{{ $sort }}">
-                <input type="hidden" name="direction" value="{{ $direction }}">
-
-                <label class="flex items-center gap-1.5">
+            <div class="mb-3 flex shrink-0 flex-wrap items-center gap-3 text-sm">
+                <label
+                    class="flex items-center gap-1.5"
+                    x-data="{
+                        term: {{ \Illuminate\Support\Js::from($search) }},
+                        searchTimer: null,
+                        onInput() {
+                            clearTimeout(this.searchTimer);
+                            this.searchTimer = setTimeout(() => this.$dispatch('produkte-search', this.term), 400);
+                        },
+                    }"
+                >
                     <span class="text-gray-500">{{ __('Suche') }}:</span>
                     <input
                         type="search"
-                        name="q"
-                        value="{{ $search }}"
+                        x-model="term"
+                        @input="onInput()"
                         placeholder="{{ __('Produktnr., -bezeichnung, Gruppe...') }}"
-                        oninput="window.liveFilterSearch(this, 'produkte-list')"
                         class="w-64 rounded-md border-gray-300 py-1 text-sm"
                     >
                 </label>
-            </form>
+            </div>
 
-            <div id="produkte-list" class="flex flex-1 min-h-0 flex-col">
+            {{--
+                Kein window.liveFilterSearch hier (anders als sonst üblich,
+                siehe CLAUDE.md) - die generische Variante tauscht nur das
+                HTML aus, kennt aber nicht den offset/hasMore-Zustand fürs
+                Nachladen. Gleiches Problem/gleiche Lösung wie beim
+                Projektverknüpfungen-Picker (connection-add-body.blade.php,
+                runSearch()): eigener kleiner Fetch-Handler, der nach dem
+                Tausch data-offset/data-has-more aus dem frischen HTML
+                zurück in den Alpine-Zustand liest.
+            --}}
+            <div
+                id="produkte-list"
+                class="flex flex-1 min-h-0 flex-col"
+                data-offset="{{ $products->count() }}"
+                data-has-more="{{ $hasMore ? '1' : '0' }}"
+                x-data="{
+                    loading: false,
+                    offset: {{ $products->count() }},
+                    hasMore: {{ $hasMore ? 'true' : 'false' }},
+                    loadingMore: false,
+                    async runSearch(term) {
+                        this.loading = true;
+                        try {
+                            const url = {{ \Illuminate\Support\Js::from(route('produkte')) }} + '?q=' + encodeURIComponent(term) + '&sort={{ $sort }}&direction={{ $direction }}';
+                            const html = await fetch(url).then((r) => r.text());
+                            const fresh = new DOMParser().parseFromString(html, 'text/html').getElementById('produkte-list');
+                            const current = document.getElementById('produkte-list');
+                            if (fresh && current) {
+                                current.innerHTML = fresh.innerHTML;
+                                this.offset = parseInt(fresh.dataset.offset || '0', 10);
+                                this.hasMore = fresh.dataset.hasMore === '1';
+                            }
+                            history.replaceState(null, '', url);
+                        } finally {
+                            this.loading = false;
+                        }
+                    },
+                    initScrollSentinel(el) {
+                        new IntersectionObserver((entries) => {
+                            if (entries[0].isIntersecting) { this.loadMore(); }
+                        }, { root: el.closest('[data-scroll-root]'), rootMargin: '300px' }).observe(el);
+                    },
+                    async loadMore() {
+                        if (this.loadingMore || ! this.hasMore) return;
+                        this.loadingMore = true;
+                        try {
+                            const url = {{ \Illuminate\Support\Js::from(route('produkte.mehr')) }}
+                                + '?offset=' + this.offset
+                                + '&q=' + encodeURIComponent({{ \Illuminate\Support\Js::from($search) }})
+                                + '&sort={{ $sort }}&direction={{ $direction }}';
+                            const response = await fetch(url);
+                            if (! response.ok) return;
+                            const html = await response.text();
+                            document.getElementById('produkte-rows').insertAdjacentHTML('beforeend', html);
+                            this.hasMore = response.headers.get('X-Has-More') === '1';
+                            this.offset += 500;
+                        } finally {
+                            this.loadingMore = false;
+                        }
+                    },
+                }"
+                @produkte-search.window="runSearch($event.detail)"
+            >
                 <div class="mb-3 shrink-0 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
-                    {{ __('gefunden: :total, angezeigt: :shown', ['total' => $total, 'shown' => min($total, $products->count())]) }}
+                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+                        <span>{{ __('Produkte gesamt') }}: <strong class="text-gray-800">{{ $totalCount }}</strong></span>
+                        @if ($search !== '')
+                            <span>{{ __('gefiltert') }}: <strong class="text-gray-800">{{ $total }}</strong></span>
+                        @endif
+                    </div>
                 </div>
 
-                <div class="bg-white shadow-sm sm:rounded-lg flex flex-1 min-h-0 flex-col">
+                <div data-scroll-root class="bg-white shadow-sm sm:rounded-lg flex flex-1 min-h-0 flex-col">
                     <div class="flex-1 min-h-0 overflow-auto">
                         <table class="min-w-full divide-y divide-gray-200 text-sm">
                             <thead class="bg-gray-50">
@@ -42,35 +115,19 @@
                                     <th class="sticky top-0 z-10 bg-gray-50 px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('Projektverknüpfung') }}</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-gray-100 bg-white">
-                                @forelse ($products as $product)
-                                    <tr class="hover:bg-gray-50">
-                                        <td class="px-4 py-2 whitespace-nowrap text-gray-700">{{ $product->product_number }}</td>
-                                        <td class="px-4 py-2 whitespace-nowrap text-gray-700">{{ $product->name }}</td>
-                                        <td class="px-4 py-2 whitespace-nowrap text-gray-700">{{ $product->productGroup?->number }}</td>
-                                        <td class="px-4 py-2 whitespace-nowrap text-gray-700">{{ $product->productGroup?->name }}</td>
-                                        <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ $product->extra_text ?? '–' }}</td>
-                                        <td class="px-4 py-2 whitespace-nowrap text-gray-400">–</td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="6" class="px-4 py-6 text-center text-gray-400">{{ __('Keine Produkte gefunden.') }}</td>
-                                    </tr>
-                                @endforelse
+                            <tbody id="produkte-rows" class="divide-y divide-gray-100 bg-white">
+                                @include('produkte.partials.rows')
                             </tbody>
                         </table>
-                    </div>
 
-                    @if ($hasMore)
-                        <div class="shrink-0 border-t border-gray-200 p-3 text-center">
-                            <a
-                                href="{{ request()->fullUrlWithQuery(['limit' => $limit + 500]) }}"
-                                class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
-                            >
-                                {{ __('Weitere laden (:count von :total geladen)', ['count' => $products->count(), 'total' => $total]) }}
-                            </a>
+                        {{-- Sentinel MUSS innerhalb des scrollenden Bereichs stehen
+                             (nicht als Geschwister-Element daneben) - sonst ist er
+                             permanent sichtbar und der Observer feuert sofort statt
+                             erst beim Herunterscrollen ans Listenende. --}}
+                        <div x-show="hasMore" x-cloak x-init="initScrollSentinel($el)" class="py-2 text-center text-xs text-gray-400">
+                            <span x-show="loadingMore" x-cloak>{{ __('Lädt…') }}</span>
                         </div>
-                    @endif
+                    </div>
                 </div>
             </div>
         </div>

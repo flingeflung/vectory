@@ -101,6 +101,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/illustrationen', [IllustrationOverviewController::class, 'index'])->name('illustrationen');
 
     Route::get('/produkte', [ProductController::class, 'index'])->name('produkte');
+    Route::get('/produkte/mehr', [ProductController::class, 'more'])->name('produkte.mehr');
 
     Route::get('/aufgaben', [TaskController::class, 'index'])->name('aufgaben');
     Route::post('/aufgaben/{task}/sichtbarkeit', [TaskController::class, 'toggleVisibility'])->name('aufgaben.visibility');
