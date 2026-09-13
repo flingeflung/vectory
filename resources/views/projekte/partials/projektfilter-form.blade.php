@@ -66,7 +66,7 @@
                             @if ($field['type'] === 'select')
                                 <select name="filter[{{ $field['key'] }}]" class="w-full rounded border-gray-300 py-1 text-sm">
                                     @unless ($field['no_placeholder'] ?? false)
-                                        <option value="">{{ __('Alle') }}</option>
+                                        <option value="">{{ __('– Alle –') }}</option>
                                     @endunless
                                     @foreach ($field['options'] as $value => $option)
                                         @php

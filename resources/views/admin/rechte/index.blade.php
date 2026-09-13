@@ -59,7 +59,7 @@
                 <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => $el.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' }))">
                     <form x-show="newSet" x-cloak method="POST" action="{{ route('admin.rechte.sets.store') }}" class="mb-2 space-y-1.5 rounded border border-gray-200 p-2">
                         <select name="base_id" x-ref="newSetBase" class="w-full rounded-md border-gray-300 text-xs" required>
-                            <option value="">{{ __('Auf Basis von…') }}</option>
+                            <option value="">{{ __('– Basis wählen –') }}</option>
                             @foreach ($templates as $template)
                                 <option value="{{ $template->id }}">{{ $template->name }}</option>
                             @endforeach
