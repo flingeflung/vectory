@@ -6,6 +6,7 @@ use App\Enums\ActivityType;
 use App\Models\Activity;
 use App\Models\Project;
 use App\Models\ProjectGroup;
+use App\Models\ProjectNote;
 use App\Support\MultichangeFieldCatalog;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -86,7 +87,7 @@ class MultichangeController extends Controller
             'preview' => $preview,
             'field' => $field,
             'value' => $value,
-            'valueLabel' => $this->describeValue($field, $value),
+            'actionText' => $this->describeAction($field, $value),
         ]);
     }
 
@@ -123,7 +124,7 @@ class MultichangeController extends Controller
             'result' => [
                 'applied' => $applied,
                 'skipped' => $preview['skipped'],
-                'fieldLabel' => $field['label'],
+                'resultText' => $this->describeResult($field, $applied),
             ],
         ]);
     }
@@ -147,7 +148,7 @@ class MultichangeController extends Controller
 
         $rules = match ($field['type']) {
             'text' => ($field['required'] ?? false) ? ['required', 'string', 'max:255'] : ['nullable', 'string', 'max:255'],
-            'textarea' => ['nullable', 'string'],
+            'textarea' => ($field['required'] ?? false) ? ['required', 'string', 'max:2000'] : ['nullable', 'string', 'max:2000'],
             'date' => ['nullable', 'date'],
             'select' => ['required', Rule::in(array_keys($field['options']))],
         };
@@ -240,6 +241,19 @@ class MultichangeController extends Controller
      */
     private function applyValue(Project $project, array $field, mixed $value): void
     {
+        if (($field['storage'] ?? 'column') === 'note') {
+            ProjectNote::query()->create([
+                'tenant_id' => $project->tenant_id,
+                'project_id' => $project->id,
+                'type' => ProjectNote::TYPE_REMARK,
+                'text' => $value,
+                'created_by_user_id' => Auth::id(),
+                'created_at' => now(),
+            ]);
+
+            return;
+        }
+
         if (($field['storage'] ?? 'column') === 'attribute') {
             $attributes = $project->attributes ?? [];
             // Gleiche Konvention wie beim normalen Zusatzfeld-Speichern
@@ -258,8 +272,43 @@ class MultichangeController extends Controller
         $project->{$field['key']} = $value;
     }
 
+    /**
+     * Satz für die Vorschau/den Bestätigungsdialog (Gegenwart: "wird
+     * gesetzt"/"wird hinzugefügt"). "Bemerkungen" hat Anhängen- statt
+     * Set-Semantik (siehe applyValue()), braucht deshalb eine eigene
+     * Formulierung statt der generischen "Feld wird auf Wert gesetzt.".
+     */
+    private function describeAction(array $field, mixed $value): string
+    {
+        if (($field['storage'] ?? 'column') === 'note') {
+            return __('Neue Bemerkung „:value" wird hinzugefügt.', ['value' => $value]);
+        }
+
+        return __(':field wird auf „:value" gesetzt.', ['field' => $field['label'], 'value' => $this->describeValue($field, $value)]);
+    }
+
+    private function describeResult(array $field, int $count): string
+    {
+        if (($field['storage'] ?? 'column') === 'note') {
+            return trans_choice(
+                'Bemerkung bei :count Projekt hinzugefügt.|Bemerkung bei :count Projekten hinzugefügt.',
+                $count,
+                ['count' => $count]
+            );
+        }
+
+        return __(':field: :count Projekt(e) erfolgreich geändert.', ['field' => $field['label'], 'count' => $count]);
+    }
+
+    /**
+     * Gleicher Satz für den Activity-Log-Eintrag, Vergangenheitsform.
+     */
     private function describeChange(array $field, mixed $value): string
     {
+        if (($field['storage'] ?? 'column') === 'note') {
+            return __('Neue Bemerkung per Multichange hinzugefügt: „:value"', ['value' => $value]);
+        }
+
         return __(':field per Multichange auf „:value" gesetzt.', ['field' => $field['label'], 'value' => $this->describeValue($field, $value)]);
     }
 

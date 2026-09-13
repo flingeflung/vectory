@@ -15,7 +15,7 @@
 @if (isset($result))
     <div class="space-y-3">
         <div class="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-green-800">
-            {{ __(':field: :count Projekt(e) erfolgreich geändert.', ['field' => $result['fieldLabel'], 'count' => $result['applied']]) }}
+            {{ $result['resultText'] }}
         </div>
 
         @if ($result['skipped']->isNotEmpty())
@@ -55,7 +55,7 @@
         <div class="text-xs text-gray-400">{{ __('Gruppe: :name', ['name' => $group->name]) }}</div>
 
         <div class="text-gray-700">
-            {{ __(':field wird auf „:value" gesetzt.', ['field' => $field['label'], 'value' => $valueLabel]) }}
+            {{ $actionText }}
         </div>
 
         @php
@@ -93,7 +93,7 @@
                 async apply() {
                     const ok = await window.confirmDialog({
                         title: {{ \Illuminate\Support\Js::from(__('Wirklich anwenden?')) }},
-                        message: {{ \Illuminate\Support\Js::from(__(':count Projekt(e) werden jetzt unwiderruflich geändert: „:field" auf „:value".', ['count' => $preview['applicable']->count(), 'field' => $field['label'], 'value' => $valueLabel])) }},
+                        message: {{ \Illuminate\Support\Js::from(__(':count Projekt(e) werden jetzt unwiderruflich geändert. :action', ['count' => $preview['applicable']->count(), 'action' => $actionText])) }},
                         confirmLabel: {{ \Illuminate\Support\Js::from(__('Anwenden')) }},
                         cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
                     });

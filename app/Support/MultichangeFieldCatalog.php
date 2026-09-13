@@ -28,7 +28,25 @@ class MultichangeFieldCatalog
             // MultichangeController, dass dort statt der Spalte
             // geschrieben wird.
             ['key' => 'initiator', 'label' => __('Initiator'), 'type' => 'text', 'storage' => 'attribute'],
-            ['key' => 'remarks', 'label' => __('Bemerkungen'), 'type' => 'textarea'],
+            // Ralf-Bug-Report, 2026-09-13: "Bemerkungen hat keine neue
+            // Bemerkung erzeugt" - "Bemerkungen" ist seit 2026-09-12 KEIN
+            // einzelnes Feld mehr, sondern eine Liste einzelner, mit Autor+
+            // Zeitpunkt versehener Einträge (project_notes, siehe system-
+            // fields/remarks.blade.php) - die alte projects.remarks-Spalte
+            // wird von der Oberfläche gar nicht mehr gelesen. Set-Semantik
+            // (Wert überschreiben) passt hier konzeptionell nicht mehr -
+            // Multichange legt stattdessen bei jedem Projekt einen NEUEN
+            // Eintrag an (Anhängen, nicht Überschreiben), analog Viettos
+            // eigenem saveattr5 ("Bemerkungen/Änderungen" war dort schon
+            // immer ein reines Anhängen, nie ein Set).
+            [
+                'key' => 'remarks',
+                'label' => __('Bemerkungen'),
+                'type' => 'textarea',
+                'required' => true,
+                'storage' => 'note',
+                'hint' => __('Fügt bei jedem Projekt der Gruppe einen neuen Bemerkungen-Eintrag hinzu - bestehende Bemerkungen bleiben unverändert erhalten.'),
+            ],
             ['key' => 'start_date', 'label' => __('Start'), 'type' => 'date'],
             ['key' => 'end_date', 'label' => __('Ende'), 'type' => 'date'],
             ['key' => 'publication_date', 'label' => __('Publikationsdatum'), 'type' => 'date'],
