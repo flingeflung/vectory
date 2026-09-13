@@ -176,6 +176,16 @@ class Project extends Model
         return $this->hasMany(ProjectNote::class)->orderBy('created_at');
     }
 
+    /**
+     * Verknüpfte Produkte aus dem Mini-PIM (Ralf, 2026-09-13, analog
+     * Viettos projekte_pim_cx) - Anzeige/Verwaltung über das "Modell/
+     * System"-Feld, siehe ProjectProductController.
+     */
+    public function products(): BelongsToMany
+    {
+        return $this->belongsToMany(Product::class, 'project_products')->withTimestamps()->orderBy('name');
+    }
+
     public function connectionsFrom(): HasMany
     {
         return $this->hasMany(ProjectConnection::class, 'project_id');

@@ -12,8 +12,9 @@ use Illuminate\View\View;
  * "Produkte"-Übersicht (Ralf, 2026-09-13), analog Viettos Modelle-Seite
  * (inhalt/modelle.php) - Daten kommen vorerst aus dem Mini-PIM
  * (ProductGroup/Product, siehe GenerateTestProducts), später über eine
- * echte PIM-Schnittstelle. Projektverknüpfung noch nicht gebaut (Ralf:
- * "machen wir danach") - Spalte zeigt bewusst nur einen Platzhalter.
+ * echte PIM-Schnittstelle. Projektverknüpfung wird über das "Modell/
+ * System"-Feld im Projekt gepflegt (siehe ProjectProductController), hier
+ * nur Anzeige.
  *
  * Nachladen beim Scrollen ans Listenende (Ralf: "bei der Projektübersicht
  * haste das doch mit Automatik hinbekommen") - gleiches Muster wie
@@ -39,7 +40,7 @@ class ProductController extends Controller
         $total = (clone $this->baseQuery($search))->count();
         $products = $this->baseQuery($search)
             ->orderBy($this->sortColumn($sort), $direction)->orderBy('products.id', $direction)
-            ->with('productGroup')
+            ->with(['productGroup', 'projects:id,source_pn,title'])
             ->take(self::PAGE_SIZE)
             ->get();
 
@@ -66,7 +67,7 @@ class ProductController extends Controller
 
         $products = $this->baseQuery($search)
             ->orderBy($this->sortColumn($sort), $direction)->orderBy('products.id', $direction)
-            ->with('productGroup')
+            ->with(['productGroup', 'projects:id,source_pn,title'])
             ->skip($offset)->take(self::PAGE_SIZE)
             ->get();
 

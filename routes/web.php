@@ -32,6 +32,7 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectCopyController;
 use App\Http\Controllers\ProjectDirectoryController;
 use App\Http\Controllers\ProjectNoteController;
+use App\Http\Controllers\ProjectProductController;
 use App\Http\Controllers\ProjectScheduleController;
 use App\Http\Controllers\ProjectWorkflowStepController;
 use App\Http\Controllers\SettingsController;
@@ -71,6 +72,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/projekte/{project}/workflow-steps/{projectWorkflowStep}/personen/{functionGroup}', [ProjectWorkflowStepController::class, 'updatePeople'])->name('projekte.workflow-steps.personen.update');
     Route::post('/projekte/{project}/checklisten', [ProjectChecklistController::class, 'update'])->name('projekte.checklisten.update');
     Route::patch('/projekte/{project}/checklisten/punkte/{point}', [ProjectChecklistController::class, 'togglePoint'])->name('projekte.checklisten.punkte.toggle');
+
+    Route::get('/projekte/{project}/produkte', [ProjectProductController::class, 'picker'])->name('projekte.produkte.picker');
+    Route::get('/projekte/{project}/produkte/mehr', [ProjectProductController::class, 'more'])->name('projekte.produkte.mehr');
+    Route::post('/projekte/{project}/produkte/{product}', [ProjectProductController::class, 'toggle'])->name('projekte.produkte.toggle');
     Route::get('/projekte/{project}/termine', [ProjectScheduleController::class, 'form'])->name('projekte.termine.form');
     Route::post('/projekte/{project}/termine/berechnen', [ProjectScheduleController::class, 'recalculate'])->name('projekte.termine.recalculate');
     Route::post('/projekte/{project}/termine/uebernehmen', [ProjectScheduleController::class, 'apply'])->name('projekte.termine.apply');

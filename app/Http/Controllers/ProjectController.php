@@ -2,26 +2,27 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Attribute;
-use App\Models\Checklist;
-use App\Models\DisplayFilterSet;
-use App\Models\FunctionGroup;
-use App\Models\Market;
-use App\Models\MarketSet;
 use App\Enums\ActivityType;
 use App\Enums\GraphicOrderStatus;
 use App\Mail\ProjectRequestMail;
 use App\Models\Activity;
+use App\Models\Attribute;
+use App\Models\Checklist;
+use App\Models\DisplayFilterSet;
 use App\Models\Favorite;
+use App\Models\FunctionGroup;
+use App\Models\GraphicOrder;
+use App\Models\Market;
+use App\Models\MarketSet;
 use App\Models\Project;
 use App\Models\ProjectPerson;
-use App\Models\RecentlyViewedProject;
-use App\Models\SystemSetting;
-use App\Models\Tenant;
 use App\Models\ProjectTypeMain;
 use App\Models\ProjectTypeSub;
 use App\Models\ProjectWorkflowStep;
 use App\Models\ProjectWorkflowStepPerson;
+use App\Models\RecentlyViewedProject;
+use App\Models\SystemSetting;
+use App\Models\Tenant;
 use App\Models\Workflow;
 use App\Models\WorkflowStep;
 use App\Services\ProjectDirectoryLocator;
@@ -34,6 +35,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -148,7 +150,7 @@ class ProjectController extends Controller
      * DevProjNr/OEM/Bogengröße/verstecktes Modellfeld - die existieren hier
      * noch nicht).
      */
-    public function quickSearch(Request $request): \Illuminate\Http\JsonResponse
+    public function quickSearch(Request $request): JsonResponse
     {
         $term = trim((string) $request->query('q', ''));
         if (mb_strlen($term) < 3) {
@@ -180,9 +182,9 @@ class ProjectController extends Controller
      * gesetzt wurde (siehe done_at-Kommentar im Import-Command) - kann bei
      * abweichendem aktuellem Status trotzdem gesetzt sein.
      *
-     * @return \Illuminate\Support\Collection<int, object{total: int, done: int, images: int}>
+     * @return Collection<int, object{total: int, done: int, images: int}>
      */
-    private function graphicOrderSummaries(\Illuminate\Support\Collection $projectIds): \Illuminate\Support\Collection
+    private function graphicOrderSummaries(Collection $projectIds): Collection
     {
         if ($projectIds->isEmpty()) {
             return collect();
@@ -190,7 +192,7 @@ class ProjectController extends Controller
 
         $nonDiscardedStatusValues = array_map(fn ($status) => $status->value, array_filter(GraphicOrderStatus::cases(), fn ($status) => ! $status->isDiscarded()));
 
-        return \App\Models\GraphicOrder::query()
+        return GraphicOrder::query()
             ->whereIn('project_id', $projectIds)
             ->whereIn('graphic_order_status_id', $nonDiscardedStatusValues)
             ->selectRaw('project_id, COUNT(*) as total, SUM(CASE WHEN done_at IS NOT NULL THEN 1 ELSE 0 END) as done, GREATEST(SUM(image_count), 0) as images')
@@ -628,7 +630,7 @@ class ProjectController extends Controller
     }
 
     /**
-     * @return array{project: Project, attributes: \Illuminate\Support\Collection, sort: ?string, direction: string, filters: array, previousProject: ?Project, nextProject: ?Project}
+     * @return array{project: Project, attributes: Collection, sort: ?string, direction: string, filters: array, previousProject: ?Project, nextProject: ?Project}
      */
     private function detailData(Request $request, Project $project): array
     {
@@ -636,7 +638,7 @@ class ProjectController extends Controller
         $filters = $this->filtersFromRequest($request);
 
         return [
-            'project' => $project->loadMissing(['markets', 'projectPeople.person', 'projectPeople.functionGroup', 'workflow', 'activities.user', 'projectWorkflowSteps.workflowStep.functionGroups', 'projectWorkflowSteps.people.functionGroup', 'projectWorkflowSteps.people.person', 'graphicOrders.initiatedBy', 'graphicOrders.illustrator', 'projectChecklists.checklist.sections.points', 'projectChecklists.activatedBy', 'projectChecklistPoints.doneBy']),
+            'project' => $project->loadMissing(['markets', 'projectPeople.person', 'projectPeople.functionGroup', 'workflow', 'activities.user', 'projectWorkflowSteps.workflowStep.functionGroups', 'projectWorkflowSteps.people.functionGroup', 'projectWorkflowSteps.people.person', 'graphicOrders.initiatedBy', 'graphicOrders.illustrator', 'projectChecklists.checklist.sections.points', 'projectChecklists.activatedBy', 'projectChecklistPoints.doneBy', 'products.productGroup']),
             // Für den "Checklisten auswählen"-Dialog - der aktuell zugewiesene
             // Katalog, gleiches Prinzip wie bei availableWorkflows unten (auch
             // inaktive Checklisten bleiben sichtbar, wenn schon zugewiesen).
@@ -644,8 +646,8 @@ class ProjectController extends Controller
                 ->where(fn (Builder $query) => $query->where('active', true)->orWhereIn('id', $project->projectChecklists->pluck('checklist_id')))
                 ->orderBy('sort')->get(),
             'attributes' => $project->relevantAttributes(),
-            'stammdatenAttributes' => $project->sectionAttributes(\App\Models\Attribute::SECTION_STAMMDATEN),
-            'ablaufdatenAttributes' => $project->sectionAttributes(\App\Models\Attribute::SECTION_ABLAUFDATEN),
+            'stammdatenAttributes' => $project->sectionAttributes(Attribute::SECTION_STAMMDATEN),
+            'ablaufdatenAttributes' => $project->sectionAttributes(Attribute::SECTION_ABLAUFDATEN),
             'projectTypeCategories' => ProjectTypeMain::query()->where('tenant_id', $project->tenant_id)->orderBy('sort')->with(['subs' => fn ($query) => $query->orderBy('sort')])->get(),
             'allMarkets' => Market::query()->where('tenant_id', $project->tenant_id)->orderBy('sort')->get(),
             'marketSets' => MarketSet::query()->where('tenant_id', $project->tenant_id)->with('markets:id')->orderBy('sort')->get(),
@@ -979,7 +981,7 @@ class ProjectController extends Controller
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, Attribute>  $attributes
+     * @param  Collection<int, Attribute>  $attributes
      */
     private function attributeValidationRules($attributes): array
     {
