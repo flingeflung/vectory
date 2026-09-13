@@ -24,6 +24,7 @@ use App\Http\Controllers\FavoriteController;
 use App\Http\Controllers\GraphicOrderController;
 use App\Http\Controllers\HelpController;
 use App\Http\Controllers\IllustrationOverviewController;
+use App\Http\Controllers\MultichangeController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectChecklistController;
@@ -72,6 +73,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/projektgruppen/{group}/personen/{user}', [ProjectGroupController::class, 'share'])->name('projektgruppen.personen.share');
     Route::delete('/projektgruppen/{group}/personen/{user}', [ProjectGroupController::class, 'unshare'])->name('projektgruppen.personen.unshare');
     Route::get('/projektgruppen/{group}/anzeigen', [ProjectGroupController::class, 'showInOverview'])->name('projektgruppen.anzeigen');
+    Route::get('/projektgruppen/{group}/multichange', [MultichangeController::class, 'form'])->name('projektgruppen.multichange.form');
+    Route::post('/projektgruppen/{group}/multichange/vorschau', [MultichangeController::class, 'preview'])->name('projektgruppen.multichange.preview');
+    Route::post('/projektgruppen/{group}/multichange/anwenden', [MultichangeController::class, 'apply'])->name('projektgruppen.multichange.apply');
     // Vor /projekte/{project} registriert - sonst würde "neu" als Projekt-ID interpretiert.
     Route::get('/projekte/neu', [ProjectController::class, 'createForm'])->name('projekte.create-form');
     Route::post('/projekte', [ProjectController::class, 'store'])->name('projekte.store');

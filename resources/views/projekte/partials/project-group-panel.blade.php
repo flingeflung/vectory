@@ -54,6 +54,21 @@
         <button type="button" @click="clearGroup()" class="block w-full rounded border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-left font-medium text-gray-700 hover:bg-btn-secondary-hover">
             {{ __('Gruppe leeren') }}
         </button>
+        @can('project.multichange')
+            {{--
+                Ralf: "Das ist ein sehr gefährliches Feature in den falschen
+                Händen!" - deshalb eigenes Recht (nur Admin-Sets) UND bewusst
+                optisch abgesetzt von den harmlosen Mitgliedschafts-Aktionen
+                oben (eigene Randlinie, andere Akzentfarbe).
+            --}}
+            <button
+                type="button"
+                onclick="window.openMultichange($store.projectGrouping.groupId)"
+                class="block w-full rounded border border-amber-300 bg-amber-50 px-2 py-1 text-left font-medium text-amber-800 hover:bg-amber-100"
+            >
+                {{ __('Multichange - Feld für alle Projekte dieser Gruppe ändern') }}
+            </button>
+        @endcan
     @endif
 
     <div class="flex items-center gap-1 border-t border-gray-100 pt-2">

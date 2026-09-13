@@ -27,6 +27,7 @@ enum ActivityType: string
     case ProjectCreated = 'project_created';
     case ProjectCopied = 'project_copied';
     case PublicationDateChanged = 'publication_date_changed';
+    case ProjectMultichanged = 'project_multichanged';
 
     public function label(): string
     {
@@ -38,6 +39,7 @@ enum ActivityType: string
             self::ProjectCreated => __('Projekt neu angelegt'),
             self::ProjectCopied => __('Projekt kopiert'),
             self::PublicationDateChanged => __('Publikationsdatum geändert'),
+            self::ProjectMultichanged => __('Per Multichange geändert'),
         };
     }
 
@@ -46,7 +48,7 @@ enum ActivityType: string
         return match ($this) {
             self::WorkflowAssigned, self::WorkflowUnassigned, self::WorkflowStepActivated => ActivityCategory::Workflow,
             self::GraphicOrderStatusChanged => ActivityCategory::Illustration,
-            self::ProjectCreated, self::ProjectCopied, self::PublicationDateChanged => ActivityCategory::General,
+            self::ProjectCreated, self::ProjectCopied, self::PublicationDateChanged, self::ProjectMultichanged => ActivityCategory::General,
         };
     }
 }

@@ -240,8 +240,7 @@ class ProjectGroupController extends Controller
 
     private function authorizeViewer(ProjectGroup $group): void
     {
-        abort_unless($group->tenant_id === CurrentTenant::id(), 404);
-        abort_unless($group->viewers()->where('users.id', Auth::id())->exists(), 403);
+        $group->authorizeViewer();
     }
 
     /**

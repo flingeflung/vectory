@@ -1901,6 +1901,62 @@
         </script>
 
         {{--
+            Multichange (Ralf, 2026-09-13, nach Vietto-Analyse - siehe
+            Backlog-Memory) - gleiches "Server entscheidet den Zustand"-
+            Muster wie die Terminberechnung oben (multichange-body.blade.php:
+            Formular -> Vorschau -> Ergebnis, alles serverseitig gerendert).
+        --}}
+        <x-modal name="multichange" max-width="lg">
+            <div class="flex max-h-[85vh] flex-col">
+                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Multichange') }}</h3>
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'multichange' }))"
+                        class="text-gray-400 hover:text-gray-600"
+                        aria-label="{{ __('Schließen') }}"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="multichange-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
+                    {{ __('Lädt…') }}
+                </div>
+            </div>
+        </x-modal>
+
+        <script>
+            (function () {
+                const multichangeBody = () => document.getElementById('multichange-body');
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
+                window.openMultichange = async (groupId) => {
+                    multichangeBody().innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
+                    window.dispatchEvent(new CustomEvent('open-modal', { detail: 'multichange' }));
+                    multichangeBody().innerHTML = await fetch(`/projektgruppen/${groupId}/multichange`).then((r) => r.text());
+                };
+
+                window.reloadMultichange = async (url, params) => {
+                    const body = new URLSearchParams(params);
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: body.toString(),
+                    });
+                    // Unerwartete Umleitung (z.B. Session abgelaufen -> Login) -
+                    // sonst landet eine ganze fremde Seite roh im Modal-Inhalt.
+                    if (response.redirected) {
+                        window.location.href = response.url;
+                        return;
+                    }
+                    multichangeBody().innerHTML = await response.text();
+                };
+            })();
+        </script>
+
+        {{--
             Projektverzeichnis: "Inhalt auflisten" (read-only Baumansicht) -
             aus Projektübersicht UND Projektdetails per Icon neben der PN
             öffenbar (siehe directory-status.blade.php), analog Viettos
