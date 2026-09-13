@@ -119,6 +119,13 @@ class AttributeController extends Controller
         $label = trim((string) $request->string('label'));
         abort_if($label === '', 422);
 
+        // Ralf, 2026-09-13: label_editable-Felder (aktuell nur "Modell/
+        // System") landen später auch als Navigationspunkt-Beschriftung -
+        // eine zu kurze Caption wäre dafür nicht nutzbar.
+        if ($attribute->label_editable) {
+            abort_if(mb_strlen($label) < 3, 422);
+        }
+
         $attribute->update(['label' => $label]);
 
         return $this->redirectToSection($attribute->section);

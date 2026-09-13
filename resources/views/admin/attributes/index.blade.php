@@ -121,7 +121,7 @@
                                                 @submit="dirty = false; window.__attributesDirtyForms.delete($el)"
                                             >
                                                 @csrf
-                                                <input type="text" name="label" value="{{ $attribute->label }}" required class="flex-1 rounded-md border-gray-300 py-1 text-sm">
+                                                <input type="text" name="label" value="{{ $attribute->label }}" required minlength="3" title="{{ __('Mindestens 3 Zeichen') }}" class="flex-1 rounded-md border-gray-300 py-1 text-sm">
                                                 <span class="shrink-0 text-gray-300" title="{{ __('Festes Feld - Bezeichnung anpassbar, nicht löschbar') }}">🔒</span>
                                                 <button type="submit" x-show="dirty" x-cloak class="shrink-0 rounded-md bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
                                                     {{ __('Speichern') }}
