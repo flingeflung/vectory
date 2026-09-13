@@ -11,7 +11,7 @@
     $fieldHints = [
         'title' => __('Angehakt: wird 1:1 übernommen, bei mehreren Kopien mit Zusatz „Kopie 1/2/…“. Nicht angehakt: bleibt im neuen Projekt leer, muss dort per Hand nachgetragen werden.'),
         'version' => __('Angehakt: Versionsnummer wird übernommen, beim Kopieren wird zusätzlich gefragt, ob sie um 1 erhöht werden soll.'),
-        'status' => __('Wird nicht 1:1 übernommen - die Kopie startet mit Status „Geplant“ bzw. folgt automatisch dem mitkopierten Workflow.'),
+        'status' => __('Status: wird beim Kopieren immer auf „Geplant“ gesetzt, der Haken wirkt hier nicht. Erstellungsstatus: angehakt = wird übernommen, nicht angehakt = bleibt leer.'),
         'workflow_id' => __('Wenn der ursprüngliche Workflow nicht mehr aktuell ist, wird automatisch die neueste Version verknüpft.'),
         'project_people' => __('Angehakt: Projektbeteiligte Personen werden mitkopiert. Wenn eine davon inaktiv ist, wird vor dem Kopieren gewarnt.'),
     ];
