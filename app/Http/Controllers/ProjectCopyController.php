@@ -41,12 +41,16 @@ class ProjectCopyController extends Controller
      * Feste Felder, deren Haken in der Vorlage aktuell KEINE Auswirkung
      * hat (siehe store()-Dispatch): Archiviert wird immer fest auf "nein"
      * gesetzt, die übrigen sind reine Platzhalter ohne Datenquelle (siehe
-     * Attribute::SYSTEM_FIELDS-Docblock). Bewusst aus der Kopieren-
-     * Übersicht ausgeblendet, damit dort nur steht, was wirklich zählt -
-     * gleiche Liste würde sich sonst mit Feldern füllen, die so oder so
-     * nichts tun.
+     * Attribute::SYSTEM_FIELDS-Docblock). "publication_date" hätte
+     * technisch eine Datenquelle, ist aber bewusst ausgenommen (Ralf,
+     * 2026-09-13): "Das ist aus meiner Sicht eine Sache für Multichange.
+     * Ich möchte vermeiden, dass man die Kopierfunktion nutzt, um Aktionen
+     * zu tätigen, die eigentlich Multichange leisten soll." Alle bewusst
+     * aus der Kopieren-Übersicht ausgeblendet, damit dort nur steht, was
+     * wirklich zählt - gleiche Liste würde sich sonst mit Feldern füllen,
+     * die so oder so nichts tun.
      */
-    public const NO_EFFECT_KEYS = ['archived', 'date_progress', 'progress', 'project_connections', 'remarks_echo', 'change_log'];
+    public const NO_EFFECT_KEYS = ['archived', 'date_progress', 'progress', 'project_connections', 'remarks_echo', 'change_log', 'publication_date'];
 
     public function form(Project $project): View
     {
@@ -150,9 +154,6 @@ class ProjectCopyController extends Controller
                 }
                 if (in_array('remarks', $checkedKeys, true)) {
                     $attrs['remarks'] = $sourceProject->remarks;
-                }
-                if (in_array('publication_date', $checkedKeys, true)) {
-                    $attrs['publication_date'] = $sourceProject->publication_date;
                 }
                 // Status/Erstellungsstatus ist ein gemeinsames Feld für zwei
                 // Spalten mit unterschiedlicher Kopierlogik (siehe Tooltipp):
