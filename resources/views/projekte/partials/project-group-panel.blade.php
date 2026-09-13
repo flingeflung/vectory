@@ -50,9 +50,34 @@
     </div>
 </div>
 
-<div class="mt-3 flex items-center gap-1.5 border-t border-gray-200 pt-2">
-    <input type="text" x-model="newGroupName" placeholder="{{ __('Neue Gruppe...') }}" class="min-w-0 flex-1 rounded-md border-gray-300 text-xs">
-    <button type="button" @click="createGroup()" class="shrink-0 rounded-md bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
-        {{ __('Speichern') }}
+{{--
+    Ralf, 2026-09-13: "ich habe wie wild auf Speichern geklickt, weil ich
+    dachte, ich muss die Gruppenzuordnung ja speichern" - Neu-Anlegen-Feld
+    +Button erst hinter einem eigenen "Neue Gruppe"-Button verstecken
+    (gleiches Prinzip wie admin/attributes "+ Neu"), statt Eingabefeld +
+    "Speichern" dauerhaft sichtbar direkt unter den Häkchen-Toggle-Aktionen
+    zu zeigen - sah sonst wie ein ausstehender Speichervorgang aus.
+--}}
+<div class="mt-3 border-t border-gray-200 pt-2" x-data="{ creatingGroup: false }">
+    <button
+        type="button"
+        x-show="! creatingGroup"
+        @click="creatingGroup = true; $nextTick(() => $refs.newGroupInput.focus())"
+        class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+    >
+        + {{ __('Neue Gruppe') }}
     </button>
+    <div x-show="creatingGroup" x-cloak class="flex items-center gap-1.5">
+        <input
+            type="text"
+            x-ref="newGroupInput"
+            x-model="newGroupName"
+            placeholder="{{ __('Name') }}"
+            @keydown.enter="await createGroup(); creatingGroup = false"
+            class="min-w-0 flex-1 rounded-md border-gray-300 text-xs"
+        >
+        <button type="button" @click="await createGroup(); creatingGroup = false" class="shrink-0 rounded-md bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
+            {{ __('Speichern') }}
+        </button>
+    </div>
 </div>
