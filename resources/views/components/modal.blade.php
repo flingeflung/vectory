@@ -6,6 +6,14 @@
     'draggable' => false,
     'height' => null,
     'resizable' => false,
+    // Ralf-Bug-Report, 2026-09-13: Projektgruppen-Panel - Projekte per
+    // Häkchen in der Tabelle markieren, WÄHREND das Panel offen ist, war
+    // unmöglich, weil der übliche Backdrop den Klick abfängt. Für diesen
+    // einen Anwendungsfall (Panel + Hintergrund gleichzeitig bedienbar)
+    // "blocking" abschaltbar: kein abgedunkelter Hintergrund, keine
+    // Klick-außerhalb-schließt-Geste, Seite bleibt scrollbar - alles
+    // andere (Escape schließt, Ziehen usw.) bleibt unverändert.
+    'blocking' => true,
 ])
 
 @php
@@ -168,12 +176,12 @@ $storageKey = "vectory-modal-size-{$name}";
     }"
     x-init="$watch('show', value => {
         if (value) {
-            document.body.classList.add('overflow-y-hidden');
+            {{ $blocking ? "document.body.classList.add('overflow-y-hidden');" : '' }}
             window.__modalStack = (window.__modalStack || []).filter(n => n !== '{{ $name }}');
             window.__modalStack.push('{{ $name }}');
             {{ $attributes->has('focusable') ? 'setTimeout(() => firstFocusable().focus(), 100)' : '' }}
         } else {
-            document.body.classList.remove('overflow-y-hidden');
+            {{ $blocking ? "document.body.classList.remove('overflow-y-hidden');" : '' }}
             window.__modalStack = (window.__modalStack || []).filter(n => n !== '{{ $name }}');
         }
     })"
@@ -184,24 +192,26 @@ $storageKey = "vectory-modal-size-{$name}";
     x-on:keydown.tab.prevent="$event.shiftKey || nextFocusable().focus()"
     x-on:keydown.shift.tab.prevent="prevFocusable().focus()"
     x-show="show"
-    class="fixed inset-0 overflow-y-auto px-4 py-6 sm:px-0 z-50"
+    class="fixed inset-0 overflow-y-auto px-4 py-6 sm:px-0 z-50 {{ $blocking ? '' : 'pointer-events-none' }}"
     style="display: {{ $show ? 'block' : 'none' }};"
 >
-    <div
-        x-show="show"
-        class="fixed inset-0 transform transition-all"
-        x-on:click="requestClose()"
-        @if (! $show)
-            x-transition:enter="ease-out duration-300"
-            x-transition:enter-start="opacity-0"
-            x-transition:enter-end="opacity-100"
-        @endif
-        x-transition:leave="ease-in duration-200"
-        x-transition:leave-start="opacity-100"
-        x-transition:leave-end="opacity-0"
-    >
-        <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
-    </div>
+    @if ($blocking)
+        <div
+            x-show="show"
+            class="fixed inset-0 transform transition-all"
+            x-on:click="requestClose()"
+            @if (! $show)
+                x-transition:enter="ease-out duration-300"
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
+            @endif
+            x-transition:leave="ease-in duration-200"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+        >
+            <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
+        </div>
+    @endif
 
     <div
         x-show="show"
@@ -211,7 +221,7 @@ $storageKey = "vectory-modal-size-{$name}";
         x-on:mousedown="$event.target.closest('[data-drag-handle]') && startDrag($event)"
         :class="(dragPos ? '' : 'sm:mx-auto') + (dragging ? ' select-none' : '') + (resizable ? ' resize' : '')"
         :style="`${(dragging || resizing) ? 'transition: none;' : ''}${dragPos ? `position: fixed; left: ${dragPos.x}px; top: ${dragPos.y}px; width: ${dragBox.width}px; margin: 0;` : ''}${resizable && dragBox ? `height: ${dragBox.height}px;` : ''}{{ $heightStyle }}{{ $resizable ? 'min-width: 480px; min-height: 320px; max-width: 95vw; max-height: 92vh;' : '' }}`"
-        class="mb-6 bg-white rounded-lg {{ $boxOverflowClass }} shadow-xl transform transition-all {{ $resizable ? '' : 'sm:w-full '.$maxWidth }}"
+        class="pointer-events-auto mb-6 bg-white rounded-lg {{ $boxOverflowClass }} shadow-xl transform transition-all {{ $resizable ? '' : 'sm:w-full '.$maxWidth }}"
         @if (! $show)
             x-transition:enter="ease-out duration-300"
             x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"

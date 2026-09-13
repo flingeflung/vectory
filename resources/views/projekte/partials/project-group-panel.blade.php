@@ -6,10 +6,29 @@
 --}}
 <div>
     <label class="block text-xs text-gray-500">{{ __('Meine Projektgruppen') }}</label>
-    <select x-model="$store.projectGrouping.groupId" @change="onGroupChange()" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+    {{--
+        Ralf (nach Vietto-Vorbild): "wenn man Haken setzt oder entfernt,
+        wird das in der im Pulldown angezeigten Gruppe sofort geändert
+        (auch die Zahl im Pulldown hinter dem Gruppennamen passt sich
+        sofort an)". Serverseitig gerenderte Zahl (data-count) ist der
+        Ausgangswert; sobald sich memberIds (Häkchen-Zustand) für die
+        AKTUELL gewählte Gruppe ändert, wird nur deren <option>-Text live
+        gepatcht - andere Gruppen im Pulldown bleiben unverändert, die
+        haben ja keine geladenen memberIds.
+    --}}
+    <select
+        x-model="$store.projectGrouping.groupId"
+        @change="onGroupChange()"
+        x-init="$watch('$store.projectGrouping.memberIds', () => {
+            if (! $store.projectGrouping.groupId) return;
+            const opt = $el.querySelector(`option[value='${$store.projectGrouping.groupId}']`);
+            if (opt) { opt.textContent = opt.dataset.name + ' (' + $store.projectGrouping.memberIds.length + ')'; }
+        })"
+        class="mt-0.5 w-full rounded-md border-gray-300 text-sm"
+    >
         <option value="">{{ __('– Gruppe auswählen –') }}</option>
         @foreach ($groups as $group)
-            <option value="{{ $group->id }}" data-viewers="{{ $group->viewers_count }}">{{ $group->name }} ({{ $group->projects_count }})</option>
+            <option value="{{ $group->id }}" data-viewers="{{ $group->viewers_count }}" data-name="{{ $group->name }}">{{ $group->name }} ({{ $group->projects_count }})</option>
         @endforeach
     </select>
 </div>

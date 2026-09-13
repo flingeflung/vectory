@@ -12,7 +12,15 @@
 --}}
 @php($modalName = 'projektgruppen-panel-'.($project?->id ?? 'uebersicht'))
 
-<x-modal name="{{ $modalName }}" max-width="sm">
+{{--
+    Ralf-Bug-Report, 2026-09-13: im Übersichts-Modus ($project === null)
+    soll man Projekte per Häkchen in der Tabelle markieren können,
+    WÄHREND dieses Panel offen ist (Gruppe auswählen im Panel, dann
+    Häkchen im Hintergrund setzen) - deshalb dort "blocking" aus (siehe
+    <x-modal>-Doku). Im Einzelprojekt-Modus gibt's dahinter keine
+    Häkchen-Spalte, bleibt beim normalen (blockierenden) Verhalten.
+--}}
+<x-modal name="{{ $modalName }}" max-width="sm" :blocking="$project !== null">
     <div
         class="flex max-h-[70vh] flex-col"
         x-data="{
@@ -147,6 +155,14 @@
                 document.getElementById('project-group-panel-body-{{ $project?->id ?? 'uebersicht' }}').innerHTML = html;
             },
         }"
+        {{-- Ralf (nach Vietto-Vorbild): Häkchen-Spalte blendet sich aus,
+             sobald das Panel geschlossen wird - nicht nur beim Öffnen an.
+             Das $watch hier greift auf "show" der äußeren <x-modal>-
+             Komponente zu (Alpines verschachtelte x-data-Scopes reichen
+             Eltern-Properties automatisch an Kind-Scopes durch). --}}
+        @if (! $project)
+            x-init="$watch('show', (value) => { if (! value) { $store.projectGrouping.active = false; } })"
+        @endif
         @open-modal.window="$event.detail === '{{ $modalName }}' && refresh()"
     >
         <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
