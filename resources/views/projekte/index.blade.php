@@ -156,7 +156,31 @@
                             this.loadingMore = false;
                         }
                     },
+                    // Ralf, 2026-09-13, zu Multichange: 'ich verstehe nicht,
+                    // warum du nicht per Ajax nur die Übersicht lädst,
+                    // sondern die komplett neue Seite' - ersetzt exakt die
+                    // schon geladenen Zeilen (offset=0, take=aktuelle Anzahl)
+                    // per Ajax statt eines vollen Seiten-Reloads. Wird per
+                    // globalem 'projekte-refresh'-Event ausgelöst (z.B. von
+                    // Multichange nach erfolgreichem Anwenden), damit auch
+                    // Aufrufer außerhalb dieses Alpine-Scopes (layouts/
+                    // app.blade.php) es anstoßen können, ohne diesen Scope
+                    // direkt erreichen zu müssen.
+                    async refreshRows() {
+                        const params = new URLSearchParams(window.location.search);
+                        params.set('offset', 0);
+                        params.set('take', this.offset || {{ $pageSize }});
+                        const url = {{ \Illuminate\Support\Js::from(route('projekte.mehr')) }} + '?' + params.toString();
+                        const response = await fetch(url);
+                        if (! response.ok) return;
+                        const html = await response.text();
+                        const rowsEl = document.getElementById('projekte-rows');
+                        rowsEl.innerHTML = html;
+                        Alpine.initTree(rowsEl);
+                        this.hasMore = response.headers.get('X-Has-More') === '1';
+                    },
                 }"
+                @projekte-refresh.window="refreshRows()"
             >
                 <div data-scroll-root class="flex-1 min-h-0 overflow-auto">
                     <table class="min-w-full divide-y divide-gray-200 text-sm">

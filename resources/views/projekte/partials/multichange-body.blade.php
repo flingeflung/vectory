@@ -35,15 +35,16 @@
             Ralf-Bug-Report: "habe die Bezeichnungen geändert, aber die
             Übersicht wird nicht aktualisiert" - die Tabelle dahinter ist
             normales, einmal beim Seitenaufruf gerendertes HTML, kein
-            reaktiver Zustand. Statt eines einzelnen Zeilen-Refreshs (müsste
-            wissen, welche Spalten gerade sichtbar sind usw.) hier bewusst
-            der einfache, robuste Weg: kompletter Reload beim Schließen -
-            nur an dieser Stelle sinnvoll, weil $result nur nach einem
-            ERFOLGREICHEN Anwenden gesetzt wird.
+            reaktiver Zustand. Erster Fix war ein kompletter Seiten-Reload -
+            Ralf: "ich verstehe nicht, warum du nicht per Ajax nur die
+            Übersicht lädst, sondern die komplett neue Seite." Jetzt per
+            Event ('projekte-refresh', siehe refreshRows() in projekte/
+            index.blade.php) - lädt nur die schon sichtbaren Zeilen per Ajax
+            neu, kein Reload mehr nötig.
         --}}
         <button
             type="button"
-            onclick="window.location.reload()"
+            onclick="window.dispatchEvent(new CustomEvent('projekte-refresh')); window.dispatchEvent(new CustomEvent('close-modal', { detail: 'multichange' }))"
             class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover"
         >
             {{ __('Schließen') }}

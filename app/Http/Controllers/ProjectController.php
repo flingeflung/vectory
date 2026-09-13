@@ -162,6 +162,15 @@ class ProjectController extends Controller
      * Zeilen-Fragmente, "weitere vorhanden?" steckt im X-Has-More-Header.
      * Gleiches Muster wie ProductController::more()/ProjectConnection
      * Controller::moreOtherProjects().
+     *
+     * Optionaler "take"-Parameter (Default PAGE_SIZE): Ralf, 2026-09-13,
+     * zu Multichange: "ich verstehe nicht, warum du nicht per Ajax nur die
+     * Übersicht lädst, sondern die komplett neue Seite" - damit lassen
+     * sich mit offset=0 genau die gerade schon geladenen Zeilen (take =
+     * aktuelle Zeilenanzahl) in EINEM Rutsch neu abfragen und per Ajax
+     * ersetzen, statt die ganze Seite neu zu laden (siehe
+     * window.refreshProjectRows() in layouts/app.blade.php). Nach oben
+     * begrenzt, damit daraus kein "alles auf einmal"-Vollabzug wird.
      */
     public function more(Request $request): Response
     {
@@ -169,11 +178,12 @@ class ProjectController extends Controller
         $filters = $this->filtersFromRequest($request);
         $user = $request->user();
         $offset = max(0, $request->integer('offset'));
+        $take = min(500, max(1, $request->integer('take') ?: self::PAGE_SIZE));
 
         $visibleColumns = array_values(array_filter(ProjectColumnCatalog::effectiveFor($user), fn (array $column) => $column['visible']));
 
         $query = $this->eagerLoadForColumns($this->orderedQuery($sort, $direction, $filters), $visibleColumns);
-        $projects = $query->skip($offset)->take(self::PAGE_SIZE)->get();
+        $projects = $query->skip($offset)->take($take)->get();
 
         $html = view('projekte.partials.rows', [
             ...$this->rowData($projects, $visibleColumns, $user),
@@ -183,7 +193,7 @@ class ProjectController extends Controller
             'filters' => $filters,
         ])->render();
 
-        return response($html)->header('X-Has-More', $projects->count() === self::PAGE_SIZE ? '1' : '0');
+        return response($html)->header('X-Has-More', $projects->count() === $take ? '1' : '0');
     }
 
     private function eagerLoadForColumns(Builder $query, array $visibleColumns): Builder
