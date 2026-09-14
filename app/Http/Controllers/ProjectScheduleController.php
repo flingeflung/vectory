@@ -56,7 +56,7 @@ class ProjectScheduleController extends Controller
         abort_if($reference === null, 422, __('Referenz-Schritt gehört nicht zu diesem Projekt oder hat keinen Termin.'));
         abort_if($reference->due_date === null, 422, __('Referenz-Schritt hat kein gültiges Datum.'));
 
-        $proposal = (new WorkflowScheduleCalculator())->recalculate($steps, $reference, $reference->due_date);
+        $proposal = (new WorkflowScheduleCalculator)->recalculate($steps, $reference, $reference->due_date);
 
         return view('projekte.partials.schedule-body', [
             'project' => $project,
@@ -84,7 +84,7 @@ class ProjectScheduleController extends Controller
         $reference = $steps->firstWhere('id', $validated['reference_step_id']);
         abort_if($reference === null || $reference->due_date === null, 422);
 
-        $proposal = (new WorkflowScheduleCalculator())->recalculate($steps, $reference, $reference->due_date);
+        $proposal = (new WorkflowScheduleCalculator)->recalculate($steps, $reference, $reference->due_date);
 
         // (int)-Cast noetig: $stepId aus $proposal ist ein echtes int (Model-
         // Key), $validated['apply_step_id'] eine numerische Zeichenkette aus
@@ -97,7 +97,17 @@ class ProjectScheduleController extends Controller
             if ($stepId === $reference->id) {
                 continue; // Referenz-Schritt selbst ändert sich nicht.
             }
-            ProjectWorkflowStep::query()->whereKey($stepId)->update(['due_date' => $date]);
+
+            // Ralf-Bug-Report, 2026-09-14: Übersicht zeigte nach "Termin
+            // berechnen" noch das alte Start-Datum. Root Cause: der Query-
+            // Builder-update() hier lief direkt auf der DB-Zeile und feuerte
+            // dadurch NIE ProjectWorkflowStepObserver::saved() - der als
+            // Start/Ende markierte Schritt (effectiveIsStart/-End) bekam
+            // zwar sein neues Datum, project.start_date/end_date blieben
+            // aber auf dem alten Stand stehen. Jetzt über das schon
+            // geladene Model-Objekt (fürs Observer-Event nötig), nicht mehr
+            // per whereKey()-Bulk-Update.
+            $steps->firstWhere('id', $stepId)?->update(['due_date' => $date]);
         }
 
         // Einzelübernahme: in der Vorschau bleiben (weitere Zeilen prüfen/übernehmen).
@@ -105,7 +115,7 @@ class ProjectScheduleController extends Controller
         $steps = $this->scheduleStepsFor($project);
         if ($toApply !== null) {
             $reference = $steps->firstWhere('id', $reference->id);
-            $proposal = (new WorkflowScheduleCalculator())->recalculate($steps, $reference, $reference->due_date);
+            $proposal = (new WorkflowScheduleCalculator)->recalculate($steps, $reference, $reference->due_date);
 
             return view('projekte.partials.schedule-body', [
                 'project' => $project,
