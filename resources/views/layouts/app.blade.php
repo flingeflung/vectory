@@ -1386,6 +1386,13 @@
                         headers: { 'X-Overlay': '1' },
                     }).then((r) => r.text());
 
+                    // Ralf, 2026-09-14: WFS-Aktivierung/Freigabe/Termin/
+                    // Illustrationsauftrag usw. liefen bisher nur hier durch -
+                    // die Tabelle im Hintergrund (z.B. die Status-Spalte,
+                    // die sich aus dem aktuellen WFS-Schritt ableitet) blieb
+                    // bis zum nächsten manuellen Reload veraltet.
+                    window.refreshProjekteListInBackground?.();
+
                     return;
                 }
 
