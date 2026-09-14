@@ -477,14 +477,20 @@ class MultichangeController extends Controller
         }
 
         if ($field['key'] === 'workflow_id') {
-            return $project->workflow?->name ?? __('entfernt');
+            return $project->workflow?->name ?? '–';
         }
 
         $raw = ($field['storage'] ?? 'column') === 'attribute'
             ? ($project->attributes[$field['key']] ?? null)
             : $project->columnValue($field['key']);
 
-        return $raw !== null && $raw !== '' ? (string) $raw : __('entfernt');
+        // Ralf-Bug-Report, 2026-09-14: "entfernt" klang hier falsch - das
+        // Feld wurde ja nicht entfernt, es war nie gesetzt. "entfernt" bleibt
+        // korrekt für den NEUEN Wert (describeValue(), z.B. "Datum wird auf
+        // entfernt gesetzt"), aber für den bisherigen Stand passt nur ein
+        // neutrales "kein Wert vorhanden" - "–", gleiche Konvention wie
+        // überall sonst in der Übersicht.
+        return $raw !== null && $raw !== '' ? (string) $raw : '–';
     }
 
     /**
