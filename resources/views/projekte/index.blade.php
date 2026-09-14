@@ -75,11 +75,21 @@
                         sichtbar sein." Deshalb eigener, immer sichtbarer
                         Button statt im Gruppieren-Panel versteckt - wählt
                         seine Zielgruppe selbst im Formular (kein
-                        Zusammenhang mit $store.projectGrouping).
+                        struktureller Zusammenhang mit $store.projectGrouping,
+                        die Gruppen-Auswahl bleibt frei änderbar).
+
+                        Ralf, 2026-09-14: "direkt die zuletzt angezeigte
+                        Gruppe aktivieren" - als reine Vorbelegung (nicht als
+                        Kopplung) die Gruppe der aktuell aktiven Übersicht-
+                        Filterung (filter[project_group_id]) vorauswählen,
+                        falls eine aktiv ist. Betrifft nur den ersten,
+                        frischen Öffnen-Klick - der "Zurück"-Roundtrip aus
+                        der Vorschau (siehe multichange-body.blade.php) hat
+                        ohnehin schon seine eigene, unabhängige Gruppe.
                     --}}
                     <button
                         type="button"
-                        onclick="window.openMultichange()"
+                        onclick="window.openMultichange({{ ! empty($filters['project_group_id']) ? (int) $filters['project_group_id'] : 'null' }})"
                         class="inline-flex items-center rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-800 hover:bg-amber-100"
                     >
                         {{ __('Multichange') }}
