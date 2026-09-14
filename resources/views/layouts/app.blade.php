@@ -1913,7 +1913,7 @@
             Muster wie die Terminberechnung oben (multichange-body.blade.php:
             Formular -> Vorschau -> Ergebnis, alles serverseitig gerendert).
         --}}
-        <x-modal name="multichange" max-width="lg">
+        <x-modal name="multichange" max-width="2xl">
             <div class="flex max-h-[85vh] flex-col">
                 <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
                     <h3 class="text-sm font-semibold text-gray-900">{{ __('Multichange') }}</h3>

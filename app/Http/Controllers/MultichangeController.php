@@ -96,6 +96,7 @@ class MultichangeController extends Controller
             'actionText' => $this->describeAction($field, $value),
             'skipReason' => $this->describeSkipReason($field, $preview['skipped']->count()),
             'unchangedNote' => $this->describeUnchangedNote($field, $preview['unchanged']->count()),
+            'changeRows' => $this->describeChangeRows($preview['applicable'], $field, $value),
         ]);
     }
 
@@ -233,7 +234,9 @@ class MultichangeController extends Controller
         // Frisch aus der DB, nicht aus irgendeinem Client-Zustand übernommen -
         // die Gruppen-Mitgliedschaft kann sich zwischen Vorschau und Anwenden
         // ändern, das soll sich dann auch auswirken (Vietto-Lektion).
-        $projects = $group->projects()->with('projectWorkflowSteps')->get();
+        // 'workflow' mitgeladen für die "Alter Wert"-Spalte der Änderungs-
+        // Tabelle (describeOldValue()) - vermeidet N+1 beim Feld workflow_id.
+        $projects = $group->projects()->with(['projectWorkflowSteps', 'workflow'])->get();
         $unchanged = collect();
 
         if ($field['key'] === 'status') {
@@ -427,10 +430,74 @@ class MultichangeController extends Controller
 
     private function describeValue(array $field, mixed $value): string
     {
+        if ($value === null || $value === '') {
+            return __('entfernt');
+        }
+
         return match ($field['type']) {
             'select' => $field['options'][$value] ?? (string) $value,
-            'date' => $value ? Carbon::parse($value)->format('d.m.Y') : __('entfernt'),
-            default => ($value !== null && $value !== '') ? $value : __('entfernt'),
+            'date' => Carbon::parse($value)->format('d.m.Y'),
+            default => (string) $value,
         };
+    }
+
+    /**
+     * Ralf, 2026-09-14: "kleine Tabelle... 1. Spalte Projektnr. + Bezeichnung,
+     * 2. Alter Wert, 3. Neuer Wert" - für ALLE Multichange-Felder (nicht nur
+     * Workflow), damit vor dem unwiderruflichen Anwenden genau sichtbar ist,
+     * was sich je Projekt ändert. Nur für die tatsächlich betroffenen
+     * ("applicable") Projekte - skipped/unchanged haben schon eigene Blöcke
+     * mit Begründung.
+     *
+     * @param  Collection<int, Project>  $applicable
+     * @return list<array{pn: string, title: string, old: string, new: string}>
+     */
+    private function describeChangeRows(Collection $applicable, array $field, mixed $value): array
+    {
+        return $applicable->map(fn (Project $project) => [
+            'pn' => $project->source_pn,
+            'title' => $project->title,
+            'old' => $this->describeOldValue($project, $field),
+            'new' => $this->describeNewValue($field, $value),
+        ])->all();
+    }
+
+    /**
+     * Aktueller Wert eines Projekts für die "Alter Wert"-Spalte - nutzt wo
+     * möglich Project::columnValue() (schon korrekt formatiert, z.B. Status/
+     * Erstellungsstatus als Label statt Zahl, Daten als d.m.Y), statt die
+     * Formatierung hier zu duplizieren.
+     */
+    private function describeOldValue(Project $project, array $field): string
+    {
+        if (($field['storage'] ?? 'column') === 'note') {
+            // Anhängen statt Ersetzen (siehe applyValue()) - "alter Wert"
+            // ergibt hier konzeptionell keinen Sinn, es gibt keinen einen.
+            return '–';
+        }
+
+        if ($field['key'] === 'workflow_id') {
+            return $project->workflow?->name ?? __('entfernt');
+        }
+
+        $raw = ($field['storage'] ?? 'column') === 'attribute'
+            ? ($project->attributes[$field['key']] ?? null)
+            : $project->columnValue($field['key']);
+
+        return $raw !== null && $raw !== '' ? (string) $raw : __('entfernt');
+    }
+
+    /**
+     * Neuer Wert für die Tabelle - bei Anhängen-Feldern (Bemerkungen/
+     * Änderungsprotokoll) einfach der neue Eintragstext, sonst dieselbe
+     * Formatierung wie im Bestätigungstext (describeValue()).
+     */
+    private function describeNewValue(array $field, mixed $value): string
+    {
+        if (($field['storage'] ?? 'column') === 'note') {
+            return (string) $value;
+        }
+
+        return $this->describeValue($field, $value);
     }
 }

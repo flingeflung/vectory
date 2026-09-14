@@ -82,6 +82,40 @@
             ) }}
         </div>
 
+        {{--
+            Ralf, 2026-09-14: "das ja ein wirklich mächtiges und auch
+            gefährliches Instrument ist" - vor dem unwiderruflichen Anwenden
+            je betroffenem Projekt genau zeigen, was sich ändert (nicht nur
+            die Gesamtzahl). Gilt für alle Felder, nicht nur Workflow (siehe
+            describeChangeRows()) - deshalb ist der Modal-Dialog jetzt auch
+            breiter (max-width 2xl statt lg, siehe layouts/app.blade.php).
+            Eigene, von der restlichen Vorschau unabhängige Scroll-Box
+            (max-h-56), damit "Zurück"/"Anwenden" bei vielen Projekten nicht
+            erst nach langem Scrollen erreichbar sind.
+        --}}
+        @if (! empty($changeRows))
+            <div class="max-h-56 overflow-auto rounded-md border border-gray-200">
+                <table class="min-w-full divide-y divide-gray-200 text-xs">
+                    <thead class="sticky top-0 bg-gray-50">
+                        <tr>
+                            <th class="px-2 py-1.5 text-left font-medium text-gray-500">{{ __('Projekt') }}</th>
+                            <th class="px-2 py-1.5 text-left font-medium text-gray-500">{{ __('Alter Wert') }}</th>
+                            <th class="px-2 py-1.5 text-left font-medium text-gray-500">{{ __('Neuer Wert') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @foreach ($changeRows as $row)
+                            <tr>
+                                <td class="px-2 py-1.5 align-top text-gray-700">{{ $row['pn'] }} – {{ $row['title'] }}</td>
+                                <td class="px-2 py-1.5 align-top text-gray-500">{{ $row['old'] }}</td>
+                                <td class="px-2 py-1.5 align-top font-medium text-gray-900">{{ $row['new'] }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+
         @if (! empty($unchangedNote))
             <div class="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
                 {{ $unchangedNote }}
