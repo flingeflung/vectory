@@ -1393,6 +1393,22 @@
                     // bis zum nächsten manuellen Reload veraltet.
                     window.refreshProjekteListInBackground?.();
 
+                    // Ralf-Bug-Report, 2026-09-14: "WFS aktivieren speichert
+                    // doch sofort, oder? Beim Schließen kommt trotzdem der
+                    // 'ungespeicherte Änderungen'-Dialog." Der frisch
+                    // eingesetzte Overlay-Inhalt hier ändert die serialisierten
+                    // Formularwerte, ohne dass der Nutzer selbst etwas
+                    // geändert hat - ohne Re-Snapshot hielt der Dirty-Check
+                    // das fälschlich für eine unerledigte Änderung. Gleicher
+                    // Fix wie beim WFS-Personen-Picker (siehe
+                    // window.resnapshotProjectOverlay-Kommentar), nur bisher
+                    // nur dort tatsächlich aufgerufen - jetzt hier zentral,
+                    // damit er für ALLE Aufrufer dieser Funktion gilt
+                    // (Illustrationsaufträge, Termin, WFS aktivieren/
+                    // Freigabe, Verzeichnis-Eintrag anlegen), nicht nur den
+                    // einen, für den er ursprünglich gebaut wurde.
+                    window.resnapshotProjectOverlay?.();
+
                     return;
                 }
 

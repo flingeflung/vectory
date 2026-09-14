@@ -151,6 +151,21 @@
                                              zwischen Projektstatus und GraphicOrder). Gleiches
                                              Status-Icon wie in der Projektübersicht. --}}
                                         <x-status-icon :status="$order->project->status" />
+                                        {{-- Ralf, 2026-09-14: Lock-Icon allein fiel beim Überfliegen der
+                                             Liste zu wenig auf - zusätzliches rotes Warnsymbol (gleiche
+                                             Ikonografie wie project-directory-status.blade.php) genau für
+                                             den Fall, der diese Spalte ursprünglich ausgelöst hat: offener
+                                             Auftrag zu einem bereits beendeten/verworfenen Projekt. --}}
+                                        @if (in_array($order->project->status, [2, 3], true))
+                                            <span
+                                                class="text-red-500"
+                                                title="{{ $order->project->status === 2 ? __('Projekt wurde beendet.') : __('Projekt wurde verworfen.') }}"
+                                            >
+                                                <svg class="inline-block h-4 w-4 align-middle" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                                                </svg>
+                                            </span>
+                                        @endif
                                     </td>
                                     <td class="px-2 py-2 whitespace-nowrap text-gray-500">{{ $order->image_count }}</td>
                                     <td class="px-2 py-2 whitespace-nowrap text-gray-500">{{ $order->status?->label() }}</td>
