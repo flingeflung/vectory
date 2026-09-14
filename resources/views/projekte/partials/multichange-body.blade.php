@@ -18,11 +18,17 @@
             {{ $result['resultText'] }}
         </div>
 
+        @if (! empty($result['unchangedNote']))
+            <div class="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                {{ $result['unchangedNote'] }}
+            </div>
+        @endif
+
         @if ($result['skipped']->isNotEmpty())
             <div class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
                 <div class="flex items-center justify-between gap-2">
                     <div class="font-medium">
-                        {{ __(':count Projekt(e) übersprungen (aktueller Workflow-Schritt bestimmt den Status):', ['count' => $result['skipped']->count()]) }}
+                        {{ $result['skipReason'] }}
                     </div>
                     <x-copy-button
                         :text="$result['skipped']->map(fn ($p) => $p->source_pn.' – '.$p->title)->implode(PHP_EOL)"
@@ -66,7 +72,7 @@
 
         @php
             $applicableCount = $preview['applicable']->count();
-            $totalCount = $applicableCount + $preview['skipped']->count();
+            $totalCount = $applicableCount + $preview['skipped']->count() + $preview['unchanged']->count();
         @endphp
         <div class="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 font-medium text-gray-700">
             {{ trans_choice(
@@ -76,11 +82,17 @@
             ) }}
         </div>
 
+        @if (! empty($unchangedNote))
+            <div class="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                {{ $unchangedNote }}
+            </div>
+        @endif
+
         @if ($preview['skipped']->isNotEmpty())
             <div class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
                 <div class="flex items-center justify-between gap-2">
                     <div class="font-medium">
-                        {{ __(':count Projekt(e) werden übersprungen (aktueller Workflow-Schritt bestimmt den Status):', ['count' => $preview['skipped']->count()]) }}
+                        {{ $skipReason }}
                     </div>
                     <x-copy-button
                         :text="$preview['skipped']->map(fn ($p) => $p->source_pn.' – '.$p->title)->implode(PHP_EOL)"
@@ -112,14 +124,19 @@
                     if (! ok) return;
                     await window.reloadMultichange(
                         {{ \Illuminate\Support\Js::from(route('projekte.multichange.apply')) }},
-                        { group_id: {{ $group->id }}, field: {{ \Illuminate\Support\Js::from($field['key']) }}, value: {{ \Illuminate\Support\Js::from($value) }} }
+                        {
+                            group_id: {{ $group->id }},
+                            field: {{ \Illuminate\Support\Js::from($field['key']) }},
+                            value: {{ \Illuminate\Support\Js::from($value) }},
+                            overwrite_different_workflow: {{ $overwriteDifferentWorkflow ? 1 : 0 }},
+                        }
                     );
                 },
             }"
         >
             <button
                 type="button"
-                onclick="window.openMultichange({{ $group->id }}, {{ \Illuminate\Support\Js::from($field['key']) }}, {{ \Illuminate\Support\Js::from((string) $value) }})"
+                onclick="window.openMultichange({{ $group->id }}, {{ \Illuminate\Support\Js::from($field['key']) }}, {{ \Illuminate\Support\Js::from((string) $value) }}, {{ $overwriteDifferentWorkflow ? 'true' : 'false' }})"
                 class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
             >
                 {{ __('Zurück') }}
@@ -137,8 +154,13 @@
     </div>
 @else
     <form
-        x-data="{ groupId: {{ \Illuminate\Support\Js::from((string) ($selectedGroupId ?? '')) }}, field: {{ \Illuminate\Support\Js::from($selectedField ?? '') }}, value: {{ \Illuminate\Support\Js::from($selectedValue ?? '') }} }"
-        @submit.prevent="window.reloadMultichange({{ \Illuminate\Support\Js::from(route('projekte.multichange.preview')) }}, { group_id: groupId, field, value })"
+        x-data="{
+            groupId: {{ \Illuminate\Support\Js::from((string) ($selectedGroupId ?? '')) }},
+            field: {{ \Illuminate\Support\Js::from($selectedField ?? '') }},
+            value: {{ \Illuminate\Support\Js::from($selectedValue ?? '') }},
+            overwrite: {{ ($selectedOverwriteDifferentWorkflow ?? false) ? 'true' : 'false' }},
+        }"
+        @submit.prevent="window.reloadMultichange({{ \Illuminate\Support\Js::from(route('projekte.multichange.preview')) }}, { group_id: groupId, field, value, overwrite_different_workflow: overwrite ? 1 : 0 })"
         class="space-y-3"
     >
         @if (isset($formErrors))
@@ -192,6 +214,16 @@
                                 <option value="{{ $optValue }}">{{ $optLabel }}</option>
                             @endforeach
                         </select>
+                    @endif
+
+                    @if ($f['key'] === 'workflow_id')
+                        <label class="mt-2 flex items-start gap-2 text-xs text-gray-600">
+                            <input type="checkbox" x-model="overwrite" class="mt-0.5 rounded border-gray-300 text-indigo-600">
+                            <span>
+                                {{ __('Andere Workflows überschreiben') }}
+                                <span class="block text-gray-400">{{ __('Projekte mit einem anderen Workflow bekommen diesen sonst nicht angetastet (siehe Hinweis oben). Mit Häkchen werden auch sie umgestellt - ihr bisheriger Fortschritt geht dabei verloren.') }}</span>
+                            </span>
+                        </label>
                     @endif
                 </div>
             @endforeach

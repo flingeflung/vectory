@@ -7,6 +7,9 @@ use App\Models\Activity;
 use App\Models\Project;
 use App\Models\ProjectGroup;
 use App\Models\ProjectNote;
+use App\Models\ProjectWorkflowStep;
+use App\Models\WorkflowStep;
+use App\Support\CurrentTenant;
 use App\Support\MultichangeFieldCatalog;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -53,7 +56,7 @@ class MultichangeController extends Controller
 
         return response()->view('projekte.partials.multichange-body', [
             'groups' => $this->availableGroups(),
-            'fields' => MultichangeFieldCatalog::available(),
+            'fields' => MultichangeFieldCatalog::available(CurrentTenant::id()),
             'selectedGroupId' => $request->integer('group_id') ?: '',
             // Ralf: "Wenn ich auf Zurück klicke, werde ich bestraft und muss
             // nochmal von vorne beginnen" - Feld+Wert bleiben beim
@@ -61,6 +64,7 @@ class MultichangeController extends Controller
             // multichange-body.blade.php), nicht nur die Gruppe.
             'selectedField' => (string) $request->string('field'),
             'selectedValue' => (string) $request->string('value'),
+            'selectedOverwriteDifferentWorkflow' => $request->boolean('overwrite_different_workflow'),
         ]);
     }
 
@@ -78,16 +82,20 @@ class MultichangeController extends Controller
             return $this->invalidInputResponse($request, $validation['errors'], $group, $validation['field']);
         }
         [$field, $value] = [$validation['field'], $validation['value']];
-        $preview = $this->buildPreview($group, $field, $value);
+        $overwriteDifferentWorkflow = $request->boolean('overwrite_different_workflow');
+        $preview = $this->buildPreview($group, $field, $value, $overwriteDifferentWorkflow);
 
         return response()->view('projekte.partials.multichange-body', [
             'groups' => $this->availableGroups(),
-            'fields' => MultichangeFieldCatalog::available(),
+            'fields' => MultichangeFieldCatalog::available(CurrentTenant::id()),
             'group' => $group,
             'preview' => $preview,
             'field' => $field,
             'value' => $value,
+            'overwriteDifferentWorkflow' => $overwriteDifferentWorkflow,
             'actionText' => $this->describeAction($field, $value),
+            'skipReason' => $this->describeSkipReason($field, $preview['skipped']->count()),
+            'unchangedNote' => $this->describeUnchangedNote($field, $preview['unchanged']->count()),
         ]);
     }
 
@@ -105,7 +113,8 @@ class MultichangeController extends Controller
             return $this->invalidInputResponse($request, $validation['errors'], $group, $validation['field']);
         }
         [$field, $value] = [$validation['field'], $validation['value']];
-        $preview = $this->buildPreview($group, $field, $value);
+        $overwriteDifferentWorkflow = $request->boolean('overwrite_different_workflow');
+        $preview = $this->buildPreview($group, $field, $value, $overwriteDifferentWorkflow);
 
         $applied = DB::transaction(function () use ($preview, $field, $value) {
             foreach ($preview['applicable'] as $project) {
@@ -120,11 +129,13 @@ class MultichangeController extends Controller
 
         return response()->view('projekte.partials.multichange-body', [
             'group' => $group,
-            'fields' => MultichangeFieldCatalog::available(),
+            'fields' => MultichangeFieldCatalog::available(CurrentTenant::id()),
             'result' => [
                 'applied' => $applied,
                 'skipped' => $preview['skipped'],
                 'resultText' => $this->describeResult($field, $applied),
+                'skipReason' => $this->describeSkipReason($field, $preview['skipped']->count()),
+                'unchangedNote' => $this->describeUnchangedNote($field, $preview['unchanged']->count()),
             ],
         ]);
     }
@@ -141,7 +152,7 @@ class MultichangeController extends Controller
      */
     private function validateInput(Request $request): array
     {
-        $field = MultichangeFieldCatalog::find((string) $request->string('field'));
+        $field = MultichangeFieldCatalog::find(CurrentTenant::id(), (string) $request->string('field'));
         if ($field === null) {
             return ['field' => null, 'value' => null, 'errors' => new MessageBag(['field' => [__('Bitte ein Feld auswählen.')]])];
         }
@@ -171,13 +182,14 @@ class MultichangeController extends Controller
         return response()
             ->view('projekte.partials.multichange-body', [
                 'groups' => $this->availableGroups(),
-                'fields' => MultichangeFieldCatalog::available(),
+                'fields' => MultichangeFieldCatalog::available(CurrentTenant::id()),
                 'formErrors' => $errors,
                 'selectedGroupId' => $group?->id ?? '',
                 'selectedField' => $field['key'] ?? '',
                 // Eingegebener Wert bleibt auch bei einem Validierungsfehler
                 // erhalten, gleicher Grund wie beim "Zurück"-Button.
                 'selectedValue' => (string) $request->string('value'),
+                'selectedOverwriteDifferentWorkflow' => $request->boolean('overwrite_different_workflow'),
             ])
             ->setStatusCode(422);
     }
@@ -214,24 +226,43 @@ class MultichangeController extends Controller
     }
 
     /**
-     * @return array{applicable: Collection<int, Project>, skipped: Collection<int, Project>}
+     * @return array{applicable: Collection<int, Project>, skipped: Collection<int, Project>, unchanged: Collection<int, Project>}
      */
-    private function buildPreview(ProjectGroup $group, array $field, mixed $value): array
+    private function buildPreview(ProjectGroup $group, array $field, mixed $value, bool $overwriteDifferentWorkflow = false): array
     {
         // Frisch aus der DB, nicht aus irgendeinem Client-Zustand übernommen -
         // die Gruppen-Mitgliedschaft kann sich zwischen Vorschau und Anwenden
         // ändern, das soll sich dann auch auswirken (Vietto-Lektion).
         $projects = $group->projects()->with('projectWorkflowSteps')->get();
+        $unchanged = collect();
 
         if ($field['key'] === 'status') {
             $applicable = $projects->reject(fn (Project $project) => $project->projectWorkflowSteps->contains('is_current', true))->values();
             $skipped = $projects->filter(fn (Project $project) => $project->projectWorkflowSteps->contains('is_current', true))->values();
+        } elseif ($field['key'] === 'workflow_id') {
+            // Ralf, 2026-09-14, drei Fälle statt einfachem Set (siehe
+            // MultichangeFieldCatalog::available() für die volle Herleitung):
+            // (1) kein Workflow -> zuweisen, (2) hat GENAU diesen Workflow
+            // schon -> unverändert, nichts tun, (3) hat einen ANDEREN
+            // Workflow -> je nach Häkchen entweder überspringen oder
+            // überschreiben.
+            $unchanged = $projects->filter(fn (Project $project) => $project->workflow_id === (int) $value)->values();
+            $remaining = $projects->reject(fn (Project $project) => $project->workflow_id === (int) $value);
+            $hasOtherWorkflow = fn (Project $project) => $project->workflow_id !== null;
+
+            if ($overwriteDifferentWorkflow) {
+                $applicable = $remaining->values();
+                $skipped = collect();
+            } else {
+                $applicable = $remaining->reject($hasOtherWorkflow)->values();
+                $skipped = $remaining->filter($hasOtherWorkflow)->values();
+            }
         } else {
             $applicable = $projects;
             $skipped = collect();
         }
 
-        return ['applicable' => $applicable, 'skipped' => $skipped];
+        return ['applicable' => $applicable, 'skipped' => $skipped, 'unchanged' => $unchanged];
     }
 
     /**
@@ -269,7 +300,46 @@ class MultichangeController extends Controller
             return;
         }
 
+        if ($field['key'] === 'workflow_id') {
+            $this->applyWorkflow($project, (int) $value);
+
+            return;
+        }
+
         $project->{$field['key']} = $value;
+    }
+
+    /**
+     * Gleiches Muster wie ProjectCopyController::store() ("Workflow mit
+     * kopieren"): Schritt-Vorlagen als projekteigene Instanzen kopieren,
+     * den Schritt mit lifecycle_status=Geplant automatisch aktivieren.
+     * Zusätzlich (nur hier nötig, da Multichange auch Projekte MIT
+     * bestehendem Workflow überschreiben kann, siehe buildPreview()): einen
+     * eventuell noch aktiven Schritt eines VORHERIGEN Workflows explizit
+     * deaktivieren - sonst bliebe er als Karteileiche mit is_current=true
+     * stehen (betrifft dann z.B. die Skip-Prüfung beim Bearbeitungsstatus-
+     * Feld, die nicht nach Workflow filtert).
+     */
+    private function applyWorkflow(Project $project, int $workflowId): void
+    {
+        $project->projectWorkflowSteps()->where('is_current', true)->update(['is_current' => false]);
+
+        $project->workflow_id = $workflowId;
+
+        WorkflowStep::query()->where('workflow_id', $workflowId)->get()
+            ->each(fn (WorkflowStep $step) => ProjectWorkflowStep::query()->firstOrCreate(
+                ['project_id' => $project->id, 'workflow_step_id' => $step->id],
+                ['tenant_id' => $project->tenant_id, 'sort' => $step->sort]
+            ));
+
+        $plannedStep = $project->projectWorkflowSteps()
+            ->whereHas('workflowStep', fn ($query) => $query->where('workflow_id', $workflowId)->where('lifecycle_status', 1))
+            ->first();
+
+        if ($plannedStep) {
+            $plannedStep->update(['is_current' => true, 'started_at' => now()]);
+            $project->status = 0;
+        }
     }
 
     /**
@@ -314,6 +384,45 @@ class MultichangeController extends Controller
         }
 
         return __(':field per Multichange auf „:value" gesetzt.', ['field' => $field['label'], 'value' => $this->describeValue($field, $value)]);
+    }
+
+    /**
+     * Überschrift des übersprungen-Kastens in der Vorschau/im Ergebnis -
+     * je Feld unterschiedlicher Grund, siehe buildPreview().
+     */
+    private function describeSkipReason(array $field, int $count): string
+    {
+        if ($field['key'] === 'workflow_id') {
+            return trans_choice(
+                ':count Projekt hat einen anderen Workflow und wird übersprungen:|:count Projekte haben einen anderen Workflow und werden übersprungen:',
+                $count,
+                ['count' => $count]
+            );
+        }
+
+        if ($field['key'] === 'status') {
+            return __(':count Projekt(e) werden übersprungen (aktueller Workflow-Schritt bestimmt den Status):', ['count' => $count]);
+        }
+
+        return trans_choice(':count Projekt wird übersprungen:|:count Projekte werden übersprungen:', $count, ['count' => $count]);
+    }
+
+    /**
+     * Nur für Felder mit einem echten "unverändert"-Fall (aktuell nur
+     * workflow_id, siehe buildPreview()) - null unterdrückt den Block in
+     * multichange-body.blade.php komplett.
+     */
+    private function describeUnchangedNote(array $field, int $count): ?string
+    {
+        if ($field['key'] !== 'workflow_id' || $count === 0) {
+            return null;
+        }
+
+        return trans_choice(
+            ':count Projekt hat diesen Workflow bereits - bleibt unverändert.|:count Projekte haben diesen Workflow bereits - bleiben unverändert.',
+            $count,
+            ['count' => $count]
+        );
     }
 
     private function describeValue(array $field, mixed $value): string

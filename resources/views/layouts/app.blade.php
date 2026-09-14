@@ -1939,16 +1939,18 @@
                 const multichangeBody = () => document.getElementById('multichange-body');
                 const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 
-                window.openMultichange = async (groupId, field, value) => {
+                window.openMultichange = async (groupId, field, value, overwriteDifferentWorkflow) => {
                     multichangeBody().innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
                     window.dispatchEvent(new CustomEvent('open-modal', { detail: 'multichange' }));
-                    // field/value: nur beim "Zurück"-Klick aus der Vorschau
-                    // gesetzt, damit die Auswahl erhalten bleibt (Ralf: "werde
-                    // ich bestraft und muss nochmal von vorne beginnen").
+                    // field/value/overwriteDifferentWorkflow: nur beim
+                    // "Zurück"-Klick aus der Vorschau gesetzt, damit die
+                    // Auswahl erhalten bleibt (Ralf: "werde ich bestraft und
+                    // muss nochmal von vorne beginnen").
                     const params = new URLSearchParams();
                     if (groupId) params.set('group_id', groupId);
                     if (field) params.set('field', field);
                     if (value) params.set('value', value);
+                    if (overwriteDifferentWorkflow) params.set('overwrite_different_workflow', '1');
                     const query = params.toString() ? `?${params.toString()}` : '';
                     multichangeBody().innerHTML = await fetch(`/projekte/multichange${query}`).then((r) => r.text());
                 };

@@ -3,20 +3,25 @@
 namespace App\Support;
 
 use App\Models\ProjectNote;
+use App\Models\Workflow;
 
 /**
  * Verfügbare Felder für Multichange (Ralf, 2026-09-13, nach Vietto-Analyse -
  * siehe Backlog-Memory für die vollständige Konzept-Herleitung). Bewusst
  * klein gehalten für die erste Version: einfache Set-Semantik auf feste
- * Projektfelder. Workflow, Projektgruppen-Tag und Checkliste sind bewusst
- * NICHT enthalten (eigene Semantik/Diskussion, vertagt).
+ * Projektfelder. Projektgruppen-Tag und Checkliste sind bewusst NICHT
+ * enthalten (eigene Semantik/Diskussion, vertagt). Workflow-Zuweisung
+ * (2026-09-14) kam als erstes Feld mit eigener Sonderlogik dazu (siehe
+ * MultichangeController::buildPreview()/applyValue() - drei Fälle statt
+ * einfachem Set), daher braucht available() jetzt den Mandanten (für die
+ * Workflow-Auswahlliste), anders als vorher.
  */
 class MultichangeFieldCatalog
 {
     /**
      * @return list<array{key: string, label: string, type: string, required?: bool, options?: array<int, string>, hint?: string}>
      */
-    public static function available(): array
+    public static function available(int $tenantId): array
     {
         return [
             ['key' => 'title', 'label' => __('Bezeichnung'), 'type' => 'text', 'required' => true],
@@ -81,11 +86,42 @@ class MultichangeFieldCatalog
                 'hint' => __('Projekte mit aktuellem Workflow-Schritt werden übersprungen - dort bestimmt der Workflow-Schritt automatisch den Status.'),
             ],
             ['key' => 'creation_type', 'label' => __('Erstellungsstatus'), 'type' => 'select', 'options' => [1 => __('Neuerstellung'), 2 => __('Änderung')]],
+            // Ralf, 2026-09-14: Zuweisung nach Vietto-Vorbild, aber ohne
+            // dessen fest verdrahtete Fallback-Tabelle für den aktuellen
+            // Schritt - Vectory hat dafür schon ein sauberes eigenes Muster
+            // (siehe ProjectCopyController::store(), "Workflow mit
+            // kopieren"): Schritt-Vorlagen werden kopiert, der Schritt mit
+            // lifecycle_status=Geplant wird automatisch aktiviert (nur
+            // is_current+started_at - Termine/WFS-Details sind bewusst ein
+            // separater, späterer Schritt, siehe Ralf: "WFS machen wir in
+            // einem separaten Step"; Beginn/Ende des Projekts bleiben daher
+            // unangetastet). Drei Situationen je Projekt bei der Prüfung
+            // (mit Ralf durchgesprochen), siehe
+            // MultichangeController::buildPreview():
+            // 1. Kein Workflow -> wird zugewiesen, 1. Schritt aktiviert.
+            // 2. Hat GENAU diesen Workflow schon -> unverändert, kein Eingriff.
+            // 3. Hat einen ANDEREN Workflow -> zwei mögliche Reaktionen je
+            //    nach Häkchen "Andere Workflows überschreiben": a) unangetastet
+            //    lassen (übersprungen) oder b) überschreiben - bisheriger
+            //    aktueller Schritt wird deaktiviert, 1. Schritt des neuen
+            //    Workflows aktiviert (Fortschritt geht verloren).
+            [
+                'key' => 'workflow_id',
+                'label' => __('Workflow'),
+                'type' => 'select',
+                'required' => true,
+                // Nur aktive (= nicht durch eine neuere Version ersetzte,
+                // siehe Workflow::superseded_by_id) Workflows zur Auswahl -
+                // gleicher Filter wie im normalen Projekt-Bearbeiten-Formular.
+                'options' => Workflow::query()->where('tenant_id', $tenantId)->where('active', true)
+                    ->orderBy('sort')->orderBy('name')->pluck('name', 'id')->all(),
+                'hint' => __('Projekte ohne Workflow bekommen ihn neu zugewiesen (1. Schritt "In Planung" wird automatisch aktiviert). Projekte, die diesen Workflow schon haben, bleiben unverändert. Projekte mit einem ANDEREN Workflow werden übersprungen - außer du aktivierst unten "Andere Workflows überschreiben": dann wird dort ebenfalls neu zugewiesen und der bisherige Fortschritt geht verloren.'),
+            ],
         ];
     }
 
-    public static function find(string $key): ?array
+    public static function find(int $tenantId, string $key): ?array
     {
-        return collect(self::available())->firstWhere('key', $key);
+        return collect(self::available($tenantId))->firstWhere('key', $key);
     }
 }
