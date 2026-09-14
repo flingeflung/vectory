@@ -706,42 +706,37 @@ class MultichangeController extends Controller
      */
     private function describeChangeRows(array $preview, array $field, mixed $value): array
     {
-        $rows = [];
+        // Ralf-Bug-Report, 2026-09-14: block- statt durchgängig PN-sortiert
+        // wirkte auf den ersten Blick wie "gar nicht sortiert" (z.B.
+        // 260003, 260006, 260001 statt 260001, 260003, 260006) - erst alle
+        // drei Buckets zu EINER Liste zusammenführen und danach nach PN
+        // sortieren, statt sie blockweise (erst applicable, dann unchanged,
+        // dann skipped) hintereinanderzuhängen. buildPreview() sortiert die
+        // Projekte zwar schon nach PN, aber eben nur INNERHALB jedes Buckets.
+        // union() statt merge(): merge() nummeriert int-Keys (Projekt-IDs)
+        // über array_merge() neu durch (dieselbe Falle wie beim
+        // project_type_sub_id-Options-Bug oben) - union() erhält sie.
+        $statusByProjectId = $preview['applicable']->mapWithKeys(fn (Project $p) => [$p->id => 'applicable'])
+            ->union($preview['unchanged']->mapWithKeys(fn (Project $p) => [$p->id => 'unchanged']))
+            ->union($preview['skipped']->mapWithKeys(fn (Project $p) => [$p->id => 'skipped']));
 
-        foreach ($preview['applicable'] as $project) {
-            $rows[] = [
+        $allProjects = $preview['applicable']->merge($preview['unchanged'])->merge($preview['skipped'])
+            ->sortBy('source_pn')->values();
+
+        return $allProjects->map(function (Project $project) use ($statusByProjectId, $field, $value) {
+            $status = $statusByProjectId[$project->id];
+
+            return [
                 'pn' => $project->source_pn,
                 'title' => $project->title,
-                'status' => 'applicable',
+                'status' => $status,
                 'old' => $this->describeOldValue($project, $field),
-                'new' => $this->describeNewValue($field, $value),
-                'note' => $this->describeRowNote($project, $field, $value),
+                'new' => $status === 'applicable' ? $this->describeNewValue($field, $value) : '–',
+                'note' => $status === 'applicable'
+                    ? $this->describeRowNote($project, $field, $value)
+                    : $this->describeExclusionNote($field, $status),
             ];
-        }
-
-        foreach ($preview['unchanged'] as $project) {
-            $rows[] = [
-                'pn' => $project->source_pn,
-                'title' => $project->title,
-                'status' => 'unchanged',
-                'old' => $this->describeOldValue($project, $field),
-                'new' => '–',
-                'note' => $this->describeExclusionNote($field, 'unchanged'),
-            ];
-        }
-
-        foreach ($preview['skipped'] as $project) {
-            $rows[] = [
-                'pn' => $project->source_pn,
-                'title' => $project->title,
-                'status' => 'skipped',
-                'old' => $this->describeOldValue($project, $field),
-                'new' => '–',
-                'note' => $this->describeExclusionNote($field, 'skipped'),
-            ];
-        }
-
-        return $rows;
+        })->all();
     }
 
     /**
