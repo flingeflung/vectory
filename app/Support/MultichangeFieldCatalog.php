@@ -162,10 +162,17 @@ class MultichangeFieldCatalog
             ->orderBy('sort')->orderBy('name')->get(['id', 'name']);
 
         $steps = WorkflowStep::query()->whereIn('workflow_id', $workflows->pluck('id'))->where('is_active', true)
-            ->orderBy('sort')->get(['id', 'workflow_id', 'title', 'lifecycle_status']);
+            ->orderBy('sort')->get(['id', 'workflow_id', 'title', 'lifecycle_status', 'sort']);
 
+        // Ralf, 2026-09-14: "Schritt X: ..." - sort ist genau die Nummer,
+        // die auch im Workflow-Reiter der Projektdetails vor jedem Schritt
+        // steht (1 In Planung, 2 Datenpflege..., usw.).
         $options = $steps->mapWithKeys(fn (WorkflowStep $step) => [
-            $step->id => __(':title (:workflow)', ['title' => $step->title, 'workflow' => $workflows->firstWhere('id', $step->workflow_id)?->name]),
+            $step->id => __('Schritt :nr: :title (:workflow)', [
+                'nr' => $step->sort,
+                'title' => $step->title,
+                'workflow' => $workflows->firstWhere('id', $step->workflow_id)?->name,
+            ]),
         ])->all();
 
         return [
