@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ActivityType;
+use App\Enums\GraphicOrderStatus;
 use App\Models\Activity;
 use App\Models\Project;
 use App\Models\ProjectGroup;
@@ -82,8 +83,10 @@ class MultichangeController extends Controller
             return $this->invalidInputResponse($request, $validation['errors'], $group, $validation['field']);
         }
         [$field, $value] = [$validation['field'], $validation['value']];
+        $this->authorizeFieldValue($request, $field, $value);
         $overwriteDifferentWorkflow = $request->boolean('overwrite_different_workflow');
         $preview = $this->buildPreview($group, $field, $value, $overwriteDifferentWorkflow);
+        $changeRows = $this->describeChangeRows($preview, $field, $value);
 
         return response()->view('projekte.partials.multichange-body', [
             'groups' => $this->availableGroups(),
@@ -96,7 +99,16 @@ class MultichangeController extends Controller
             'actionText' => $this->describeAction($field, $value),
             'skipReason' => $this->describeSkipReason($field, $preview['skipped']->count()),
             'unchangedNote' => $this->describeUnchangedNote($field, $preview['unchanged']->count()),
-            'changeRows' => $this->describeChangeRows($preview['applicable'], $field, $value),
+            'changeRows' => $changeRows,
+            // Ralf, 2026-09-14: "eine gute Möglichkeit, solche Infos ins
+            // Clipboard zu übertragen, damit der Bearbeiter die offenen
+            // Dinge gezielt nachbearbeiten kann" - eine Zeile je Bemerkung
+            // (Ausschlussgrund ODER Warnung wie offene Illustrationsaufträge),
+            // nicht nur die übersprungenen Projekte wie zuvor.
+            'changeRowsNoteCopyText' => collect($changeRows)
+                ->filter(fn (array $row) => ! empty($row['note']))
+                ->map(fn (array $row) => $row['pn'].' – '.$row['note'])
+                ->implode(PHP_EOL),
         ]);
     }
 
@@ -114,6 +126,7 @@ class MultichangeController extends Controller
             return $this->invalidInputResponse($request, $validation['errors'], $group, $validation['field']);
         }
         [$field, $value] = [$validation['field'], $validation['value']];
+        $this->authorizeFieldValue($request, $field, $value);
         $overwriteDifferentWorkflow = $request->boolean('overwrite_different_workflow');
         $preview = $this->buildPreview($group, $field, $value, $overwriteDifferentWorkflow);
 
@@ -142,6 +155,25 @@ class MultichangeController extends Controller
     }
 
     /**
+     * Zusätzliches Recht für bestimmte Feld+Wert-Kombinationen, analog zum
+     * einzelnen Aktivieren-Button (ProjectWorkflowStepController::activate()):
+     * Wechsel zu einem Beenden/Verworfen-Schritt (lifecycle_status 3/4)
+     * braucht project.complete, nicht nur project.multichange - sonst ließe
+     * sich diese Sperre über Multichange umgehen.
+     */
+    private function authorizeFieldValue(Request $request, array $field, mixed $value): void
+    {
+        if ($field['key'] !== 'workflow_step_id') {
+            return;
+        }
+
+        $targetStep = WorkflowStep::find($value);
+        if ($targetStep && in_array($targetStep->lifecycle_status, [3, 4], true)) {
+            abort_unless($request->user()->can('project.complete'), 403);
+        }
+    }
+
+    /**
      * Bewusst KEIN ->validate() (das würde bei einem Fehler per Redirect
      * auf die vorherige Seite umleiten - für einen fetch()-Aufruf aus dem
      * Modal heraus landet die komplette umgeleitete Seite dann roh im
@@ -162,7 +194,7 @@ class MultichangeController extends Controller
             'text' => ($field['required'] ?? false) ? ['required', 'string', 'max:255'] : ['nullable', 'string', 'max:255'],
             'textarea' => ($field['required'] ?? false) ? ['required', 'string', 'max:2000'] : ['nullable', 'string', 'max:2000'],
             'date' => ['nullable', 'date'],
-            'select' => ['required', Rule::in(array_keys($field['options']))],
+            'select', 'workflow_step' => ['required', Rule::in(array_keys($field['options']))],
         };
 
         $validator = Validator::make($request->all(), ['value' => $rules], [], ['value' => __('Neuer Wert')]);
@@ -171,7 +203,7 @@ class MultichangeController extends Controller
         }
 
         $value = $validator->validated()['value'] ?? null;
-        if ($field['type'] === 'select' && $value !== null) {
+        if (in_array($field['type'], ['select', 'workflow_step'], true) && $value !== null) {
             $value = (int) $value;
         }
 
@@ -234,14 +266,35 @@ class MultichangeController extends Controller
         // Frisch aus der DB, nicht aus irgendeinem Client-Zustand übernommen -
         // die Gruppen-Mitgliedschaft kann sich zwischen Vorschau und Anwenden
         // ändern, das soll sich dann auch auswirken (Vietto-Lektion).
-        // 'workflow' mitgeladen für die "Alter Wert"-Spalte der Änderungs-
-        // Tabelle (describeOldValue()) - vermeidet N+1 beim Feld workflow_id.
-        $projects = $group->projects()->with(['projectWorkflowSteps', 'workflow'])->get();
+        // 'workflow' + 'projectWorkflowSteps.workflowStep' mitgeladen für
+        // die "Alter Wert"-Spalte der Änderungs-Tabelle (describeOldValue())
+        // - vermeidet N+1 bei workflow_id/workflow_step_id.
+        $projects = $group->projects()->with(['projectWorkflowSteps.workflowStep', 'workflow'])->get();
         $unchanged = collect();
 
         if ($field['key'] === 'status') {
             $applicable = $projects->reject(fn (Project $project) => $project->projectWorkflowSteps->contains('is_current', true))->values();
             $skipped = $projects->filter(fn (Project $project) => $project->projectWorkflowSteps->contains('is_current', true))->values();
+        } elseif ($field['key'] === 'workflow_step_id') {
+            // Ralf, 2026-09-14, drei Situationen (siehe MultichangeFieldCatalog
+            // für die volle Herleitung): (1) derselbe Workflow + Ziel-Schritt
+            // schon aktuell -> unverändert, (2) derselbe Workflow + anderer
+            // aktueller Schritt -> wird geändert, (3) kein/anderer Workflow ->
+            // übersprungen (Workflow muss zuerst per eigenem Feld angepasst
+            // werden - kein Häkchen/Override hier, anders als bei workflow_id).
+            $targetStep = WorkflowStep::find($value);
+            $targetWorkflowId = $targetStep?->workflow_id;
+
+            $sameWorkflow = $projects->filter(fn (Project $project) => $project->workflow_id === $targetWorkflowId);
+            $skipped = $projects->reject(fn (Project $project) => $project->workflow_id === $targetWorkflowId)->values();
+
+            $unchanged = $sameWorkflow->filter(function (Project $project) use ($value) {
+                $currentStep = $project->projectWorkflowSteps->firstWhere('is_current', true);
+
+                return $currentStep && $currentStep->workflow_step_id === (int) $value;
+            })->values();
+
+            $applicable = $sameWorkflow->reject(fn (Project $project) => $unchanged->contains('id', $project->id))->values();
         } elseif ($field['key'] === 'workflow_id') {
             // Ralf, 2026-09-14, drei Fälle statt einfachem Set (siehe
             // MultichangeFieldCatalog::available() für die volle Herleitung):
@@ -309,7 +362,57 @@ class MultichangeController extends Controller
             return;
         }
 
+        if ($field['key'] === 'workflow_step_id') {
+            $this->applyWorkflowStep($project, (int) $value);
+
+            return;
+        }
+
         $project->{$field['key']} = $value;
+    }
+
+    /**
+     * Gleiche Mechanik wie ProjectWorkflowStepController::activate() (der
+     * einzelne "Aktivieren"-Button) - bewusst 1:1 übernommen statt eigener
+     * vereinfachter Logik, inkl. Vorwärts/Rückwärts-Unterscheidung (nur
+     * beim Vorwärts-Wechsel gilt der bisherige Schritt als erledigt,
+     * completed_at gesetzt - bei einem Rücksprung/Korrekturschleife bleibt
+     * er unangetastet). Anders als beim Einzelschritt-Button: kein
+     * E-Mail-Versand, keine Bestätigungs-Nachfrage pro Projekt (Ralf,
+     * 2026-09-14: "keine E-Mail-Flut auslösen, aber eine Erinnerung an den
+     * Anwender" - siehe MultichangeFieldCatalog-Hint + describeResult()).
+     */
+    private function applyWorkflowStep(Project $project, int $targetWorkflowStepId): void
+    {
+        $target = $project->projectWorkflowSteps->firstWhere('workflow_step_id', $targetWorkflowStepId);
+        if (! $target) {
+            // Kann bei korrekt gefilterter "applicable"-Liste nicht
+            // vorkommen (buildPreview() lässt nur Projekte mit demselben
+            // Workflow durch) - defensiv statt eine Annahme zu erzwingen.
+            return;
+        }
+
+        $currentStep = $project->projectWorkflowSteps->firstWhere('is_current', true);
+        $person = Auth::user()->person;
+
+        if ($currentStep && $currentStep->id !== $target->id) {
+            $movingForward = $target->sort > $currentStep->sort;
+
+            $currentStep->update([
+                'is_current' => false,
+                'completed_at' => $movingForward ? now() : $currentStep->completed_at,
+                'completed_by_person_id' => $movingForward ? $person?->id : $currentStep->completed_by_person_id,
+            ]);
+        }
+
+        $target->update([
+            'is_current' => true,
+            'started_at' => now(),
+            'completed_at' => null,
+            'completed_by_person_id' => null,
+        ]);
+
+        $project->status = $target->workflowStep->lifecycle_status - 1;
     }
 
     /**
@@ -374,7 +477,18 @@ class MultichangeController extends Controller
             );
         }
 
-        return __(':field: :count Projekt(e) erfolgreich geändert.', ['field' => $field['label'], 'count' => $count]);
+        $text = __(':field: :count Projekt(e) erfolgreich geändert.', ['field' => $field['label'], 'count' => $count]);
+
+        // Ralf, 2026-09-14: "keine E-Mail-Flut auslösen, aber eine
+        // Erinnerung an den Anwender, dass er das ggf. selbst veranlassen
+        // muss" - Multichange verschickt bewusst keine Mails (anders als
+        // der einzelne "Aktivieren"-Button), also expliziter Hinweis statt
+        // stillschweigend nichts zu tun.
+        if ($field['key'] === 'workflow_step_id' && $count > 0) {
+            $text .= ' '.__('Es wurden keine automatischen E-Mails an Zuständige verschickt - bei Bedarf bitte selbst informieren.');
+        }
+
+        return $text;
     }
 
     /**
@@ -403,6 +517,14 @@ class MultichangeController extends Controller
             );
         }
 
+        if ($field['key'] === 'workflow_step_id') {
+            return trans_choice(
+                ':count Projekt hat keinen oder einen anderen Workflow und wird übersprungen (Workflow zuerst per Feld "Workflow" anpassen):|:count Projekte haben keinen oder einen anderen Workflow und werden übersprungen (Workflow zuerst per Feld "Workflow" anpassen):',
+                $count,
+                ['count' => $count]
+            );
+        }
+
         if ($field['key'] === 'status') {
             return __(':count Projekt(e) werden übersprungen (aktueller Workflow-Schritt bestimmt den Status):', ['count' => $count]);
         }
@@ -411,14 +533,22 @@ class MultichangeController extends Controller
     }
 
     /**
-     * Nur für Felder mit einem echten "unverändert"-Fall (aktuell nur
-     * workflow_id, siehe buildPreview()) - null unterdrückt den Block in
-     * multichange-body.blade.php komplett.
+     * Nur für Felder mit einem echten "unverändert"-Fall (workflow_id,
+     * workflow_step_id - siehe buildPreview()) - null unterdrückt den Block
+     * in multichange-body.blade.php komplett.
      */
     private function describeUnchangedNote(array $field, int $count): ?string
     {
-        if ($field['key'] !== 'workflow_id' || $count === 0) {
+        if ($count === 0 || ! in_array($field['key'], ['workflow_id', 'workflow_step_id'], true)) {
             return null;
+        }
+
+        if ($field['key'] === 'workflow_step_id') {
+            return trans_choice(
+                ':count Projekt hat diesen Workflow-Schritt bereits als aktuellen Schritt - bleibt unverändert.|:count Projekte haben diesen Workflow-Schritt bereits als aktuellen Schritt - bleiben unverändert.',
+                $count,
+                ['count' => $count]
+            );
         }
 
         return trans_choice(
@@ -435,7 +565,7 @@ class MultichangeController extends Controller
         }
 
         return match ($field['type']) {
-            'select' => $field['options'][$value] ?? (string) $value,
+            'select', 'workflow_step' => $field['options'][$value] ?? (string) $value,
             'date' => Carbon::parse($value)->format('d.m.Y'),
             default => (string) $value,
         };
@@ -444,22 +574,117 @@ class MultichangeController extends Controller
     /**
      * Ralf, 2026-09-14: "kleine Tabelle... 1. Spalte Projektnr. + Bezeichnung,
      * 2. Alter Wert, 3. Neuer Wert" - für ALLE Multichange-Felder (nicht nur
-     * Workflow), damit vor dem unwiderruflichen Anwenden genau sichtbar ist,
-     * was sich je Projekt ändert. Nur für die tatsächlich betroffenen
-     * ("applicable") Projekte - skipped/unchanged haben schon eigene Blöcke
-     * mit Begründung.
+     * Workflow). Ralf, gleicher Tag, Nachtrag: "Nimm die Projekte, die von
+     * einer Änderung ausgeschlossen sind, mit in die Tabelle rein... mit
+     * einer klaren Kennzeichnung + Bemerkung, dass das Projekt nicht
+     * geändert wird, weil..." - deshalb jetzt ALLE drei Gruppen
+     * (applicable/unchanged/skipped) als Zeilen, nicht nur applicable; die
+     * gesammelten Kurz-Hinweise (skipReason/unchangedNote) bleiben ZUSÄTZLICH
+     * bestehen (siehe preview()/apply()), nur die frühere Bullet-Liste
+     * innerhalb dieser Boxen entfällt in multichange-body.blade.php, weil
+     * die Tabelle das jetzt mit mehr Kontext (Alter/Neuer Wert) abdeckt.
+     * 4. Spalte "Bemerkungen": bei ausgeschlossenen Zeilen der Grund, bei
+     * betroffenen Zeilen aktuell nur für workflow_step_id genutzt (offene
+     * Illustrationsaufträge bei Wechsel zu Beenden/Verwerfen).
      *
-     * @param  Collection<int, Project>  $applicable
-     * @return list<array{pn: string, title: string, old: string, new: string}>
+     * @param  array{applicable: Collection<int, Project>, skipped: Collection<int, Project>, unchanged: Collection<int, Project>}  $preview
+     * @return list<array{pn: string, title: string, status: string, old: string, new: string, note: ?string}>
      */
-    private function describeChangeRows(Collection $applicable, array $field, mixed $value): array
+    private function describeChangeRows(array $preview, array $field, mixed $value): array
     {
-        return $applicable->map(fn (Project $project) => [
-            'pn' => $project->source_pn,
-            'title' => $project->title,
-            'old' => $this->describeOldValue($project, $field),
-            'new' => $this->describeNewValue($field, $value),
-        ])->all();
+        $rows = [];
+
+        foreach ($preview['applicable'] as $project) {
+            $rows[] = [
+                'pn' => $project->source_pn,
+                'title' => $project->title,
+                'status' => 'applicable',
+                'old' => $this->describeOldValue($project, $field),
+                'new' => $this->describeNewValue($field, $value),
+                'note' => $this->describeRowNote($project, $field, $value),
+            ];
+        }
+
+        foreach ($preview['unchanged'] as $project) {
+            $rows[] = [
+                'pn' => $project->source_pn,
+                'title' => $project->title,
+                'status' => 'unchanged',
+                'old' => $this->describeOldValue($project, $field),
+                'new' => '–',
+                'note' => $this->describeExclusionNote($field, 'unchanged'),
+            ];
+        }
+
+        foreach ($preview['skipped'] as $project) {
+            $rows[] = [
+                'pn' => $project->source_pn,
+                'title' => $project->title,
+                'status' => 'skipped',
+                'old' => $this->describeOldValue($project, $field),
+                'new' => '–',
+                'note' => $this->describeExclusionNote($field, 'skipped'),
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Bemerkung je Zeile für ausgeschlossene ("unchanged"/"skipped")
+     * Projekte - Einzelsatz ohne Anzahl-Präfix (anders als
+     * describeSkipReason()/describeUnchangedNote(), die die einleitenden
+     * Sammel-Kästen darüber beschriften), da hier pro Projekt einzeln
+     * daneben steht.
+     */
+    private function describeExclusionNote(array $field, string $status): string
+    {
+        if ($status === 'unchanged') {
+            return match ($field['key']) {
+                'workflow_id' => __('Wird nicht geändert: hat diesen Workflow bereits.'),
+                'workflow_step_id' => __('Wird nicht geändert: hat diesen Workflow-Schritt bereits als aktuellen Schritt.'),
+                default => __('Wird nicht geändert: hat diesen Wert bereits.'),
+            };
+        }
+
+        return match ($field['key']) {
+            'workflow_id' => __('Wird nicht geändert: hat einen anderen Workflow.'),
+            'workflow_step_id' => __('Wird nicht geändert: hat keinen oder einen anderen Workflow - Workflow zuerst per Feld "Workflow" anpassen.'),
+            'status' => __('Wird nicht geändert: aktueller Workflow-Schritt bestimmt den Status.'),
+            default => __('Wird nicht geändert.'),
+        };
+    }
+
+    /**
+     * Bemerkung für tatsächlich betroffene ("applicable") Zeilen - aktuell
+     * nur für workflow_step_id genutzt: weiche Warnung bei offenen
+     * Illustrationsaufträgen, wenn der Ziel-Schritt Beenden/Verwerfen ist
+     * (lifecycle_status 3/4), analog der Warnung beim einzelnen
+     * "Aktivieren"-Button (dort ein Popup, hier Teil der Tabelle statt X
+     * Popups bei X Projekten). null bei keiner Warnung - Zelle bleibt leer.
+     */
+    private function describeRowNote(Project $project, array $field, mixed $value): ?string
+    {
+        if ($field['key'] !== 'workflow_step_id') {
+            return null;
+        }
+
+        $targetStep = WorkflowStep::find($value);
+        if (! $targetStep || ! in_array($targetStep->lifecycle_status, [3, 4], true)) {
+            return null;
+        }
+
+        $openStatusValues = array_map(
+            fn ($status) => $status->value,
+            array_filter(GraphicOrderStatus::cases(), fn ($status) => $status->isOpen())
+        );
+        $openCount = $project->graphicOrders()->whereIn('graphic_order_status_id', $openStatusValues)->count();
+
+        if ($openCount === 0) {
+            return null;
+        }
+
+        return trans_choice(':count offener Illustrationsauftrag|:count offene Illustrationsaufträge', $openCount, ['count' => $openCount]);
     }
 
     /**
@@ -478,6 +703,12 @@ class MultichangeController extends Controller
 
         if ($field['key'] === 'workflow_id') {
             return $project->workflow?->name ?? '–';
+        }
+
+        if ($field['key'] === 'workflow_step_id') {
+            $currentStep = $project->projectWorkflowSteps->firstWhere('is_current', true);
+
+            return $currentStep ? ($field['options'][$currentStep->workflow_step_id] ?? $currentStep->workflowStep?->title ?? '–') : '–';
         }
 
         $raw = ($field['storage'] ?? 'column') === 'attribute'

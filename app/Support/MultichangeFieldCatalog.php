@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\ProjectNote;
 use App\Models\Workflow;
+use App\Models\WorkflowStep;
 
 /**
  * Verfügbare Felder für Multichange (Ralf, 2026-09-13, nach Vietto-Analyse -
@@ -124,6 +125,65 @@ class MultichangeFieldCatalog
                     __('Projekte ohne Workflow bekommen ihn neu zugewiesen (1. Schritt "In Planung" wird automatisch aktiviert).'),
                     __('Projekte, die diesen Workflow bereits haben, bleiben unverändert.'),
                     __('Projekte mit einem ANDEREN Workflow werden übersprungen - außer Sie aktivieren unten "Andere Workflows überschreiben": dann wird dort ebenfalls neu zugewiesen und der bisherige Fortschritt geht verloren.'),
+                ],
+            ],
+            ...self::workflowStepField($tenantId),
+        ];
+    }
+
+    /**
+     * Eigener Feld-Typ 'workflow_step' (2026-09-14, Ralf: "Zunächst muss
+     * man einen WF auswählen, dann dort den entsprechenden WFS") - im
+     * Gegensatz zu allen anderen Feldern hier braucht die Werteauswahl
+     * ZWEI verschachtelte Schritte (erst Workflow, dann dessen Schritt),
+     * deshalb eigene Formular-Darstellung in multichange-body.blade.php
+     * statt der generischen select-Option-Liste. Übermittelt wird am Ende
+     * trotzdem nur die eine WorkflowStep-ID als Wert - "options" bleibt
+     * trotzdem als flache ID->Label-Liste vorhanden (Label inkl.
+     * Workflow-Name, da Schritt-Titel wie "In Planung" workflow-übergreifend
+     * mehrfach vorkommen können), fürs Validieren und für describeValue().
+     *
+     * Drei Situationen je Projekt bei der Prüfung (mit Ralf durchgesprochen,
+     * siehe MultichangeController::buildPreview()):
+     * 1. Hat denselben Workflow UND bereits den Ziel-Schritt aktuell ->
+     *    unverändert, kein Eingriff.
+     * 2. Hat denselben Workflow, aber einen ANDEREN Schritt aktuell -> wird
+     *    geändert (Vorwärts/Rückwärts-Logik wie beim einzelnen
+     *    "Aktivieren"-Button, siehe ProjectWorkflowStepController::activate()
+     *    - pro Projekt einzeln berechnet, nicht global).
+     * 3. Hat keinen oder einen ANDEREN Workflow -> übersprungen, mit Hinweis,
+     *    dass zuerst der Workflow angepasst werden muss.
+     *
+     * @return list<array{key: string, label: string, type: string}>
+     */
+    private static function workflowStepField(int $tenantId): array
+    {
+        $workflows = Workflow::query()->where('tenant_id', $tenantId)->where('active', true)
+            ->orderBy('sort')->orderBy('name')->get(['id', 'name']);
+
+        $steps = WorkflowStep::query()->whereIn('workflow_id', $workflows->pluck('id'))->where('is_active', true)
+            ->orderBy('sort')->get(['id', 'workflow_id', 'title', 'lifecycle_status']);
+
+        $options = $steps->mapWithKeys(fn (WorkflowStep $step) => [
+            $step->id => __(':title (:workflow)', ['title' => $step->title, 'workflow' => $workflows->firstWhere('id', $step->workflow_id)?->name]),
+        ])->all();
+
+        return [
+            [
+                'key' => 'workflow_step_id',
+                'label' => __('Workflow-Schritt'),
+                'type' => 'workflow_step',
+                'required' => true,
+                'options' => $options,
+                // Für die Formular-Kaskade (Workflow wählen -> nur dessen
+                // Schritte anzeigen), nicht für Validierung/Anzeige genutzt.
+                'workflows' => $workflows->map(fn (Workflow $w) => ['id' => $w->id, 'name' => $w->name])->values()->all(),
+                'steps' => $steps->map(fn (WorkflowStep $step) => ['id' => $step->id, 'workflow_id' => $step->workflow_id, 'title' => $step->title])->values()->all(),
+                'hint' => [
+                    __('Projekte mit demselben Workflow, die den Ziel-Schritt schon als aktuellen Schritt haben, bleiben unverändert.'),
+                    __('Projekte mit demselben Workflow, aber einem anderen aktuellen Schritt, werden auf den Ziel-Schritt umgestellt.'),
+                    __('Projekte ohne diesen Workflow werden übersprungen - der Workflow muss dafür zuerst per Multichange-Feld "Workflow" angepasst werden.'),
+                    __('Es werden keine automatischen E-Mails an Zuständige verschickt - bei Bedarf bitte selbst informieren.'),
                 ],
             ],
         ];

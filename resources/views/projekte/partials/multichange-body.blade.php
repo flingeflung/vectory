@@ -85,30 +85,51 @@
         {{--
             Ralf, 2026-09-14: "das ja ein wirklich mächtiges und auch
             gefährliches Instrument ist" - vor dem unwiderruflichen Anwenden
-            je betroffenem Projekt genau zeigen, was sich ändert (nicht nur
-            die Gesamtzahl). Gilt für alle Felder, nicht nur Workflow (siehe
-            describeChangeRows()) - deshalb ist der Modal-Dialog jetzt auch
-            breiter (max-width 2xl statt lg, siehe layouts/app.blade.php).
-            Eigene, von der restlichen Vorschau unabhängige Scroll-Box
-            (max-h-56), damit "Zurück"/"Anwenden" bei vielen Projekten nicht
-            erst nach langem Scrollen erreichbar sind.
+            je Projekt genau zeigen, was sich ändert. Gilt für alle Felder,
+            nicht nur Workflow (siehe describeChangeRows()) - deshalb ist
+            der Modal-Dialog jetzt auch breiter (max-width 2xl statt lg,
+            siehe layouts/app.blade.php). Eigene, von der restlichen
+            Vorschau unabhängige Scroll-Box (max-h-64), damit "Zurück"/
+            "Anwenden" bei vielen Projekten nicht erst nach langem Scrollen
+            erreichbar sind.
+
+            Nachtrag, gleicher Tag: "Nimm die Projekte, die von einer
+            Änderung ausgeschlossen sind, mit in die Tabelle rein (zusätzlich
+            zur gesammelten Anzeige), mit einer klaren Kennzeichnung +
+            Bemerkung, dass das Projekt nicht geändert wird, weil..." -
+            deshalb jetzt ALLE drei Gruppen als Zeilen (ausgeschlossene
+            grau/bernstein hinterlegt, "Neuer Wert" bleibt bei denen leer),
+            die gesammelten Kurz-Hinweise darunter bleiben zusätzlich stehen,
+            aber ohne die frühere (jetzt redundante) Aufzählung.
         --}}
         @if (! empty($changeRows))
-            <div class="max-h-56 overflow-auto rounded-md border border-gray-200">
+            <div class="max-h-64 overflow-auto rounded-md border border-gray-200">
                 <table class="min-w-full divide-y divide-gray-200 text-xs">
                     <thead class="sticky top-0 bg-gray-50">
                         <tr>
                             <th class="px-2 py-1.5 text-left font-medium text-gray-500">{{ __('Projekt') }}</th>
                             <th class="px-2 py-1.5 text-left font-medium text-gray-500">{{ __('Alter Wert') }}</th>
                             <th class="px-2 py-1.5 text-left font-medium text-gray-500">{{ __('Neuer Wert') }}</th>
+                            <th class="px-2 py-1.5 text-left font-medium text-gray-500">
+                                <div class="flex items-center gap-1.5">
+                                    {{ __('Bemerkungen') }}
+                                    @if (! empty($changeRowsNoteCopyText))
+                                        <x-copy-button
+                                            :text="$changeRowsNoteCopyText"
+                                            :label="__('Bemerkungen in die Zwischenablage kopieren')"
+                                        />
+                                    @endif
+                                </div>
+                            </th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         @foreach ($changeRows as $row)
-                            <tr>
-                                <td class="px-2 py-1.5 align-top text-gray-700">{{ $row['pn'] }} – {{ $row['title'] }}</td>
-                                <td class="px-2 py-1.5 align-top text-gray-500">{{ $row['old'] }}</td>
-                                <td class="px-2 py-1.5 align-top font-medium text-gray-900">{{ $row['new'] }}</td>
+                            <tr @class(['bg-gray-50' => $row['status'] === 'unchanged', 'bg-amber-50' => $row['status'] === 'skipped'])>
+                                <td class="px-2 py-1.5 align-top {{ $row['status'] === 'applicable' ? 'text-gray-700' : 'text-gray-400' }}">{{ $row['pn'] }} – {{ $row['title'] }}</td>
+                                <td class="px-2 py-1.5 align-top {{ $row['status'] === 'applicable' ? 'text-gray-500' : 'text-gray-400' }}">{{ $row['old'] }}</td>
+                                <td class="px-2 py-1.5 align-top {{ $row['status'] === 'applicable' ? 'font-medium text-gray-900' : 'text-gray-400' }}">{{ $row['new'] }}</td>
+                                <td class="px-2 py-1.5 align-top {{ $row['status'] === 'skipped' ? 'text-amber-800' : 'text-gray-500' }}">{{ $row['note'] }}</td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -123,21 +144,8 @@
         @endif
 
         @if ($preview['skipped']->isNotEmpty())
-            <div class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                <div class="flex items-center justify-between gap-2">
-                    <div class="font-medium">
-                        {{ $skipReason }}
-                    </div>
-                    <x-copy-button
-                        :text="$preview['skipped']->map(fn ($p) => $p->source_pn.' – '.$p->title)->implode(PHP_EOL)"
-                        :label="__('Übersprungene Projekte in die Zwischenablage kopieren')"
-                    />
-                </div>
-                <ul class="mt-1 list-inside list-disc">
-                    @foreach ($preview['skipped'] as $project)
-                        <li>{{ $project->source_pn }} – {{ $project->title }}</li>
-                    @endforeach
-                </ul>
+            <div class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+                {{ $skipReason }}
             </div>
         @endif
 
@@ -242,7 +250,9 @@
                             <p class="mb-1 text-xs text-amber-700">{{ $f['hint'] }}</p>
                         @endif
                     @endif
-                    <label class="block text-xs text-gray-500">{{ __('Neuer Wert') }}</label>
+                    @unless ($f['type'] === 'workflow_step')
+                        <label class="block text-xs text-gray-500">{{ __('Neuer Wert') }}</label>
+                    @endunless
                     @if ($f['type'] === 'text')
                         <input type="text" x-model="value" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                     @elseif ($f['type'] === 'textarea')
@@ -256,6 +266,50 @@
                                 <option value="{{ $optValue }}">{{ $optLabel }}</option>
                             @endforeach
                         </select>
+                    @elseif ($f['type'] === 'workflow_step')
+                        {{--
+                            Ralf, 2026-09-14: "Zunächst muss man einen WF
+                            auswählen, dann dort den entsprechenden WFS" -
+                            zweistufige Kaskade, aber übermittelt wird nur
+                            die eine WorkflowStep-ID (siehe value unten).
+                            wfId ist reine Client-Anzeigehilfe, kein
+                            Formularfeld - bei "Zurück" aus der Vorschau
+                            serverseitig aus dem schon gewählten Schritt
+                            zurückgerechnet, damit die Kaskade nicht wieder
+                            bei "– Workflow wählen –" anfängt.
+                        --}}
+                        @php
+                            $initialWfId = collect($f['steps'])->firstWhere('id', (int) ($selectedValue ?? 0))['workflow_id'] ?? '';
+                        @endphp
+                        <div x-data="{ wfId: {{ \Illuminate\Support\Js::from((string) $initialWfId) }} }">
+                            <label class="block text-xs text-gray-500">{{ __('Workflow') }}</label>
+                            <select x-model="wfId" @change="value = ''" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                                <option value="">{{ __('– Workflow wählen –') }}</option>
+                                @foreach ($f['workflows'] as $wf)
+                                    <option value="{{ $wf['id'] }}">{{ $wf['name'] }}</option>
+                                @endforeach
+                            </select>
+
+                            {{--
+                                Ralf-Bug-Report beim Testen: ein verschachteltes
+                                x-show auf diesem inneren Wrapper reagierte
+                                nicht zuverlässig auf wfId-Änderungen (Alpine-
+                                Effekt band sich offenbar einmalig an den
+                                initialen leeren Wert). Immer sichtbar statt
+                                bedingt gerendert umgeht das Problem robust -
+                                die Auswahlliste ist ohnehin leer/nur
+                                Platzhalter, solange kein Workflow gewählt ist.
+                            --}}
+                            <div class="mt-2">
+                                <label class="block text-xs text-gray-500">{{ __('Workflow-Schritt') }}</label>
+                                <select x-model="value" :disabled="! wfId" class="mt-0.5 w-full rounded-md border-gray-300 text-sm disabled:bg-gray-100 disabled:text-gray-400">
+                                    <option value="">{{ __('– auswählen –') }}</option>
+                                    <template x-for="step in {{ \Illuminate\Support\Js::from($f['steps']) }}.filter(s => String(s.workflow_id) === String(wfId))" :key="step.id">
+                                        <option :value="step.id" x-text="step.title"></option>
+                                    </template>
+                                </select>
+                            </div>
+                        </div>
                     @endif
 
                     @if ($f['key'] === 'workflow_id')
