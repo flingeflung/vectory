@@ -18,12 +18,17 @@
                 const response = await fetch({{ \Illuminate\Support\Js::from(route('projektgruppen.verbund.store', $group)) }}, {
                     method: 'POST', body: fd, headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
                 });
+                // Ralf-Rückfrage, 2026-09-14: Dialog soll nach Erfolg
+                // zugehen, nur bei Konflikt/Fehler offen bleiben, damit
+                // man die Meldung sieht und korrigieren kann.
+                if (response.ok) {
+                    window.dispatchEvent(new CustomEvent('close-modal', { detail: 'verbund-panel' }));
+                    window.dispatchEvent(new CustomEvent('projekte-refresh'));
+                    return;
+                }
                 const body = document.getElementById('verbund-panel-body');
                 body.innerHTML = await response.text();
                 Alpine.initTree(body);
-                if (response.ok) {
-                    window.dispatchEvent(new CustomEvent('projekte-refresh'));
-                }
             } finally {
                 this.saving = false;
             }
@@ -38,9 +43,7 @@
             const response = await fetch({{ \Illuminate\Support\Js::from(route('projektgruppen.verbund.destroy', $group)) }}, {
                 method: 'DELETE', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
             });
-            const body = document.getElementById('verbund-panel-body');
-            body.innerHTML = await response.text();
-            Alpine.initTree(body);
+            window.dispatchEvent(new CustomEvent('close-modal', { detail: 'verbund-panel' }));
             window.dispatchEvent(new CustomEvent('projekte-refresh'));
         },
     }"

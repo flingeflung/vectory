@@ -7,7 +7,7 @@
 --}}
 @forelse ($projects as $project)
     <tr
-        class="hover:bg-gray-50"
+        class="{{ $project->verbund_rolle === 2 ? 'bg-gray-50 hover:bg-gray-100' : 'hover:bg-gray-50' }}"
         @if ($project->verbund_rolle === 1)
             x-data="{ verbundExpanded: true }"
         @elseif ($project->verbund_rolle === 2)
@@ -32,7 +32,7 @@
                 @change="$store.projectGrouping.toggleProject({{ $project->id }}, $event.target.checked)"
             >
         </td>
-        <td class="{{ $project->verbund_rolle === 2 ? 'pl-8 pr-4' : 'px-4' }} py-2 whitespace-nowrap text-gray-500">
+        <td class="{{ $project->verbund_rolle === 2 ? 'pl-12 pr-4' : 'px-4' }} py-2 whitespace-nowrap text-gray-500">
             <span class="inline-flex items-center gap-1">
                 @if ($project->verbund_rolle === 1)
                     <button
