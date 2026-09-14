@@ -367,11 +367,44 @@ class MultichangeController extends Controller
                 $skipped = $remaining->filter($hasOtherWorkflow)->values();
             }
         } else {
-            $applicable = $projects;
             $skipped = collect();
+
+            // Ralf-Bug-Report, 2026-09-14: Projektkategorie/-art zeigte
+            // "3 von 3 werden geändert", obwohl ein Projekt den Zielwert
+            // schon hatte (Alter Wert == Neuer Wert in der Tabelle) - diese
+            // generische Zweigstelle kannte bisher gar kein "schon
+            // identisch", anders als workflow_id/workflow_step_id/status
+            // oben. Gilt nur für echte Set-Felder, nicht für die beiden
+            // Anhängen-Felder (Bemerkungen/Änderungsprotokoll, storage
+            // 'note') - dort gibt es konzeptionell kein "schon vorhanden".
+            if (($field['storage'] ?? 'column') === 'note') {
+                $applicable = $projects;
+            } else {
+                $unchanged = $projects->filter(fn (Project $project) => $this->valueUnchanged($project, $field, $value))->values();
+                $applicable = $projects->reject(fn (Project $project) => $unchanged->contains('id', $project->id))->values();
+            }
         }
 
         return ['applicable' => $applicable, 'skipped' => $skipped, 'unchanged' => $unchanged];
+    }
+
+    /**
+     * Roh-Vergleich für die unchanged-Erkennung der generischen
+     * buildPreview()-Zweigstelle (Set-Felder ohne eigene Sonderlogik) -
+     * bewusst über Rohwerte statt über die formatierten Anzeige-Strings aus
+     * describeOldValue()/describeValue(), damit z.B. "leer" (null) und
+     * "entfernt" (Anzeigetext für einen NEUEN leeren Wert) nicht fälschlich
+     * als unterschiedlich gelten.
+     */
+    private function valueUnchanged(Project $project, array $field, mixed $value): bool
+    {
+        $current = match (true) {
+            ($field['storage'] ?? 'column') === 'attribute' => $project->attributes[$field['key']] ?? null,
+            in_array($field['key'], ['start_date', 'end_date', 'publication_date'], true) => $project->{$field['key']}?->format('Y-m-d'),
+            default => $project->{$field['key']},
+        };
+
+        return (string) ($current ?? '') === (string) ($value ?? '');
     }
 
     /**
@@ -596,13 +629,16 @@ class MultichangeController extends Controller
     }
 
     /**
-     * Nur für Felder mit einem echten "unverändert"-Fall (workflow_id,
-     * workflow_step_id - siehe buildPreview()) - null unterdrückt den Block
-     * in multichange-body.blade.php komplett.
+     * count===0 unterdrückt den Block in multichange-body.blade.php komplett -
+     * seit dem generischen unchanged-Fix in buildPreview() (Ralf-Bug-Report,
+     * 2026-09-14: Projektkategorie/-art zeigte "wird geändert" trotz
+     * identischem Wert) kann das bei JEDEM Set-Feld vorkommen, nicht mehr
+     * nur bei workflow_id/workflow_step_id - daher der generische
+     * Fallback-Satz am Ende statt eines weiteren Early-Return.
      */
     private function describeUnchangedNote(array $field, int $count): ?string
     {
-        if ($count === 0 || ! in_array($field['key'], ['workflow_id', 'workflow_step_id'], true)) {
+        if ($count === 0) {
             return null;
         }
 
@@ -614,8 +650,16 @@ class MultichangeController extends Controller
             );
         }
 
+        if ($field['key'] === 'workflow_id') {
+            return trans_choice(
+                ':count Projekt hat diesen Workflow bereits - bleibt unverändert.|:count Projekte haben diesen Workflow bereits - bleiben unverändert.',
+                $count,
+                ['count' => $count]
+            );
+        }
+
         return trans_choice(
-            ':count Projekt hat diesen Workflow bereits - bleibt unverändert.|:count Projekte haben diesen Workflow bereits - bleiben unverändert.',
+            ':count Projekt hat diesen Wert bereits - bleibt unverändert.|:count Projekte haben diesen Wert bereits - bleiben unverändert.',
             $count,
             ['count' => $count]
         );
