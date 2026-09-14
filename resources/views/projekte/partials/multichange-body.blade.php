@@ -199,7 +199,7 @@
                 <div x-show="field === {{ \Illuminate\Support\Js::from($f['key']) }}" x-cloak>
                     @if (! empty($f['hint']))
                         @if (is_array($f['hint']))
-                            <ul class="mb-1 list-inside list-disc space-y-0.5 text-xs text-amber-700">
+                            <ul class="mb-1 list-outside list-disc space-y-0.5 pl-4 text-xs text-amber-700">
                                 @foreach ($f['hint'] as $hintLine)
                                     <li>{{ $hintLine }}</li>
                                 @endforeach
