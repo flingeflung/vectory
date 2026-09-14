@@ -20,8 +20,14 @@
 
         @if ($result['skipped']->isNotEmpty())
             <div class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                <div class="font-medium">
-                    {{ __(':count Projekt(e) übersprungen (aktueller Workflow-Schritt bestimmt den Status):', ['count' => $result['skipped']->count()]) }}
+                <div class="flex items-center justify-between gap-2">
+                    <div class="font-medium">
+                        {{ __(':count Projekt(e) übersprungen (aktueller Workflow-Schritt bestimmt den Status):', ['count' => $result['skipped']->count()]) }}
+                    </div>
+                    <x-copy-button
+                        :text="$result['skipped']->map(fn ($p) => $p->source_pn.' – '.$p->title)->implode(PHP_EOL)"
+                        :label="__('Übersprungene Projekte in die Zwischenablage kopieren')"
+                    />
                 </div>
                 <ul class="mt-1 list-inside list-disc">
                     @foreach ($result['skipped'] as $project)
@@ -72,8 +78,14 @@
 
         @if ($preview['skipped']->isNotEmpty())
             <div class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                <div class="font-medium">
-                    {{ __(':count Projekt(e) werden übersprungen (aktueller Workflow-Schritt bestimmt den Status):', ['count' => $preview['skipped']->count()]) }}
+                <div class="flex items-center justify-between gap-2">
+                    <div class="font-medium">
+                        {{ __(':count Projekt(e) werden übersprungen (aktueller Workflow-Schritt bestimmt den Status):', ['count' => $preview['skipped']->count()]) }}
+                    </div>
+                    <x-copy-button
+                        :text="$preview['skipped']->map(fn ($p) => $p->source_pn.' – '.$p->title)->implode(PHP_EOL)"
+                        :label="__('Übersprungene Projekte in die Zwischenablage kopieren')"
+                    />
                 </div>
                 <ul class="mt-1 list-inside list-disc">
                     @foreach ($preview['skipped'] as $project)
