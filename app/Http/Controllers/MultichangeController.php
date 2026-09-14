@@ -8,6 +8,7 @@ use App\Models\Activity;
 use App\Models\Project;
 use App\Models\ProjectGroup;
 use App\Models\ProjectNote;
+use App\Models\ProjectTypeSub;
 use App\Models\ProjectWorkflowStep;
 use App\Models\WorkflowStep;
 use App\Support\CurrentTenant;
@@ -269,7 +270,7 @@ class MultichangeController extends Controller
         // 'workflow' + 'projectWorkflowSteps.workflowStep' mitgeladen für
         // die "Alter Wert"-Spalte der Änderungs-Tabelle (describeOldValue())
         // - vermeidet N+1 bei workflow_id/workflow_step_id.
-        $projects = $group->projects()->with(['projectWorkflowSteps.workflowStep', 'workflow'])->get();
+        $projects = $group->projects()->with(['projectWorkflowSteps.workflowStep', 'workflow', 'projectTypeSub.main'])->get();
         $unchanged = collect();
 
         if ($field['key'] === 'status') {
@@ -364,6 +365,16 @@ class MultichangeController extends Controller
 
         if ($field['key'] === 'workflow_step_id') {
             $this->applyWorkflowStep($project, (int) $value);
+
+            return;
+        }
+
+        if ($field['key'] === 'project_type_sub_id') {
+            // Gleiche Ableitung wie ProjectController::update() -
+            // project_type_main_id hat kein eigenes Formularfeld, sondern
+            // wird immer aus der gewählten Unterkategorie übernommen.
+            $project->project_type_sub_id = $value;
+            $project->project_type_main_id = ProjectTypeSub::query()->where('tenant_id', $project->tenant_id)->find($value)?->project_type_main_id;
 
             return;
         }
@@ -709,6 +720,16 @@ class MultichangeController extends Controller
             $currentStep = $project->projectWorkflowSteps->firstWhere('is_current', true);
 
             return $currentStep ? ($field['options'][$currentStep->workflow_step_id] ?? $currentStep->workflowStep?->title ?? '–') : '–';
+        }
+
+        // Project::columnValue() kennt nur den Anzeige-Key 'project_type'
+        // (Kategorie+Art als String, siehe rows.blade.php-Spalte), nicht
+        // den hier verwendeten Formular-/Spalten-Key 'project_type_sub_id' -
+        // ohne diesen Sonderfall käme die rohe ID statt eines Labels raus.
+        if ($field['key'] === 'project_type_sub_id') {
+            $sub = $project->projectTypeSub;
+
+            return $sub ? $sub->main->name.': '.$sub->name : '–';
         }
 
         $raw = ($field['storage'] ?? 'column') === 'attribute'

@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\ProjectNote;
+use App\Models\ProjectTypeMain;
 use App\Models\Workflow;
 use App\Models\WorkflowStep;
 
@@ -87,6 +88,35 @@ class MultichangeFieldCatalog
                 'hint' => __('Projekte mit aktuellem Workflow-Schritt werden übersprungen - dort bestimmt der Workflow-Schritt automatisch den Status.'),
             ],
             ['key' => 'creation_type', 'label' => __('Erstellungsstatus'), 'type' => 'select', 'options' => [1 => __('Neuerstellung'), 2 => __('Änderung')]],
+            // Ralf, 2026-09-14: "Projekttyp/-art, genau, das bitte
+            // umsetzen" - schreibt project_type_sub_id, project_type_main_id
+            // wird analog ProjectController::update() serverseitig daraus
+            // abgeleitet (siehe MultichangeController::applyValue()). Flache
+            // Liste statt optgroups wie im normalen Formular (system-fields/
+            // project_type.blade.php) - Multichange kennt bisher keine
+            // gruppierten Selects, "Kategorie: Art" im Label reicht als
+            // Orientierung.
+            [
+                'key' => 'project_type_sub_id',
+                'label' => __('Projektkategorie/-art'),
+                'type' => 'select',
+                'required' => true,
+                // flatMap()/collapse() würde die int-Keys (Sub-IDs) über
+                // array_merge() neu durchnummerieren (0,1,2,...) statt sie zu
+                // erhalten - deshalb manuell per reduce() zusammengebaut.
+                // Genau das hat den 500er beim Anwenden verursacht: Option
+                // "Kurzanleitung" wurde als Wert 1 übermittelt statt der
+                // echten ID 63, die dann als FK nicht existierte.
+                'options' => ProjectTypeMain::query()->where('tenant_id', $tenantId)->where('active', true)
+                    ->orderBy('sort')->with(['subs' => fn ($query) => $query->where('active', true)->orderBy('sort')])->get()
+                    ->reduce(function (array $options, ProjectTypeMain $category) {
+                        foreach ($category->subs as $sub) {
+                            $options[$sub->id] = $category->name.': '.$sub->name;
+                        }
+
+                        return $options;
+                    }, []),
+            ],
             // Ralf, 2026-09-14: Zuweisung nach Vietto-Vorbild, aber ohne
             // dessen fest verdrahtete Fallback-Tabelle für den aktuellen
             // Schritt - Vectory hat dafür schon ein sauberes eigenes Muster
