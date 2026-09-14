@@ -42,9 +42,13 @@ class ProjectColumnCatalog
             ['key' => 'product_group_number', 'label' => __('Produktgruppennr.'), 'long_text' => false],
             ['key' => 'product_group_name', 'label' => __('Produktgruppenbezeichnung'), 'long_text' => false],
             ['key' => 'version', 'label' => __('Version'), 'long_text' => false],
-            ['key' => 'start_date', 'label' => __('Start'), 'long_text' => false],
-            ['key' => 'end_date', 'label' => __('Ende'), 'long_text' => false],
+            // Ralf, 2026-09-14: Start und Ende gehören als Paar zusammen (wie
+            // schon Status/Erstellungsstatus im Projekt-Formular) - eine
+            // Spalte statt zwei, beide Werte übereinander gestapelt.
+            ['key' => 'start_end', 'label' => __('Start/Ende'), 'long_text' => false, 'start_end' => true],
             ['key' => 'publication_date', 'label' => __('Publikationsdatum'), 'long_text' => false],
+            ['key' => 'creation_type', 'label' => __('Erstellungsstatus'), 'long_text' => false],
+            ['key' => 'archived', 'label' => __('Archiviert'), 'long_text' => false],
             ['key' => 'remarks', 'label' => __('Bemerkungen'), 'long_text' => true],
             ['key' => 'markets', 'label' => __('Märkte/Subsprachen'), 'long_text' => false, 'icons' => true],
             ['key' => 'graphic_orders_summary', 'label' => __('Illustration'), 'long_text' => false, 'graphic_summary' => true],
@@ -75,11 +79,11 @@ class ProjectColumnCatalog
      */
     public static function defaultConfig(): array
     {
-        $visibleByDefault = ['title', 'attribute:format', 'version', 'status', 'start_date', 'end_date'];
+        $visibleByDefault = ['title', 'attribute:format', 'version', 'status', 'start_end'];
 
         return array_map(
             fn (string $key) => ['key' => $key, 'visible' => in_array($key, $visibleByDefault, true), 'long_text' => false],
-            ['title', 'attribute:format', 'version', 'status', 'project_type', 'start_date', 'end_date', 'remarks', 'attribute:material_number', 'attribute:farbe', 'attribute:heftung', 'attribute:erstauflage']
+            ['title', 'attribute:format', 'version', 'status', 'project_type', 'start_end', 'remarks', 'attribute:material_number', 'attribute:farbe', 'attribute:heftung', 'attribute:erstauflage']
         );
     }
 
@@ -120,6 +124,7 @@ class ProjectColumnCatalog
                     'type_icon' => $column['type_icon'] ?? false,
                     'graphic_summary' => $column['graphic_summary'] ?? false,
                     'progress' => $column['progress'] ?? false,
+                    'start_end' => $column['start_end'] ?? false,
                     'visible' => $forcedVisible || ($saved['visible'] ?? false),
                     'show_long_text' => $saved['long_text'] ?? false,
                     'short_length' => $saved['short_length'] ?? self::DEFAULT_SHORT_LENGTH,

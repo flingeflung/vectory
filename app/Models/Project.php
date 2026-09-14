@@ -54,6 +54,7 @@ class Project extends Model
             'start_date' => $this->start_date?->format('d.m.Y'),
             'end_date' => $this->end_date?->format('d.m.Y'),
             'publication_date' => $this->publication_date?->format('d.m.Y'),
+            'creation_type' => $this->creation_type_label,
             default => $this->getAttribute($key),
         };
     }
@@ -67,6 +68,17 @@ class Project extends Model
                 2 => __('Beendet'),
                 3 => __('Verworfen'),
                 default => __('Unbekannt'),
+            },
+        );
+    }
+
+    protected function creationTypeLabel(): CastsAttribute
+    {
+        return CastsAttribute::make(
+            get: fn () => match ($this->creation_type) {
+                1 => __('Neuerstellung'),
+                2 => __('Änderung'),
+                default => null,
             },
         );
     }
@@ -245,6 +257,25 @@ class Project extends Model
         }
 
         return (int) floor(100 / ($steps->count() - 1) * $currentIndex);
+    }
+
+    /**
+     * Zeitlicher Fortschritt zwischen Start und Ende in Prozent (0-100),
+     * analog Viettos getzeitbalken() in ajax_ueb_getpncontent.php - Anteil
+     * der bereits verstrichenen Tage seit Start an der Gesamtlaufzeit
+     * Start-Ende, auf "heute" bezogen. null ohne Start/Ende oder wenn Start
+     * nach Ende liegt (ungültiger Bereich).
+     */
+    public function dateProgressPercent(): ?int
+    {
+        if (! $this->start_date || ! $this->end_date || $this->start_date->gt($this->end_date)) {
+            return null;
+        }
+
+        $totalDays = max(1, (int) floor($this->start_date->diffInSeconds($this->end_date) / 86400));
+        $elapsedDays = (int) floor((now()->timestamp - $this->start_date->timestamp) / 86400);
+
+        return max(0, min(100, (int) floor(100 / $totalDays * $elapsedDays)));
     }
 
     /**

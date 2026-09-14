@@ -27,7 +27,7 @@
             <span class="inline-flex items-center gap-1">
                 <x-pn-link :project="$project" :sort="$sort" :direction="$direction" :filters="$filters" />
                 @if (in_array($project->id, $favoriteProjectIds, true))
-                    <x-favorite-star :project="$project" :is-favorite="true" size="h-3.5 w-3.5" />
+                    <x-favorite-star :project="$project" :is-favorite="true" size="h-3.5 w-3.5" class="shrink-0" />
                 @endif
                 <x-project-directory-status :project="$project" :status="$directoryStatuses[$project->id]" />
             </span>
@@ -59,6 +59,12 @@
                     <span title="{{ $goTotal }} {{ $goTotal == 1 ? __('Illustrationsauftrag') : __('Illustrationsaufträge') }}, {{ $goDone }} {{ __('erledigt') }}, {{ $goImages }} {{ $goImages == 1 ? __('Bild') : __('Bilder') }} {{ __('ges.') }}">{{ $goTotal }}/{{ $goDone }}/{{ $goImages }}</span>
                 @elseif ($column['key'] === 'status')
                     <x-status-icon :status="$project->status" />
+                @elseif ($column['key'] === 'archived')
+                    @if ($project->archived)
+                        {{ __('Ja') }}
+                    @else
+                        <span class="text-gray-400">&ndash;</span>
+                    @endif
                 @elseif ($column['key'] === 'workflow')
                     @if ($project->workflow)
                         <div title="{{ $project->workflow->name }}">{{ $project->workflow->id }} - {{ $project->workflow->short_name }}</div>
@@ -89,17 +95,42 @@
                         {{ $groupNames->implode(', ') }}
                     @endif
                 @elseif ($column['progress'] ?? false)
-                    @php $progress = $project->progressPercent(); @endphp
-                    @if ($progress !== null)
-                        <div class="flex items-center gap-1.5" title="{{ $progress }} %">
-                            <div class="h-1.5 w-16 overflow-hidden rounded-full bg-gray-200">
-                                <div class="h-full rounded-full bg-blue-500" style="width: {{ $progress }}%"></div>
-                            </div>
-                            <span class="text-xs">{{ $progress }}%</span>
-                        </div>
-                    @else
+                    {{--
+                        Ralf, 2026-09-14: "Datumsfortschritt parallel zum
+                        Projektfortschritt in einer Spalte" - genau Viettos
+                        "datbalken"-Spalte (ajax_ueb_getpncontent.php):
+                        Datumsfortschritt (Zeitanteil Start->Ende, orange)
+                        oben, Projektfortschritt (WFS-Erledigung, blau/grün
+                        bei 100%) darunter - beide mit Tooltipp. Bei
+                        verworfenen Projekten (status 3) wie in Vietto keine
+                        Balken, nur "-".
+                    --}}
+                    @if ($project->status === 3)
                         <span class="text-gray-400">&ndash;</span>
+                    @else
+                        @php $dateProgress = $project->dateProgressPercent(); $progress = $project->progressPercent(); @endphp
+                        <div class="space-y-1">
+                            <div
+                                class="h-1.5 w-16 overflow-hidden rounded-full bg-gray-200"
+                                title="{{ $dateProgress !== null ? __('Datumsfortschritt: :percent %', ['percent' => $dateProgress]) : __('Datumsfortschritt: Start/Ende fehlt') }}"
+                            >
+                                <div class="h-full rounded-full bg-amber-400" style="width: {{ $dateProgress ?? 0 }}%"></div>
+                            </div>
+                            @if ($progress !== null)
+                                <div class="flex items-center gap-1.5" title="{{ __('Projektfortschritt: :percent %', ['percent' => $progress]) }}">
+                                    <div class="h-1.5 w-16 overflow-hidden rounded-full bg-gray-200">
+                                        <div class="h-full rounded-full {{ $progress >= 100 ? 'bg-green-500' : 'bg-blue-500' }}" style="width: {{ $progress }}%"></div>
+                                    </div>
+                                    <span class="text-xs">{{ $progress }}%</span>
+                                </div>
+                            @else
+                                <span class="text-gray-400" title="{{ __('Projektfortschritt: kein aktueller Workflow-Schritt') }}">&ndash;</span>
+                            @endif
+                        </div>
                     @endif
+                @elseif ($column['start_end'] ?? false)
+                    <div>{{ $project->start_date?->format('d.m.Y') ?? '–' }}</div>
+                    <div class="text-gray-400">{{ $project->end_date?->format('d.m.Y') ?? '–' }}</div>
                 @elseif ($column['icons'] ?? false)
                     @php $marketPreviewCount = 5; $marketList = $project->markets; @endphp
                     @if ($marketList->count() > $marketPreviewCount)

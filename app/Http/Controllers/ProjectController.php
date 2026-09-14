@@ -1060,7 +1060,14 @@ class ProjectController extends Controller
 
         $query = Project::query();
         [$sortColumn, $idColumn] = $this->resolveSortColumns($query, $column);
-        $value = $column === 'workflow' ? $current->workflow?->sort : $current->{$column};
+        $value = match ($column) {
+            'workflow' => $current->workflow?->sort,
+            // Start/Ende sind in der Übersicht seit 2026-09-14 eine
+            // zusammengeführte Spalte (siehe ProjectColumnCatalog) - sortiert
+            // wird weiterhin nach der echten start_date-Spalte.
+            'start_end' => $current->start_date,
+            default => $current->{$column},
+        };
         $this->applyFilters($query, $filters);
 
         // MySQL sortiert NULL wie den kleinsten Wert: bei ASC zuerst, bei
@@ -1115,6 +1122,13 @@ class ProjectController extends Controller
      */
     private function resolveSortColumns(Builder $query, string $column): array
     {
+        // Start/Ende sind in der Übersicht seit 2026-09-14 eine
+        // zusammengeführte Spalte (siehe ProjectColumnCatalog) - sortiert
+        // wird weiterhin nach der echten start_date-Spalte.
+        if ($column === 'start_end') {
+            return ['start_date', 'id'];
+        }
+
         if ($column !== 'workflow') {
             return [$column, 'id'];
         }

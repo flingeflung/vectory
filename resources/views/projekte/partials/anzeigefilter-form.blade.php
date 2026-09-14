@@ -164,12 +164,12 @@
 
         <div x-show="savingOpen" x-cloak class="flex items-center gap-2">
             <button
-                type="submit"
-                form="anzeigefilter-form"
+                type="button"
                 x-show="!savingAsNew"
-                class="inline-flex items-center rounded-md bg-btn-primary px-4 py-2 text-sm font-medium text-white hover:bg-btn-primary-hover"
+                @click="savingAsNew = true"
+                class="inline-flex items-center rounded-md border border-btn-secondary-border bg-btn-secondary px-4 py-2 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
             >
-                {{ __('Speichern') }}
+                {{ __('Speichern unter') }}
             </button>
 
             <template x-if="savingAsNew">
@@ -184,15 +184,6 @@
             </template>
 
             <button
-                type="button"
-                x-show="!savingAsNew"
-                @click="savingAsNew = true"
-                class="inline-flex items-center rounded-md border border-btn-secondary-border bg-btn-secondary px-4 py-2 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
-            >
-                {{ __('Speichern unter') }}
-            </button>
-
-            <button
                 type="submit"
                 form="anzeigefilter-form"
                 formaction="{{ route('projekte.anzeigefilter.sets.store') }}"
@@ -200,6 +191,15 @@
                 class="inline-flex items-center rounded-md bg-btn-primary px-4 py-2 text-sm font-medium text-white hover:bg-btn-primary-hover"
             >
                 {{ __('Speichern unter') }}
+            </button>
+
+            <button
+                type="submit"
+                form="anzeigefilter-form"
+                x-show="!savingAsNew"
+                class="inline-flex items-center rounded-md bg-btn-primary px-4 py-2 text-sm font-medium text-white hover:bg-btn-primary-hover"
+            >
+                {{ __('Speichern') }}
             </button>
         </div>
     </div>
