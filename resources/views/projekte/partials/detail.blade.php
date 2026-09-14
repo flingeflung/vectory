@@ -180,10 +180,10 @@
         <form id="project-detail-form" method="POST" action="{{ route('projekte.update', $project) }}" class="space-y-4 text-sm">
         <div>
         <div class="text-[11px] font-medium" style="color: #999">{{ __('Stammdaten') }}</div>
-        <div class="mb-2 border-t-2" style="border-color: #09f"></div>
+        <div class="border-t-2" style="border-color: #09f"></div>
         <div class="flex gap-3">
         <div class="w-0.5 shrink-0 rounded-full" style="background-color: #09f" title="{{ __('Stammdaten') }}"></div>
-        <div class="min-w-0 flex-1">
+        <div class="min-w-0 flex-1 pt-2">
 
         <div class="grid grid-cols-2 gap-x-4">
         @php $col = 0; $row = 0; @endphp
@@ -211,10 +211,10 @@
         @if ($attributes->isNotEmpty())
         <div class="!mt-4">
         <div class="text-[11px] font-medium" style="color: #999">{{ __('Typspezifische Attribute') }}</div>
-        <div class="mb-2 border-t-2" style="border-color: {{ $project->attribute_section_color }}"></div>
+        <div class="border-t-2" style="border-color: {{ $project->attribute_section_color }}"></div>
         <div class="flex gap-3">
         <div class="w-0.5 shrink-0 rounded-full" style="background-color: {{ $project->attribute_section_color }}" title="{{ __('Typspezifische Attribute') }}"></div>
-        <div class="min-w-0 flex-1">
+        <div class="min-w-0 flex-1 pt-2">
             <div class="grid grid-cols-4 gap-2">
                 @foreach ($attributes as $attribute)
                     @include('projekte.partials.attribute-field', ['attribute' => $attribute])
@@ -227,10 +227,10 @@
 
         <div class="!mt-4">
         <div class="text-[11px] font-medium" style="color: #999">{{ __('Ablaufdaten') }}</div>
-        <div class="mb-2 border-t-2" style="border-color: #396"></div>
+        <div class="border-t-2" style="border-color: #396"></div>
         <div class="flex gap-3">
         <div class="w-0.5 shrink-0 rounded-full" style="background-color: #396" title="{{ __('Ablaufdaten') }}"></div>
-        <div class="min-w-0 flex-1">
+        <div class="min-w-0 flex-1 pt-2">
 
         <div class="grid grid-cols-2 gap-x-4">
         @php $col = 0; $row = 0; @endphp
