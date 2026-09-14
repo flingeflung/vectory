@@ -321,8 +321,15 @@ class MultichangeController extends Controller
         // ändern, das soll sich dann auch auswirken (Vietto-Lektion).
         // 'workflow' + 'projectWorkflowSteps.workflowStep' mitgeladen für
         // die "Alter Wert"-Spalte der Änderungs-Tabelle (describeOldValue())
-        // - vermeidet N+1 bei workflow_id/workflow_step_id.
-        $projects = $group->projects()->with(['projectWorkflowSteps.workflowStep', 'workflow', 'projectTypeSub.main'])->get();
+        // - vermeidet N+1 bei workflow_id/workflow_step_id. Ralf-Nachfrage,
+        // 2026-09-14: ohne orderBy kam schlicht die Pivot-Tabellen-Reihenfolge
+        // (Zuordnungsreihenfolge) raus, kein bewusstes Kriterium - PN statt
+        // "wie in der Projektübersicht", weil die Gruppe bewusst unabhängig
+        // vom Übersichts-Filter ist (siehe Klassen-Docblock) und darin sonst
+        // auch Projekte auftauchen könnten, die im aktuellen Filter gar nicht
+        // sichtbar sind, für die es dann keine definierte Position gäbe.
+        $projects = $group->projects()->orderBy('source_pn')
+            ->with(['projectWorkflowSteps.workflowStep', 'workflow', 'projectTypeSub.main'])->get();
         $unchanged = collect();
 
         if ($field['key'] === 'status') {
