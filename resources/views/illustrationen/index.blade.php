@@ -144,6 +144,13 @@
                                     <td class="px-2 py-2 whitespace-nowrap text-gray-500">Illu-{{ $order->id }}</td>
                                     <td class="px-2 py-2 whitespace-nowrap text-gray-500">
                                         <x-pn-link :project="$order->project" />
+                                        {{-- Ralf, 2026-09-14: hier war bisher nicht sichtbar, ob das
+                                             Projekt eines offenen Illu-Auftrags schon beendet/verworfen
+                                             ist - schließt offene Aufträge nicht automatisch (siehe
+                                             ProjectWorkflowStepController::activate(), keine Verknüpfung
+                                             zwischen Projektstatus und GraphicOrder). Gleiches
+                                             Status-Icon wie in der Projektübersicht. --}}
+                                        <x-status-icon :status="$order->project->status" />
                                     </td>
                                     <td class="px-2 py-2 whitespace-nowrap text-gray-500">{{ $order->image_count }}</td>
                                     <td class="px-2 py-2 whitespace-nowrap text-gray-500">{{ $order->status?->label() }}</td>
