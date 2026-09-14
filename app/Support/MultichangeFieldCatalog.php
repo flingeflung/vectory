@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Models\ProjectNote;
+
 /**
  * Verfügbare Felder für Multichange (Ralf, 2026-09-13, nach Vietto-Analyse -
  * siehe Backlog-Memory für die vollständige Konzept-Herleitung). Bewusst
@@ -45,7 +47,22 @@ class MultichangeFieldCatalog
                 'type' => 'textarea',
                 'required' => true,
                 'storage' => 'note',
+                'note_type' => ProjectNote::TYPE_REMARK,
+                'note_label' => __('Bemerkung'),
                 'hint' => __('Fügt bei jedem Projekt der Gruppe einen neuen Bemerkungen-Eintrag hinzu - bestehende Bemerkungen bleiben unverändert erhalten.'),
+            ],
+            // Ralf, 2026-09-14: "Änderungsprotokoll bei Multichange, analog
+            // zu Bemerkungen" - gleiche Anhängen-Semantik, nur anderer
+            // ProjectNote::TYPE (siehe system-fields/change_log.blade.php).
+            [
+                'key' => 'change_log',
+                'label' => __('Änderungsprotokoll'),
+                'type' => 'textarea',
+                'required' => true,
+                'storage' => 'note',
+                'note_type' => ProjectNote::TYPE_CHANGE,
+                'note_label' => __('Änderungsprotokoll-Eintrag'),
+                'hint' => __('Fügt bei jedem Projekt der Gruppe einen neuen Änderungsprotokoll-Eintrag hinzu - bestehende Einträge bleiben unverändert erhalten.'),
             ],
             ['key' => 'start_date', 'label' => __('Start'), 'type' => 'date'],
             ['key' => 'end_date', 'label' => __('Ende'), 'type' => 'date'],

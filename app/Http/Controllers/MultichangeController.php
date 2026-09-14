@@ -245,7 +245,7 @@ class MultichangeController extends Controller
             ProjectNote::query()->create([
                 'tenant_id' => $project->tenant_id,
                 'project_id' => $project->id,
-                'type' => ProjectNote::TYPE_REMARK,
+                'type' => $field['note_type'],
                 'text' => $value,
                 'created_by_user_id' => Auth::id(),
                 'created_at' => now(),
@@ -281,7 +281,11 @@ class MultichangeController extends Controller
     private function describeAction(array $field, mixed $value): string
     {
         if (($field['storage'] ?? 'column') === 'note') {
-            return __('Neue Bemerkung „:value" wird hinzugefügt.', ['value' => $value]);
+            // Bewusst ohne Artikel ("Neue Bemerkung"/"Neuer Eintrag") -
+            // unterschiedliches Genus je note_label ließe sich sonst nicht
+            // generisch formulieren, ohne für jedes Feld eine eigene
+            // Artikel-Form mitzugeben.
+            return __(':noteLabel wird hinzugefügt: „:value"', ['noteLabel' => $field['note_label'], 'value' => $value]);
         }
 
         return __(':field wird auf „:value" gesetzt.', ['field' => $field['label'], 'value' => $this->describeValue($field, $value)]);
@@ -291,9 +295,9 @@ class MultichangeController extends Controller
     {
         if (($field['storage'] ?? 'column') === 'note') {
             return trans_choice(
-                'Bemerkung bei :count Projekt hinzugefügt.|Bemerkung bei :count Projekten hinzugefügt.',
+                ':noteLabel bei :count Projekt hinzugefügt.|:noteLabel bei :count Projekten hinzugefügt.',
                 $count,
-                ['count' => $count]
+                ['count' => $count, 'noteLabel' => $field['note_label']]
             );
         }
 
@@ -306,7 +310,7 @@ class MultichangeController extends Controller
     private function describeChange(array $field, mixed $value): string
     {
         if (($field['storage'] ?? 'column') === 'note') {
-            return __('Neue Bemerkung per Multichange hinzugefügt: „:value"', ['value' => $value]);
+            return __(':noteLabel per Multichange hinzugefügt: „:value"', ['noteLabel' => $field['note_label'], 'value' => $value]);
         }
 
         return __(':field per Multichange auf „:value" gesetzt.', ['field' => $field['label'], 'value' => $this->describeValue($field, $value)]);
