@@ -82,9 +82,13 @@
                         ? {{ \Illuminate\Support\Js::from(__('Diese Gruppe wird auch für eine weitere Person gelöscht, die sie sehen kann. Wirklich endgültig löschen?')) }}
                         : {{ \Illuminate\Support\Js::from(__('Diese Gruppe wirklich endgültig löschen?')) }};
                 if (! await window.confirmDialog({ title: {{ \Illuminate\Support\Js::from(__('Gruppe löschen?')) }}, message, confirmLabel: {{ \Illuminate\Support\Js::from(__('Löschen')) }}, cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }} })) return;
-                await fetch('/projektgruppen/' + $store.projectGrouping.groupId, {
+                const response = await fetch('/projektgruppen/' + $store.projectGrouping.groupId, {
                     method: 'DELETE', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
                 });
+                if (! response.ok) {
+                    await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Diese Gruppe ist Teil eines Verbunds - bitte erst den Verbund auflösen.')) }});
+                    return;
+                }
                 $store.projectGrouping.groupId = '';
                 @if (! $project) await $store.projectGrouping.loadMembers(); @endif
                 await this.refresh();
@@ -110,9 +114,13 @@
                     confirmLabel: {{ \Illuminate\Support\Js::from(__('Leeren')) }},
                     cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
                 })) return;
-                await fetch('/projektgruppen/' + $store.projectGrouping.groupId + '/leeren', {
+                const response = await fetch('/projektgruppen/' + $store.projectGrouping.groupId + '/leeren', {
                     method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
                 });
+                if (! response.ok) {
+                    await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Diese Gruppe ist Teil eines Verbunds - bitte erst den Verbund auflösen.')) }});
+                    return;
+                }
                 @if (! $project) await $store.projectGrouping.loadMembers(); @endif
                 await this.refresh();
             },
@@ -124,9 +132,13 @@
                 await this.refresh();
             },
             async removeThisProject() {
-                await fetch('/projektgruppen/' + $store.projectGrouping.groupId + '/projekte/{{ $project->id }}', {
+                const response = await fetch('/projektgruppen/' + $store.projectGrouping.groupId + '/projekte/{{ $project->id }}', {
                     method: 'DELETE', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
                 });
+                if (! response.ok) {
+                    await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Diese Gruppe ist Teil eines Verbunds - bitte erst den Verbund auflösen.')) }});
+                    return;
+                }
                 await this.refresh();
             },
             @else

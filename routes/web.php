@@ -40,6 +40,7 @@ use App\Http\Controllers\ProjectWorkflowStepController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TenantSwitchController;
+use App\Http\Controllers\VerbundController;
 use App\Http\Middleware\RememberLastAdminPage;
 use Illuminate\Support\Facades\Route;
 
@@ -73,6 +74,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/projektgruppen/{group}/personen/{user}', [ProjectGroupController::class, 'share'])->name('projektgruppen.personen.share');
     Route::delete('/projektgruppen/{group}/personen/{user}', [ProjectGroupController::class, 'unshare'])->name('projektgruppen.personen.unshare');
     Route::get('/projektgruppen/{group}/anzeigen', [ProjectGroupController::class, 'showInOverview'])->name('projektgruppen.anzeigen');
+    Route::get('/projektgruppen/{group}/verbund', [VerbundController::class, 'panel'])->name('projektgruppen.verbund.panel');
+    Route::post('/projektgruppen/{group}/verbund', [VerbundController::class, 'store'])->name('projektgruppen.verbund.store');
+    Route::delete('/projektgruppen/{group}/verbund', [VerbundController::class, 'destroy'])->name('projektgruppen.verbund.destroy');
     // Ralf, 2026-09-13: "Das Gruppieren soll losgelöst sein davon" -
     // Multichange wählt seine Zielgruppe selbst im Formular, deshalb kein
     // {group}-Routenparameter (anders als alle /projektgruppen/{group}/...-

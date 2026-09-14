@@ -6,7 +6,16 @@
     $graphicOrderSummaries.
 --}}
 @forelse ($projects as $project)
-    <tr class="hover:bg-gray-50">
+    <tr
+        class="hover:bg-gray-50"
+        @if ($project->verbund_rolle === 1)
+            x-data="{ verbundExpanded: true }"
+        @elseif ($project->verbund_rolle === 2)
+            x-data="{ verbundExpanded: true }"
+            x-on:verbund-toggle-{{ $project->hauptprojekt_id }}.window="verbundExpanded = $event.detail"
+            x-show="verbundExpanded"
+        @endif
+    >
         {{-- x-cloak nur, wenn die Spalte nicht schon von Anfang an sichtbar
              sein soll (reopen_group) - siehe gleiche Begründung beim <th>
              in projekte/index.blade.php. --}}
@@ -23,8 +32,22 @@
                 @change="$store.projectGrouping.toggleProject({{ $project->id }}, $event.target.checked)"
             >
         </td>
-        <td class="px-4 py-2 whitespace-nowrap text-gray-500">
+        <td class="{{ $project->verbund_rolle === 2 ? 'pl-8 pr-4' : 'px-4' }} py-2 whitespace-nowrap text-gray-500">
             <span class="inline-flex items-center gap-1">
+                @if ($project->verbund_rolle === 1)
+                    <button
+                        type="button"
+                        @click="verbundExpanded = ! verbundExpanded; window.dispatchEvent(new CustomEvent('verbund-toggle-{{ $project->id }}', { detail: verbundExpanded }))"
+                        class="shrink-0 text-gray-400 hover:text-gray-600"
+                        :title="verbundExpanded ? {{ \Illuminate\Support\Js::from(__('Unterprojekte einklappen')) }} : {{ \Illuminate\Support\Js::from(__('Unterprojekte ausklappen')) }}"
+                    >
+                        <svg class="h-3 w-3 transition-transform" :class="{ '-rotate-90': ! verbundExpanded }" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                @endif
+                <x-hauptprojekt-icon :project="$project" />
+                <x-unterprojekt-icon :project="$project" />
                 <x-pn-link :project="$project" :sort="$sort" :direction="$direction" :filters="$filters" />
                 @if (in_array($project->id, $favoriteProjectIds, true))
                     <x-favorite-star :project="$project" :is-favorite="true" size="h-3.5 w-3.5" class="shrink-0" />

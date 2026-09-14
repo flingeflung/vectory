@@ -28,6 +28,8 @@ enum ActivityType: string
     case ProjectCopied = 'project_copied';
     case PublicationDateChanged = 'publication_date_changed';
     case ProjectMultichanged = 'project_multichanged';
+    case VerbundRoleChanged = 'verbund_role_changed';
+    case VerbundDissolved = 'verbund_dissolved';
 
     public function label(): string
     {
@@ -40,6 +42,8 @@ enum ActivityType: string
             self::ProjectCopied => __('Projekt kopiert'),
             self::PublicationDateChanged => __('Publikationsdatum geändert'),
             self::ProjectMultichanged => __('Per Multichange geändert'),
+            self::VerbundRoleChanged => __('Verbund-Rolle geändert'),
+            self::VerbundDissolved => __('Verbund aufgelöst'),
         };
     }
 
@@ -48,7 +52,8 @@ enum ActivityType: string
         return match ($this) {
             self::WorkflowAssigned, self::WorkflowUnassigned, self::WorkflowStepActivated => ActivityCategory::Workflow,
             self::GraphicOrderStatusChanged => ActivityCategory::Illustration,
-            self::ProjectCreated, self::ProjectCopied, self::PublicationDateChanged, self::ProjectMultichanged => ActivityCategory::General,
+            self::ProjectCreated, self::ProjectCopied, self::PublicationDateChanged, self::ProjectMultichanged,
+            self::VerbundRoleChanged, self::VerbundDissolved => ActivityCategory::General,
         };
     }
 }

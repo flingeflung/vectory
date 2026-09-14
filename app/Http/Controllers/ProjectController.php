@@ -198,6 +198,11 @@ class ProjectController extends Controller
 
     private function eagerLoadForColumns(Builder $query, array $visibleColumns): Builder
     {
+        // "Projektverbund" (Ralf, 2026-09-14): Haupt-/Unterprojekt-Icon in
+        // der PN-Zelle ist immer sichtbar, keine abwählbare Spalte - deshalb
+        // unconditional statt an eine Spalten-Sichtbarkeit gekoppelt.
+        $query->with('hauptprojekt');
+
         if (array_any($visibleColumns, fn (array $column) => $column['key'] === 'markets')) {
             $query->with('markets');
         }
@@ -1066,7 +1071,13 @@ class ProjectController extends Controller
 
         $query = Project::query();
         [$sortColumn, $idColumn] = $this->resolveSortColumns($query, $column);
-        $query->orderBy($sortColumn, $dir)->orderBy($idColumn, $dir);
+        $groupedSortColumn = $this->verbundGroupedSortColumn($column);
+        $query->orderByRaw("{$groupedSortColumn} {$dir}")
+            // Innerhalb einer Verbund-Gruppe immer Hauptprojekt (0) vor
+            // Unterprojekt (1), unabhängig von $dir.
+            ->orderByRaw('(projects.verbund_rolle = 2) asc')
+            ->orderBy($sortColumn, $dir)
+            ->orderBy($idColumn, $dir);
         $this->applyFilters($query, $filters);
 
         return $query;
@@ -1150,16 +1161,51 @@ class ProjectController extends Controller
         // zusammengeführte Spalte (siehe ProjectColumnCatalog) - sortiert
         // wird weiterhin nach der echten start_date-Spalte.
         if ($column === 'start_end') {
-            return ['start_date', 'id'];
+            return ['projects.start_date', 'projects.id'];
         }
 
         if ($column !== 'workflow') {
-            return [$column, 'id'];
+            // "projects."-Präfix nötig, seit orderedQuery() (Verbund-
+            // Gruppierung) einen Self-Join auf "projects" (Alias
+            // verbund_haupt) einführt - ohne Präfix wäre der Spaltenname
+            // sonst zwischen beiden Tabellen mehrdeutig.
+            return ['projects.'.$column, 'projects.id'];
         }
 
         $query->leftJoin('workflows', 'workflows.id', '=', 'projects.workflow_id')->select('projects.*');
 
         return ['workflows.sort', 'projects.id'];
+    }
+
+    /**
+     * "Projektverbund" (Ralf, 2026-09-14): Unterprojekte sollen in der
+     * Übersicht IMMER direkt hinter ihrem Hauptprojekt stehen, unabhängig
+     * von der gewählten Sortierspalte - dafür bekommt jede Zeile einen
+     * "Gruppen-Sortierschlüssel": bei einem Unterprojekt der Wert SEINES
+     * Hauptprojekts, sonst der eigene Wert. Bewusst als korrelierte
+     * Subquery statt eines Self-Joins auf "projects" - ein Join würde jede
+     * Spalte in applyFilters() (viele unqualifizierte $query->where(...)-
+     * Aufrufe) zwischen "projects" und dem Join-Alias mehrdeutig machen und
+     * die komplette Filterung brechen. Eine Subquery bleibt vom Rest der
+     * Query isoliert.
+     */
+    private function verbundGroupedSortColumn(string $column): string
+    {
+        if ($column === 'workflow') {
+            return 'COALESCE(
+                (SELECT verbund_haupt_workflow.sort FROM projects AS verbund_haupt
+                    LEFT JOIN workflows AS verbund_haupt_workflow ON verbund_haupt_workflow.id = verbund_haupt.workflow_id
+                 WHERE verbund_haupt.id = projects.hauptprojekt_id),
+                workflows.sort
+            )';
+        }
+
+        $plainColumn = $column === 'start_end' ? 'start_date' : $column;
+
+        return "COALESCE(
+            (SELECT verbund_haupt.{$plainColumn} FROM projects AS verbund_haupt WHERE verbund_haupt.id = projects.hauptprojekt_id),
+            projects.{$plainColumn}
+        )";
     }
 
     private function isOverlayRequest(Request $request): bool

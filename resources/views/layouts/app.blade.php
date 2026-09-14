@@ -1827,6 +1827,44 @@
         </script>
 
         {{--
+            "Projektverbund" (Ralf, 2026-09-14) - Button "Verbund" im
+            Gruppendialog (project-group-panel.blade.php) öffnet diesen,
+            gestapelten Dialog (analog activate-workflow-step direkt
+            darüber: globale <x-modal> + globaler Öffner, nicht ins
+            Gruppendialog-Markup verschachtelt). Der Fragment-Inhalt
+            (verbund-panel.blade.php) treibt sich per eigenem Alpine-x-data
+            selbst, kein globaler Submit-Listener nötig wie oben.
+        --}}
+        <x-modal name="verbund-panel" max-width="md">
+            <div class="flex max-h-[85vh] flex-col">
+                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Verbund') }}</h3>
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'verbund-panel' }))"
+                        class="text-gray-400 hover:text-gray-600"
+                        aria-label="{{ __('Schließen') }}"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div id="verbund-panel-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
+                    {{ __('Lädt…') }}
+                </div>
+            </div>
+        </x-modal>
+
+        <script>
+            window.openVerbundPanel = async (groupId) => {
+                const body = document.getElementById('verbund-panel-body');
+                body.innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
+                window.dispatchEvent(new CustomEvent('open-modal', { detail: 'verbund-panel' }));
+                body.innerHTML = await fetch(`/projektgruppen/${groupId}/verbund`).then((r) => r.text());
+                Alpine.initTree(body);
+            };
+        </script>
+
+        {{--
             Ralf, 2026-09-12 ("analog zu Vietto"): welche Person(en) für eine
             Funktionsgruppe an EINEM Schritt zuständig sind, direkt im
             Workflow-Schritte-Tab änderbar - Klick auf die Funktionsgruppe

@@ -100,6 +100,7 @@ class ProjectGroupController extends Controller
     public function destroy(Request $request, ProjectGroup $group): Response
     {
         $this->authorizeViewer($group);
+        $this->abortIfActiveVerbund($group);
 
         $group->delete();
 
@@ -126,6 +127,7 @@ class ProjectGroupController extends Controller
     public function clear(Request $request, ProjectGroup $group): Response
     {
         $this->authorizeViewer($group);
+        $this->abortIfActiveVerbund($group);
 
         $group->projects()->detach();
 
@@ -147,6 +149,7 @@ class ProjectGroupController extends Controller
     public function removeProject(Request $request, ProjectGroup $group, Project $project): Response
     {
         $this->authorizeViewer($group);
+        $this->abortIfActiveVerbund($group);
 
         $group->projects()->detach($project->id);
 
@@ -173,6 +176,7 @@ class ProjectGroupController extends Controller
     public function removeAllFiltered(Request $request, ProjectGroup $group): Response
     {
         $this->authorizeViewer($group);
+        $this->abortIfActiveVerbund($group);
 
         $group->projects()->detach($this->filteredProjectIds($request));
 
@@ -241,6 +245,18 @@ class ProjectGroupController extends Controller
     private function authorizeViewer(ProjectGroup $group): void
     {
         $group->authorizeViewer();
+    }
+
+    /**
+     * "Projektverbund" (Ralf, 2026-09-14): solange die Gruppe eine aktive
+     * Haupt-/Unterprojekt-Zuordnung trägt, darf sie weder geleert noch
+     * gelöscht werden, noch dürfen einzelne Mitglieder entfernt werden -
+     * erst "Verbund auflösen" (siehe VerbundController::destroy()) setzt
+     * alle Mitglieder wieder zu normalen Projekten zurück.
+     */
+    private function abortIfActiveVerbund(ProjectGroup $group): void
+    {
+        abort_if($group->projects()->whereNotNull('verbund_rolle')->exists(), 422, __('Diese Gruppe ist Teil eines Verbunds - bitte erst den Verbund auflösen.'));
     }
 
     /**

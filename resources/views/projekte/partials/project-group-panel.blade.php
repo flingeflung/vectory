@@ -64,6 +64,7 @@
     </div>
     <div class="flex flex-wrap gap-1.5">
         <button type="button" @click="openShare()" class="rounded border border-gray-300 px-2 py-0.5 text-gray-600 hover:bg-gray-50">{{ __('Teilen') }}</button>
+        <button type="button" @click="window.openVerbundPanel($store.projectGrouping.groupId)" class="rounded border border-indigo-300 px-2 py-0.5 text-indigo-700 hover:bg-indigo-50">{{ __('Verbund') }}</button>
         <button type="button" @click="leaveGroup()" class="rounded border border-gray-300 px-2 py-0.5 text-gray-600 hover:bg-gray-50">{{ __('Gruppe verlassen') }}</button>
         <button type="button" @click="deleteGroup()" class="rounded border border-red-300 px-2 py-0.5 text-red-600 hover:bg-red-50">{{ __('Gruppe löschen') }}</button>
     </div>

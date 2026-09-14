@@ -17,7 +17,7 @@ use Illuminate\Support\Collection;
     'tenant_id', 'source_pn', 'title', 'codename', 'initiator', 'system_model',
     'construction_year', 'project_type_main_id', 'project_type_sub_id', 'version',
     'status', 'creation_type', 'archived', 'localization', 'publication_date', 'start_date', 'end_date', 'remarks',
-    'attributes', 'workflow_id',
+    'attributes', 'workflow_id', 'verbund_rolle', 'hauptprojekt_id',
 ])]
 #[ObservedBy(ProjectObserver::class)]
 class Project extends Model
@@ -55,6 +55,7 @@ class Project extends Model
             'end_date' => $this->end_date?->format('d.m.Y'),
             'publication_date' => $this->publication_date?->format('d.m.Y'),
             'creation_type' => $this->creation_type_label,
+            'verbund_rolle' => $this->verbund_rolle_label,
             default => $this->getAttribute($key),
         };
     }
@@ -78,6 +79,17 @@ class Project extends Model
             get: fn () => match ($this->creation_type) {
                 1 => __('Neuerstellung'),
                 2 => __('Änderung'),
+                default => null,
+            },
+        );
+    }
+
+    protected function verbundRolleLabel(): CastsAttribute
+    {
+        return CastsAttribute::make(
+            get: fn () => match ($this->verbund_rolle) {
+                1 => __('Hauptprojekt'),
+                2 => __('Unterprojekt'),
                 default => null,
             },
         );
@@ -202,6 +214,20 @@ class Project extends Model
     public function projectGroups(): BelongsToMany
     {
         return $this->belongsToMany(ProjectGroup::class, 'project_group_project')->withTimestamps();
+    }
+
+    /**
+     * "Projektverbund" (Ralf, 2026-09-14): genau 2 Ebenen, kein Nesting -
+     * hauptprojekt_id nur bei verbund_rolle=2 (Unterprojekt) belegt.
+     */
+    public function hauptprojekt(): BelongsTo
+    {
+        return $this->belongsTo(Project::class, 'hauptprojekt_id');
+    }
+
+    public function unterprojekte(): HasMany
+    {
+        return $this->hasMany(Project::class, 'hauptprojekt_id');
     }
 
     public function connectionsFrom(): HasMany
