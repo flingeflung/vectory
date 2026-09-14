@@ -229,7 +229,7 @@
                             <input type="checkbox" x-model="overwrite" class="mt-0.5 rounded border-gray-300 text-indigo-600">
                             <span>
                                 {{ __('Andere Workflows überschreiben') }}
-                                <span class="block text-gray-400">{{ __('Projekte mit einem anderen Workflow bekommen diesen sonst nicht angetastet (siehe Hinweis oben). Mit Häkchen werden auch sie umgestellt - ihr bisheriger Fortschritt geht dabei verloren.') }}</span>
+                                <span class="block text-gray-400">{{ __('Achtung! Wenn diese Option angehakt ist, wird bei Projekten mit einem anderen Workflow dieser und damit auch der bisherige Projektfortschritt überschrieben. Wenn die Option nicht angehakt ist, bleiben Projekte mit einem anderen Workflow unangetastet.') }}</span>
                             </span>
                         </label>
                     @endif
