@@ -179,6 +179,8 @@
                                 class="cursor-pointer"
                             >{{ $value }}</span>
                         </span>
+                    @elseif ($value === null || $value === '')
+                        <span class="text-gray-400">&ndash;</span>
                     @else
                         {{ $value }}
                     @endif
