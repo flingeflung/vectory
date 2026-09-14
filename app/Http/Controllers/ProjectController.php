@@ -620,6 +620,16 @@ class ProjectController extends Controller
         // stehen (kollidieren nie, da workflow_step_id je Workflow eindeutig
         // ist) - kein Datenverlust beim Wechsel, wie in Vietto.
         if ($project->wasChanged('workflow_id')) {
+            // Ralf-Bug-Report, 2026-09-14: nach einem Workflow-Wechsel blieb
+            // ein zuvor aktueller Schritt (egal welchen Workflows) als
+            // Karteileiche mit is_current=true stehen - project.workflow_id
+            // zeigte dann auf einen anderen/keinen Workflow, während der
+            // "aktuelle" Schritt noch auf dem alten stand. Gleicher Fix wie
+            // in MultichangeController::applyWorkflow(): alten aktuellen
+            // Schritt explizit deaktivieren, unabhängig davon, ob überhaupt
+            // ein neuer Workflow zugewiesen wird.
+            $project->projectWorkflowSteps()->where('is_current', true)->update(['is_current' => false]);
+
             if ($project->workflow_id) {
                 WorkflowStep::query()
                     ->where('workflow_id', $project->workflow_id)
@@ -628,6 +638,20 @@ class ProjectController extends Controller
                         ['project_id' => $project->id, 'workflow_step_id' => $step->id],
                         ['tenant_id' => $project->tenant_id, 'sort' => $step->sort]
                     ));
+
+                // Ralf, 2026-09-14: "ich bin eigentlich davon ausgegangen,
+                // dass wenn ein neuer WF zugewiesen wird, immer der WFS 'in
+                // Planung' aktiviert wird" - gleiches Verhalten wie
+                // Multichange und "Projekt kopieren" (ProjectCopyController),
+                // hier bisher als einziger der drei Zuweisungs-Wege gefehlt.
+                $plannedStep = $project->projectWorkflowSteps()
+                    ->whereHas('workflowStep', fn ($query) => $query->where('workflow_id', $project->workflow_id)->where('lifecycle_status', 1))
+                    ->first();
+
+                if ($plannedStep) {
+                    $plannedStep->update(['is_current' => true, 'started_at' => now()]);
+                    $project->update(['status' => 0]);
+                }
 
                 Activity::log($project, ActivityType::WorkflowAssigned, __('Workflow ":name" zugewiesen.', ['name' => $project->workflow->name]));
             } else {
