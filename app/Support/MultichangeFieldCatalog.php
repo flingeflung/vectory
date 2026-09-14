@@ -115,7 +115,16 @@ class MultichangeFieldCatalog
                 // gleicher Filter wie im normalen Projekt-Bearbeiten-Formular.
                 'options' => Workflow::query()->where('tenant_id', $tenantId)->where('active', true)
                     ->orderBy('sort')->orderBy('name')->pluck('name', 'id')->all(),
-                'hint' => __('Projekte ohne Workflow bekommen ihn neu zugewiesen (1. Schritt "In Planung" wird automatisch aktiviert). Projekte, die diesen Workflow schon haben, bleiben unverändert. Projekte mit einem ANDEREN Workflow werden übersprungen - außer du aktivierst unten "Andere Workflows überschreiben": dann wird dort ebenfalls neu zugewiesen und der bisherige Fortschritt geht verloren.'),
+                // Ralf, 2026-09-14: Sie-Form (nicht "du") in der Oberfläche,
+                // dazu als Liste statt Fließtext, damit die drei Fälle gut
+                // sichtbar bleiben - hint darf deshalb hier ausnahmsweise
+                // eine Liste von Zeilen statt eines einzelnen Strings sein
+                // (siehe generische Darstellung in multichange-body.blade.php).
+                'hint' => [
+                    __('Projekte ohne Workflow bekommen ihn neu zugewiesen (1. Schritt "In Planung" wird automatisch aktiviert).'),
+                    __('Projekte, die diesen Workflow bereits haben, bleiben unverändert.'),
+                    __('Projekte mit einem ANDEREN Workflow werden übersprungen - außer Sie aktivieren unten "Andere Workflows überschreiben": dann wird dort ebenfalls neu zugewiesen und der bisherige Fortschritt geht verloren.'),
+                ],
             ],
         ];
     }

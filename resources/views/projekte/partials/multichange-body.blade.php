@@ -198,7 +198,15 @@
             @foreach ($fields as $f)
                 <div x-show="field === {{ \Illuminate\Support\Js::from($f['key']) }}" x-cloak>
                     @if (! empty($f['hint']))
-                        <p class="mb-1 text-xs text-amber-700">{{ $f['hint'] }}</p>
+                        @if (is_array($f['hint']))
+                            <ul class="mb-1 list-inside list-disc space-y-0.5 text-xs text-amber-700">
+                                @foreach ($f['hint'] as $hintLine)
+                                    <li>{{ $hintLine }}</li>
+                                @endforeach
+                            </ul>
+                        @else
+                            <p class="mb-1 text-xs text-amber-700">{{ $f['hint'] }}</p>
+                        @endif
                     @endif
                     <label class="block text-xs text-gray-500">{{ __('Neuer Wert') }}</label>
                     @if ($f['type'] === 'text')
