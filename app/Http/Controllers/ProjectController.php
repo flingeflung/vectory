@@ -133,7 +133,7 @@ class ProjectController extends Controller
         $reopenGroups = null;
         $reopenMemberIds = collect();
         if ($request->filled('reopen_group')) {
-            $reopenGroups = $user->projectGroups()->withCount(['projects', 'viewers'])->orderBy('name')->get();
+            $reopenGroups = ProjectGroup::visibleTo($user)->withCount(['projects', 'viewers'])->orderBy('name')->get();
             $reopenMemberIds = ProjectGroup::query()->find($request->integer('reopen_group'))?->projects()->pluck('projects.id') ?? collect();
         }
 

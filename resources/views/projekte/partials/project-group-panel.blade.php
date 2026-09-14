@@ -22,13 +22,24 @@
         x-init="$watch('$store.projectGrouping.memberIds', () => {
             if (! $store.projectGrouping.groupId) return;
             const opt = $el.querySelector(`option[value='${$store.projectGrouping.groupId}']`);
-            if (opt) { opt.textContent = opt.dataset.name + ' (' + $store.projectGrouping.memberIds.length + ')'; }
+            if (opt) { opt.textContent = opt.dataset.name + ' (' + $store.projectGrouping.memberIds.length + ')' + opt.dataset.verbundSuffix; }
         })"
         class="mt-0.5 w-full rounded-md border-gray-300 text-sm"
     >
         <option value="">{{ __('– Gruppe auswählen –') }}</option>
         @foreach ($groups as $group)
-            <option value="{{ $group->id }}" data-viewers="{{ $group->viewers_count }}" data-name="{{ $group->name }}">{{ $group->name }} ({{ $group->projects_count }})</option>
+            {{--
+                "Projektverbund" (Ralf, 2026-09-14): Verbund-Gruppen im
+                Pulldown klar kennzeichnen - data-verbund-suffix wird auch
+                vom obigen live-Patch (Häkchen-Zähler) mit übernommen, sonst
+                fiele die Kennzeichnung beim ersten Häkchen-Klick wieder weg.
+            --}}
+            <option
+                value="{{ $group->id }}"
+                data-viewers="{{ $group->viewers_count }}"
+                data-name="{{ $group->name }}"
+                data-verbund-suffix="{{ $group->is_verbund ? ' – '.__('Verbund') : '' }}"
+            >{{ $group->name }} ({{ $group->projects_count }}){{ $group->is_verbund ? ' – '.__('Verbund') : '' }}</option>
         @endforeach
     </select>
 </div>

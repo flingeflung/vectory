@@ -55,4 +55,19 @@ class VerbundConflictChecker
             ->filter()
             ->values();
     }
+
+    /**
+     * Für Projekte, die NEU zu einer Verbund-Gruppe hinzugefügt werden
+     * sollen (noch keine Mitglieder) - einfacher als conflictsFor(): jedes
+     * Projekt mit bereits gesetzter Verbund-Rolle ist automatisch ein
+     * Konflikt, da es nicht gleichzeitig Mitglied dieses UND eines anderen
+     * Verbunds sein kann.
+     *
+     * @param  Collection<int, Project>  $candidates
+     * @return Collection<int, Project>
+     */
+    public function projectsWithExistingRole(Collection $candidates): Collection
+    {
+        return $candidates->filter(fn (Project $project) => $project->verbund_rolle !== null)->values();
+    }
 }

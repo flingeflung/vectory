@@ -172,9 +172,31 @@
             },
             async removeAllFiltered() {
                 const before = $store.projectGrouping.memberIds.length;
-                const response = await fetch('/projektgruppen/' + $store.projectGrouping.groupId + '/alle' + window.location.search, {
-                    method: 'DELETE', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
-                });
+                const url = '/projektgruppen/' + $store.projectGrouping.groupId + '/alle' + window.location.search;
+                const csrfToken = document.querySelector('meta[name=csrf-token]').content;
+                let response = await fetch(url, { method: 'DELETE', headers: { 'X-CSRF-TOKEN': csrfToken } });
+                {{--
+                    "Projektverbund" (Ralf, 2026-09-14): steckt das
+                    Hauptprojekt mit in der Auswahl, löst Massenentfernen
+                    sonst überraschend den ganzen Verbund auf - Server
+                    antwortet dann statt des normalen HTML-Fragments mit
+                    409 + JSON, Client fragt einmal nach und schickt bei
+                    Zustimmung mit confirm_dissolve=1 erneut los.
+                --}}
+                if (response.status === 409) {
+                    const data = await response.json();
+                    if (data.needs_confirmation) {
+                        const confirmed = await window.confirmDialog({
+                            title: {{ \Illuminate\Support\Js::from(__('Verbund auflösen?')) }},
+                            message: data.message,
+                            confirmLabel: {{ \Illuminate\Support\Js::from(__('Fortfahren')) }},
+                            cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
+                        });
+                        if (! confirmed) return;
+                        const separator = window.location.search ? '&' : '?';
+                        response = await fetch(url + separator + 'confirm_dissolve=1', { method: 'DELETE', headers: { 'X-CSRF-TOKEN': csrfToken } });
+                    }
+                }
                 if (! response.ok) {
                     await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Fehler beim Entfernen. Bitte erneut versuchen.')) }});
                     return;

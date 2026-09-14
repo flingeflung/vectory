@@ -60,7 +60,7 @@ class VerbundController extends Controller
             ])->setStatusCode(422);
         }
 
-        DB::transaction(function () use ($members, $selected) {
+        DB::transaction(function () use ($group, $members, $selected) {
             foreach ($members as $project) {
                 if ($project->id === $selected->id) {
                     $project->update(['verbund_rolle' => 1, 'hauptprojekt_id' => null]);
@@ -74,6 +74,8 @@ class VerbundController extends Controller
                         : __('Unterprojekt des Verbunds von ":name" geworden.', ['name' => $selected->title]));
                 }
             }
+
+            $group->update(['is_verbund' => true]);
         });
 
         return $this->panel($group);
@@ -83,6 +85,20 @@ class VerbundController extends Controller
     {
         $group->authorizeViewer();
 
+        $this->dissolve($group);
+
+        return $this->panel($group);
+    }
+
+    /**
+     * Setzt Verbund-Rolle/Hauptprojekt-Zuweisung aller Mitglieder zurück und
+     * markiert die Gruppe wieder als normale Gruppe - eigene Methode, weil
+     * ProjectGroupController::removeAllFiltered() dieselbe Logik braucht
+     * (Ralf, 2026-09-14: Massenentfernen, das auch das Hauptprojekt
+     * einschließt, löst nach Bestätigung den ganzen Verbund auf).
+     */
+    public function dissolve(ProjectGroup $group): void
+    {
         DB::transaction(function () use ($group) {
             $members = $group->projects()->whereNotNull('verbund_rolle')->get();
 
@@ -90,8 +106,8 @@ class VerbundController extends Controller
                 $project->update(['verbund_rolle' => null, 'hauptprojekt_id' => null]);
                 Activity::log($project, ActivityType::VerbundDissolved, __('Verbund aufgelöst.'));
             }
-        });
 
-        return $this->panel($group);
+            $group->update(['is_verbund' => false]);
+        });
     }
 }

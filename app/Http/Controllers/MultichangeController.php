@@ -235,7 +235,7 @@ class MultichangeController extends Controller
      */
     private function availableGroups(): Collection
     {
-        return Auth::user()->projectGroups()->withCount('projects')->orderBy('name')->get();
+        return ProjectGroup::visibleTo(Auth::user())->withCount('projects')->orderBy('name')->get();
     }
 
     /**

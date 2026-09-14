@@ -6,6 +6,7 @@ use App\Models\Attribute;
 use App\Models\Market;
 use App\Models\ProductGroup;
 use App\Models\Project;
+use App\Models\ProjectGroup;
 use App\Models\ProjectTypeMain;
 use App\Models\User;
 use App\Models\Workflow;
@@ -124,7 +125,9 @@ class ProjectFilterCatalog
      */
     private static function projectGroupOptions(): array
     {
-        return auth()->user()?->projectGroups()->orderBy('name')->pluck('name', 'project_groups.id')->all() ?? [];
+        $user = auth()->user();
+
+        return $user ? ProjectGroup::visibleTo($user)->orderBy('name')->pluck('name', 'project_groups.id')->all() : [];
     }
 
     /**

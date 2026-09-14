@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ActivityType;
+use App\Models\Activity;
 use App\Models\Project;
 use App\Models\ProjectGroup;
 use App\Models\User;
 use App\Support\CurrentTenant;
+use App\Support\VerbundConflictChecker;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,6 +32,11 @@ use Illuminate\Support\Facades\Auth;
  */
 class ProjectGroupController extends Controller
 {
+    public function __construct(
+        private readonly VerbundController $verbund,
+        private readonly VerbundConflictChecker $conflictChecker,
+    ) {}
+
     /**
      * Dropdown-Inhalt "Meine Projektgruppen" - wiederverwendet vom
      * Übersichts- UND vom Einzelprojekt-Picker (system-fields/-artiges
@@ -37,7 +45,7 @@ class ProjectGroupController extends Controller
      */
     public function panel(Request $request): Response
     {
-        $groups = Auth::user()->projectGroups()->withCount(['projects', 'viewers'])->orderBy('name')->get();
+        $groups = ProjectGroup::visibleTo(Auth::user())->withCount(['projects', 'viewers'])->orderBy('name')->get();
 
         $project = $request->integer('project_id')
             ? Project::query()->findOrFail($request->integer('project_id'))
@@ -134,22 +142,51 @@ class ProjectGroupController extends Controller
         return $this->panel($request);
     }
 
+    /**
+     * "Projektverbund" (Ralf, 2026-09-14): Hinzufügen zu einer Verbund-
+     * Gruppe macht das Projekt automatisch zum Unterprojekt (live, kein
+     * erneutes Öffnen des Verbund-Dialogs nötig) - außer es ist bereits
+     * Teil eines ANDEREN Verbunds, dann wird der Hinzufügen-Vorgang ganz
+     * abgelehnt.
+     */
     public function addProject(Request $request, ProjectGroup $group, Project $project): Response
     {
         $this->authorizeViewer($group);
         abort_unless($project->tenant_id === CurrentTenant::id(), 404);
 
-        if (! $group->projects()->where('projects.id', $project->id)->exists()) {
-            $group->projects()->attach($project->id);
+        if ($group->projects()->where('projects.id', $project->id)->exists()) {
+            return $this->panel($request);
+        }
+
+        if ($group->is_verbund && $project->verbund_rolle !== null) {
+            abort(422, __('Dieses Projekt ist bereits Teil eines anderen Verbunds.'));
+        }
+
+        $group->projects()->attach($project->id);
+
+        if ($group->is_verbund) {
+            $this->assignToVerbund($group, collect([$project]));
         }
 
         return $this->panel($request);
     }
 
+    /**
+     * Entfernen aus einer Verbund-Gruppe macht das Projekt automatisch
+     * wieder zu einem normalen Projekt - außer es ist das Hauptprojekt,
+     * das geht nur über "Verbund auflösen" (VerbundController::destroy()),
+     * sonst bliebe der Verbund ohne Hauptprojekt zurück.
+     */
     public function removeProject(Request $request, ProjectGroup $group, Project $project): Response
     {
         $this->authorizeViewer($group);
-        $this->abortIfActiveVerbund($group);
+
+        if ($group->is_verbund) {
+            abort_if($project->verbund_rolle === 1, 422, __('Das Hauptprojekt kann nicht einzeln entfernt werden - bitte erst den Verbund auflösen.'));
+
+            $project->update(['verbund_rolle' => null, 'hauptprojekt_id' => null]);
+            Activity::log($project, ActivityType::VerbundRoleChanged, __('Aus dem Verbund entfernt.'));
+        }
 
         $group->projects()->detach($project->id);
 
@@ -168,19 +205,89 @@ class ProjectGroupController extends Controller
 
         $ids = $this->filteredProjectIds($request);
         $existingIds = $group->projects()->whereIn('projects.id', $ids)->pluck('projects.id');
-        $group->projects()->attach($ids->diff($existingIds));
+        $newIds = $ids->diff($existingIds);
+
+        // Projekte, die schon Teil eines ANDEREN Verbunds sind, werden bei
+        // einer Verbund-Gruppe stillschweigend übersprungen (nicht die ganze
+        // Aktion blockiert - anders als beim Einzel-Hinzufügen, wo der
+        // Anwender das eine betroffene Projekt direkt vor Augen hat).
+        if ($group->is_verbund) {
+            $candidates = Project::query()->whereIn('id', $newIds)->get();
+            $conflicting = $this->conflictChecker->projectsWithExistingRole($candidates);
+            $newIds = $newIds->diff($conflicting->pluck('id'));
+        }
+
+        $group->projects()->attach($newIds);
+
+        if ($group->is_verbund && $newIds->isNotEmpty()) {
+            $this->assignToVerbund($group, Project::query()->whereIn('id', $newIds)->get());
+        }
 
         return $this->panel($request);
     }
 
-    public function removeAllFiltered(Request $request, ProjectGroup $group): Response
+    /**
+     * "Projektverbund" (Ralf, 2026-09-14): Massenentfernen bei einer
+     * aktiven Verbund-Gruppe setzt die Verbund-Rolle der entfernten
+     * Projekte automatisch zurück - ist das Hauptprojekt mit dabei, würde
+     * das den ganzen Verbund auflösen. Statt das stillschweigend zu tun
+     * oder die ganze Aktion zu blockieren, fragt der Client vorher nach
+     * (siehe removeAllFiltered() in project-group-modal.blade.php) -
+     * erkennbar an "confirm_dissolve" im Request. Ohne diese Bestätigung
+     * liefert dieser Endpunkt bewusst KEIN HTML-Fragment, sondern JSON mit
+     * einem eigenen Status (409), damit der Client den Unterschied zu einem
+     * normalen Fehler erkennt.
+     */
+    public function removeAllFiltered(Request $request, ProjectGroup $group): Response|JsonResponse
     {
         $this->authorizeViewer($group);
-        $this->abortIfActiveVerbund($group);
 
-        $group->projects()->detach($this->filteredProjectIds($request));
+        if (! $group->is_verbund) {
+            $group->projects()->detach($this->filteredProjectIds($request));
+
+            return $this->panel($request);
+        }
+
+        $ids = $this->filteredProjectIds($request);
+        $memberIds = $group->projects()->whereIn('projects.id', $ids)->pluck('projects.id');
+        $hauptprojekt = $group->projects()->where('verbund_rolle', 1)->first();
+        $removesHauptprojekt = $hauptprojekt && $memberIds->contains($hauptprojekt->id);
+
+        if ($removesHauptprojekt && ! $request->boolean('confirm_dissolve')) {
+            return response()->json([
+                'needs_confirmation' => true,
+                'message' => __('Das Hauptprojekt ist auch in dieser Auswahl - würde es entfernt, wird der ganze Verbund aufgelöst. Trotzdem fortfahren?'),
+            ], 409);
+        }
+
+        if ($removesHauptprojekt) {
+            $this->verbund->dissolve($group);
+        } else {
+            Project::query()->whereIn('id', $memberIds)->get()->each(function (Project $project) {
+                $project->update(['verbund_rolle' => null, 'hauptprojekt_id' => null]);
+                Activity::log($project, ActivityType::VerbundRoleChanged, __('Aus dem Verbund entfernt.'));
+            });
+        }
+
+        $group->projects()->detach($memberIds);
 
         return $this->panel($request);
+    }
+
+    /**
+     * @param  Collection<int, Project>  $projects
+     */
+    private function assignToVerbund(ProjectGroup $group, Collection $projects): void
+    {
+        $hauptprojekt = $group->projects()->where('verbund_rolle', 1)->first();
+        if (! $hauptprojekt) {
+            return;
+        }
+
+        foreach ($projects as $project) {
+            $project->update(['verbund_rolle' => 2, 'hauptprojekt_id' => $hauptprojekt->id]);
+            Activity::log($project, ActivityType::VerbundRoleChanged, __('Unterprojekt des Verbunds von ":name" geworden.', ['name' => $hauptprojekt->title]));
+        }
     }
 
     /**
@@ -250,9 +357,11 @@ class ProjectGroupController extends Controller
     /**
      * "Projektverbund" (Ralf, 2026-09-14): solange die Gruppe eine aktive
      * Haupt-/Unterprojekt-Zuordnung trägt, darf sie weder geleert noch
-     * gelöscht werden, noch dürfen einzelne Mitglieder entfernt werden -
-     * erst "Verbund auflösen" (siehe VerbundController::destroy()) setzt
-     * alle Mitglieder wieder zu normalen Projekten zurück.
+     * gelöscht werden - beides würde den Verbund-Container ohne "Verbund
+     * auflösen" verschwinden lassen. Einzelnes Hinzufügen/Entfernen von
+     * Mitgliedern ist dagegen erlaubt (siehe addProject()/removeProject()/
+     * addAllFiltered()/removeAllFiltered() - die synchronisieren die
+     * Verbund-Rolle live mit, statt die Aktion zu blockieren).
      */
     private function abortIfActiveVerbund(ProjectGroup $group): void
     {
