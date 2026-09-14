@@ -1,5 +1,5 @@
 <div x-data="{ editingWorkflow: false }">
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-3">
         <label class="text-xs text-gray-500">{{ __('Workflow') }}</label>
         <x-edit-icon-button x-show="!editingWorkflow" @click="editingWorkflow = true" :title="__('Ändern')" />
         <button type="button" x-show="editingWorkflow" x-cloak @click="editingWorkflow = false" class="{{ $secondaryBtn }}">
