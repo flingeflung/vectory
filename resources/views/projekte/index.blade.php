@@ -279,7 +279,7 @@
         </script>
     @endif
 
-    <x-modal name="anzeigefilter" max-width="xl" :show="$errors->any()" :dirty-check="'anzeigefilterIsDirty'">
+    <x-modal name="anzeigefilter" max-width="xl" :show="$errors->any()" :dirty-check="'anzeigefilterIsDirty'" :close-on-backdrop="false">
         @include('projekte.partials.anzeigefilter-form')
     </x-modal>
 

@@ -6,6 +6,13 @@
     'draggable' => false,
     'height' => null,
     'resizable' => false,
+    // Ralf, 2026-09-15: "bei komplizierten Eingaben ist ein Klick daneben
+    // sehr ärgerlich" - für Dialoge mit aufwändig auszufüllenden Formularen
+    // (aktuell Multichange, Anzeigefilter) lässt sich das versehentliche
+    // Schließen per Klick auf den abgedunkelten Hintergrund abschalten.
+    // Escape und die eigenen Abbrechen/"X"-Buttons funktionieren immer
+    // unverändert weiter (setzen intentional, nicht aus Versehen daneben).
+    'closeOnBackdrop' => true,
     // Ralf-Bug-Report, 2026-09-13: Projektgruppen-Panel - Projekte per
     // Häkchen in der Tabelle markieren, WÄHREND das Panel offen ist, war
     // unmöglich, weil der übliche Backdrop den Klick abfängt. Für diesen
@@ -199,7 +206,9 @@ $storageKey = "vectory-modal-size-{$name}";
         <div
             x-show="show"
             class="fixed inset-0 transform transition-all"
-            x-on:click="requestClose()"
+            @if ($closeOnBackdrop)
+                x-on:click="requestClose()"
+            @endif
             @if (! $show)
                 x-transition:enter="ease-out duration-300"
                 x-transition:enter-start="opacity-0"

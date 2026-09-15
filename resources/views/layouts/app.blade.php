@@ -1994,7 +1994,7 @@
             Muster wie die Terminberechnung oben (multichange-body.blade.php:
             Formular -> Vorschau -> Ergebnis, alles serverseitig gerendert).
         --}}
-        <x-modal name="multichange" max-width="2xl" :draggable="true">
+        <x-modal name="multichange" max-width="2xl" :draggable="true" :close-on-backdrop="false">
             <div class="flex max-h-[85vh] flex-col">
                 <div class="flex shrink-0 cursor-move select-none items-center justify-between rounded-t-lg border-b border-gray-200 bg-gray-100 px-4 py-3" data-drag-handle title="{{ __('Ziehen zum Verschieben') }}">
                     <h3 class="text-sm font-semibold text-gray-900">{{ __('Multichange') }}</h3>
