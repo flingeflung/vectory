@@ -67,11 +67,38 @@
         </button>
     @endif
 
-    <div class="flex items-center gap-1 border-t border-gray-100 pt-2">
-        <input type="text" x-model="renameValue" x-init="renameValue = {{ \Illuminate\Support\Js::from($groups->pluck('name', 'id')) }}[$store.projectGrouping.groupId] ?? ''" class="min-w-0 flex-1 rounded border-gray-300 py-1 text-xs">
-        <button type="button" @click="renameGroup()" title="{{ __('Umbenennen') }}" class="shrink-0 rounded border border-gray-300 bg-btn-secondary p-1 text-gray-500 hover:bg-btn-secondary-hover">
-            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+    {{--
+        Ralf, 2026-09-15: das vorherige Stift-Icon neben einem dauerhaft
+        sichtbaren Textfeld sah wie "Speichern" aus, wurde aber sonst überall
+        für "Bearbeiten starten" verwendet - jetzt wie das "+ Neue Gruppe"-
+        Muster unten: erst ein Button, der das Textfeld (+ Speichern/
+        Abbrechen) einblendet, statt das Feld dauerhaft vorzuhalten.
+    --}}
+    <div class="border-t border-gray-100 pt-2" x-data="{ renaming: false }">
+        <button
+            type="button"
+            x-show="! renaming"
+            @click="renaming = true; $nextTick(() => $refs.renameInput.focus())"
+            class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+        >
+            {{ __('Umbenennen') }}
         </button>
+        <div x-show="renaming" x-cloak class="flex items-center gap-1.5">
+            <input
+                type="text"
+                x-ref="renameInput"
+                x-model="renameValue"
+                x-init="renameValue = {{ \Illuminate\Support\Js::from($groups->pluck('name', 'id')) }}[$store.projectGrouping.groupId] ?? ''"
+                @keydown.enter="await renameGroup(); renaming = false"
+                class="min-w-0 flex-1 rounded-md border-gray-300 py-1 text-xs"
+            >
+            <button type="button" @click="await renameGroup(); renaming = false" class="shrink-0 rounded-md bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
+                {{ __('Speichern') }}
+            </button>
+            <button type="button" @click="renaming = false" class="shrink-0 rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
+                {{ __('Abbrechen') }}
+            </button>
+        </div>
     </div>
     <div class="flex flex-wrap gap-1.5">
         <button type="button" @click="openShare()" class="rounded border border-gray-300 px-2 py-0.5 text-gray-600 hover:bg-gray-50">{{ __('Teilen') }}</button>
