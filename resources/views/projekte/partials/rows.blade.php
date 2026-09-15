@@ -117,6 +117,12 @@
                     @else
                         {{ $groupNames->implode(', ') }}
                     @endif
+                @elseif ($column['key'] === 'project_groups')
+                    @if ($project->projectGroups->isEmpty())
+                        <span class="text-gray-400">&ndash;</span>
+                    @else
+                        {{ $project->projectGroups->pluck('name')->implode(', ') }}
+                    @endif
                 @elseif ($column['progress'] ?? false)
                     {{--
                         Ralf, 2026-09-14: "Datumsfortschritt parallel zum

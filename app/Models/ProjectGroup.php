@@ -68,11 +68,19 @@ class ProjectGroup extends Model
      * user geteilte) UND alle Verbund-Gruppen des aktuellen Mandanten
      * (siehe authorizeViewer()). Ersetzt die früheren direkten
      * User::projectGroups()-Aufrufe an den entsprechenden Stellen.
+     *
+     * Echter lokaler Scope (scopeVisibleTo) statt einer eigenständigen
+     * static-Methode (Ralf, 2026-09-15, Anlass: "Gruppe(n)"-Spalte in der
+     * Projektübersicht) - dadurch auch INNERHALB eines Eager-Load-
+     * Constraint-Closures nutzbar (`$query->with(['projectGroups' => fn
+     * ($q) => $q->visibleTo($user)])`), nicht nur als eigener Einstiegspunkt
+     * wie `ProjectGroup::visibleTo($user)` (funktioniert dank Laravels
+     * Scope-Mechanik unverändert weiter, siehe bestehende Aufrufstellen).
      */
-    public static function visibleTo(User $user): Builder
+    public function scopeVisibleTo(Builder $query, User $user): Builder
     {
-        return static::query()->where(
-            fn ($query) => $query->whereHas('viewers', fn ($q) => $q->where('users.id', $user->id))
+        return $query->where(
+            fn ($q) => $q->whereHas('viewers', fn ($q2) => $q2->where('users.id', $user->id))
                 ->orWhere('is_verbund', true)
         );
     }

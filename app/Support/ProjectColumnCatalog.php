@@ -53,6 +53,11 @@ class ProjectColumnCatalog
             ['key' => 'markets', 'label' => __('Märkte/Subsprachen'), 'long_text' => false, 'icons' => true],
             ['key' => 'graphic_orders_summary', 'label' => __('Illustration'), 'long_text' => false, 'graphic_summary' => true],
             ['key' => 'progress', 'label' => __('Fortschritt'), 'long_text' => false, 'progress' => true],
+            // Ralf, 2026-09-15: Gruppennamen, denen das Projekt angehört -
+            // nur die für den aktuellen Nutzer SICHTBAREN Gruppen (siehe
+            // ProjectGroup::scopeVisibleTo()), sonst würden fremde/nicht
+            // geteilte Gruppennamen durchsickern.
+            ['key' => 'project_groups', 'label' => __('Gruppe(n)'), 'long_text' => false],
         ];
 
         $attributes = Attribute::query()

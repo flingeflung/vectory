@@ -215,6 +215,9 @@ class ProjectController extends Controller
         if (array_any($visibleColumns, fn (array $column) => in_array($column['key'], ['system_model', 'product_group_number', 'product_group_name'], true))) {
             $query->with('products.productGroup');
         }
+        if (array_any($visibleColumns, fn (array $column) => $column['key'] === 'project_groups')) {
+            $query->with(['projectGroups' => fn ($q) => $q->visibleTo(Auth::user())->orderBy('name')]);
+        }
 
         return $query;
     }
