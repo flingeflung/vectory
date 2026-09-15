@@ -990,6 +990,17 @@ class ProjectController extends Controller
                 continue;
             }
 
+            if ($key === 'verbund') {
+                match ($value) {
+                    'ja' => $query->whereNotNull('verbund_rolle'),
+                    'nein' => $query->whereNull('verbund_rolle'),
+                    'haupt' => $query->where('verbund_rolle', 1),
+                    default => null,
+                };
+
+                continue;
+            }
+
             if ($key === 'product_group_id') {
                 $query->whereHas('products', fn (Builder $query) => $query->where('products.product_group_id', $value));
 

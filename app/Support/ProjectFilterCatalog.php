@@ -62,6 +62,11 @@ class ProjectFilterCatalog
             // Controller::showInOverview()), aber auch normal manuell
             // wählbar wie jeder andere Filter.
             ['key' => 'project_group_id', 'label' => __('Projektgruppe'), 'type' => 'select', 'options' => self::projectGroupOptions()],
+            ['key' => 'verbund', 'label' => __('Verbund'), 'type' => 'select', 'options' => [
+                'ja' => __('nur Verbundprojekte'),
+                'nein' => __('keine Verbundprojekte'),
+                'haupt' => __('nur Hauptprojekte'),
+            ]],
             ['key' => 'remarks', 'label' => __('Bemerkungen'), 'type' => 'text'],
             ['key' => 'markets', 'label' => __('Märkte/Subsprachen'), 'type' => 'multiselect', 'columns' => 2, 'options' => self::marketOptions($tenantId)],
             ['key' => 'graphic_orders', 'label' => __('Grafikaufträge'), 'type' => 'select', 'options' => [
