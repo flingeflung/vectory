@@ -67,9 +67,26 @@ class MultichangeController extends Controller
             // Zurück-Klick jetzt erhalten (siehe "Zurück"-Button in
             // multichange-body.blade.php), nicht nur die Gruppe.
             'selectedField' => (string) $request->string('field'),
-            'selectedValue' => (string) $request->string('value'),
+            'selectedValue' => $this->selectedValueFor($request),
             'selectedOverwriteDifferentWorkflow' => $request->boolean('overwrite_different_workflow'),
+            'selectedMultiMode' => (string) $request->string('multi_mode') ?: 'add',
         ]);
+    }
+
+    /**
+     * "Zurück"-Klick aus der Vorschau (siehe form()-Docblock) - bei einem
+     * Mehrfachauswahl-Pulldown kommt der bisher gewählte Wert als Liste
+     * (value[]=...) statt als einzelner String zurück, sonst ginge die
+     * Auswahl beim Zurückgehen verloren (Ralf: "werde ich bestraft").
+     */
+    private function selectedValueFor(Request $request): string|array
+    {
+        $field = MultichangeFieldCatalog::find(CurrentTenant::id(), (string) $request->string('field'));
+        if ($field && $field['type'] === 'attribute_select_multiple') {
+            return $request->array('value');
+        }
+
+        return (string) $request->string('value');
     }
 
     public function preview(Request $request): Response
@@ -88,8 +105,9 @@ class MultichangeController extends Controller
         [$field, $value] = [$validation['field'], $validation['value']];
         $this->authorizeFieldValue($request, $field, $value);
         $overwriteDifferentWorkflow = $request->boolean('overwrite_different_workflow');
-        $preview = $this->buildPreview($group, $field, $value, $overwriteDifferentWorkflow);
-        $changeRows = $this->describeChangeRows($preview, $field, $value);
+        $multiMode = (string) $request->string('multi_mode') ?: 'add';
+        $preview = $this->buildPreview($group, $field, $value, $overwriteDifferentWorkflow, $multiMode);
+        $changeRows = $this->describeChangeRows($preview, $field, $value, $multiMode);
 
         return response()->view('projekte.partials.multichange-body', [
             'groups' => $this->availableGroups(),
@@ -99,7 +117,8 @@ class MultichangeController extends Controller
             'field' => $field,
             'value' => $value,
             'overwriteDifferentWorkflow' => $overwriteDifferentWorkflow,
-            'actionText' => $this->describeAction($field, $value),
+            'multiMode' => $multiMode,
+            'actionText' => $this->describeAction($field, $value, $multiMode),
             'skipReason' => $this->describeSkipReason($field, $preview['skipped']->count()),
             'unchangedNote' => $this->describeUnchangedNote($field, $preview['unchanged']->count()),
             'changeRows' => $changeRows,
@@ -131,14 +150,15 @@ class MultichangeController extends Controller
         [$field, $value] = [$validation['field'], $validation['value']];
         $this->authorizeFieldValue($request, $field, $value);
         $overwriteDifferentWorkflow = $request->boolean('overwrite_different_workflow');
-        $preview = $this->buildPreview($group, $field, $value, $overwriteDifferentWorkflow);
+        $multiMode = (string) $request->string('multi_mode') ?: 'add';
+        $preview = $this->buildPreview($group, $field, $value, $overwriteDifferentWorkflow, $multiMode);
 
-        $applied = DB::transaction(function () use ($preview, $field, $value) {
+        $applied = DB::transaction(function () use ($preview, $field, $value, $multiMode) {
             foreach ($preview['applicable'] as $project) {
-                $this->applyValue($project, $field, $value);
+                $this->applyValue($project, $field, $value, $multiMode);
                 $project->save();
 
-                Activity::log($project, ActivityType::ProjectMultichanged, $this->describeChange($field, $value));
+                Activity::log($project, ActivityType::ProjectMultichanged, $this->describeChange($field, $value, $multiMode));
             }
 
             return $preview['applicable']->count();
@@ -198,14 +218,39 @@ class MultichangeController extends Controller
             'textarea' => ($field['required'] ?? false) ? ['required', 'string', 'max:2000'] : ['nullable', 'string', 'max:2000'],
             'date' => ['nullable', 'date'],
             'select', 'workflow_step' => ['required', Rule::in(array_keys($field['options']))],
+            // Ralf, 2026-09-15: Pulldown-Zusatzfelder dürfen (anders als die
+            // festen Pulldown-Felder oben) auf leer gesetzt werden - am
+            // einzelnen Projekt ist "– nicht zugewiesen –" für Zusatzfelder
+            // ja auch immer eine gültige Wahl.
+            'attribute_select' => ['nullable', 'string', Rule::in(array_keys($field['options']))],
+            'attribute_select_multiple' => ['nullable', 'array'],
+            // Ralf, 2026-09-15: dieselben Grenzen wie im normalen
+            // Projektformular (ProjectController::attributeValidationRules())
+            // - Mindest-/Höchstwert/Dezimalstellen kommen vom Attribut selbst,
+            // bleiben leer = keine Einschränkung.
+            'attribute_number' => array_filter([
+                'nullable',
+                'numeric',
+                $field['number_min'] !== null ? 'min:'.$field['number_min'] : null,
+                $field['number_max'] !== null ? 'max:'.$field['number_max'] : null,
+                $field['number_decimals'] !== null ? 'decimal:0,'.$field['number_decimals'] : null,
+            ]),
         };
 
-        $validator = Validator::make($request->all(), ['value' => $rules], [], ['value' => __('Neuer Wert')]);
+        $allRules = ['value' => $rules];
+        if ($field['type'] === 'attribute_select_multiple') {
+            $allRules['value.*'] = ['string', Rule::in(array_keys($field['options']))];
+        }
+
+        $validator = Validator::make($request->all(), $allRules, [], ['value' => __('Neuer Wert')]);
         if ($validator->fails()) {
             return ['field' => $field, 'value' => null, 'errors' => $validator->errors()];
         }
 
         $value = $validator->validated()['value'] ?? null;
+        // Nur die festen Pulldown-Felder haben numerische IDs als Optionswert
+        // (z.B. Status, Workflow) - Pulldown-Zusatzfelder tragen einen
+        // sprechenden String-Wert (AttributeOption::value), NICHT casten.
         if (in_array($field['type'], ['select', 'workflow_step'], true) && $value !== null) {
             $value = (int) $value;
         }
@@ -224,8 +269,9 @@ class MultichangeController extends Controller
                 'selectedField' => $field['key'] ?? '',
                 // Eingegebener Wert bleibt auch bei einem Validierungsfehler
                 // erhalten, gleicher Grund wie beim "Zurück"-Button.
-                'selectedValue' => (string) $request->string('value'),
+                'selectedValue' => ($field['type'] ?? null) === 'attribute_select_multiple' ? $request->array('value') : (string) $request->string('value'),
                 'selectedOverwriteDifferentWorkflow' => $request->boolean('overwrite_different_workflow'),
+                'selectedMultiMode' => (string) $request->string('multi_mode') ?: 'add',
             ])
             ->setStatusCode(422);
     }
@@ -314,7 +360,7 @@ class MultichangeController extends Controller
     /**
      * @return array{applicable: Collection<int, Project>, skipped: Collection<int, Project>, unchanged: Collection<int, Project>}
      */
-    private function buildPreview(ProjectGroup $group, array $field, mixed $value, bool $overwriteDifferentWorkflow = false): array
+    private function buildPreview(ProjectGroup $group, array $field, mixed $value, bool $overwriteDifferentWorkflow = false, string $multiMode = 'add'): array
     {
         // Frisch aus der DB, nicht aus irgendeinem Client-Zustand übernommen -
         // die Gruppen-Mitgliedschaft kann sich zwischen Vorschau und Anwenden
@@ -373,6 +419,24 @@ class MultichangeController extends Controller
                 $applicable = $remaining->reject($hasOtherWorkflow)->values();
                 $skipped = $remaining->filter($hasOtherWorkflow)->values();
             }
+        } elseif (in_array($field['type'], ['attribute_select', 'attribute_select_multiple', 'attribute_number'], true)) {
+            // Ralf, 2026-09-15: Pulldown-Zusatzfeld aus dem Bereich
+            // "Typspezifisch" ist nicht jeder Projektart zugeordnet - ein
+            // Projekt, dessen Projektart nicht dabei ist, kennt das Feld gar
+            // nicht und wird übersprungen (typspezifisch_sub_ids === null =
+            // Stammdaten/Ablaufdaten, gilt immer für alle Projekte).
+            $subIds = $field['typspezifisch_sub_ids'] ?? null;
+            $inScope = $subIds === null
+                ? $projects
+                : $projects->filter(fn (Project $project) => in_array($project->project_type_sub_id, $subIds, true))->values();
+            $skipped = $subIds === null ? collect() : $projects->diff($inScope)->values();
+
+            if ($field['type'] === 'attribute_select_multiple') {
+                $unchanged = $inScope->filter(fn (Project $project) => $this->multiValueUnchanged($project, $field, (array) $value, $multiMode))->values();
+            } else {
+                $unchanged = $inScope->filter(fn (Project $project) => $this->valueUnchanged($project, $field, $value))->values();
+            }
+            $applicable = $inScope->reject(fn (Project $project) => $unchanged->contains('id', $project->id))->values();
         } else {
             $skipped = collect();
 
@@ -415,11 +479,29 @@ class MultichangeController extends Controller
     }
 
     /**
+     * unchanged-Erkennung für Mehrfachauswahl-Pulldowns, abhängig vom
+     * gewählten Modus (Ergänzen/Überschreiben, siehe MultichangeFieldCatalog
+     * -Docblock): bei "Ergänzen" bleibt ein Projekt unverändert, wenn es die
+     * ausgewählten Werte bereits ALLE hat (Ergänzen hätte keine Wirkung);
+     * bei "Überschreiben" nur, wenn die Wertelisten exakt übereinstimmen.
+     */
+    private function multiValueUnchanged(Project $project, array $field, array $selected, string $multiMode): bool
+    {
+        $current = (array) ($project->attributes[$field['key']] ?? []);
+
+        if ($multiMode === 'overwrite') {
+            return collect($current)->sort()->values()->all() === collect($selected)->sort()->values()->all();
+        }
+
+        return collect($selected)->every(fn ($v) => in_array($v, $current, true));
+    }
+
+    /**
      * Die meisten Felder hier sind echte projects-Spalten, aber "Initiator"
      * ist ein normales Zusatzfeld (siehe MultichangeFieldCatalog) - dessen
      * Wert lebt im attributes-JSON, nicht in einer eigenen Spalte.
      */
-    private function applyValue(Project $project, array $field, mixed $value): void
+    private function applyValue(Project $project, array $field, mixed $value, string $multiMode = 'add'): void
     {
         if (($field['storage'] ?? 'column') === 'note') {
             ProjectNote::query()->create([
@@ -430,6 +512,22 @@ class MultichangeController extends Controller
                 'created_by_user_id' => Auth::id(),
                 'created_at' => now(),
             ]);
+
+            return;
+        }
+
+        if ($field['type'] === 'attribute_select_multiple') {
+            $attributes = $project->attributes ?? [];
+            $current = (array) ($attributes[$field['key']] ?? []);
+            $selected = (array) $value;
+            $new = $multiMode === 'overwrite' ? $selected : array_values(array_unique([...$current, ...$selected]));
+
+            if ($new === []) {
+                unset($attributes[$field['key']]);
+            } else {
+                $attributes[$field['key']] = $new;
+            }
+            $project->attributes = $attributes;
 
             return;
         }
@@ -557,7 +655,7 @@ class MultichangeController extends Controller
      * Set-Semantik (siehe applyValue()), braucht deshalb eine eigene
      * Formulierung statt der generischen "Feld wird auf Wert gesetzt.".
      */
-    private function describeAction(array $field, mixed $value): string
+    private function describeAction(array $field, mixed $value, string $multiMode = 'add'): string
     {
         if (($field['storage'] ?? 'column') === 'note') {
             // Bewusst ohne Artikel ("Neue Bemerkung"/"Neuer Eintrag") -
@@ -565,6 +663,14 @@ class MultichangeController extends Controller
             // generisch formulieren, ohne für jedes Feld eine eigene
             // Artikel-Form mitzugeben.
             return __(':noteLabel wird hinzugefügt: „:value"', ['noteLabel' => $field['note_label'], 'value' => $value]);
+        }
+
+        // Ralf, 2026-09-15: "Ergänzen" hat (anders als "Überschreiben", das
+        // sich wie ein normales Set-Feld anfühlt) eine eigene Formulierung -
+        // es wird ja nicht auf den Wert GESETZT, sondern der Wert nur
+        // hinzugefügt, bestehende Werte bleiben stehen.
+        if ($field['type'] === 'attribute_select_multiple' && $multiMode === 'add') {
+            return __(':field: „:value" wird ergänzt.', ['field' => $field['label'], 'value' => $this->describeValue($field, $value)]);
         }
 
         return __(':field wird auf „:value" gesetzt.', ['field' => $field['label'], 'value' => $this->describeValue($field, $value)]);
@@ -597,10 +703,14 @@ class MultichangeController extends Controller
     /**
      * Gleicher Satz für den Activity-Log-Eintrag, Vergangenheitsform.
      */
-    private function describeChange(array $field, mixed $value): string
+    private function describeChange(array $field, mixed $value, string $multiMode = 'add'): string
     {
         if (($field['storage'] ?? 'column') === 'note') {
             return __(':noteLabel per Multichange hinzugefügt: „:value"', ['noteLabel' => $field['note_label'], 'value' => $value]);
+        }
+
+        if ($field['type'] === 'attribute_select_multiple' && $multiMode === 'add') {
+            return __(':field per Multichange ergänzt: „:value"', ['field' => $field['label'], 'value' => $this->describeValue($field, $value)]);
         }
 
         return __(':field per Multichange auf „:value" gesetzt.', ['field' => $field['label'], 'value' => $this->describeValue($field, $value)]);
@@ -630,6 +740,14 @@ class MultichangeController extends Controller
 
         if ($field['key'] === 'status') {
             return __(':count Projekt(e) werden übersprungen (aktueller Workflow-Schritt bestimmt den Status):', ['count' => $count]);
+        }
+
+        if (($field['typspezifisch_sub_ids'] ?? null) !== null) {
+            return trans_choice(
+                ':count Projekt hat eine Projektart, der dieses Feld nicht zugeordnet ist, und wird übersprungen:|:count Projekte haben eine Projektart, der dieses Feld nicht zugeordnet ist, und werden übersprungen:',
+                $count,
+                ['count' => $count]
+            );
         }
 
         return trans_choice(':count Projekt wird übersprungen:|:count Projekte werden übersprungen:', $count, ['count' => $count]);
@@ -674,12 +792,18 @@ class MultichangeController extends Controller
 
     private function describeValue(array $field, mixed $value): string
     {
+        if ($field['type'] === 'attribute_select_multiple') {
+            $labels = collect((array) $value)->map(fn ($v) => $field['options'][$v] ?? (string) $v);
+
+            return $labels->isNotEmpty() ? $labels->implode(', ') : __('entfernt');
+        }
+
         if ($value === null || $value === '') {
             return __('entfernt');
         }
 
         return match ($field['type']) {
-            'select', 'workflow_step' => $field['options'][$value] ?? (string) $value,
+            'select', 'workflow_step', 'attribute_select' => $field['options'][$value] ?? (string) $value,
             'date' => Carbon::parse($value)->format('d.m.Y'),
             default => (string) $value,
         };
@@ -704,7 +828,7 @@ class MultichangeController extends Controller
      * @param  array{applicable: Collection<int, Project>, skipped: Collection<int, Project>, unchanged: Collection<int, Project>}  $preview
      * @return list<array{pn: string, title: string, status: string, old: string, new: string, note: ?string}>
      */
-    private function describeChangeRows(array $preview, array $field, mixed $value): array
+    private function describeChangeRows(array $preview, array $field, mixed $value, string $multiMode = 'add'): array
     {
         // Ralf-Bug-Report, 2026-09-14: block- statt durchgängig PN-sortiert
         // wirkte auf den ersten Blick wie "gar nicht sortiert" (z.B.
@@ -723,7 +847,7 @@ class MultichangeController extends Controller
         $allProjects = $preview['applicable']->merge($preview['unchanged'])->merge($preview['skipped'])
             ->sortBy('source_pn')->values();
 
-        return $allProjects->map(function (Project $project) use ($statusByProjectId, $field, $value) {
+        return $allProjects->map(function (Project $project) use ($statusByProjectId, $field, $value, $multiMode) {
             $status = $statusByProjectId[$project->id];
 
             return [
@@ -731,7 +855,7 @@ class MultichangeController extends Controller
                 'title' => $project->title,
                 'status' => $status,
                 'old' => $this->describeOldValue($project, $field),
-                'new' => $status === 'applicable' ? $this->describeNewValue($field, $value) : '–',
+                'new' => $status === 'applicable' ? $this->describeNewValue($project, $field, $value, $multiMode) : '–',
                 'note' => $status === 'applicable'
                     ? $this->describeRowNote($project, $field, $value)
                     : $this->describeExclusionNote($field, $status),
@@ -754,6 +878,10 @@ class MultichangeController extends Controller
                 'workflow_step_id' => __('Wird nicht geändert: hat diesen Workflow-Schritt bereits als aktuellen Schritt.'),
                 default => __('Wird nicht geändert: hat diesen Wert bereits.'),
             };
+        }
+
+        if (($field['typspezifisch_sub_ids'] ?? null) !== null) {
+            return __('Wird nicht geändert: Projektart hat dieses Feld nicht zugeordnet.');
         }
 
         return match ($field['key']) {
@@ -830,6 +958,22 @@ class MultichangeController extends Controller
             return $sub ? $sub->main->name.': '.$sub->name : '–';
         }
 
+        // Pulldown-Zusatzfelder: Rohwert(e) sind AttributeOption::value
+        // (sprechender String), nicht die Option-Bezeichnung - über
+        // describeValue() durch die "options"-Liste des Feldes auflösen,
+        // statt den technischen Wert roh anzuzeigen.
+        if ($field['type'] === 'attribute_select') {
+            $raw = $project->attributes[$field['key']] ?? null;
+
+            return $raw !== null && $raw !== '' ? $this->describeValue($field, $raw) : '–';
+        }
+
+        if ($field['type'] === 'attribute_select_multiple') {
+            $raw = (array) ($project->attributes[$field['key']] ?? []);
+
+            return $raw !== [] ? $this->describeValue($field, $raw) : '–';
+        }
+
         $raw = ($field['storage'] ?? 'column') === 'attribute'
             ? ($project->attributes[$field['key']] ?? null)
             : $project->columnValue($field['key']);
@@ -848,10 +992,20 @@ class MultichangeController extends Controller
      * Änderungsprotokoll) einfach der neue Eintragstext, sonst dieselbe
      * Formatierung wie im Bestätigungstext (describeValue()).
      */
-    private function describeNewValue(array $field, mixed $value): string
+    private function describeNewValue(Project $project, array $field, mixed $value, string $multiMode = 'add'): string
     {
         if (($field['storage'] ?? 'column') === 'note') {
             return (string) $value;
+        }
+
+        // "Ergänzen" ergibt je Projekt einen ANDEREN neuen Wert (bisherige
+        // Werte + Ergänzung) - anders als beim einfachen Set-Feld lässt sich
+        // das nicht ohne den aktuellen Projektwert berechnen.
+        if ($field['type'] === 'attribute_select_multiple' && $multiMode === 'add') {
+            $current = (array) ($project->attributes[$field['key']] ?? []);
+            $resulting = array_values(array_unique([...$current, ...(array) $value]));
+
+            return $this->describeValue($field, $resulting);
         }
 
         return $this->describeValue($field, $value);

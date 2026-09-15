@@ -2020,24 +2020,40 @@
                 const multichangeBody = () => document.getElementById('multichange-body');
                 const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 
-                window.openMultichange = async (groupId, field, value, overwriteDifferentWorkflow) => {
+                // Ralf, 2026-09-15: Mehrfachauswahl-Pulldown-Zusatzfelder
+                // schicken "value" als Liste statt eines einzelnen Strings -
+                // beide Helfer bauen die Query/den Body deshalb selbst aus
+                // einem Objekt, statt URLSearchParams direkt ein Array
+                // übergeben zu können (das würde es zu "a,b" zusammenziehen
+                // statt als echte PHP-Liste value[]=a&value[]=b anzukommen).
+                const appendParam = (params, key, val) => {
+                    if (Array.isArray(val)) {
+                        val.forEach((v) => params.append(`${key}[]`, v));
+                    } else if (val !== null && val !== undefined && val !== '') {
+                        params.append(key, val);
+                    }
+                };
+
+                window.openMultichange = async (groupId, field, value, overwriteDifferentWorkflow, multiMode) => {
                     multichangeBody().innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
                     window.dispatchEvent(new CustomEvent('open-modal', { detail: 'multichange' }));
-                    // field/value/overwriteDifferentWorkflow: nur beim
-                    // "Zurück"-Klick aus der Vorschau gesetzt, damit die
+                    // field/value/overwriteDifferentWorkflow/multiMode: nur
+                    // beim "Zurück"-Klick aus der Vorschau gesetzt, damit die
                     // Auswahl erhalten bleibt (Ralf: "werde ich bestraft und
                     // muss nochmal von vorne beginnen").
                     const params = new URLSearchParams();
                     if (groupId) params.set('group_id', groupId);
                     if (field) params.set('field', field);
-                    if (value) params.set('value', value);
+                    appendParam(params, 'value', value);
                     if (overwriteDifferentWorkflow) params.set('overwrite_different_workflow', '1');
+                    if (multiMode) params.set('multi_mode', multiMode);
                     const query = params.toString() ? `?${params.toString()}` : '';
                     multichangeBody().innerHTML = await fetch(`/projekte/multichange${query}`).then((r) => r.text());
                 };
 
                 window.reloadMultichange = async (url, params) => {
-                    const body = new URLSearchParams(params);
+                    const body = new URLSearchParams();
+                    Object.entries(params).forEach(([key, val]) => appendParam(body, key, val));
                     const response = await fetch(url, {
                         method: 'POST',
                         headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/x-www-form-urlencoded' },

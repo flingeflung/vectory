@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Attribute;
 use App\Models\ProjectNote;
 use App\Models\ProjectTypeMain;
 use App\Models\Workflow;
@@ -158,7 +159,55 @@ class MultichangeFieldCatalog
                 ],
             ],
             ...self::workflowStepField($tenantId),
+            ...self::pulldownAttributeFields($tenantId),
+            ...self::numberAttributeFields($tenantId),
         ];
+    }
+
+    /**
+     * Pulldown-Zusatzfelder (Ralf, 2026-09-15, Konzept mit Ralf abgestimmt)
+     * - jedes Zusatzfeld vom Typ Pulldown (egal welcher Bereich) bekommt
+     * automatisch ein eigenes Multichange-Feld, genau wie "Initiator" es
+     * für ein Text-Zusatzfeld schon vorher gab. 'key' bewusst der reine
+     * Attribut-Key OHNE Präfix (wie bei 'initiator') - applyValue()/
+     * valueUnchanged()/describeOldValue() lesen/schreiben damit direkt
+     * unter demselben Schlüssel im attributes-JSON.
+     *
+     * Einfachauswahl-Pulldowns (type 'attribute_select') laufen über die
+     * normale Set-Semantik (auch Leeren erlaubt, siehe validateInput() -
+     * anders als die festen Pulldown-Felder oben, die immer einen Wert
+     * verlangen). Mehrfachauswahl-Pulldowns (type 'attribute_select_multiple')
+     * haben eigene Semantik (Ergänzen ODER Überschreiben, Nutzer wählt im
+     * Formular - siehe MultichangeController::buildPreview()/applyValue()).
+     *
+     * 'typspezifisch_sub_ids' (nur bei Bereich "Typspezifisch" gesetzt):
+     * Projekte, deren Projektart NICHT in dieser Liste steht, kennen das
+     * Feld gar nicht und werden übersprungen (siehe buildPreview()) - anders
+     * als bei den festen Feldern oben gibt es das hier zum ersten Mal, weil
+     * ein Zusatzfeld je nach Bereich eben NICHT für jedes Projekt existiert.
+     *
+     * @return list<array{key: string, label: string, type: string, storage: string, options: array<string, string>, typspezifisch_sub_ids: ?list<int>}>
+     */
+    private static function pulldownAttributeFields(int $tenantId): array
+    {
+        return Attribute::query()
+            ->where('tenant_id', $tenantId)
+            ->where('data_type', Attribute::DATA_TYPE_SELECT)
+            ->with('options', 'projectTypeSubs')
+            ->orderBy('sort')
+            ->get()
+            ->map(fn (Attribute $attribute) => [
+                'key' => $attribute->key,
+                'label' => $attribute->label,
+                'type' => $attribute->multiple ? 'attribute_select_multiple' : 'attribute_select',
+                'storage' => 'attribute',
+                'options' => $attribute->options->pluck('label', 'value')->all(),
+                'typspezifisch_sub_ids' => $attribute->section === Attribute::SECTION_TYPSPEZIFISCH
+                    ? $attribute->projectTypeSubs->pluck('id')->all()
+                    : null,
+            ])
+            ->values()
+            ->all();
     }
 
     /**
@@ -224,6 +273,43 @@ class MultichangeFieldCatalog
                 ],
             ],
         ];
+    }
+
+    /**
+     * Zahl-Zusatzfelder (Ralf, 2026-09-15: "sinngemäß" wie die Pulldown-
+     * Zusatzfelder oben) - anders als Pulldown gibt es hier keine
+     * Mehrfachauswahl, deshalb reicht die normale Set-Semantik (kein eigener
+     * type-Zweig in buildPreview()/applyValue() nötig, läuft über denselben
+     * generischen Pfad wie z.B. "Initiator"). Mindest-/Höchstwert +
+     * Dezimalstellen (Attribute::number_min/.../number_decimals) werden hier
+     * nur durchgereicht - Validierung baut MultichangeController::
+     * validateInput() daraus dieselben Regeln wie ProjectController::
+     * attributeValidationRules() für das normale Projektformular.
+     *
+     * @return list<array{key: string, label: string, type: string, storage: string, number_min: ?float, number_max: ?float, number_decimals: ?int, typspezifisch_sub_ids: ?list<int>}>
+     */
+    private static function numberAttributeFields(int $tenantId): array
+    {
+        return Attribute::query()
+            ->where('tenant_id', $tenantId)
+            ->where('data_type', Attribute::DATA_TYPE_NUMBER)
+            ->with('projectTypeSubs')
+            ->orderBy('sort')
+            ->get()
+            ->map(fn (Attribute $attribute) => [
+                'key' => $attribute->key,
+                'label' => $attribute->label,
+                'type' => 'attribute_number',
+                'storage' => 'attribute',
+                'number_min' => $attribute->number_min !== null ? (float) $attribute->number_min : null,
+                'number_max' => $attribute->number_max !== null ? (float) $attribute->number_max : null,
+                'number_decimals' => $attribute->number_decimals,
+                'typspezifisch_sub_ids' => $attribute->section === Attribute::SECTION_TYPSPEZIFISCH
+                    ? $attribute->projectTypeSubs->pluck('id')->all()
+                    : null,
+            ])
+            ->values()
+            ->all();
     }
 
     public static function find(int $tenantId, string $key): ?array

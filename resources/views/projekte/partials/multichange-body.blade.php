@@ -171,6 +171,7 @@
                             field: {{ \Illuminate\Support\Js::from($field['key']) }},
                             value: {{ \Illuminate\Support\Js::from($value) }},
                             overwrite_different_workflow: {{ $overwriteDifferentWorkflow ? 1 : 0 }},
+                            multi_mode: {{ \Illuminate\Support\Js::from($multiMode ?? 'add') }},
                         }
                     );
                 },
@@ -178,7 +179,7 @@
         >
             <button
                 type="button"
-                onclick="window.openMultichange({{ $group->id }}, {{ \Illuminate\Support\Js::from($field['key']) }}, {{ \Illuminate\Support\Js::from((string) $value) }}, {{ $overwriteDifferentWorkflow ? 'true' : 'false' }})"
+                onclick="window.openMultichange({{ $group->id }}, {{ \Illuminate\Support\Js::from($field['key']) }}, {{ \Illuminate\Support\Js::from($field['type'] === 'attribute_select_multiple' ? (array) $value : (string) $value) }}, {{ $overwriteDifferentWorkflow ? 'true' : 'false' }}, {{ \Illuminate\Support\Js::from($multiMode ?? 'add') }})"
                 class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
             >
                 {{ __('Zurück') }}
@@ -195,14 +196,25 @@
         </div>
     </div>
 @else
+    @php
+        $selectedValueIsArray = is_array($selectedValue ?? null);
+    @endphp
     <form
         x-data="{
             groupId: {{ \Illuminate\Support\Js::from((string) ($selectedGroupId ?? '')) }},
             field: {{ \Illuminate\Support\Js::from($selectedField ?? '') }},
-            value: {{ \Illuminate\Support\Js::from($selectedValue ?? '') }},
+            value: {{ \Illuminate\Support\Js::from($selectedValueIsArray ? '' : ($selectedValue ?? '')) }},
+            multiValue: {{ \Illuminate\Support\Js::from($selectedValueIsArray ? $selectedValue : []) }},
+            multiMode: {{ \Illuminate\Support\Js::from($selectedMultiMode ?? 'add') }},
             overwrite: {{ ($selectedOverwriteDifferentWorkflow ?? false) ? 'true' : 'false' }},
+            // Ralf, 2026-09-15: Mehrfachauswahl-Pulldown-Zusatzfelder
+            // schicken multiValue statt value (siehe unten) - fieldTypes
+            // ist eine einmalig mitgegebene Nachschlagetabelle, damit das
+            // Formular beim Abschicken weiß, welches der beiden gemeint ist.
+            fieldTypes: {{ \Illuminate\Support\Js::from(collect($fields)->pluck('type', 'key')) }},
+            get isMultiField() { return this.fieldTypes[this.field] === 'attribute_select_multiple'; },
         }"
-        @submit.prevent="window.reloadMultichange({{ \Illuminate\Support\Js::from(route('projekte.multichange.preview')) }}, { group_id: groupId, field, value, overwrite_different_workflow: overwrite ? 1 : 0 })"
+        @submit.prevent="window.reloadMultichange({{ \Illuminate\Support\Js::from(route('projekte.multichange.preview')) }}, { group_id: groupId, field, value: isMultiField ? multiValue : value, overwrite_different_workflow: overwrite ? 1 : 0, multi_mode: multiMode })"
         class="space-y-3"
     >
         @if (isset($formErrors))
@@ -229,7 +241,7 @@
         <div x-show="groupId" x-cloak class="space-y-3 border-t border-gray-100 pt-3">
             <div>
                 <label class="block text-xs text-gray-500">{{ __('Feld') }}</label>
-                <select x-model="field" @change="value = ''" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                <select x-model="field" @change="value = ''; multiValue = []; multiMode = 'add'" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                     <option value="">{{ __('– Feld wählen –') }}</option>
                     @foreach ($fields as $f)
                         <option value="{{ $f['key'] }}">{{ $f['label'] }}</option>
@@ -250,7 +262,7 @@
                             <p class="mb-1 text-xs text-amber-700">{{ $f['hint'] }}</p>
                         @endif
                     @endif
-                    @unless ($f['type'] === 'workflow_step')
+                    @unless (in_array($f['type'], ['workflow_step', 'attribute_select_multiple'], true))
                         <label class="block text-xs text-gray-500">{{ __('Neuer Wert') }}</label>
                     @endunless
                     @if ($f['type'] === 'text')
@@ -259,13 +271,66 @@
                         <textarea x-model="value" rows="3" class="mt-0.5 w-full rounded-md border-gray-300 text-sm"></textarea>
                     @elseif ($f['type'] === 'date')
                         <input type="date" x-model="value" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
-                    @elseif ($f['type'] === 'select')
+                    @elseif (in_array($f['type'], ['select', 'attribute_select'], true))
                         <select x-model="value" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                             <option value="">{{ __('– auswählen –') }}</option>
                             @foreach ($f['options'] as $optValue => $optLabel)
                                 <option value="{{ $optValue }}">{{ $optLabel }}</option>
                             @endforeach
                         </select>
+                    @elseif ($f['type'] === 'attribute_number')
+                        @php
+                            $numberStep = $f['number_decimals'] !== null ? (1 / (10 ** $f['number_decimals'])) : 'any';
+                        @endphp
+                        <input
+                            type="number"
+                            x-model="value"
+                            step="{{ $numberStep }}"
+                            @if ($f['number_min'] !== null) min="{{ rtrim(rtrim((string) $f['number_min'], '0'), '.') }}" @endif
+                            @if ($f['number_max'] !== null) max="{{ rtrim(rtrim((string) $f['number_max'], '0'), '.') }}" @endif
+                            class="mt-0.5 w-full rounded-md border-gray-300 text-sm"
+                        >
+                        @if ($f['number_min'] !== null || $f['number_max'] !== null)
+                            <p class="mt-0.5 text-xs text-gray-400">
+                                @if ($f['number_min'] !== null && $f['number_max'] !== null)
+                                    {{ __('Bereich :min – :max', ['min' => $f['number_min'], 'max' => $f['number_max']]) }}
+                                @elseif ($f['number_min'] !== null)
+                                    {{ __('Mindestens :min', ['min' => $f['number_min']]) }}
+                                @else
+                                    {{ __('Höchstens :max', ['max' => $f['number_max']]) }}
+                                @endif
+                            </p>
+                        @endif
+                    @elseif ($f['type'] === 'attribute_select_multiple')
+                        {{--
+                            Ralf, 2026-09-15 (Konzept mit Ralf abgestimmt):
+                            Mehrfachauswahl-Pulldown - Nutzer wählt sowohl die
+                            Werte als auch den Modus (Ergänzen/Überschreiben).
+                            Im Prüfen-Dialog sieht er dann je Projekt genau,
+                            was sich dadurch ändert.
+                        --}}
+                        <label class="block text-xs text-gray-500">{{ __('Werte') }}</label>
+                        <select x-model="multiValue" multiple size="{{ min(6, max(3, count($f['options']))) }}" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                            @foreach ($f['options'] as $optValue => $optLabel)
+                                <option value="{{ $optValue }}">{{ $optLabel }}</option>
+                            @endforeach
+                        </select>
+                        <div class="mt-2 space-y-1.5 rounded-md border border-gray-200 bg-gray-50 p-2">
+                            <label class="flex items-start gap-1.5 text-xs text-gray-700">
+                                <input type="radio" x-model="multiMode" value="add" class="mt-0.5 text-indigo-600">
+                                <span>
+                                    {{ __('Ergänzen') }}
+                                    <span class="block text-gray-400">{{ __('Die gewählten Werte werden bei jedem Projekt zu den bestehenden hinzugefügt, nichts geht verloren.') }}</span>
+                                </span>
+                            </label>
+                            <label class="flex items-start gap-1.5 text-xs text-gray-700">
+                                <input type="radio" x-model="multiMode" value="overwrite" class="mt-0.5 text-indigo-600">
+                                <span>
+                                    {{ __('Überschreiben') }}
+                                    <span class="block text-gray-400">{{ __('Die bisherige Auswahl wird bei jedem Projekt komplett durch die hier gewählten Werte ersetzt.') }}</span>
+                                </span>
+                            </label>
+                        </div>
                     @elseif ($f['type'] === 'workflow_step')
                         {{--
                             Ralf, 2026-09-14: "Zunächst muss man einen WF
