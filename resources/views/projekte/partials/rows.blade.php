@@ -191,6 +191,13 @@
                             <x-market-icon :market="$market" />
                         @endforeach
                     @endif
+                @elseif ($column['boolean'] ?? false)
+                    @php $value = $project->columnValue($column['key']); @endphp
+                    @if ($value === null)
+                        <span class="text-gray-400">&ndash;</span>
+                    @else
+                        {{ $value ? __('Ja') : __('Nein') }}
+                    @endif
                 @else
                     @php $value = $project->columnValue($column['key']); @endphp
                     @if ($column['long_text'] && ! $column['show_long_text'] && \Illuminate\Support\Str::length((string) $value) > $column['short_length'])

@@ -11,7 +11,15 @@
     <label class="block text-xs text-gray-500">{{ $attribute->label }}</label>
     @switch($attribute->data_type)
         @case('textarea')
-            <textarea name="attributes[{{ $attribute->key }}]" rows="2" class="mt-0.5 w-full rounded border-gray-300 text-sm">{{ $value }}</textarea>
+            <textarea
+                name="attributes[{{ $attribute->key }}]"
+                rows="2"
+                @if ($attribute->max_length) maxlength="{{ $attribute->max_length }}" @endif
+                class="mt-0.5 w-full rounded border-gray-300 text-sm"
+            >{{ $value }}</textarea>
+            @if ($attribute->max_length)
+                <p class="mt-0.5 text-xs text-gray-400">{{ __('Max. :max Zeichen', ['max' => $attribute->max_length]) }}</p>
+            @endif
             @break
 
         @case('number')
@@ -70,6 +78,15 @@
             @break
 
         @default
-            <input type="text" name="attributes[{{ $attribute->key }}]" value="{{ $value }}" class="mt-0.5 w-full rounded border-gray-300 text-sm">
+            <input
+                type="text"
+                name="attributes[{{ $attribute->key }}]"
+                value="{{ $value }}"
+                maxlength="{{ $attribute->max_length ?? 255 }}"
+                class="mt-0.5 w-full rounded border-gray-300 text-sm"
+            >
+            @if ($attribute->max_length)
+                <p class="mt-0.5 text-xs text-gray-400">{{ __('Max. :max Zeichen', ['max' => $attribute->max_length]) }}</p>
+            @endif
     @endswitch
 </div>

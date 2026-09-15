@@ -84,6 +84,7 @@ class AttributeController extends Controller
 
         $multiple = $dataType === Attribute::DATA_TYPE_SELECT && $request->boolean('multiple');
         $numberConstraints = $dataType === Attribute::DATA_TYPE_NUMBER ? $this->numberConstraints($request) : [];
+        $isTextType = in_array($dataType, [Attribute::DATA_TYPE_TEXT, Attribute::DATA_TYPE_TEXTAREA], true);
 
         $attribute = Attribute::query()->create([
             'tenant_id' => $tenantId,
@@ -93,6 +94,7 @@ class AttributeController extends Controller
             'data_type' => $dataType,
             'multiple' => $multiple,
             ...$numberConstraints,
+            'max_length' => $isTextType ? $this->maxLengthConstraint($request) : null,
             'sort' => 1 + (int) Attribute::query()->where('tenant_id', $tenantId)->where('section', $section)->max('sort'),
         ]);
 
@@ -132,9 +134,12 @@ class AttributeController extends Controller
             abort_if(mb_strlen($label) < 3, 422);
         }
 
+        $isTextType = in_array($attribute->data_type, [Attribute::DATA_TYPE_TEXT, Attribute::DATA_TYPE_TEXTAREA], true);
+
         $attribute->update([
             'label' => $label,
             ...($attribute->data_type === Attribute::DATA_TYPE_NUMBER ? $this->numberConstraints($request) : []),
+            ...($isTextType ? ['max_length' => $this->maxLengthConstraint($request)] : []),
         ]);
 
         return $this->redirectToSection($attribute->section);
@@ -327,6 +332,26 @@ class AttributeController extends Controller
         abort_if($decimals !== null && ($decimals < 0 || $decimals > 10), 422);
 
         return ['number_min' => $min, 'number_max' => $max, 'number_decimals' => $decimals];
+    }
+
+    /**
+     * Obergrenze für die Textlänge (Ralf, 2026-09-15) - für Text
+     * (einzeilig) UND Textarea (mehrzeilig), aus demselben Anlegen- ODER
+     * Ändern-Formular wie numberConstraints(). Leer = keine eigene
+     * Einschränkung (Text bleibt dann bei den bisherigen 255 Zeichen
+     * Vorgabe, Textarea bleibt unbegrenzt, siehe ProjectController::
+     * attributeValidationRules()).
+     */
+    private function maxLengthConstraint(Request $request): ?int
+    {
+        if (! $request->filled('max_length')) {
+            return null;
+        }
+
+        $maxLength = (int) $request->input('max_length');
+        abort_if($maxLength < 1, 422);
+
+        return $maxLength;
     }
 
     private function dataTypeOptions(): array

@@ -70,6 +70,12 @@ class ProjectColumnCatalog
                 'key' => 'attribute:'.$attribute->key,
                 'label' => $attribute->label,
                 'long_text' => false,
+                // Ralf-Bug-Report, 2026-09-15: Ja/Nein-Zusatzfelder zeigten
+                // in der Übersicht "1" bei Ja und nichts (Leerstring) bei
+                // Nein, weil der rohe PHP-Bool ungefiltert ausgegeben wurde
+                // (siehe rows.blade.php) - eigenes Flag, damit dort echte
+                // "Ja"/"Nein"-Texte statt des Rohwerts stehen.
+                'boolean' => $attribute->data_type === Attribute::DATA_TYPE_BOOLEAN,
             ])
             ->all();
 
@@ -128,6 +134,7 @@ class ProjectColumnCatalog
                     'icons' => $column['icons'] ?? false,
                     'type_icon' => $column['type_icon'] ?? false,
                     'graphic_summary' => $column['graphic_summary'] ?? false,
+                    'boolean' => $column['boolean'] ?? false,
                     'progress' => $column['progress'] ?? false,
                     'start_end' => $column['start_end'] ?? false,
                     'visible' => $forcedVisible || ($saved['visible'] ?? false),

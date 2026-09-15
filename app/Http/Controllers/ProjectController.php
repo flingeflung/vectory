@@ -1320,7 +1320,11 @@ class ProjectController extends Controller
                 ]),
                 Attribute::DATA_TYPE_DATE => ['nullable', 'date'],
                 Attribute::DATA_TYPE_BOOLEAN => ['boolean'],
-                Attribute::DATA_TYPE_TEXTAREA => ['nullable', 'string'],
+                // Ralf, 2026-09-15: Max. Textlänge (Attribute::max_length)
+                // optional konfigurierbar - unverändertes Verhalten, wenn
+                // leer (Text weiter max. 255, Textarea weiter unbegrenzt).
+                Attribute::DATA_TYPE_TEXT => ['nullable', 'string', 'max:'.($attribute->max_length ?? 255)],
+                Attribute::DATA_TYPE_TEXTAREA => array_filter(['nullable', 'string', $attribute->max_length ? 'max:'.$attribute->max_length : null]),
                 Attribute::DATA_TYPE_SELECT => $attribute->multiple
                     ? ['array']
                     : ['nullable', 'string', Rule::in($attribute->options->pluck('value'))],

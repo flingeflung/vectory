@@ -265,13 +265,29 @@
                     @unless (in_array($f['type'], ['workflow_step', 'attribute_select_multiple'], true))
                         <label class="block text-xs text-gray-500">{{ __('Neuer Wert') }}</label>
                     @endunless
-                    @if ($f['type'] === 'text')
-                        <input type="text" x-model="value" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
-                    @elseif ($f['type'] === 'textarea')
-                        <textarea x-model="value" rows="3" class="mt-0.5 w-full rounded-md border-gray-300 text-sm"></textarea>
-                    @elseif ($f['type'] === 'date')
+                    @if (in_array($f['type'], ['text', 'attribute_text'], true))
+                        <input
+                            type="text"
+                            x-model="value"
+                            @if ($f['max_length'] ?? null) maxlength="{{ $f['max_length'] }}" @endif
+                            class="mt-0.5 w-full rounded-md border-gray-300 text-sm"
+                        >
+                        @if ($f['max_length'] ?? null)
+                            <p class="mt-0.5 text-xs text-gray-400">{{ __('Max. :max Zeichen', ['max' => $f['max_length']]) }}</p>
+                        @endif
+                    @elseif (in_array($f['type'], ['textarea', 'attribute_textarea'], true))
+                        <textarea
+                            x-model="value"
+                            rows="3"
+                            @if ($f['max_length'] ?? null) maxlength="{{ $f['max_length'] }}" @endif
+                            class="mt-0.5 w-full rounded-md border-gray-300 text-sm"
+                        ></textarea>
+                        @if ($f['max_length'] ?? null)
+                            <p class="mt-0.5 text-xs text-gray-400">{{ __('Max. :max Zeichen', ['max' => $f['max_length']]) }}</p>
+                        @endif
+                    @elseif (in_array($f['type'], ['date', 'attribute_date'], true))
                         <input type="date" x-model="value" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
-                    @elseif (in_array($f['type'], ['select', 'attribute_select'], true))
+                    @elseif (in_array($f['type'], ['select', 'attribute_select', 'attribute_boolean'], true))
                         <select x-model="value" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                             <option value="">{{ __('– auswählen –') }}</option>
                             @foreach ($f['options'] as $optValue => $optLabel)

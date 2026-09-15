@@ -18,6 +18,17 @@ use App\Models\WorkflowStep;
  * MultichangeController::buildPreview()/applyValue() - drei Fälle statt
  * einfachem Set), daher braucht available() jetzt den Mandanten (für die
  * Workflow-Auswahlliste), anders als vorher.
+ *
+ * WICHTIG für jede generische Attribut-Scan-Methode hier unten (pulldown-/
+ * number-/boolean-/date-/textAttributeFields()): IMMER `where('system',
+ * false)` mitgeben. Systemfelder (title, status, workflow_id, archived,
+ * project_type, remarks, ...) existieren alle als echte Attribute-Zeilen
+ * für Sortierung/Label, tragen dort aber ALLE `data_type = 'text'`
+ * (Datenbank-Stichprobe 2026-09-15) - unabhängig davon, wie das Feld
+ * TATSÄCHLICH angezeigt/gespeichert wird (Pulldown, echte Spalte, ...).
+ * Ohne den Systemfeld-Ausschluss tauchen sie hier als kaputte Dubletten
+ * auf, die ins Leere schreiben (attributes-JSON statt der echten Spalte/
+ * Sonderlogik).
  */
 class MultichangeFieldCatalog
 {
@@ -161,6 +172,9 @@ class MultichangeFieldCatalog
             ...self::workflowStepField($tenantId),
             ...self::pulldownAttributeFields($tenantId),
             ...self::numberAttributeFields($tenantId),
+            ...self::booleanAttributeFields($tenantId),
+            ...self::dateAttributeFields($tenantId),
+            ...self::textAttributeFields($tenantId),
         ];
     }
 
@@ -192,6 +206,7 @@ class MultichangeFieldCatalog
     {
         return Attribute::query()
             ->where('tenant_id', $tenantId)
+            ->where('system', false)
             ->where('data_type', Attribute::DATA_TYPE_SELECT)
             ->with('options', 'projectTypeSubs')
             ->orderBy('sort')
@@ -292,6 +307,7 @@ class MultichangeFieldCatalog
     {
         return Attribute::query()
             ->where('tenant_id', $tenantId)
+            ->where('system', false)
             ->where('data_type', Attribute::DATA_TYPE_NUMBER)
             ->with('projectTypeSubs')
             ->orderBy('sort')
@@ -304,6 +320,108 @@ class MultichangeFieldCatalog
                 'number_min' => $attribute->number_min !== null ? (float) $attribute->number_min : null,
                 'number_max' => $attribute->number_max !== null ? (float) $attribute->number_max : null,
                 'number_decimals' => $attribute->number_decimals,
+                'typspezifisch_sub_ids' => $attribute->section === Attribute::SECTION_TYPSPEZIFISCH
+                    ? $attribute->projectTypeSubs->pluck('id')->all()
+                    : null,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Ja/Nein-Zusatzfelder - anders als Pulldown/Zahl/Datum gibt es am
+     * einzelnen Projekt kein "leer" (die Checkbox liefert immer true/false,
+     * siehe ProjectController::update()), deshalb hier bewusst "required"
+     * statt nullable (siehe MultichangeController::validateInput()) - ein
+     * "Leeren" ergäbe kein sinnvolles Ziel.
+     *
+     * @return list<array{key: string, label: string, type: string, storage: string, options: array<string, string>, typspezifisch_sub_ids: ?list<int>}>
+     */
+    private static function booleanAttributeFields(int $tenantId): array
+    {
+        return Attribute::query()
+            ->where('tenant_id', $tenantId)
+            ->where('system', false)
+            ->where('data_type', Attribute::DATA_TYPE_BOOLEAN)
+            ->with('projectTypeSubs')
+            ->orderBy('sort')
+            ->get()
+            ->map(fn (Attribute $attribute) => [
+                'key' => $attribute->key,
+                'label' => $attribute->label,
+                'type' => 'attribute_boolean',
+                'storage' => 'attribute',
+                'options' => ['1' => __('Ja'), '0' => __('Nein')],
+                'typspezifisch_sub_ids' => $attribute->section === Attribute::SECTION_TYPSPEZIFISCH
+                    ? $attribute->projectTypeSubs->pluck('id')->all()
+                    : null,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Datum-Zusatzfelder - "sinngemäß" wie Start/Ende/Publikationsdatum
+     * oben (gleicher type 'date' bei Validierung/Formular, siehe
+     * MultichangeController), nur eben mit eigenem type-Namen, damit
+     * buildPreview() sie zusätzlich durch die Typspezifisch-Übersprungen-
+     * Prüfung schicken kann (die festen Datumsfelder brauchen das nicht,
+     * die gelten immer für jedes Projekt).
+     *
+     * @return list<array{key: string, label: string, type: string, storage: string, typspezifisch_sub_ids: ?list<int>}>
+     */
+    private static function dateAttributeFields(int $tenantId): array
+    {
+        return Attribute::query()
+            ->where('tenant_id', $tenantId)
+            ->where('system', false)
+            ->where('data_type', Attribute::DATA_TYPE_DATE)
+            ->with('projectTypeSubs')
+            ->orderBy('sort')
+            ->get()
+            ->map(fn (Attribute $attribute) => [
+                'key' => $attribute->key,
+                'label' => $attribute->label,
+                'type' => 'attribute_date',
+                'storage' => 'attribute',
+                'typspezifisch_sub_ids' => $attribute->section === Attribute::SECTION_TYPSPEZIFISCH
+                    ? $attribute->projectTypeSubs->pluck('id')->all()
+                    : null,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Text-/Textarea-Zusatzfelder (Ralf, 2026-09-15) - eigene type-Werte
+     * ('attribute_text'/'attribute_textarea') statt der festen 'text'/
+     * 'textarea', damit buildPreview() sie zusätzlich durch die
+     * Typspezifisch-Übersprungen-Prüfung schicken kann (die feste
+     * "Bezeichnung" oben braucht das nicht). max_length kommt vom Attribut
+     * selbst (Attribute::max_length) und wird in validateInput() genauso
+     * ausgewertet wie am einzelnen Projekt (attribute-field.blade.php).
+     *
+     * @return list<array{key: string, label: string, type: string, storage: string, max_length: ?int, typspezifisch_sub_ids: ?list<int>}>
+     */
+    private static function textAttributeFields(int $tenantId): array
+    {
+        return Attribute::query()
+            ->where('tenant_id', $tenantId)
+            ->where('system', false)
+            // "Initiator" hat oben bereits sein eigenes, historisch
+            // gewachsenes Eintrag mit eigenen Kommentaren - ohne diesen
+            // Ausschluss würde es hier ein zweites Mal auftauchen.
+            ->where('key', '!=', 'initiator')
+            ->whereIn('data_type', [Attribute::DATA_TYPE_TEXT, Attribute::DATA_TYPE_TEXTAREA])
+            ->with('projectTypeSubs')
+            ->orderBy('sort')
+            ->get()
+            ->map(fn (Attribute $attribute) => [
+                'key' => $attribute->key,
+                'label' => $attribute->label,
+                'type' => $attribute->data_type === Attribute::DATA_TYPE_TEXTAREA ? 'attribute_textarea' : 'attribute_text',
+                'storage' => 'attribute',
+                'max_length' => $attribute->max_length,
                 'typspezifisch_sub_ids' => $attribute->section === Attribute::SECTION_TYPSPEZIFISCH
                     ? $attribute->projectTypeSubs->pluck('id')->all()
                     : null,

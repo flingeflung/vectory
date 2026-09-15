@@ -216,8 +216,11 @@ class MultichangeController extends Controller
         $rules = match ($field['type']) {
             'text' => ($field['required'] ?? false) ? ['required', 'string', 'max:255'] : ['nullable', 'string', 'max:255'],
             'textarea' => ($field['required'] ?? false) ? ['required', 'string', 'max:2000'] : ['nullable', 'string', 'max:2000'],
-            'date' => ['nullable', 'date'],
+            'date', 'attribute_date' => ['nullable', 'date'],
             'select', 'workflow_step' => ['required', Rule::in(array_keys($field['options']))],
+            // Ralf, 2026-09-15: am einzelnen Projekt liefert die Checkbox
+            // immer true/false (nie "leer"), deshalb hier ebenfalls required.
+            'attribute_boolean' => ['required', Rule::in(array_keys($field['options']))],
             // Ralf, 2026-09-15: Pulldown-Zusatzfelder dürfen (anders als die
             // festen Pulldown-Felder oben) auf leer gesetzt werden - am
             // einzelnen Projekt ist "– nicht zugewiesen –" für Zusatzfelder
@@ -235,6 +238,13 @@ class MultichangeController extends Controller
                 $field['number_max'] !== null ? 'max:'.$field['number_max'] : null,
                 $field['number_decimals'] !== null ? 'decimal:0,'.$field['number_decimals'] : null,
             ]),
+            // Ralf, 2026-09-15: Max. Textlänge kommt vom Attribut selbst
+            // (Attribute::max_length) - dieselben Vorgabewerte wie am
+            // einzelnen Projekt (ProjectController::attributeValidationRules()):
+            // Text weiterhin max. 255, wenn nicht konfiguriert, Textarea
+            // weiterhin unbegrenzt.
+            'attribute_text' => ['nullable', 'string', 'max:'.($field['max_length'] ?? 255)],
+            'attribute_textarea' => array_filter(['nullable', 'string', $field['max_length'] ? 'max:'.$field['max_length'] : null]),
         };
 
         $allRules = ['value' => $rules];
@@ -253,6 +263,14 @@ class MultichangeController extends Controller
         // sprechenden String-Wert (AttributeOption::value), NICHT casten.
         if (in_array($field['type'], ['select', 'workflow_step'], true) && $value !== null) {
             $value = (int) $value;
+        }
+        // Echter PHP-Bool statt "1"/"0"-String - genau das Format, in dem
+        // ProjectController::update() Ja/Nein-Zusatzfelder speichert (siehe
+        // $request->boolean(...) dort). Bei einem String-Wert würde der
+        // spätere unchanged-Vergleich (string)false !== (string)"0" liefern
+        // und "Nein" fälschlich immer als Änderung zeigen.
+        if ($field['type'] === 'attribute_boolean') {
+            $value = $value === '1';
         }
 
         return ['field' => $field, 'value' => $value, 'errors' => null];
@@ -419,7 +437,7 @@ class MultichangeController extends Controller
                 $applicable = $remaining->reject($hasOtherWorkflow)->values();
                 $skipped = $remaining->filter($hasOtherWorkflow)->values();
             }
-        } elseif (in_array($field['type'], ['attribute_select', 'attribute_select_multiple', 'attribute_number'], true)) {
+        } elseif (in_array($field['type'], ['attribute_select', 'attribute_select_multiple', 'attribute_number', 'attribute_boolean', 'attribute_date', 'attribute_text', 'attribute_textarea'], true)) {
             // Ralf, 2026-09-15: Pulldown-Zusatzfeld aus dem Bereich
             // "Typspezifisch" ist nicht jeder Projektart zugeordnet - ein
             // Projekt, dessen Projektart nicht dabei ist, kennt das Feld gar
@@ -718,13 +736,18 @@ class MultichangeController extends Controller
 
     /**
      * Überschrift des übersprungen-Kastens in der Vorschau/im Ergebnis -
-     * je Feld unterschiedlicher Grund, siehe buildPreview().
+     * je Feld unterschiedlicher Grund, siehe buildPreview(). Endet bewusst
+     * mit einem Punkt statt eines Doppelpunkts (Ralf-Bug-Report, 2026-09-15:
+     * der Doppelpunkt war ein Überbleibsel aus der Zeit vor der
+     * Änderungs-Tabelle, als darunter noch eine Aufzählung der betroffenen
+     * Projekte stand, siehe describeChangeRows()-Docblock - seitdem
+     * "kündigt" der Doppelpunkt etwas an, das gar nicht mehr folgt).
      */
     private function describeSkipReason(array $field, int $count): string
     {
         if ($field['key'] === 'workflow_id') {
             return trans_choice(
-                ':count Projekt hat einen anderen Workflow und wird übersprungen:|:count Projekte haben einen anderen Workflow und werden übersprungen:',
+                ':count Projekt hat einen anderen Workflow und wird übersprungen.|:count Projekte haben einen anderen Workflow und werden übersprungen.',
                 $count,
                 ['count' => $count]
             );
@@ -732,25 +755,25 @@ class MultichangeController extends Controller
 
         if ($field['key'] === 'workflow_step_id') {
             return trans_choice(
-                ':count Projekt hat keinen oder einen anderen Workflow und wird übersprungen (Workflow zuerst per Feld "Workflow" anpassen):|:count Projekte haben keinen oder einen anderen Workflow und werden übersprungen (Workflow zuerst per Feld "Workflow" anpassen):',
+                ':count Projekt hat keinen oder einen anderen Workflow und wird übersprungen (Workflow zuerst per Feld "Workflow" anpassen).|:count Projekte haben keinen oder einen anderen Workflow und werden übersprungen (Workflow zuerst per Feld "Workflow" anpassen).',
                 $count,
                 ['count' => $count]
             );
         }
 
         if ($field['key'] === 'status') {
-            return __(':count Projekt(e) werden übersprungen (aktueller Workflow-Schritt bestimmt den Status):', ['count' => $count]);
+            return __(':count Projekt(e) werden übersprungen (aktueller Workflow-Schritt bestimmt den Status).', ['count' => $count]);
         }
 
         if (($field['typspezifisch_sub_ids'] ?? null) !== null) {
             return trans_choice(
-                ':count Projekt hat eine Projektart, der dieses Feld nicht zugeordnet ist, und wird übersprungen:|:count Projekte haben eine Projektart, der dieses Feld nicht zugeordnet ist, und werden übersprungen:',
+                ':count Projekt hat eine Projektart, der dieses Feld nicht zugeordnet ist, und wird übersprungen.|:count Projekte haben eine Projektart, der dieses Feld nicht zugeordnet ist, und werden übersprungen.',
                 $count,
                 ['count' => $count]
             );
         }
 
-        return trans_choice(':count Projekt wird übersprungen:|:count Projekte werden übersprungen:', $count, ['count' => $count]);
+        return trans_choice(':count Projekt wird übersprungen.|:count Projekte werden übersprungen.', $count, ['count' => $count]);
     }
 
     /**
@@ -804,7 +827,8 @@ class MultichangeController extends Controller
 
         return match ($field['type']) {
             'select', 'workflow_step', 'attribute_select' => $field['options'][$value] ?? (string) $value,
-            'date' => Carbon::parse($value)->format('d.m.Y'),
+            'attribute_boolean' => $field['options'][$value ? '1' : '0'],
+            'date', 'attribute_date' => Carbon::parse($value)->format('d.m.Y'),
             default => (string) $value,
         };
     }
@@ -972,6 +996,22 @@ class MultichangeController extends Controller
             $raw = (array) ($project->attributes[$field['key']] ?? []);
 
             return $raw !== [] ? $this->describeValue($field, $raw) : '–';
+        }
+
+        // Ja/Nein-Zusatzfeld: Rohwert ist ein echter PHP-Bool (siehe
+        // applyValue()) - "false" darf hier NICHT wie "kein Wert" behandelt
+        // werden (anders als bei den übrigen Feldtypen unten), sonst zeigt
+        // die Spalte "Alter Wert" bei "Nein" fälschlich einen Leerstrich.
+        if ($field['type'] === 'attribute_boolean') {
+            $raw = $project->attributes[$field['key']] ?? null;
+
+            return $raw !== null ? $this->describeValue($field, $raw) : '–';
+        }
+
+        if ($field['type'] === 'attribute_date') {
+            $raw = $project->attributes[$field['key']] ?? null;
+
+            return $raw !== null && $raw !== '' ? $this->describeValue($field, $raw) : '–';
         }
 
         $raw = ($field['storage'] ?? 'column') === 'attribute'

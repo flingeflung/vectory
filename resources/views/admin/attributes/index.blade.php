@@ -80,6 +80,10 @@
                                     <input type="number" name="number_decimals" min="0" max="10" step="1" class="mt-0.5 w-24 rounded-md border-gray-300 py-1 text-sm">
                                 </div>
                             </div>
+                            <div x-show="newType === 'text' || newType === 'textarea'" x-cloak>
+                                <label class="block text-xs text-gray-500">{{ __('Max. Textlänge') }}</label>
+                                <input type="number" name="max_length" min="1" step="1" placeholder="{{ __('unbegrenzt') }}" class="mt-0.5 w-24 rounded-md border-gray-300 py-1 text-sm">
+                            </div>
                             <div class="flex justify-end gap-2">
                                 <button type="button" @click="creating = false" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                                     {{ __('Abbrechen') }}
@@ -216,6 +220,13 @@
                                                     <label class="flex items-center gap-1">
                                                         {{ __('Dezimalstellen') }}
                                                         <input type="number" min="0" max="10" step="1" name="number_decimals" value="{{ $attribute->number_decimals }}" class="w-16 rounded border-gray-300 py-0.5 text-xs">
+                                                    </label>
+                                                </div>
+                                            @elseif (in_array($attribute->data_type, ['text', 'textarea'], true))
+                                                <div class="ml-0 flex items-center gap-1 text-xs text-gray-500">
+                                                    <label class="flex items-center gap-1">
+                                                        {{ __('Max. Textlänge') }}
+                                                        <input type="number" min="1" step="1" name="max_length" value="{{ $attribute->max_length }}" placeholder="{{ __('unbegrenzt') }}" class="w-20 rounded border-gray-300 py-0.5 text-xs">
                                                     </label>
                                                 </div>
                                             @endif
