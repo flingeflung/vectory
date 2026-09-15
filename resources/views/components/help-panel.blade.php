@@ -13,9 +13,9 @@
     was hier die eigentliche Seiten-URL überschreiben würde. Eigene,
     schlanke Debounce-Funktion ohne History-Nebenwirkung stattdessen.
 --}}
-<x-modal name="help-panel" max-width="lg" :draggable="true">
+<x-modal name="help-panel" max-width="3xl" :draggable="true">
     <div
-        class="flex max-h-[80vh] flex-col"
+        class="flex h-[85vh] max-h-[85vh] flex-col"
         x-data="{
             refresh(delay = 0) {
                 clearTimeout(this.timer);
@@ -72,12 +72,15 @@
              components/help-image-lightbox.blade.php), bewusst kein neuer
              Browser-Tab (Ralf: "macht wieder zu viel Arbeit, es zu erkennen
              und wieder zu schließen"). "[[Artikel-Titel]]"-Verweise
-             (data-help-key, siehe HelpArticleTranslation::bodyHtml())
-             springen im selben Panel zum Zielartikel statt echt zu
-             navigieren. Event-Delegation, weil #help-results bei jeder
-             Suche/jedem Artikelwechsel per innerHTML ausgetauscht wird. --}}
+             (data-help-key, siehe HelpArticleTranslation::bodyHtml()) UND
+             die Baum-Navigation links (help._nav) springen im selben Panel
+             zum Zielartikel statt echt zu navigieren - eine gemeinsame
+             Event-Delegation auf dem ganzen Panel-Körper, weil #help-results
+             bei jeder Suche/jedem Artikelwechsel per innerHTML ausgetauscht
+             wird (die Navigation links dagegen nicht, die bleibt fix
+             stehen). --}}
         <div
-            class="min-h-0 flex-1 overflow-y-auto px-4 py-3"
+            class="flex min-h-0 flex-1"
             x-on:click="if ($event.target.tagName === 'IMG') {
                 window.__helpLightboxSrc = $event.target.src;
                 window.dispatchEvent(new CustomEvent('open-modal', { detail: 'help-image-lightbox' }));
@@ -86,7 +89,12 @@
                 window.helpOpenArticle($event.target.closest('[data-help-key]').dataset.helpKey);
             }"
         >
-            <div id="help-results">{{ __('Lädt…') }}</div>
+            <div class="w-56 shrink-0 overflow-y-auto border-r border-gray-100 px-3 py-3 text-sm">
+                @include('help._nav', ['nodes' => \App\Models\HelpArticle::tree(), 'topLevel' => true])
+            </div>
+            <div class="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+                <div id="help-results">{{ __('Lädt…') }}</div>
+            </div>
         </div>
     </div>
 </x-modal>

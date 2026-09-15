@@ -285,8 +285,11 @@ Route::middleware(['auth', 'verified', 'can:access-superadmin', RememberLastAdmi
 
     Route::get('/hilfeseiten', [HelpArticleController::class, 'index'])->name('hilfeseiten');
     Route::post('/hilfeseiten', [HelpArticleController::class, 'store'])->name('hilfeseiten.store');
+    Route::post('/hilfeseiten/reorder', [HelpArticleController::class, 'reorder'])->name('hilfeseiten.reorder');
     Route::post('/hilfeseiten/{helpArticle}', [HelpArticleController::class, 'update'])->name('hilfeseiten.update');
     Route::delete('/hilfeseiten/{helpArticle}', [HelpArticleController::class, 'destroy'])->name('hilfeseiten.destroy');
+    Route::post('/hilfeseiten/{helpArticle}/einruecken', [HelpArticleController::class, 'indent'])->name('hilfeseiten.einruecken');
+    Route::post('/hilfeseiten/{helpArticle}/ausruecken', [HelpArticleController::class, 'outdent'])->name('hilfeseiten.ausruecken');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {

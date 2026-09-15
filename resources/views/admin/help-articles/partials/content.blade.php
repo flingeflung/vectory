@@ -8,7 +8,7 @@
                 return url.pathname + url.search;
             },
         }"
-        class="flex w-80 shrink-0 flex-col"
+        class="flex w-96 shrink-0 flex-col"
     >
         <div class="flex flex-1 min-h-0 flex-col rounded-lg border border-gray-200 bg-white" x-data="{ newArticle: false }">
             <div class="shrink-0 flex items-center justify-between border-b border-gray-100 p-2">
@@ -26,23 +26,10 @@
                     </button>
                 </form>
 
-                @if ($articles->isEmpty())
+                @if ($tree->isEmpty())
                     <div class="px-2 py-1 text-gray-400">{{ __('Noch keine Hilfeseiten angelegt.') }}</div>
                 @else
-                    @foreach ($articles as $article)
-                        @php($articleTitle = $article->translation(\App\Models\HelpArticle::PRIMARY_LOCALE)?->title ?? $article->key)
-                        <a
-                            :href="navUrl({ article: {{ $article->id }} })"
-                            onclick="return window.navigateOrConfirm(event)"
-                            @if ($selected?->id === $article->id) data-selected @endif
-                            class="flex flex-col rounded px-2 py-1 {{ $selected?->id === $article->id ? 'bg-indigo-50 font-medium text-indigo-700' : 'text-gray-700 hover:bg-gray-50' }}"
-                        >
-                            {{ $articleTitle }}
-                            @if (empty($article->route_names))
-                                <span class="text-xs font-normal text-gray-400">{{ __('nur über Suche erreichbar') }}</span>
-                            @endif
-                        </a>
-                    @endforeach
+                    @include('admin.help-articles.partials.tree', ['nodes' => $tree, 'parentId' => null, 'selected' => $selected])
                 @endif
             </div>
         </div>

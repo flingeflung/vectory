@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\HelpArticle;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -21,16 +22,15 @@ class HelpArticleController extends Controller
 {
     public function index(Request $request): View
     {
-        $articles = HelpArticle::query()->with('translations')->get()
-            ->sortBy(fn (HelpArticle $article) => $article->translation(HelpArticle::PRIMARY_LOCALE)?->title ?? $article->key)
-            ->values();
+        $tree = HelpArticle::tree();
+        $flat = HelpArticle::flattenTree($tree);
 
         $selected = $request->filled('article')
-            ? $articles->firstWhere('id', (int) $request->query('article'))
+            ? $flat->firstWhere('id', (int) $request->query('article'))
             : null;
 
         return view('admin.help-articles.index', [
-            'articles' => $articles,
+            'tree' => $tree,
             'selected' => $selected,
             'locales' => HelpArticle::AVAILABLE_LOCALES,
         ]);
@@ -46,9 +46,13 @@ class HelpArticleController extends Controller
         $title = trim((string) $request->string('title'));
         abort_if($title === '', 422);
 
+        $nextPosition = 1 + (int) HelpArticle::query()->whereNull('parent_id')->max('position');
+
         $article = HelpArticle::query()->create([
             'key' => $this->uniqueKey($title),
             'route_names' => [],
+            'parent_id' => null,
+            'position' => $nextPosition,
         ]);
 
         $article->translations()->create([
@@ -110,9 +114,97 @@ class HelpArticleController extends Controller
 
     public function destroy(HelpArticle $helpArticle): RedirectResponse
     {
+        // Kinder werden NICHT mitgelöscht - rücken per nullOnDelete (siehe
+        // Migration) automatisch auf Ebene 1 auf, statt Inhalte beim
+        // Aufräumen der Struktur zu verlieren.
         $helpArticle->delete();
 
         return redirect()->route('admin.hilfeseiten')->with('status', 'help-article-deleted');
+    }
+
+    /**
+     * Reine Sortierung innerhalb derselben Ebene (Ziehen am Griff-Symbol,
+     * kein Ebenenwechsel) - analog ProjectTypeController::reorderMain().
+     */
+    public function reorder(Request $request): RedirectResponse
+    {
+        $parentId = $request->filled('parent_id') ? (int) $request->input('parent_id') : null;
+
+        collect($request->array('ids'))->values()->each(function (string $id, int $index) use ($parentId) {
+            HelpArticle::query()->where('id', (int) $id)->where('parent_id', $parentId)->update(['position' => $index]);
+        });
+
+        return redirect()->route('admin.hilfeseiten');
+    }
+
+    /**
+     * Macht den Artikel zum letzten Kind seines direkten Vorgängers auf
+     * derselben Ebene - kein Vorgänger vorhanden (erster Eintrag) oder
+     * würde MAX_DEPTH überschreiten: keine Wirkung.
+     */
+    public function indent(HelpArticle $helpArticle): RedirectResponse
+    {
+        $previousSibling = HelpArticle::query()
+            ->where('parent_id', $helpArticle->parent_id)
+            ->where('position', '<', $helpArticle->position)
+            ->orderByDesc('position')
+            ->first();
+
+        if ($previousSibling && $previousSibling->depth() < HelpArticle::MAX_DEPTH) {
+            DB::transaction(function () use ($helpArticle, $previousSibling) {
+                $this->renumberSiblingsAfterRemoval($helpArticle);
+
+                $helpArticle->update([
+                    'parent_id' => $previousSibling->id,
+                    'position' => $previousSibling->children()->count(),
+                ]);
+            });
+        }
+
+        return redirect()->route('admin.hilfeseiten', ['article' => $helpArticle->id]);
+    }
+
+    /**
+     * Macht den Artikel zum Geschwister seines bisherigen Elternteils,
+     * direkt danach einsortiert - bereits auf Ebene 1: keine Wirkung.
+     */
+    public function outdent(HelpArticle $helpArticle): RedirectResponse
+    {
+        if ($helpArticle->parent_id === null) {
+            return redirect()->route('admin.hilfeseiten', ['article' => $helpArticle->id]);
+        }
+
+        $oldParent = $helpArticle->parent;
+
+        DB::transaction(function () use ($helpArticle, $oldParent) {
+            $this->renumberSiblingsAfterRemoval($helpArticle);
+
+            HelpArticle::query()
+                ->where('parent_id', $oldParent->parent_id)
+                ->where('position', '>', $oldParent->position)
+                ->increment('position');
+
+            $helpArticle->update([
+                'parent_id' => $oldParent->parent_id,
+                'position' => $oldParent->position + 1,
+            ]);
+        });
+
+        return redirect()->route('admin.hilfeseiten', ['article' => $helpArticle->id]);
+    }
+
+    /**
+     * Schließt die Lücke, die ein Artikel beim Verlassen seiner bisherigen
+     * Geschwisterliste hinterlässt (gemeinsam von indent()/outdent()
+     * gebraucht) - sonst driftet die Positions-Nummerierung mit jeder
+     * Verschiebung weiter auseinander.
+     */
+    private function renumberSiblingsAfterRemoval(HelpArticle $helpArticle): void
+    {
+        HelpArticle::query()
+            ->where('parent_id', $helpArticle->parent_id)
+            ->where('position', '>', $helpArticle->position)
+            ->decrement('position');
     }
 
     private function uniqueKey(string $title): string
