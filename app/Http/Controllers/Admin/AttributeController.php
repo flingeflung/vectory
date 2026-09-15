@@ -26,7 +26,11 @@ use Illuminate\View\View;
  * und bleibt danach unveränderlich - ein Umbenennen ändert nur "label"
  * (was der Kunde sieht). Ändern von Feldtyp/Mehrfachauswahl nach dem
  * Anlegen ist bewusst nicht vorgesehen (beides bestimmt die Datenablage) -
- * bei Bedarf neu anlegen statt nachträglich umbauen.
+ * bei Bedarf neu anlegen statt nachträglich umbauen. Zahl-Attribute haben
+ * zusätzlich Mindest-/Höchstwert + Dezimalstellen (Ralf, 2026-09-15) - im
+ * Gegensatz zu Feldtyp/Mehrfachauswahl reine Validierungsgrenzen ohne
+ * Auswirkung auf die Datenablage, deshalb bewusst auch nachträglich über
+ * update() änderbar.
  */
 class AttributeController extends Controller
 {
@@ -79,6 +83,7 @@ class AttributeController extends Controller
         abort_unless(in_array($dataType, Attribute::DATA_TYPES, true), 422);
 
         $multiple = $dataType === Attribute::DATA_TYPE_SELECT && $request->boolean('multiple');
+        $numberConstraints = $dataType === Attribute::DATA_TYPE_NUMBER ? $this->numberConstraints($request) : [];
 
         $attribute = Attribute::query()->create([
             'tenant_id' => $tenantId,
@@ -87,6 +92,7 @@ class AttributeController extends Controller
             'label' => $label,
             'data_type' => $dataType,
             'multiple' => $multiple,
+            ...$numberConstraints,
             'sort' => 1 + (int) Attribute::query()->where('tenant_id', $tenantId)->where('section', $section)->max('sort'),
         ]);
 
@@ -126,7 +132,10 @@ class AttributeController extends Controller
             abort_if(mb_strlen($label) < 3, 422);
         }
 
-        $attribute->update(['label' => $label]);
+        $attribute->update([
+            'label' => $label,
+            ...($attribute->data_type === Attribute::DATA_TYPE_NUMBER ? $this->numberConstraints($request) : []),
+        ]);
 
         return $this->redirectToSection($attribute->section);
     }
@@ -298,6 +307,26 @@ class AttributeController extends Controller
             ->whereNotNull('attributes')
             ->whereRaw("JSON_EXTRACT(attributes, '$.\"{$attribute->key}\"') is not null")
             ->count();
+    }
+
+    /**
+     * Mindest-/Höchstwert + Dezimalstellen für ein Zahl-Attribut, aus dem
+     * Anlegen- ODER dem Ändern-Formular (identische Feldnamen, siehe
+     * store()/update()) - alle drei bleiben leer/null, wenn nicht
+     * ausgefüllt (keine Einschränkung).
+     *
+     * @return array{number_min: ?float, number_max: ?float, number_decimals: ?int}
+     */
+    private function numberConstraints(Request $request): array
+    {
+        $min = $request->filled('number_min') ? (float) $request->input('number_min') : null;
+        $max = $request->filled('number_max') ? (float) $request->input('number_max') : null;
+        $decimals = $request->filled('number_decimals') ? (int) $request->input('number_decimals') : null;
+
+        abort_if($min !== null && $max !== null && $min > $max, 422, __('Die Mindestzahl darf nicht größer als die Höchstzahl sein.'));
+        abort_if($decimals !== null && ($decimals < 0 || $decimals > 10), 422);
+
+        return ['number_min' => $min, 'number_max' => $max, 'number_decimals' => $decimals];
     }
 
     private function dataTypeOptions(): array

@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['tenant_id', 'section', 'system', 'label_editable', 'key', 'label', 'data_type', 'multiple', 'sort', 'available_in_mail_templates'])]
+#[Fillable(['tenant_id', 'section', 'system', 'label_editable', 'key', 'label', 'data_type', 'multiple', 'number_min', 'number_max', 'number_decimals', 'sort', 'available_in_mail_templates'])]
 #[ObservedBy(AttributeObserver::class)]
 class Attribute extends Model
 {
@@ -152,5 +152,30 @@ class Attribute extends Model
     public function projectTypeSubs(): BelongsToMany
     {
         return $this->belongsToMany(ProjectTypeSub::class, 'attribute_project_type');
+    }
+
+    /**
+     * number_min/number_max kommen aus der DB als DECIMAL-String mit fixen
+     * 4 Nachkommastellen (z.B. "5.0000") - für Anzeige/Formular-Vorbelegung
+     * unschöne Nullen abschneiden ("5" statt "5.0000", "2.5" statt
+     * "2.5000").
+     */
+    public function numberMinDisplay(): ?string
+    {
+        return self::trimTrailingZeros($this->number_min);
+    }
+
+    public function numberMaxDisplay(): ?string
+    {
+        return self::trimTrailingZeros($this->number_max);
+    }
+
+    private static function trimTrailingZeros(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        return rtrim(rtrim($value, '0'), '.') ?: '0';
     }
 }

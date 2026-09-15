@@ -1303,7 +1303,18 @@ class ProjectController extends Controller
             $key = 'attributes.'.$attribute->key;
 
             $rules[$key] = match ($attribute->data_type) {
-                Attribute::DATA_TYPE_NUMBER => ['nullable', 'numeric'],
+                // Ralf, 2026-09-15: Zahl-Attribute können optional Mindest-/
+                // Höchstwert + Dezimalstellen tragen (Attribute::number_min/
+                // .../number_decimals) - hier in echte Validierungsregeln
+                // übersetzt, statt nur als reine Anzeige-/Formular-Hinweise
+                // zu existieren.
+                Attribute::DATA_TYPE_NUMBER => array_filter([
+                    'nullable',
+                    'numeric',
+                    $attribute->number_min !== null ? 'min:'.$attribute->number_min : null,
+                    $attribute->number_max !== null ? 'max:'.$attribute->number_max : null,
+                    $attribute->number_decimals !== null ? 'decimal:0,'.$attribute->number_decimals : null,
+                ]),
                 Attribute::DATA_TYPE_DATE => ['nullable', 'date'],
                 Attribute::DATA_TYPE_BOOLEAN => ['boolean'],
                 Attribute::DATA_TYPE_TEXTAREA => ['nullable', 'string'],

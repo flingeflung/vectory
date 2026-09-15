@@ -15,7 +15,29 @@
             @break
 
         @case('number')
-            <input type="number" name="attributes[{{ $attribute->key }}]" value="{{ $value }}" class="mt-0.5 w-full rounded border-gray-300 text-sm">
+            @php
+                $step = $attribute->number_decimals !== null ? (1 / (10 ** $attribute->number_decimals)) : 'any';
+            @endphp
+            <input
+                type="number"
+                name="attributes[{{ $attribute->key }}]"
+                value="{{ $value }}"
+                @if ($attribute->number_min !== null) min="{{ $attribute->numberMinDisplay() }}" @endif
+                @if ($attribute->number_max !== null) max="{{ $attribute->numberMaxDisplay() }}" @endif
+                step="{{ $step }}"
+                class="mt-0.5 w-full rounded border-gray-300 text-sm"
+            >
+            @if ($attribute->number_min !== null || $attribute->number_max !== null)
+                <p class="mt-0.5 text-xs text-gray-400">
+                    @if ($attribute->number_min !== null && $attribute->number_max !== null)
+                        {{ __('Bereich :min – :max', ['min' => $attribute->numberMinDisplay(), 'max' => $attribute->numberMaxDisplay()]) }}
+                    @elseif ($attribute->number_min !== null)
+                        {{ __('Mindestens :min', ['min' => $attribute->numberMinDisplay()]) }}
+                    @else
+                        {{ __('Höchstens :max', ['max' => $attribute->numberMaxDisplay()]) }}
+                    @endif
+                </p>
+            @endif
             @break
 
         @case('date')

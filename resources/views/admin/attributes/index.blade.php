@@ -34,7 +34,7 @@
                                 <div class="text-xs font-semibold text-gray-500">{{ __('Felder') }}</div>
                                 <p class="text-xs text-gray-400">{{ __('Feste Felder (Schloss-Symbol) lassen sich nur per Drag & Drop einsortieren, nicht umbenennen/löschen.') }}</p>
                             </div>
-                            <button type="button" @click="creating = !creating" class="shrink-0 rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
+                            <button type="button" @click="creating = !creating; if (creating) $nextTick(() => $refs.newAttributeLabel.focus())" class="shrink-0 rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                                 + {{ __('Neu') }}
                             </button>
                         </div>
@@ -51,7 +51,7 @@
                             <div class="flex gap-2">
                                 <div class="flex-1">
                                     <label class="block text-xs text-gray-500">{{ __('Bezeichnung') }}</label>
-                                    <input type="text" name="label" required class="mt-0.5 w-full rounded-md border-gray-300 py-1 text-sm">
+                                    <input type="text" name="label" x-ref="newAttributeLabel" required class="mt-0.5 w-full rounded-md border-gray-300 py-1 text-sm">
                                 </div>
                                 <div class="w-40">
                                     <label class="block text-xs text-gray-500">{{ __('Feldtyp') }}</label>
@@ -66,6 +66,20 @@
                                 <input type="checkbox" name="multiple" value="1" class="rounded border-gray-300">
                                 {{ __('Mehrfachauswahl erlauben') }}
                             </label>
+                            <div x-show="newType === 'number'" x-cloak class="flex gap-2">
+                                <div>
+                                    <label class="block text-xs text-gray-500">{{ __('Mindestzahl') }}</label>
+                                    <input type="number" step="any" name="number_min" class="mt-0.5 w-24 rounded-md border-gray-300 py-1 text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500">{{ __('Höchstzahl') }}</label>
+                                    <input type="number" step="any" name="number_max" class="mt-0.5 w-24 rounded-md border-gray-300 py-1 text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500">{{ __('Dezimalstellen') }}</label>
+                                    <input type="number" name="number_decimals" min="0" max="10" step="1" class="mt-0.5 w-24 rounded-md border-gray-300 py-1 text-sm">
+                                </div>
+                            </div>
                             <div class="flex justify-end gap-2">
                                 <button type="button" @click="creating = false" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                                     {{ __('Abbrechen') }}
@@ -176,17 +190,35 @@
                                         <form
                                             method="POST"
                                             action="{{ route('admin.projektattribute.update', $attribute) }}"
-                                            class="flex flex-1 items-center gap-2"
+                                            class="flex flex-1 flex-col gap-1"
                                             x-data="{ dirty: false }"
                                             @input="dirty = window.formIsDirty($el, window.__attributesDirtyForms)"
                                             @submit="dirty = false; window.__attributesDirtyForms.delete($el)"
                                         >
                                             @csrf
-                                            <input type="text" name="label" value="{{ $attribute->label }}" required class="flex-1 rounded-md border-gray-300 py-1 text-sm">
-                                            <span class="shrink-0 text-xs text-gray-400">{{ $dataTypes[$attribute->data_type] }}</span>
-                                            <button type="submit" x-show="dirty" x-cloak class="shrink-0 rounded-md bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
-                                                {{ __('Speichern') }}
-                                            </button>
+                                            <div class="flex items-center gap-2">
+                                                <input type="text" name="label" value="{{ $attribute->label }}" required class="flex-1 rounded-md border-gray-300 py-1 text-sm">
+                                                <span class="shrink-0 text-xs text-gray-400">{{ $dataTypes[$attribute->data_type] }}</span>
+                                                <button type="submit" x-show="dirty" x-cloak class="shrink-0 rounded-md bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
+                                                    {{ __('Speichern') }}
+                                                </button>
+                                            </div>
+                                            @if ($attribute->data_type === 'number')
+                                                <div class="ml-0 flex items-center gap-3 text-xs text-gray-500">
+                                                    <label class="flex items-center gap-1">
+                                                        {{ __('Mindestzahl') }}
+                                                        <input type="number" step="any" name="number_min" value="{{ $attribute->numberMinDisplay() }}" class="w-20 rounded border-gray-300 py-0.5 text-xs">
+                                                    </label>
+                                                    <label class="flex items-center gap-1">
+                                                        {{ __('Höchstzahl') }}
+                                                        <input type="number" step="any" name="number_max" value="{{ $attribute->numberMaxDisplay() }}" class="w-20 rounded border-gray-300 py-0.5 text-xs">
+                                                    </label>
+                                                    <label class="flex items-center gap-1">
+                                                        {{ __('Dezimalstellen') }}
+                                                        <input type="number" min="0" max="10" step="1" name="number_decimals" value="{{ $attribute->number_decimals }}" class="w-16 rounded border-gray-300 py-0.5 text-xs">
+                                                    </label>
+                                                </div>
+                                            @endif
                                         </form>
                                         @if ($deletionLocked)
                                             <span class="shrink-0 text-xs text-gray-400" title="{{ __('Wird in :count Projekten verwendet - nur Super-Admin kann Felder mit vorhandenen Werten löschen.', ['count' => $valueCount]) }}">
