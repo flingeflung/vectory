@@ -1089,11 +1089,23 @@ class ProjectController extends Controller
      */
     private function adjacentProject(?string $sort, string $direction, array $filters, Project $current, string $way): ?Project
     {
+        [$direct, $current, $excludeIds] = $this->verbundAdjacentDetour($current, $way);
+        if ($direct !== false) {
+            return $direct;
+        }
+
         [$column, $primaryDir] = $this->effectiveOrder($sort, $direction);
         $queryDirection = $way === 'next' ? $primaryDir : ($primaryDir === 'asc' ? 'desc' : 'asc');
         $operator = $queryDirection === 'asc' ? '>' : '<';
 
         $query = Project::query();
+        if ($excludeIds->isNotEmpty()) {
+            // Normale Berechnung ab der Hauptprojekt-Position (siehe
+            // verbundAdjacentDetour()) darf nicht zufällig auf eines der
+            // eigenen Unterprojekte zurückspringen, nur weil dessen PN
+            // natürlich als Nächstes käme - die wurden ja schon gezeigt.
+            $query->whereNotIn('id', $excludeIds);
+        }
         [$sortColumn, $idColumn] = $this->resolveSortColumns($query, $column);
         $value = match ($column) {
             'workflow' => $current->workflow?->sort,
@@ -1145,6 +1157,62 @@ class ProjectController extends Controller
             ->orderBy($sortColumn, $queryDirection)
             ->orderBy($idColumn, $queryDirection)
             ->first();
+    }
+
+    /**
+     * "Projektverbund", einfachste Variante (Ralf, 2026-09-15): statt die
+     * eigentliche Sortierung Verbund-fest zu machen, nur ein kleiner Umweg
+     * fürs Blättern selbst - von einem Hauptprojekt aus geht's zuerst durch
+     * seine eigenen Unterprojekte (PN-Reihenfolge), erst danach normal
+     * weiter; von einem Unterprojekt aus zum nächsten Geschwister, am
+     * Ende/Anfang weiter an der Position, an der es beim HAUPTPROJEKT
+     * sowieso weitergegangen wäre (nicht der eigenen Position des
+     * Unterprojekts - die kann ganz woanders in der Sortierung liegen).
+     *
+     * @return array{0: Project|false, 1: Project} [direktes Ergebnis oder
+     *                                             false für "kein Sonderfall", wirksames Ausgangsprojekt für die
+     *                                             normale Berechnung, falls kein direktes Ergebnis]
+     */
+    private function verbundAdjacentDetour(Project $current, string $way): array
+    {
+        $noExclusion = collect();
+
+        if ($current->verbund_rolle === 1) {
+            if ($way === 'next') {
+                $firstUnterprojekt = $current->unterprojekte()->orderBy('source_pn')->first();
+                if ($firstUnterprojekt) {
+                    return [$firstUnterprojekt, $current, $noExclusion];
+                }
+            }
+
+            // Fällt auf normale Berechnung ab der eigenen (Hauptprojekt-)
+            // Position zurück - eigene Unterprojekte dabei ausschließen,
+            // falls eines zufällig natürlich als Nächstes/Vorheriges käme.
+            return [false, $current, $current->unterprojekte()->pluck('id')];
+        }
+
+        if ($current->verbund_rolle === 2) {
+            $siblings = Project::query()->where('hauptprojekt_id', $current->hauptprojekt_id)->orderBy('source_pn')->get();
+            $index = $siblings->search(fn (Project $p) => $p->id === $current->id);
+
+            if ($way === 'next') {
+                if ($index !== false && $siblings->has($index + 1)) {
+                    return [$siblings[$index + 1], $current, $noExclusion];
+                }
+
+                $hauptprojekt = $current->hauptprojekt;
+
+                return [false, $hauptprojekt ?? $current, $siblings->pluck('id')];
+            }
+
+            if ($index !== false && $index > 0) {
+                return [$siblings[$index - 1], $current, $noExclusion];
+            }
+
+            return [$current->hauptprojekt ?? false, $current, $noExclusion];
+        }
+
+        return [false, $current, $noExclusion];
     }
 
     /**
