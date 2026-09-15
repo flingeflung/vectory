@@ -310,8 +310,15 @@ class MultichangeController extends Controller
      */
     private function sortedFields(): array
     {
+        // Ralf-Bug-Report, 2026-09-15: SORT_NATURAL sortiert "Änderungs-
+        // protokoll" hinter Z statt bei A ein - PHPs eingebaute String-
+        // Sortierung kennt keine deutsche Kollation (Ä/Ö/Ü zählen dort als
+        // eigene, "höhere" Zeichen als Z). Collator('de_DE') sortiert sie
+        // stattdessen wie A/O/U ein.
+        $collator = new \Collator('de_DE');
+
         return collect(MultichangeFieldCatalog::available(CurrentTenant::id()))
-            ->sortBy('label', SORT_NATURAL | SORT_FLAG_CASE)
+            ->sort(fn (array $a, array $b) => $collator->compare($a['label'], $b['label']))
             ->values()
             ->all();
     }
