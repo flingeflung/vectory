@@ -10,11 +10,9 @@ use App\Models\ProjectGroup;
 use App\Models\ProjectNote;
 use App\Models\ProjectTypeSub;
 use App\Models\ProjectWorkflowStep;
-use App\Models\User;
 use App\Models\WorkflowStep;
 use App\Support\CurrentTenant;
 use App\Support\MultichangeFieldCatalog;
-use App\Support\ProjectColumnCatalog;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
@@ -60,7 +58,7 @@ class MultichangeController extends Controller
 
         return response()->view('projekte.partials.multichange-body', [
             'groups' => $this->availableGroups(),
-            'fields' => $this->orderedFields($request->user()),
+            'fields' => $this->sortedFields(),
             'selectedGroupId' => $request->integer('group_id') ?: '',
             // Ralf: "Wenn ich auf Zurück klicke, werde ich bestraft und muss
             // nochmal von vorne beginnen" - Feld+Wert bleiben beim
@@ -111,7 +109,7 @@ class MultichangeController extends Controller
 
         return response()->view('projekte.partials.multichange-body', [
             'groups' => $this->availableGroups(),
-            'fields' => $this->orderedFields($request->user()),
+            'fields' => $this->sortedFields(),
             'group' => $group,
             'preview' => $preview,
             'field' => $field,
@@ -166,7 +164,7 @@ class MultichangeController extends Controller
 
         return response()->view('projekte.partials.multichange-body', [
             'group' => $group,
-            'fields' => $this->orderedFields($request->user()),
+            'fields' => $this->sortedFields(),
             'result' => [
                 'applied' => $applied,
                 'skipped' => $preview['skipped'],
@@ -281,7 +279,7 @@ class MultichangeController extends Controller
         return response()
             ->view('projekte.partials.multichange-body', [
                 'groups' => $this->availableGroups(),
-                'fields' => $this->orderedFields($request->user()),
+                'fields' => $this->sortedFields(),
                 'formErrors' => $errors,
                 'selectedGroupId' => $group?->id ?? '',
                 'selectedField' => $field['key'] ?? '',
@@ -303,51 +301,17 @@ class MultichangeController extends Controller
     }
 
     /**
-     * Ralf, 2026-09-14: "kannst du die Reihenfolge hier dem aktuell
-     * verwendeten Anzeigefilter angleichen?" - die Feld-Liste folgt der
-     * Spaltenreihenfolge, die der Anwender gerade in seinem aktiven
-     * Anzeigefilter-Set eingestellt hat (ProjectColumnCatalog::effectiveFor(),
-     * per Drag&Drop personalisiert), statt einer eigenen, unabhängigen
-     * Reihenfolge. Die meisten Multichange-Felder haben eine 1:1-Entsprechung
-     * als Spalte dort; "Start"/"Ende" teilen sich dort EINE Spalte
-     * ("start_end") und bleiben deshalb untereinander in ihrer Multichange-
-     * eigenen Reihenfolge. "Workflow-Schritt" hat gar keine eigene Spalte -
-     * hängt sich direkt hinter "Workflow" (+0.5), statt irgendwo verloren zu
-     * landen. Felder ohne jede Entsprechung fallen stabil ans Ende.
-     *
-     * @return list<array{key: string, label: string, type: string}>
+     * Ralf, 2026-09-15: "Die Sortierung hier ist Käse. Mach sie durchgehend
+     * alfabetisch" - ersetzt die bisherige Herleitung aus der
+     * Anzeigefilter-Spaltenreihenfolge (wurde mit inzwischen 6
+     * Zusatzfeld-Typen unübersichtlich - die meisten neuen Felder haben gar
+     * keine Spalten-Entsprechung und fielen alle undurchsichtig ans Ende).
+     * Einfach nach Label, ohne Rücksicht auf Feldtyp oder Herkunft.
      */
-    private function orderedFields(User $user): array
+    private function sortedFields(): array
     {
-        $columnKeyByFieldKey = [
-            'title' => 'title',
-            'initiator' => 'attribute:initiator',
-            'remarks' => 'remarks',
-            'change_log' => 'attribute:change_log',
-            'start_date' => 'start_end',
-            'end_date' => 'start_end',
-            'publication_date' => 'publication_date',
-            'status' => 'status',
-            'creation_type' => 'creation_type',
-            'project_type_sub_id' => 'project_type',
-            'workflow_id' => 'workflow',
-            'workflow_step_id' => 'workflow',
-        ];
-
-        $columnPositions = collect(ProjectColumnCatalog::effectiveFor($user))->pluck('key')->flip();
-
         return collect(MultichangeFieldCatalog::available(CurrentTenant::id()))
-            ->values()
-            ->sortBy(function (array $field, int $index) use ($columnKeyByFieldKey, $columnPositions) {
-                $columnKey = $columnKeyByFieldKey[$field['key']] ?? null;
-                $position = $columnKey !== null ? $columnPositions->get($columnKey) : null;
-
-                if ($position === null) {
-                    return 1000 + $index;
-                }
-
-                return $field['key'] === 'workflow_step_id' ? $position + 0.5 : $position;
-            })
+            ->sortBy('label', SORT_NATURAL | SORT_FLAG_CASE)
             ->values()
             ->all();
     }
