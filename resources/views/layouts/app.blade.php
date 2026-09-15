@@ -80,6 +80,33 @@
         </script>
 
         {{--
+            Ralf-Bug-Report, 2026-09-14: Sitzung während eines offenen
+            Dialogs abgelaufen (z.B. Gruppieren) - der fetch() lud
+            unbemerkt die komplette Login-Seite nach und stopfte sie roh in
+            das kleine Dialog-Fenster. Bisher nur an zwei Einzelstellen
+            behandelt (reloadMultichange(), Illustrationsaufträge-Formular)
+            - hier global für ALLE fetch()-Aufrufe der Seite gelöst, statt
+            jede der zig Fragment-Ladestellen einzeln anzufassen: window.fetch
+            selbst wird einmal umschlossen, eine Umleitung auf /login lässt
+            die GANZE Seite dorthin wechseln (nicht nur neu laden - so
+            bleibt ein evtl. "zurück zu"-Parameter erhalten), statt die
+            Login-Seite an den ursprünglichen Aufrufer durchzureichen.
+        --}}
+        <script>
+            (function () {
+                const originalFetch = window.fetch;
+                window.fetch = async function (...args) {
+                    const response = await originalFetch.apply(this, args);
+                    if (response.redirected && new URL(response.url).pathname === '/login') {
+                        window.location.href = response.url;
+                        return new Promise(() => {});
+                    }
+                    return response;
+                };
+            })();
+        </script>
+
+        {{--
             Hilfesystem (Ralf, 2026-09-12): welcher Hilfeartikel zur
             "aktuellen Seite" gehört, wird über den Laravel-Routennamen
             aufgelöst (siehe HelpController::results()). Bei einem per
