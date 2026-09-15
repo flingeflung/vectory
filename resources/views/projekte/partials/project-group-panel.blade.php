@@ -38,8 +38,8 @@
                 value="{{ $group->id }}"
                 data-viewers="{{ $group->viewers_count }}"
                 data-name="{{ $group->name }}"
-                data-verbund-suffix="{{ $group->is_verbund ? ' – '.__('Verbund') : '' }}"
-            >{{ $group->name }} ({{ $group->projects_count }}){{ $group->is_verbund ? ' – '.__('Verbund') : '' }}</option>
+                data-verbund-suffix="{{ $group->is_verbund ? ' ⚑' : '' }}"
+            >{{ $group->name }} ({{ $group->projects_count }}){{ $group->is_verbund ? ' ⚑' : '' }}</option>
         @endforeach
     </select>
 </div>
