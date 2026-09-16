@@ -54,7 +54,7 @@
                     onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'papierformate-uebernehmen' }))"
                     class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
                 >
-                    {{ __('Aus anderem Kunden übernehmen') }}
+                    {{ __('Von anderem Kunden übernehmen') }}
                 </button>
             @endif
             <button
