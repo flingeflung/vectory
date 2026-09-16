@@ -38,7 +38,7 @@ class SuperAdminController extends Controller
      */
     public function downloadTranslations(Request $request): BinaryFileResponse
     {
-        $locale = $request->string('locale', 'en');
+        $locale = (string) $request->string('locale', 'en');
         abort_unless(array_key_exists($locale, AvailableLocales::translatable()), 422);
 
         Artisan::call('lang:sync', ['locale' => $locale]);
@@ -55,7 +55,7 @@ class SuperAdminController extends Controller
      */
     public function uploadTranslations(Request $request): RedirectResponse
     {
-        $locale = $request->string('locale', 'en');
+        $locale = (string) $request->string('locale', 'en');
         abort_unless(array_key_exists($locale, AvailableLocales::translatable()), 422);
 
         $request->validate(['translation_file' => ['required', 'file']]);

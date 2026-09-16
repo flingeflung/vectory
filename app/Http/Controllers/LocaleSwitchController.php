@@ -15,7 +15,7 @@ class LocaleSwitchController extends Controller
 {
     public function update(Request $request): RedirectResponse
     {
-        $locale = $request->string('locale');
+        $locale = (string) $request->string('locale');
         abort_unless(AvailableLocales::isValid($locale), 422);
 
         session(['locale' => $locale]);
