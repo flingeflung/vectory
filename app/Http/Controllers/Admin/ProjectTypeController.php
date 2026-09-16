@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -195,13 +196,14 @@ class ProjectTypeController extends Controller
     }
 
     /**
-     * @return array{project_type_main_id: int, name: string}
+     * @return array{project_type_main_id: int, name: string, format_type?: int}
      */
     private function validatedSub(Request $request, int $tenantId): array
     {
         $validated = $request->validate([
             'project_type_main_id' => ['required', 'integer'],
             'name' => ['required', 'string', 'max:255'],
+            'format_type' => ['sometimes', 'integer', Rule::in(array_keys(ProjectTypeSub::formatTypes()))],
         ]);
 
         $categoryBelongsToTenant = ProjectTypeMain::query()->where('id', $validated['project_type_main_id'])->where('tenant_id', $tenantId)->exists();

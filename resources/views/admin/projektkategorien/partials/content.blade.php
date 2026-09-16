@@ -151,6 +151,11 @@
                                     <option value="{{ $target->id }}" @selected($target->id === $selectedCategory->id)>{{ $target->name }}</option>
                                 @endforeach
                             </select>
+                            <select name="format_type" title="{{ __('Formatauswahl im Projekt') }}" class="w-44 shrink-0 rounded-md border-gray-300 text-xs">
+                                @foreach (\App\Models\ProjectTypeSub::formatTypes() as $value => $label)
+                                    <option value="{{ $value }}" @selected($sub->format_type === $value)>{{ $label }}</option>
+                                @endforeach
+                            </select>
                             <label class="flex shrink-0 items-center gap-1 text-xs text-gray-600">
                                 <input type="checkbox" name="active" value="1" @checked($sub->active) class="rounded border-gray-300">
                                 {{ __('Aktiv') }}
