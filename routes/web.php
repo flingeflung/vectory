@@ -26,6 +26,7 @@ use App\Http\Controllers\FavoriteController;
 use App\Http\Controllers\GraphicOrderController;
 use App\Http\Controllers\HelpController;
 use App\Http\Controllers\IllustrationOverviewController;
+use App\Http\Controllers\LocaleSwitchController;
 use App\Http\Controllers\MultichangeController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
@@ -301,6 +302,8 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
 Route::middleware(['auth', 'verified', 'can:access-superadmin', RememberLastAdminPage::class])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/superadmin', [SuperAdminController::class, 'index'])->name('superadmin');
     Route::post('/superadmin', [SuperAdminController::class, 'update'])->name('superadmin.update');
+    Route::get('/superadmin/uebersetzung', [SuperAdminController::class, 'downloadTranslations'])->name('superadmin.uebersetzung.download');
+    Route::post('/superadmin/uebersetzung', [SuperAdminController::class, 'uploadTranslations'])->name('superadmin.uebersetzung.upload');
 
     Route::get('/hilfeseiten', [HelpArticleController::class, 'index'])->name('hilfeseiten');
     Route::post('/hilfeseiten', [HelpArticleController::class, 'store'])->name('hilfeseiten.store');
@@ -313,6 +316,7 @@ Route::middleware(['auth', 'verified', 'can:access-superadmin', RememberLastAdmi
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/mandant-wechseln', [TenantSwitchController::class, 'update'])->name('mandant.wechseln');
+    Route::post('/sprache-wechseln', [LocaleSwitchController::class, 'update'])->name('sprache.wechseln');
 });
 
 Route::middleware(['auth', 'verified'])->prefix('projekte/anzeigefilter')->name('projekte.anzeigefilter.')->group(function () {

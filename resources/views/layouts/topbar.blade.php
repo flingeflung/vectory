@@ -55,6 +55,51 @@
             </div>
         @endif
 
+        {{-- Sprachumschalter (Ralf, 2026-09-16): rein sitzungsbasiert, siehe
+             LocaleSwitchController. Immer sichtbar, auch bevor eine Sprache
+             tatsächlich vollständig übersetzt ist - fehlende Texte zeigen
+             einfach den deutschen Originaltext (Laravel-Fallback). --}}
+        <div x-data="{ open: false }" @click.outside="open = false" class="relative">
+            <button
+                @click="open = !open"
+                class="flex items-center gap-1.5 rounded-md border border-white/20 px-2.5 py-1 text-sm font-medium hover:bg-white/10 focus:outline-none"
+                title="{{ __('Sprache wechseln') }}"
+            >
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 21l5.25-11.25L21 21m-9.75-2.25h8.25M3 5.621a48.474 48.474 0 016-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m6.334-12.138a48.276 48.276 0 016.15 2.006M11.334 5.364c1.176 5.294 4.66 9.716 9.334 12.138" />
+                </svg>
+                {{ strtoupper(app()->getLocale()) }}
+                <svg class="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+            </button>
+
+            <div
+                x-show="open"
+                x-transition
+                class="absolute right-0 z-50 mt-2 w-40 rounded-md bg-white py-1 text-sm text-gray-700 shadow-lg"
+                style="display: none;"
+            >
+                @foreach (\App\Support\AvailableLocales::all() as $code => $label)
+                    <form method="POST" action="{{ route('sprache.wechseln') }}">
+                        @csrf
+                        <input type="hidden" name="locale" value="{{ $code }}">
+                        <button
+                            type="submit"
+                            class="flex w-full items-center justify-between px-4 py-2 text-left hover:bg-gray-100 {{ $code === app()->getLocale() ? 'font-semibold text-gray-900' : '' }}"
+                        >
+                            {{ $label }}
+                            @if ($code === app()->getLocale())
+                                <svg class="h-4 w-4 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                </svg>
+                            @endif
+                        </button>
+                    </form>
+                @endforeach
+            </div>
+        </div>
+
         {{-- Hilfesystem (Ralf, 2026-09-12): auf jeder Seite erreichbar, fester
              Platz unabhängig davon, ob der Mandanten-Umschalter daneben
              angezeigt wird. --}}
