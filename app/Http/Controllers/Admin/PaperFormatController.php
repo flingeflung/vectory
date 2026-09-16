@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\PaperFormat;
 use App\Models\PaperFormatCombination;
+use App\Models\Tenant;
+use App\Services\PaperFormatCatalogImporter;
 use App\Support\CurrentTenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,7 +33,9 @@ class PaperFormatController extends Controller
             ])
             ->values();
 
-        return view('admin.papierformate.index', ['formats' => $formats, 'combinations' => $combinations]);
+        $otherTenants = CurrentTenant::availableTenants()->reject(fn (Tenant $t) => $t->id === CurrentTenant::id())->values();
+
+        return view('admin.papierformate.index', ['formats' => $formats, 'combinations' => $combinations, 'otherTenants' => $otherTenants]);
     }
 
     /**
@@ -116,5 +120,27 @@ class PaperFormatController extends Controller
         });
 
         return redirect()->route('admin.papierformate');
+    }
+
+    /**
+     * Übernimmt den Formate-Katalog eines anderen Kunden (Schritt 5, siehe
+     * PaperFormatCatalogImporter) - pull-basiert, nur aus Kunden erreichbar,
+     * auf die der aktuelle Nutzer laut Mandanten-Umschalter sowieso Zugriff
+     * hat (kein Weg, sich Formate aus einem fremden Kunden zu "ziehen").
+     */
+    public function importFromTenant(Request $request, PaperFormatCatalogImporter $importer): RedirectResponse
+    {
+        $target = Tenant::query()->findOrFail(CurrentTenant::id());
+        $sourceId = $request->integer('source_tenant_id');
+
+        $source = CurrentTenant::availableTenants()->firstWhere('id', $sourceId);
+        abort_if($source === null || $source->id === $target->id, 422);
+
+        $summary = $importer->import($source, $target);
+
+        return redirect()->route('admin.papierformate')
+            ->with('status', 'papierformate-import-done')
+            ->with('import_summary', $summary)
+            ->with('import_source_name', $source->name);
     }
 }

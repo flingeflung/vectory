@@ -248,6 +248,7 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
 
     Route::get('/papierformate', [PaperFormatController::class, 'index'])->name('papierformate');
     Route::get('/papierformate/katalog', [PaperFormatController::class, 'catalog'])->name('papierformate.katalog');
+    Route::post('/papierformate/uebernehmen', [PaperFormatController::class, 'importFromTenant'])->name('papierformate.uebernehmen');
     Route::post('/papierformate', [PaperFormatController::class, 'store'])->name('papierformate.store');
     // Fester Pfad vor dem {paperFormat}-Wildcard registriert - sonst würde
     // "reorder" als ID interpretiert (gleiche Falle wie bei Workflows/

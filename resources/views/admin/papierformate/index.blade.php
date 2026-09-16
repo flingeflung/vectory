@@ -28,6 +28,18 @@
     @if (session('status') === 'papierformate-kombination-deleted')
         <x-flash-message class="mb-3 shrink-0 px-3 py-2 text-sm">{{ __('Gelöscht.') }}</x-flash-message>
     @endif
+    @if (session('status') === 'papierformate-import-done')
+        @php($summary = session('import_summary'))
+        <x-flash-message class="mb-3 shrink-0 px-3 py-2 text-sm">
+            {{ __('Übernommen von :name: :formats Papierformate (:formatsSkipped bereits vorhanden), :combinations Format-Kombinationen (:combinationsSkipped bereits vorhanden).', [
+                'name' => session('import_source_name'),
+                'formats' => $summary['formats_copied'],
+                'formatsSkipped' => $summary['formats_skipped'],
+                'combinations' => $summary['combinations_copied'],
+                'combinationsSkipped' => $summary['combinations_skipped'],
+            ]) }}
+        </x-flash-message>
+    @endif
 
     <div x-data x-init="window.adminPageIsDirty = () => window.__papierformateDirtyForms.size > 0 || (window.papierformateCatalogIsDirty?.() ?? false)" class="flex flex-1 min-h-0 flex-col gap-3">
         {{-- Der Papierformate-Basiskatalog lebt jetzt in einem eigenen,
@@ -35,7 +47,16 @@
              Container - Ralf: "Das Feld für die Papierformate ist zu klein."
              Die Format-Kombinationen darunter gewinnen dadurch den Platz,
              den der Katalog-Container vorher belegt hat. --}}
-        <div class="shrink-0 flex justify-end">
+        <div class="shrink-0 flex justify-end gap-2">
+            @if ($otherTenants->isNotEmpty())
+                <button
+                    type="button"
+                    onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'papierformate-uebernehmen' }))"
+                    class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                >
+                    {{ __('Aus anderem Kunden übernehmen') }}
+                </button>
+            @endif
             <button
                 type="button"
                 onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'papierformate-katalog' }))"
@@ -179,6 +200,52 @@
             </div>
         </div>
     </div>
+
+    {{-- Katalog von einem anderen Kunden übernehmen (Schritt 5, pull-
+         basiert): schlichter Formular-POST + Seiten-Reload, kein fetch
+         nötig - reine, seltene Admin-Aktion, kein Konflikt mit
+         ungespeicherten Zeilen-Eingaben auf dieser Seite (die Format-
+         Kombinationen wurden gerade erst geladen). --}}
+    @if ($otherTenants->isNotEmpty())
+        <x-modal name="papierformate-uebernehmen" max-width="sm">
+            <form method="POST" action="{{ route('admin.papierformate.uebernehmen') }}">
+                @csrf
+                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Katalog übernehmen') }}</h3>
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'papierformate-uebernehmen' }))"
+                        class="text-gray-400 hover:text-gray-600"
+                        aria-label="{{ __('Schließen') }}"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div class="p-4 text-sm">
+                    <label class="block text-xs text-gray-500">{{ __('Kunde, von dem übernommen werden soll') }}</label>
+                    <select name="source_tenant_id" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                        <option value="">{{ __('– bitte wählen –') }}</option>
+                        @foreach ($otherTenants as $tenant)
+                            <option value="{{ $tenant->id }}">{{ $tenant->name }}</option>
+                        @endforeach
+                    </select>
+                    <p class="mt-2 text-xs text-gray-400">{{ __('Übernimmt alle freigegebenen Papierformate und Format-Kombinationen des gewählten Kunden. Bereits vorhandene (gleicher Name bzw. gleiches Format-Paar) werden dabei übersprungen, nichts wird überschrieben.') }}</p>
+                </div>
+                <div class="shrink-0 border-t border-gray-100 p-3 flex justify-end gap-2">
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'papierformate-uebernehmen' }))"
+                        class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                    >
+                        {{ __('Abbrechen') }}
+                    </button>
+                    <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
+                        {{ __('Übernehmen') }}
+                    </button>
+                </div>
+            </form>
+        </x-modal>
+    @endif
 
     {{-- Papierformate-Katalog-Overlay: Inhalt wird per fetch nachgeladen
          (gleiches Muster wie die Firma/Abteilung/Geschäftsbereich/Rolle-
