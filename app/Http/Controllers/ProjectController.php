@@ -483,8 +483,14 @@ class ProjectController extends Controller
 
         // Alle drei Bereiche zusammen: typspezifische (nach Projektart
         // gefiltert) + Stammdaten/Ablaufdaten-Zusatzattribute (gelten
-        // immer, siehe Project::sectionAttributes()).
+        // immer, siehe Project::sectionAttributes()). "format" ist zwar
+        // typspezifisch, aber ein reines System-Feld mit eigenen Spalten
+        // (paper_format_combination_id/input_format_free_text/
+        // output_format_free_text) statt des generischen attributes-JSON -
+        // dieselbe Ausnahme wie bei den System-Feldern der anderen beiden
+        // Bereiche (siehe Project::customSectionAttributes()).
         $relevantAttributes = $project->relevantAttributes()
+            ->filter(fn (Attribute $attribute) => ! $attribute->system || $attribute->label_editable)
             ->concat($project->customSectionAttributes(Attribute::SECTION_STAMMDATEN))
             ->concat($project->customSectionAttributes(Attribute::SECTION_ABLAUFDATEN));
         $isOverlay = $this->isOverlayRequest($request);
@@ -501,6 +507,8 @@ class ProjectController extends Controller
             'end_date' => ['nullable', 'date'],
             'publication_date' => ['nullable', 'date'],
             'remarks' => ['nullable', 'string'],
+            'input_format_free_text' => ['nullable', 'string', 'max:30'],
+            'output_format_free_text' => ['nullable', 'string', 'max:30'],
             'markets' => ['array'],
             'markets.*' => ['integer', Rule::exists('markets', 'id')->where('tenant_id', $project->tenant_id)],
             'project_people' => ['array'],

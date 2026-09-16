@@ -12,6 +12,8 @@ use App\Http\Controllers\Admin\HelpArticleController;
 use App\Http\Controllers\Admin\LegacyRoleController;
 use App\Http\Controllers\Admin\MailTemplateController;
 use App\Http\Controllers\Admin\MarketController;
+use App\Http\Controllers\Admin\PaperFormatCombinationController;
+use App\Http\Controllers\Admin\PaperFormatController;
 use App\Http\Controllers\Admin\PermissionController as AdminPermissionController;
 use App\Http\Controllers\Admin\PersonController as AdminPersonController;
 use App\Http\Controllers\Admin\ProjectTypeController;
@@ -32,6 +34,7 @@ use App\Http\Controllers\ProjectConnectionController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectCopyController;
 use App\Http\Controllers\ProjectDirectoryController;
+use App\Http\Controllers\ProjectFormatController;
 use App\Http\Controllers\ProjectGroupController;
 use App\Http\Controllers\ProjectNoteController;
 use App\Http\Controllers\ProjectProductController;
@@ -104,6 +107,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/projekte/{project}/checklisten', [ProjectChecklistController::class, 'update'])->name('projekte.checklisten.update');
     Route::patch('/projekte/{project}/checklisten/punkte/{point}', [ProjectChecklistController::class, 'togglePoint'])->name('projekte.checklisten.punkte.toggle');
 
+    Route::post('/projekte/{project}/format-kombination', [ProjectFormatController::class, 'saveCombination'])->name('projekte.format.kombination');
     Route::get('/projekte/{project}/produkte', [ProjectProductController::class, 'picker'])->name('projekte.produkte.picker');
     Route::get('/projekte/{project}/produkte/mehr', [ProjectProductController::class, 'more'])->name('projekte.produkte.mehr');
     Route::post('/projekte/{project}/produkte/{product}', [ProjectProductController::class, 'toggle'])->name('projekte.produkte.toggle');
@@ -241,6 +245,20 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     Route::delete('/projektattribute/{attribute}', [AttributeController::class, 'destroy'])->name('projektattribute.destroy');
     Route::post('/projektattribute/{attribute}/pulldown', [AttributeController::class, 'updatePulldown'])->name('projektattribute.pulldown.update');
     Route::post('/projektattribute/{attribute}/projektart', [AttributeController::class, 'toggleProjectType'])->name('projektattribute.projektart.toggle');
+
+    Route::get('/papierformate', [PaperFormatController::class, 'index'])->name('papierformate');
+    Route::get('/papierformate/katalog', [PaperFormatController::class, 'catalog'])->name('papierformate.katalog');
+    Route::post('/papierformate', [PaperFormatController::class, 'store'])->name('papierformate.store');
+    // Fester Pfad vor dem {paperFormat}-Wildcard registriert - sonst würde
+    // "reorder" als ID interpretiert (gleiche Falle wie bei Workflows/
+    // Projektkategorien/Projektattributen).
+    Route::post('/papierformate/reorder', [PaperFormatController::class, 'reorder'])->name('papierformate.reorder');
+    Route::post('/papierformate/{paperFormat}', [PaperFormatController::class, 'update'])->name('papierformate.update');
+    Route::delete('/papierformate/{paperFormat}', [PaperFormatController::class, 'destroy'])->name('papierformate.destroy');
+
+    Route::post('/papierformate-kombinationen', [PaperFormatCombinationController::class, 'store'])->name('papierformate.kombinationen.store');
+    Route::post('/papierformate-kombinationen/{combination}', [PaperFormatCombinationController::class, 'update'])->name('papierformate.kombinationen.update');
+    Route::delete('/papierformate-kombinationen/{combination}', [PaperFormatCombinationController::class, 'destroy'])->name('papierformate.kombinationen.destroy');
 
     Route::get('/projektkopie-vorlagen', [CopyTemplateController::class, 'index'])->name('projektkopie-vorlagen');
     Route::post('/projektkopie-vorlagen', [CopyTemplateController::class, 'store'])->name('projektkopie-vorlagen.store');

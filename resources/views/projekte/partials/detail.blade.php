@@ -217,7 +217,11 @@
         <div class="min-w-0 flex-1 pt-2">
             <div class="grid grid-cols-4 gap-2">
                 @foreach ($attributes as $attribute)
-                    @include('projekte.partials.attribute-field', ['attribute' => $attribute])
+                    @if ($attribute->system)
+                        @include('projekte.partials.system-fields.'.$attribute->key, ['field' => $attribute])
+                    @else
+                        @include('projekte.partials.attribute-field', ['attribute' => $attribute])
+                    @endif
                 @endforeach
             </div>
         </div>
