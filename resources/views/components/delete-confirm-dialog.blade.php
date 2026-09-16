@@ -151,7 +151,14 @@
             if (field) field.value = result.reassignTo;
         }
 
-        formEl.submit();
+        // requestSubmit() statt submit(): Letzteres löst laut Spezifikation
+        // KEIN 'submit'-Event aus, dadurch würde jedes fetch-basierte
+        // Overlay (Papierformate-/Firma-/Abteilungs-/Geschäftsbereichs-/
+        // Rollen-Verwaltung usw.), das Formular-Submits per document-Listener
+        // abfängt, das Löschen nie sehen - Browser macht stattdessen eine
+        // echte Seitennavigation zur DELETE-Antwort, was das gerade offene
+        // Overlay schließt (Ralfs Bug-Report beim Papierformate-Overlay).
+        formEl.requestSubmit();
         return true;
     };
 </script>

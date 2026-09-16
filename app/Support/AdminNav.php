@@ -32,6 +32,7 @@ class AdminNav
                 ['route' => 'admin.maerkte', 'match' => 'admin.maerkte*', 'label' => __('Märkte')],
                 ['route' => 'admin.workflows', 'match' => 'admin.workflows*', 'label' => __('Workflows')],
                 ['route' => 'admin.checklisten', 'match' => 'admin.checklisten*', 'label' => __('Checklisten')],
+                ['route' => 'admin.papierformate', 'match' => 'admin.papierformate*', 'label' => __('Papierformate')],
             ],
             __('Kommunikation') => [
                 ['route' => 'admin.mail-vorlagen', 'match' => 'admin.mail-vorlagen*', 'label' => __('Mail-Vorlagen')],
