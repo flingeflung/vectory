@@ -38,12 +38,12 @@ class SystemSetting extends Model
      */
     public static function companyLabel(): string
     {
-        return self::multiTenantEnabled() ? 'Subunternehmer' : 'Dienstleisterfirma';
+        return self::multiTenantEnabled() ? __('Subunternehmer') : __('Dienstleisterfirma');
     }
 
     public static function companyLabelPlural(): string
     {
-        return self::multiTenantEnabled() ? 'Subunternehmer' : 'Dienstleisterfirmen';
+        return self::multiTenantEnabled() ? __('Subunternehmer') : __('Dienstleisterfirmen');
     }
 
     /**
