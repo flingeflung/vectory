@@ -5,8 +5,10 @@
     alphabetisch. Reine Anzeige, keine Bearbeitung (die bleibt bei der
     einzelnen Person). Sticky erste Spalte (Name), gleiches Muster wie
     die Jahresübersicht der Zeiterfassung (jobload/overview.blade.php).
+    Bewusst KEIN eigener Scroll-Container hier - der Aufrufer
+    (#personen-zugriffsmatrix-body) ist der einzige scrollende Rahmen,
+    sonst bezieht sich "sticky" auf den falschen Container.
 --}}
-<div class="overflow-auto">
     <table class="min-w-full border-collapse text-sm">
         <thead class="text-xs text-gray-500">
             <tr>
@@ -53,4 +55,3 @@
             @endforelse
         </tbody>
     </table>
-</div>
