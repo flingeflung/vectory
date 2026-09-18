@@ -115,12 +115,13 @@ class TenantConfigCloner
             // kopierende User im Zielmandanten hat mit der ursprünglichen
             // Erfassung nichts zu tun (gleiche Begründung wie beim
             // ausgelassenen legacy_id bei Kunden).
-            $this->copySimple(ProjectTemplate::class, $source->id, $target->id, [
+            $projectTemplateMap = $this->copySimple(ProjectTemplate::class, $source->id, $target->id, [
                 'name', 'format', 'reusable_content_share', 'languages_count', 'product_maturity',
                 'product_change_delays', 'contact_availability', 'localizer_availability', 'software_share',
                 'product_complexity', 'print_variants_count', 'images_count', 'duration_value', 'duration_unit',
                 'remarks', 'active',
             ]);
+            $this->copyProjectTemplateFunctionGroups($target->id, $projectTemplateMap, $functionGroupMap);
 
             unset($departmentMap);
         });
@@ -376,6 +377,33 @@ class TenantConfigCloner
                     'tenant_id' => $targetTenantId,
                     'workflow_step_id' => $workflowStepMap[$row->workflow_step_id],
                     'function_group_id' => $functionGroupMap[$row->function_group_id],
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            });
+    }
+
+    /**
+     * Step 2 der Kapa-Planung: geplante Stunden je Funktionsgruppe einer
+     * Projektschablone (gleiches Muster wie copyWorkflowStepFunctionGroups()).
+     */
+    private function copyProjectTemplateFunctionGroups(int $targetTenantId, array $projectTemplateMap, array $functionGroupMap): void
+    {
+        if ($projectTemplateMap === []) {
+            return;
+        }
+
+        DB::table('project_template_function_group')->whereIn('project_template_id', array_keys($projectTemplateMap))->get()
+            ->each(function ($row) use ($targetTenantId, $projectTemplateMap, $functionGroupMap) {
+                if (! isset($functionGroupMap[$row->function_group_id])) {
+                    return;
+                }
+
+                DB::table('project_template_function_group')->insert([
+                    'tenant_id' => $targetTenantId,
+                    'project_template_id' => $projectTemplateMap[$row->project_template_id],
+                    'function_group_id' => $functionGroupMap[$row->function_group_id],
+                    'planned_hours' => $row->planned_hours,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);

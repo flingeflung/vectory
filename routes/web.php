@@ -228,6 +228,7 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     Route::get('/projektschablonen', [ProjectTemplateController::class, 'index'])->name('projektschablonen');
     Route::post('/projektschablonen', [ProjectTemplateController::class, 'store'])->name('projektschablonen.store');
     Route::post('/projektschablonen/{template}', [ProjectTemplateController::class, 'update'])->name('projektschablonen.update');
+    Route::post('/projektschablonen/{template}/funktionsgruppen', [ProjectTemplateController::class, 'updateFunctionGroups'])->name('projektschablonen.funktionsgruppen.update');
     Route::delete('/projektschablonen/{template}', [ProjectTemplateController::class, 'destroy'])->name('projektschablonen.destroy');
 
     Route::get('/workflows', [WorkflowController::class, 'index'])->name('workflows');

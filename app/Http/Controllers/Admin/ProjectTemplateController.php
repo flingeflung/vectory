@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\FunctionGroup;
 use App\Models\ProjectTemplate;
 use App\Support\CurrentTenant;
 use Illuminate\Http\RedirectResponse;
@@ -16,7 +17,9 @@ use Illuminate\View\View;
  * Redaktionsleitung, Nachfolger von Viettos GA-Kategorien - siehe
  * ProjectTemplate-Model-Docblock). Step 1 von Ralfs 4-Schritte-Plan zur
  * Kapa-Planung (2026-09-18, siehe Roadmap-Backlog): hier nur der reine
- * Katalog, noch ohne Workflow-Kopplung oder Fktgrp-Stunden.
+ * Katalog. Step 2 (Stunden je Funktionsgruppe) ist dazugekommen, noch ohne
+ * Workflow-Kopplung (Step 3) - die beteiligten Fktgrp werden hier weiterhin
+ * manuell zusammengestellt.
  *
  * Gleiches Grundmuster wie die "klitzekleinen" Verwalten-Overlays (Firma/
  * Abteilung/...): eine Liste von Zeilen-Formularen (data-row-form, siehe
@@ -40,7 +43,7 @@ class ProjectTemplateController extends Controller
             }
         }
 
-        $templates = $query->with(['createdByUser.person', 'updatedByUser.person'])
+        $templates = $query->with(['createdByUser.person', 'updatedByUser.person', 'functionGroups'])
             // FIELD(): Wochen-Einträge vor Monate-Einträgen (gleiche
             // Reihenfolge wie Viettos gakat.php, intDauerEinheit 1=Wochen
             // zuerst) - alphabetisch wäre "months" fälschlich vor "weeks".
@@ -48,7 +51,14 @@ class ProjectTemplateController extends Controller
             ->orderBy('duration_value')->orderBy('name')
             ->get();
 
-        $data = ['templates' => $templates];
+        // Katalog des Mandanten, NICHT über Person::visibleTenantIds o.ä. -
+        // Projektschablonen sind (anders als Personen) bewusst nicht per
+        // Kundenzugriff mit anderen Mandanten teilbar (Ralf, 2026-09-18:
+        // "Pro Kunden-Mandant"), Fktgrp-Auswahl bleibt also strikt auf den
+        // eigenen Katalog beschränkt.
+        $functionGroups = FunctionGroup::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('name')->get();
+
+        $data = ['templates' => $templates, 'functionGroups' => $functionGroups];
 
         if ($this->isOverlayRequest($request)) {
             return response()->view('admin.project-templates.partials.content', $data);
@@ -87,6 +97,32 @@ class ProjectTemplateController extends Controller
             'active' => $request->boolean('active'),
             'updated_by_user_id' => Auth::id(),
         ]);
+
+        return redirect()->route('admin.projektschablonen')->with('status', 'projektschablonen-updated');
+    }
+
+    /**
+     * Geplante Stunden je Funktionsgruppe - eine leere/0-Eingabe entfernt
+     * die Fktgrp aus der Schablone (kein 0-Stunden-Eintrag), statt sie als
+     * "0 h geplant" stehen zu lassen.
+     */
+    public function updateFunctionGroups(Request $request, ProjectTemplate $template): RedirectResponse
+    {
+        abort_unless($template->tenant_id === CurrentTenant::id(), 404);
+
+        $request->validate(['hours' => ['nullable', 'array'], 'hours.*' => ['nullable', 'numeric', 'min:0', 'max:999']]);
+
+        $hours = collect($request->array('hours'))
+            ->mapWithKeys(fn ($value, $functionGroupId) => [(int) $functionGroupId => $value])
+            ->filter(fn ($value) => $value !== null && $value !== '' && (float) $value > 0);
+
+        $validIds = FunctionGroup::query()->where('tenant_id', $template->tenant_id)->whereIn('id', $hours->keys())->pluck('id');
+
+        $syncData = $validIds->mapWithKeys(fn ($id) => [
+            $id => ['tenant_id' => $template->tenant_id, 'planned_hours' => (float) $hours[$id]],
+        ]);
+
+        $template->functionGroups()->sync($syncData);
 
         return redirect()->route('admin.projektschablonen')->with('status', 'projektschablonen-updated');
     }

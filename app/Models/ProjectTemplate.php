@@ -6,6 +6,7 @@ use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * Projektschablone (Nachfolger von Viettos GA-Kategorien) - Erfahrungswerte-
@@ -37,6 +38,19 @@ class ProjectTemplate extends Model
     public function updatedByUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by_user_id');
+    }
+
+    /**
+     * Step 2 der Kapa-Planung (Ralf, 2026-09-18): geplante Stunden je
+     * Funktionsgruppe - noch manuell zusammengestellt, Step 3 leitet die
+     * beteiligten Fktgrp später stattdessen aus der gekoppelten
+     * Workflow-Zuordnung ab.
+     */
+    public function functionGroups(): BelongsToMany
+    {
+        return $this->belongsToMany(FunctionGroup::class, 'project_template_function_group')
+            ->withPivot('planned_hours')
+            ->withTimestamps();
     }
 
     public static function durationUnitOptions(): array
