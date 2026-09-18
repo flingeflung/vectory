@@ -39,12 +39,20 @@
                         const response = await fetch({{ \Illuminate\Support\Js::from(route('admin.projektschablonen.fremdkatalog')) }} + '?tenant_id=' + this.sourceTenantId);
                         this.templates = await response.json();
                         this.loading = false;
+                        // Der Browser wählt bei neu eingefügten <option>-
+                        // Elementen automatisch die erste aus, x-model
+                        // bekommt das aber nicht mit (kein 'change'-Event
+                        // durch reines Nachladen) - sonst bliebe templateId
+                        // leer, obwohl das Feld sichtbar schon einen Wert
+                        // zeigt, und der Speichern-Button dadurch fälschlich
+                        // deaktiviert.
+                        this.templateId = this.templates[0]?.id ?? '';
                     },
                 }"
             >
                 @csrf
                 <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
-                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Schablone von anderem Kunden holen') }}</h3>
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Schablone von anderem Kunden importieren') }}</h3>
                     <button
                         type="button"
                         onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'projektschablonen-uebernehmen' }))"
@@ -56,7 +64,7 @@
                 </div>
                 <div class="space-y-3 p-4 text-sm">
                     <div>
-                        <label class="block text-xs text-gray-500">{{ __('Kunde, von dem geholt werden soll') }}</label>
+                        <label class="block text-xs text-gray-500">{{ __('Kunde, von dem importiert werden soll') }}</label>
                         <select name="source_tenant_id" x-model="sourceTenantId" @change="loadTemplates()" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                             <option value="">{{ __('– bitte wählen –') }}</option>
                             @foreach ($otherTenants as $tenant)
@@ -82,7 +90,7 @@
                             </template>
                         </select>
                     </div>
-                    <p class="text-xs text-gray-400">{{ __('Übernimmt Merkmale, Format und Dauer der gewählten Schablone. Workflow-Kopplung und Stunden je Funktionsgruppe werden NICHT mit übernommen, da diese je Kunde unterschiedlich sind - bitte im Zielkunden neu zuweisen. Die Kopie startet inaktiv.') }}</p>
+                    <p class="text-xs text-gray-400">{{ __('Importiert Merkmale, Format und Dauer der gewählten Schablone. Workflow-Kopplung und Stunden je Funktionsgruppe werden NICHT mit importiert, da diese je Kunde unterschiedlich sind - bitte im Zielkunden neu zuweisen. Die Kopie startet inaktiv.') }}</p>
                 </div>
                 <div class="flex shrink-0 justify-end gap-2 border-t border-gray-100 p-3">
                     <button
@@ -93,7 +101,7 @@
                         {{ __('Abbrechen') }}
                     </button>
                     <button type="submit" :disabled="!templateId" class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover disabled:opacity-40">
-                        {{ __('Holen') }}
+                        {{ __('Importieren') }}
                     </button>
                 </div>
             </form>

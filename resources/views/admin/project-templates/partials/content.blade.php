@@ -2,7 +2,7 @@
     {{-- Links: Liste, per Merkmal-Filter einschränkbar. --}}
     <div class="flex w-80 shrink-0 flex-col">
         <div class="flex flex-1 min-h-0 flex-col rounded-lg border border-gray-200 bg-white">
-            <div class="shrink-0 flex items-center justify-between border-b border-gray-100 p-2">
+            <div class="shrink-0 space-y-1.5 border-b border-gray-100 p-2">
                 <span class="text-xs font-semibold text-gray-500">{{ __('Projektschablonen') }}</span>
                 <div class="flex items-center gap-1">
                     @if ($otherTenants->isNotEmpty())
@@ -11,7 +11,7 @@
                             onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'projektschablonen-uebernehmen' }))"
                             class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
                         >
-                            {{ __('Von anderem Kunden holen') }}
+                            {{ __('Von anderem Kunden importieren') }}
                         </button>
                     @endif
                     <a

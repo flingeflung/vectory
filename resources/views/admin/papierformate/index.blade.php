@@ -31,7 +31,7 @@
     @if (session('status') === 'papierformate-import-done')
         @php($summary = session('import_summary'))
         <x-flash-message class="mb-3 shrink-0 px-3 py-2 text-sm">
-            {{ __('Übernommen von :name: :formats Papierformate (:formatsSkipped bereits vorhanden), :combinations Format-Kombinationen (:combinationsSkipped bereits vorhanden).', [
+            {{ __('Importiert von :name: :formats Papierformate (:formatsSkipped bereits vorhanden), :combinations Format-Kombinationen (:combinationsSkipped bereits vorhanden).', [
                 'name' => session('import_source_name'),
                 'formats' => $summary['formats_copied'],
                 'formatsSkipped' => $summary['formats_skipped'],
@@ -54,7 +54,7 @@
                     onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'papierformate-uebernehmen' }))"
                     class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
                 >
-                    {{ __('Von anderem Kunden übernehmen') }}
+                    {{ __('Von anderem Kunden importieren') }}
                 </button>
             @endif
             <button
@@ -211,7 +211,7 @@
             <form method="POST" action="{{ route('admin.papierformate.uebernehmen') }}">
                 @csrf
                 <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
-                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Katalog übernehmen') }}</h3>
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Katalog importieren') }}</h3>
                     <button
                         type="button"
                         onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'papierformate-uebernehmen' }))"
@@ -222,7 +222,7 @@
                     </button>
                 </div>
                 <div class="p-4 text-sm">
-                    <label class="block text-xs text-gray-500">{{ __('Kunde, von dem übernommen werden soll') }}</label>
+                    <label class="block text-xs text-gray-500">{{ __('Kunde, von dem importiert werden soll') }}</label>
                     <select name="source_tenant_id" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                         <option value="">{{ __('– bitte wählen –') }}</option>
                         @foreach ($otherTenants as $tenant)
@@ -240,7 +240,7 @@
                         {{ __('Abbrechen') }}
                     </button>
                     <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
-                        {{ __('Übernehmen') }}
+                        {{ __('Importieren') }}
                     </button>
                 </div>
             </form>
