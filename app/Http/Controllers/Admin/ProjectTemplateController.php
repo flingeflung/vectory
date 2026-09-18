@@ -105,7 +105,7 @@ class ProjectTemplateController extends Controller
         $rules = [
             'name' => ['required', 'string', 'max:255'],
             'format' => ['required', 'integer', 'in:1,2,3'],
-            'duration_value' => ['required', 'integer', 'min:1', 'max:999'],
+            'duration_value' => ['required', 'numeric', 'min:0.5', 'max:999', 'multiple_of:0.5'],
             'duration_unit' => ['required', 'string', 'in:weeks,months'],
             'remarks' => ['nullable', 'string'],
         ];

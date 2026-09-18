@@ -25,7 +25,7 @@
     <div>
         <label class="block text-xs text-gray-500">{{ __('Dauer') }}</label>
         <div class="flex items-center gap-1">
-            <input type="number" name="duration_value" value="{{ $template->duration_value ?? 1 }}" min="1" max="999" required class="mt-0.5 w-16 rounded-md border-gray-300 py-1 text-sm">
+            <input type="number" name="duration_value" value="{{ $template->duration_value ?? 1 }}" min="0.5" max="999" step="0.5" required class="mt-0.5 w-16 rounded-md border-gray-300 py-1 text-sm">
             <select name="duration_unit" class="mt-0.5 rounded-md border-gray-300 py-1 text-sm">
                 @foreach (\App\Models\ProjectTemplate::durationUnitOptions() as $value => $label)
                     <option value="{{ $value }}" @selected(($template->duration_unit ?? 'weeks') === $value)>{{ $label }}</option>

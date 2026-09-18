@@ -26,7 +26,7 @@ class ProjectTemplate extends Model
 
     protected function casts(): array
     {
-        return ['active' => 'boolean'];
+        return ['active' => 'boolean', 'duration_value' => 'decimal:1'];
     }
 
     public function createdByUser(): BelongsTo
