@@ -306,6 +306,7 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
 
     Route::get('/personen', [AdminPersonController::class, 'index'])->name('personen');
     Route::post('/personen', [AdminPersonController::class, 'store'])->name('personen.store');
+    Route::get('/personen/zugriffsmatrix', [AdminPersonController::class, 'accessMatrix'])->name('personen.zugriffsmatrix');
     Route::get('/personen/{person}', [AdminPersonController::class, 'edit'])->name('personen.edit');
     Route::post('/personen/{person}', [AdminPersonController::class, 'update'])->name('personen.update');
     Route::post('/personen/{person}/login', [AdminPersonController::class, 'createLogin'])->name('personen.login.store');

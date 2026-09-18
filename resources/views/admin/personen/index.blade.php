@@ -115,6 +115,16 @@
                 </div>
             </form>
 
+            @if ($canSearchAllTenants)
+                <button
+                    type="button"
+                    onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'personen-zugriffsmatrix' }))"
+                    class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                >
+                    {{ __('Kundenzugriff-Matrix') }}
+                </button>
+            @endif
+
             <form
                 method="POST"
                 action="{{ route('admin.personen.store') }}"
@@ -203,4 +213,60 @@
             </table>
         </div>
     </div>
+
+    @if ($canSearchAllTenants)
+        {{--
+            Kundenzugriff-Matrix (Ralf, 2026-09-18) - gleiche Personen wie
+            in der Liste oben (aktuelle Filter/Sortierung mitgegeben),
+            Vollbild-Overlay wie beim Gantt. Reine Anzeige, keine
+            Bearbeitung.
+        --}}
+        <x-modal name="personen-zugriffsmatrix" max-width="7xl" :draggable="true" :fullscreen="true">
+            <div class="flex h-full min-h-0 flex-col">
+                <div class="flex shrink-0 cursor-move items-center justify-between border-b border-gray-200 bg-gray-100 px-4 py-2 select-none" data-drag-handle>
+                    <div class="text-sm font-semibold text-gray-900">{{ __('Kundenzugriff-Matrix') }}</div>
+                    <div class="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onclick="window.toggleModalMaximize('personen-zugriffsmatrix')"
+                            class="flex h-6 w-6 items-center justify-center rounded text-gray-500 hover:bg-gray-200 hover:text-gray-800"
+                            aria-label="{{ __('Maximieren') }}"
+                            title="{{ __('Maximieren') }}"
+                        >
+                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 3h8a2 2 0 012 2v14a2 2 0 01-2 2H8a2 2 0 01-2-2V5a2 2 0 012-2z" />
+                            </svg>
+                        </button>
+                        <button
+                            type="button"
+                            onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'personen-zugriffsmatrix' }))"
+                            class="text-gray-400 hover:text-gray-600"
+                            aria-label="{{ __('Schließen') }}"
+                        >
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div id="personen-zugriffsmatrix-body" class="min-h-0 flex-1 overflow-hidden">
+                    {{ __('Lädt…') }}
+                </div>
+            </div>
+        </x-modal>
+
+        <script>
+            (function () {
+                window.addEventListener('open-modal', async (event) => {
+                    if (event.detail !== 'personen-zugriffsmatrix') {
+                        return;
+                    }
+                    const url = new URL({{ \Illuminate\Support\Js::from(route('admin.personen.zugriffsmatrix')) }}, window.location.origin);
+                    url.search = window.location.search;
+                    const body = document.getElementById('personen-zugriffsmatrix-body');
+                    body.innerHTML = await fetch(url.toString()).then((r) => r.text());
+                });
+            })();
+        </script>
+    @endif
 </x-admin-layout>

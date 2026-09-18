@@ -19,6 +19,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -144,6 +145,45 @@ class PersonController extends Controller
             // View einen "(Kundenname)"-Zusatz, siehe Blade-Template.
             'tenantNames' => Tenant::query()->whereIn('id', $catalogTenantIds)->pluck('name', 'id'),
         ]);
+    }
+
+    /**
+     * Kundenzugriff-Matrix (Ralf, 2026-09-18: "wie gehe ich vor, wenn ich
+     * alle meine Leute und deren Kundenzugriffe sehen möchte? Muss ich
+     * jeden einzelnen abklappern?") - Zeilen/Spalten: Personen genau wie
+     * in der aktuell gefilterten/sortierten Personenliste (kein eigener
+     * Filter hier, bewusst wiederverwendet statt doppelt gebaut), Spalten:
+     * Heimat-Mandant zuerst, dann alle anderen Kunden alphabetisch. Erst
+     * mal nur zum Anschauen (Ralf: "erst mal nur anzeigen") - keine
+     * Bearbeitung hier, dafür bleibt die einzelne Person zuständig. Nur
+     * Heimat-Admin/Super-Admin erreichbar - Kundekunde-Admin hat ohnehin
+     * keine eigenen Leute mit Kundenzugriff zu verwalten.
+     */
+    public function accessMatrix(Request $request): View
+    {
+        $canAccess = SystemSetting::multiTenantEnabled()
+            && ($request->user()->role === 'super_admin' || CurrentTenant::isHomeTenantAdmin($request->user()));
+        abort_unless($canAccess, 403);
+
+        $tenantId = CurrentTenant::id();
+        $filters = $this->filtersFromRequest($request);
+
+        $people = $this->filteredPeopleQuery($filters, $tenantId, $request->user()->role)
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->get();
+
+        $homeTenant = Tenant::query()->where('is_home_tenant', true)->first();
+        $otherTenants = Tenant::query()
+            ->when($homeTenant, fn (Builder $query) => $query->where('id', '!=', $homeTenant->id))
+            ->orderBy('name')
+            ->get();
+
+        $grants = DB::table('person_tenant')->whereIn('person_id', $people->pluck('id'))->get()
+            ->groupBy('person_id')
+            ->map(fn ($rows) => $rows->pluck('tenant_id')->all());
+
+        return view('admin.personen.partials.access-matrix', compact('people', 'homeTenant', 'otherTenants', 'grants'));
     }
 
     /**
