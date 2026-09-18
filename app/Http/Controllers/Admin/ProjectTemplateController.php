@@ -40,7 +40,7 @@ class ProjectTemplateController extends Controller
             }
         }
 
-        $templates = $query->with(['createdByUser', 'updatedByUser'])
+        $templates = $query->with(['createdByUser.person', 'updatedByUser.person'])
             // FIELD(): Wochen-Einträge vor Monate-Einträgen (gleiche
             // Reihenfolge wie Viettos gakat.php, intDauerEinheit 1=Wochen
             // zuerst) - alphabetisch wäre "months" fälschlich vor "weeks".

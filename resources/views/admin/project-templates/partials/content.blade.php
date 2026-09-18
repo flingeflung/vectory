@@ -21,14 +21,18 @@
     <div class="space-y-2">
         @forelse ($templates as $template)
             <div class="rounded-md border border-gray-200 p-3 {{ ! $template->active ? 'bg-gray-50' : '' }}" x-data="{}">
+                @php
+                    $createdByName = $template->createdByUser?->person?->fullName() ?? $template->createdByUser?->name ?? '–';
+                    $updatedByName = $template->updatedByUser?->person?->fullName() ?? $template->updatedByUser?->name;
+                @endphp
                 <form data-row-form x-data="{ dirty: false }" @input="dirty = window.formIsDirty($el)" @submit="dirty = false" method="POST" action="{{ route('admin.projektschablonen.update', $template) }}">
                     @csrf
                     @include('admin.project-templates.partials.fields', ['template' => $template])
                     <div class="mt-2 flex items-center justify-between">
                         <p class="text-xs text-gray-400">
-                            {{ __('angelegt von :name am :date', ['name' => $template->createdByUser?->name ?? '–', 'date' => $template->created_at?->format('d.m.Y')]) }}
-                            @if ($template->updatedByUser)
-                                , {{ __('geändert von :name am :date', ['name' => $template->updatedByUser->name, 'date' => $template->updated_at?->format('d.m.Y')]) }}
+                            {{ __('angelegt von :name am :date', ['name' => $createdByName, 'date' => $template->created_at?->format('d.m.Y')]) }}
+                            @if ($updatedByName)
+                                , {{ __('geändert von :name am :date', ['name' => $updatedByName, 'date' => $template->updated_at?->format('d.m.Y')]) }}
                             @endif
                         </p>
                         <button type="submit" x-show="dirty" x-cloak class="shrink-0 rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
