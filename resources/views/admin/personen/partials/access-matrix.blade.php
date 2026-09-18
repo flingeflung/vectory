@@ -34,14 +34,14 @@
                     @if ($homeTenant)
                         <td class="px-2 py-1 text-center">
                             @if ($person->tenant_id === $homeTenant->id)
-                                <span class="font-semibold text-gray-700" title="{{ __('Heimat-Mandant') }}">•</span>
+                                @include('admin.personen.partials.home-icon')
                             @endif
                         </td>
                     @endif
                     @foreach ($otherTenants as $tenant)
                         <td class="px-2 py-1 text-center">
                             @if ($person->tenant_id === $tenant->id)
-                                <span class="font-semibold text-gray-700" title="{{ __('Heimat-Mandant') }}">•</span>
+                                @include('admin.personen.partials.home-icon')
                             @elseif (in_array($tenant->id, $grants->get($person->id, []), true))
                                 <span class="text-green-600" title="{{ __('Kundenzugriff') }}">✓</span>
                             @endif
