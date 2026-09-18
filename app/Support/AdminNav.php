@@ -24,6 +24,7 @@ class AdminNav
                 ['route' => 'admin.personen', 'match' => 'admin.personen*', 'label' => __('Personen')],
                 ['route' => 'admin.rechte', 'match' => 'admin.rechte', 'label' => __('Rechte')],
                 ['route' => 'admin.function-groups', 'match' => 'admin.function-groups', 'label' => __('Funktionsgruppen')],
+                ['route' => 'admin.jobtypen', 'match' => 'admin.jobtypen*', 'label' => __('Zeiterfassung')],
             ],
             __('Projekt-Konfiguration') => [
                 ['route' => 'admin.projektkategorien', 'match' => 'admin.projektkategorien*', 'label' => __('Projektkategorien')],

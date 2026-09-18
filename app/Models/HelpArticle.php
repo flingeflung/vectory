@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -13,9 +14,27 @@ use Illuminate\Support\Collection;
  * Hilfeartikel des Hilfesystems (siehe Migration) - bewusst kein
  * BelongsToTenant, gilt für alle Mandanten gleich.
  */
-#[Fillable(['key', 'route_names', 'parent_id', 'position'])]
+#[Fillable(['key', 'route_names', 'parent_id', 'position', 'visible_role'])]
 class HelpArticle extends Model
 {
+    /**
+     * Sichtbarkeits-Stufen für visible_role (Ralf, 2026-09-16) - dieselben
+     * zwei Stufen wie die access-admin/access-superadmin-Gates, damit eine
+     * Hilfeseite z.B. nur den Superadmin betrifft, obwohl der normale
+     * Hilfe-Button für jeden eingeloggten Nutzer da ist. null = für alle,
+     * das explizite Feld drückt nur die BEIDEN einschränkenden Stufen aus.
+     * Bewusst KEINE Vererbung an Unterseiten (Ralf ausdrücklich bestätigt) -
+     * jede Seite trägt ihre eigene Einstellung.
+     */
+    public const VISIBLE_ADMIN = 'admin';
+
+    public const VISIBLE_SUPER_ADMIN = 'super_admin';
+
+    public const VISIBILITY_LEVELS = [
+        self::VISIBLE_ADMIN => 'Admin & Superadmin',
+        self::VISIBLE_SUPER_ADMIN => 'nur Superadmin',
+    ];
+
     /**
      * "3-Ebenen-Hilfestruktur" (Ralf, 2026-09-15): mehr Verschachtelung
      * würde die Navigation links im Hilfe-Panel unübersichtlich machen -
@@ -134,6 +153,39 @@ class HelpArticle extends Model
         return $byLocale->firstWhere('locale', $locale)
             ?? $byLocale->firstWhere('locale', self::PRIMARY_LOCALE)
             ?? $byLocale->first();
+    }
+
+    public function isVisibleTo(?User $user): bool
+    {
+        return match ($this->visible_role) {
+            self::VISIBLE_SUPER_ADMIN => $user?->role === 'super_admin',
+            self::VISIBLE_ADMIN => in_array($user?->role, ['admin', 'super_admin'], true),
+            default => true,
+        };
+    }
+
+    /**
+     * Baum (oder Teilbaum) auf die für $user sichtbaren Knoten reduzieren -
+     * fürs Hilfe-Panel selbst (nicht für die Super-Admin-Verwaltung, die
+     * zeigt bewusst immer alles). Ein für $user unsichtbarer Knoten nimmt
+     * dabei automatisch seine Unterseiten mit aus der Navigation (kein
+     * erreichbarer Elternknoten mehr) - keine eigene Vererbungsregel,
+     * einfach eine Folge davon, dass der Baum an dieser Stelle abgeschnitten
+     * wird.
+     *
+     * @param  Collection<int, self>  $nodes
+     * @return Collection<int, self>
+     */
+    public static function filterVisible(Collection $nodes, ?User $user): Collection
+    {
+        return $nodes
+            ->filter(fn (self $node) => $node->isVisibleTo($user))
+            ->map(function (self $node) use ($user) {
+                $node->setRelation('children', self::filterVisible($node->children, $user));
+
+                return $node;
+            })
+            ->values();
     }
 
     /**

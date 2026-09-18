@@ -546,6 +546,793 @@
             </div>
         </x-modal>
 
+        <x-modal name="project-gantt" max-width="7xl" :draggable="true" :resizable="true" :fullscreen="true">
+            <div class="flex h-full min-h-0 flex-col">
+                <div class="flex shrink-0 cursor-move items-center justify-between border-b border-gray-200 bg-gray-100 px-4 py-2 select-none" data-drag-handle>
+                    <div class="text-sm font-semibold text-gray-900">{{ __('Gantt') }}</div>
+                    <div class="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onclick="window.toggleModalMaximize('project-gantt')"
+                            class="flex h-6 w-6 items-center justify-center rounded text-gray-500 hover:bg-gray-200 hover:text-gray-800"
+                            aria-label="{{ __('Maximieren') }}"
+                            title="{{ __('Maximieren') }}"
+                        >
+                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 3h8a2 2 0 012 2v14a2 2 0 01-2 2H8a2 2 0 01-2-2V5a2 2 0 012-2z" />
+                            </svg>
+                        </button>
+                        <button
+                            type="button"
+                            onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-gantt' }))"
+                            class="text-gray-400 hover:text-gray-600"
+                            aria-label="{{ __('Schließen') }}"
+                        >
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div id="project-gantt-body" class="min-h-0 flex-1 overflow-hidden p-4 text-sm text-gray-600">
+                    {{ __('Gantt-Ansicht wird hier eingebaut.') }}
+                </div>
+            </div>
+        </x-modal>
+
+        <x-modal name="project-gantt-people" max-width="md" :draggable="true">
+            <div class="flex max-h-[75vh] flex-col">
+                <div class="flex items-center justify-between border-b border-gray-200 bg-gray-100 px-4 py-2" data-drag-handle>
+                    <div class="text-sm font-semibold text-gray-900">{{ __('Personen') }}</div>
+                    <button type="button" class="text-gray-500 hover:text-gray-700" onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-gantt-people' }))" aria-label="{{ __('Schließen') }}">×</button>
+                </div>
+                <div class="space-y-4 overflow-y-auto p-4 text-sm">
+                    <fieldset class="space-y-2">
+                        <legend class="mb-2 font-medium text-gray-700">{{ __('Darstellung') }}</legend>
+                        <label class="flex items-center gap-2"><input type="radio" name="gantt-people-mode" value="per-project" checked> {{ __('Personen pro Projekt') }}</label>
+                        <label class="flex items-center gap-2"><input type="radio" name="gantt-people-mode" value="all"> {{ __('Personen über alle Projekte') }}</label>
+                    </fieldset>
+                    <div class="flex gap-2">
+                        <button type="button" data-gantt-select-people="all" class="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50">{{ __('Alle') }}</button>
+                        <button type="button" data-gantt-select-people="none" class="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50">{{ __('Keiner') }}</button>
+                    </div>
+                    <div id="project-gantt-people-list" class="space-y-1 border-t border-gray-200 pt-3"></div>
+                </div>
+                <div class="flex justify-end border-t border-gray-200 px-4 py-3">
+                    <button type="button" class="rounded-md bg-btn-primary px-3 py-1.5 text-sm text-white hover:bg-btn-primary-hover" onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-gantt-people' }))">{{ __('Schließen') }}</button>
+                </div>
+            </div>
+        </x-modal>
+
+        <div id="project-gantt-loading" class="fixed inset-0 z-[100] hidden items-center justify-center bg-gray-900/20" role="status" aria-live="polite">
+            <div class="flex flex-col items-center gap-3 rounded-lg bg-white px-8 py-6 shadow-lg">
+                <x-loading-spinner class="h-10 w-10 text-gray-600" />
+                <span class="text-sm text-gray-600">{{ __('Lädt…') }}</span>
+            </div>
+        </div>
+
+        <script>
+            (function () {
+                const ganttBody = () => document.getElementById('project-gantt-body');
+                let ganttResizeObserver = null;
+                let peopleByProject = {};
+                let ganttProjects = [];
+                let selectedPersonIds = new Set();
+                let knownPersonIds = new Set();
+                let peopleMode = 'per-project';
+                let savedScale = 28;
+                let settingsLoaded = false;
+                let settingsLoading = null;
+                let saveTimer = null;
+                let saveQueue = Promise.resolve();
+                let loadedProjectIdsKey = null;
+                let peopleLoading = null;
+                let ganttOpening = false;
+
+                const loadGanttSettings = () => {
+                    if (settingsLoaded) {
+                        return Promise.resolve();
+                    }
+                    if (settingsLoading) {
+                        return settingsLoading;
+                    }
+
+                    settingsLoading = fetch({{ \Illuminate\Support\Js::from(route('projekte.gantt.einstellungen.show')) }}, {
+                        headers: { Accept: 'application/json' },
+                    }).then((response) => {
+                        if (!response.ok) {
+                            throw new Error('Could not load Gantt settings');
+                        }
+                        return response.json();
+                    }).then((saved) => {
+                        peopleMode = saved.mode === 'all' ? 'all' : 'per-project';
+                        selectedPersonIds = new Set((saved.selected_person_ids || []).map(Number));
+                        knownPersonIds = new Set((saved.known_person_ids || []).map(Number));
+                        savedScale = Math.min(60, Math.max(18, Number(saved.scale) || 28));
+                        settingsLoaded = true;
+                    }).finally(() => {
+                        settingsLoading = null;
+                    });
+
+                    return settingsLoading;
+                };
+
+                const saveGanttSettings = (debounce = false) => {
+                    clearTimeout(saveTimer);
+                    const persist = () => {
+                        const payload = {
+                            mode: peopleMode,
+                            scale: savedScale,
+                            selected_person_ids: [...selectedPersonIds],
+                            known_person_ids: [...knownPersonIds],
+                        };
+                        saveQueue = saveQueue.catch(() => {}).then(async () => {
+                            const response = await fetch({{ \Illuminate\Support\Js::from(route('projekte.gantt.einstellungen.update')) }}, {
+                                method: 'PUT',
+                                headers: {
+                                    Accept: 'application/json',
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                },
+                                body: JSON.stringify(payload),
+                                keepalive: true,
+                            });
+                            if (!response.ok) {
+                                throw new Error('Could not save Gantt settings');
+                            }
+                            const status = ganttBody()?.querySelector('[data-gantt-save-status]');
+                            if (status) {
+                                status.textContent = '';
+                            }
+                        }).catch(() => {
+                            const status = ganttBody()?.querySelector('[data-gantt-save-status]');
+                            if (status) {
+                                status.textContent = {{ \Illuminate\Support\Js::from(__('Einstellungen konnten nicht gespeichert werden.')) }};
+                            }
+                        });
+                    };
+
+                    if (debounce) {
+                        saveTimer = setTimeout(persist, 250);
+                    } else {
+                        persist();
+                    }
+                };
+
+                const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+                })[character]);
+
+                const parseDate = (value) => {
+                    if (!value) {
+                        return null;
+                    }
+                    const date = new Date(value + 'T00:00:00');
+                    return Number.isNaN(date.getTime()) ? null : date;
+                };
+
+                const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+                const toDateKey = (value) => {
+                    const date = parseDate(value);
+                    if (!date) {
+                        return null;
+                    }
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                };
+
+                const formatDayLabel = (date) => {
+                    const dt = new Date(date);
+                    return `${String(dt.getDate()).padStart(2, '0')}.${String(dt.getMonth() + 1).padStart(2, '0')}`;
+                };
+
+                const formatFullDateLabel = (date) => {
+                    const dt = new Date(date);
+                    return `${String(dt.getDate()).padStart(2, '0')}.${String(dt.getMonth() + 1).padStart(2, '0')}.${dt.getFullYear()}`;
+                };
+
+                const truncateTitle = (title, maxLen = 48) => {
+                    if (!title) {
+                        return '';
+                    }
+                    const value = title.trim();
+                    if (value.length <= maxLen) {
+                        return value;
+                    }
+                    return value.slice(0, maxLen - 1).trimEnd() + '…';
+                };
+
+                const defaultHeaderHeight = 28;
+                const defaultRowHeight = 28;
+
+                const renderGantt = () => {
+                    const projects = ganttProjects
+                        .map((project) => ({
+                            id: project.id,
+                            pn: project.source_pn || '–',
+                            title: project.title || 'Ohne Titel',
+                            start: toDateKey(project.start_date?.slice(0, 10) || ''),
+                            end: toDateKey(project.end_date?.slice(0, 10) || ''),
+                        }))
+                        .sort((a, b) => a.pn.localeCompare(b.pn, 'de', { numeric: true }));
+
+                    if (!projects.length) {
+                        return `
+                            <div class="flex h-full items-center justify-center text-sm text-gray-500">
+                                Keine Projekte für die Gantt-Ansicht vorhanden.
+                            </div>
+                        `;
+                    }
+
+                    const validDates = projects
+                        .map((project) => [project.start, project.end])
+                        .flat()
+                        .filter(Boolean)
+                        .map((value) => parseDate(value))
+                        .filter(Boolean);
+
+                    const fallbackStart = new Date();
+                    fallbackStart.setHours(0, 0, 0, 0);
+                    const fallbackEnd = new Date(fallbackStart);
+                    fallbackEnd.setDate(fallbackEnd.getDate() + 29);
+
+                    let minDate = validDates.length ? new Date(Math.min(...validDates.map((entry) => entry.getTime()))) : fallbackStart;
+                    let maxDate = validDates.length ? new Date(Math.max(...validDates.map((entry) => entry.getTime()))) : fallbackEnd;
+
+                    const paddingDays = 7;
+                    minDate = new Date(minDate); minDate.setDate(minDate.getDate() - paddingDays);
+                    maxDate = new Date(maxDate); maxDate.setDate(maxDate.getDate() + paddingDays);
+
+                    const dateList = [];
+                    for (let cursor = new Date(minDate); cursor <= maxDate; cursor.setDate(cursor.getDate() + 1)) {
+                        dateList.push(new Date(cursor));
+                    }
+
+                    const initialScale = defaultHeaderHeight;
+                    const dayWidth = initialScale;
+                    const headerHeight = defaultHeaderHeight;
+                    const rowHeight = defaultRowHeight;
+                    const gridWidth = dateList.length * dayWidth;
+                    const mondayOffset = (minDate.getDay() + 6) % 7;
+
+                    const projectBars = projects.map((project) => {
+                        const startDate = parseDate(project.start);
+                        const endDate = parseDate(project.end);
+
+                        if (!startDate || !endDate) {
+                            return null;
+                        }
+
+                        const startOffset = Math.max(0, Math.round((startDate - minDate) / (1000 * 60 * 60 * 24)));
+                        const endOffset = Math.max(startOffset + 1, Math.round((endDate - minDate) / (1000 * 60 * 60 * 24)) + 1);
+                        const leftPx = startOffset * dayWidth;
+                        const widthPx = Math.max(20, (endOffset - startOffset) * dayWidth);
+
+                        return {
+                            ...project,
+                            leftPx,
+                            widthPx,
+                        };
+                    }).filter(Boolean);
+
+                    const selectedPeopleFor = (project) => (peopleByProject[project.id] || [])
+                        .filter((person) => selectedPersonIds.has(person.id));
+                    const displayRows = projects.flatMap((project) => [
+                        { type: 'project', project },
+                        ...(peopleMode === 'per-project'
+                            ? selectedPeopleFor(project).map((person) => ({ type: 'person', person, projects: [project] }))
+                            : []),
+                    ]);
+
+                    if (peopleMode === 'all') {
+                        const people = new Map();
+                        projects.forEach((project) => {
+                            selectedPeopleFor(project).forEach((person) => {
+                                if (!people.has(person.id)) {
+                                    people.set(person.id, { type: 'person', person, projects: [] });
+                                }
+                                people.get(person.id).projects.push(project);
+                            });
+                        });
+                        displayRows.push(...[...people.values()].sort((a, b) => a.person.name.localeCompare(b.person.name, 'de')));
+                    }
+
+                    const barsByProjectId = new Map(projectBars.map((bar) => [bar.id, bar]));
+                    displayRows.forEach((row) => {
+                        if (row.type !== 'person') {
+                            return;
+                        }
+
+                        const laneEnds = [];
+                        row.bars = row.projects
+                            .map((project) => ({ project, bar: barsByProjectId.get(project.id) }))
+                            .filter((item) => item.bar)
+                            .sort((a, b) => a.bar.leftPx - b.bar.leftPx);
+                        row.bars.forEach((item) => {
+                            const freeLane = laneEnds.findIndex((end) => end <= item.bar.leftPx);
+                            item.lane = freeLane === -1 ? laneEnds.length : freeLane;
+                            laneEnds[item.lane] = item.bar.leftPx + item.bar.widthPx;
+                        });
+                        row.laneCount = laneEnds.length;
+                    });
+
+                    const displayRowHeight = (row) => row.type === 'person' && peopleMode === 'all'
+                        ? Math.max(rowHeight, row.laneCount * 12 + 4)
+                        : rowHeight;
+
+                    const rowMarkup = displayRows.map((row) => {
+                        const rowBars = row.type === 'project'
+                            ? [{ project: row.project, bar: barsByProjectId.get(row.project.id) }]
+                            : row.bars;
+                        const height = displayRowHeight(row);
+                        const barMarkup = rowBars.map(({ project, bar, lane }) => {
+                            if (!bar) {
+                                return '';
+                            }
+
+                            return row.type === 'project' ? `
+                                <div class="gantt-project-bar absolute rounded border border-sky-300" data-bar-left="${bar.leftPx}" data-bar-width="${bar.widthPx}" style="top: 50%; left: ${bar.leftPx}px; width: ${bar.widthPx}px; height: 16px; transform: translateY(-50%); background-color: #bae6fd;"></div>
+                            ` : `
+                                <div class="gantt-project-bar absolute rounded" title="${escapeHtml(project.pn)}" data-bar-left="${bar.leftPx}" data-bar-width="${bar.widthPx}" style="top: ${peopleMode === 'all' ? `${(height - row.laneCount * 12) / 2 + 2 + lane * 12}px` : '50%'}; left: ${bar.leftPx}px; width: ${bar.widthPx}px; height: ${peopleMode === 'all' ? '8px' : '10px'}; ${peopleMode === 'all' ? '' : 'transform: translateY(-50%);'} background-color: #d9f0ba; border: 1px solid #a3c77a;"></div>
+                            `;
+                        }).join('');
+
+                        return `
+                            <div class="gantt-row" style="min-width: ${gridWidth}px; height: ${height}px;">
+                                <div class="relative overflow-hidden bg-white" style="height: ${height}px; min-width: ${gridWidth}px;">
+                                    <div class="gantt-grid-track absolute inset-0 border-b border-gray-200" data-gantt-grid-track="1" data-monday-offset="${mondayOffset}" style="width: ${gridWidth}px; min-width: ${gridWidth}px; background-image: linear-gradient(to right, transparent calc(100% - 1px), #e5e7eb calc(100% - 1px)), linear-gradient(to right, #fff 0 71.428571%, #fffaeb 71.428571% 100%); background-size: ${dayWidth}px 100%, ${dayWidth * 7}px 100%; background-position: 0 0, -${mondayOffset * dayWidth}px 0;"></div>
+                                    ${barMarkup}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    const headerMarkup = `
+                        <div class="gantt-header" data-gantt-header="1" style="border-bottom: 1px solid #e5e7eb; background: #f9fafb; height: ${headerHeight}px; min-height: ${headerHeight}px; box-sizing: border-box; min-width: ${gridWidth}px;">
+                            <div class="gantt-date-grid flex" data-gantt-date-grid="1" style="width: ${gridWidth}px; min-width: ${gridWidth}px; height: 100%;">
+                                ${dateList.map((date) => `
+                                    <div class="gantt-date-header flex-shrink-0 border-r border-gray-200 text-center text-[9px] font-medium text-gray-600" title="${formatFullDateLabel(date)}" style="width: ${dayWidth}px; height: 100%; line-height: ${headerHeight}px; padding: 0; box-sizing: border-box; background-color: ${date.getDay() === 0 || date.getDay() === 6 ? '#fffaeb' : '#f9fafb'};">
+                                        ${formatDayLabel(date)}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+
+                    const scaleMarkup = `
+                        <div class="flex h-10 shrink-0 items-center justify-between border-b border-gray-200 bg-gray-100 px-3">
+                            <div class="flex items-center gap-3">
+                                <span class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Skalierung</span>
+                                <input type="range" min="18" max="60" step="2" value="${initialScale}" class="h-2 w-40 accent-sky-600" data-gantt-scale />
+                                <span class="text-xs text-gray-600" data-gantt-visible-days></span>
+                                <button type="button" class="rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-50" onclick="window.openProjectGanttPeople()">{{ __('Personen') }}</button>
+                                <span class="text-xs text-red-600" data-gantt-save-status></span>
+                            </div>
+                            <span class="text-xs text-gray-500">${formatDayLabel(minDate)} – ${formatDayLabel(maxDate)}</span>
+                        </div>
+                    `;
+
+                    return `
+                        <div class="flex h-full min-h-0 flex-col overflow-hidden rounded-md border border-gray-200 bg-white">
+                            ${scaleMarkup}
+                            <div class="grid min-h-0 flex-1 overflow-hidden" style="grid-template-columns: 260px minmax(0, 1fr);">
+                                <div class="overflow-hidden border-r border-gray-200 bg-gray-50" data-gantt-project-pane>
+                                    <div class="h-full overflow-y-auto" data-gantt-project-scroll>
+                                        <div class="min-h-full">
+                                            <div data-gantt-project-spacer style="height: ${headerHeight}px; min-height: ${headerHeight}px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; box-sizing: border-box;"></div>
+                                            ${displayRows.map((row) => row.type === 'project' ? `
+                                                <div class="flex items-center gap-2 border-b border-gray-200 px-2 text-[11px]" style="height: ${rowHeight}px; min-height: ${rowHeight}px; box-sizing: border-box;">
+                                                    <button
+                                                        type="button"
+                                                        class="w-20 shrink-0 rounded px-1 py-0.5 text-left font-medium text-indigo-700 hover:bg-indigo-50 hover:underline"
+                                                        title="Projekt öffnen"
+                                                        data-gantt-project-id="${row.project.id ?? ''}"
+                                                        onclick="if (this.dataset.ganttProjectId) { window.dispatchEvent(new CustomEvent('open-project', { detail: { id: Number(this.dataset.ganttProjectId) } })); }"
+                                                    >
+                                                        ${escapeHtml(row.project.pn)}
+                                                    </button>
+                                                    <span class="truncate leading-none" title="${escapeHtml(row.project.title)}">${escapeHtml(truncateTitle(row.project.title))}</span>
+                                                </div>
+                                            ` : `
+                                                <div class="flex items-center border-b border-gray-200 pl-8 pr-2 text-[11px] ${row.person.inactive ? 'text-gray-400' : 'text-gray-700'}" style="height: ${displayRowHeight(row)}px; min-height: ${displayRowHeight(row)}px; box-sizing: border-box;">
+                                                    <span class="truncate" title="${escapeHtml(row.person.name + (row.person.inactive ? ' [i]' : '') + (row.person.affiliation ? ` (${row.person.affiliation})` : ''))}">${escapeHtml(row.person.name)}${row.person.inactive ? ' [i]' : ''}${row.person.affiliation ? ` <span class="text-gray-400">(${escapeHtml(row.person.affiliation)})</span>` : ''}</span>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="min-w-0 overflow-auto bg-white" data-gantt-date-scroll>
+                                    ${headerMarkup}
+                                    <div class="gantt-body-rows" data-gantt-body-rows="1" style="min-width: ${gridWidth}px;">
+                                        ${rowMarkup}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                };
+
+                const syncGanttHeaderHeights = () => {
+                    const body = ganttBody();
+                    if (!body) {
+                        return;
+                    }
+                    const header = body.querySelector('[data-gantt-header]');
+                    const spacer = body.querySelector('[data-gantt-project-spacer]');
+                    if (!header || !spacer) {
+                        return;
+                    }
+                    const height = header.getBoundingClientRect().height || defaultHeaderHeight;
+                    spacer.style.height = `${height}px`;
+                    spacer.style.minHeight = `${height}px`;
+                    spacer.style.lineHeight = `${height}px`;
+                    header.style.height = `${height}px`;
+                    header.style.minHeight = `${height}px`;
+                    const dateGrid = header.querySelector('[data-gantt-date-grid]');
+                    if (dateGrid) {
+                        dateGrid.style.height = `${height}px`;
+                    }
+                };
+
+                const visibleProjectIds = () => ganttProjects
+                    .map((project) => Number(project.id))
+                    .filter(Boolean);
+
+                const loadGanttProjects = async () => {
+                    const query = document.querySelector('[data-gantt-query]')?.dataset.ganttQuery || '';
+                    const response = await fetch({{ \Illuminate\Support\Js::from(route('projekte.gantt.projekte')) }} + (query ? '?' + query : ''), {
+                        headers: { Accept: 'application/json' },
+                    });
+                    if (!response.ok) {
+                        if (response.status === 422) {
+                            const data = await response.json();
+                            if (data.code === 'project_limit_exceeded') {
+                                const error = new Error('Project limit exceeded');
+                                error.ganttLimitMessage = data.message;
+                                throw error;
+                            }
+                        }
+                        throw new Error('Could not load Gantt projects');
+                    }
+                    ganttProjects = (await response.json()).projects || [];
+                };
+
+                const loadGanttPeople = async () => {
+                    const projectIds = visibleProjectIds();
+                    const key = projectIds.join(',');
+                    if (loadedProjectIdsKey === key) {
+                        return;
+                    }
+                    if (peopleLoading?.key === key) {
+                        return peopleLoading.promise;
+                    }
+
+                    const promise = (async () => {
+                        const nextPeopleByProject = {};
+                        for (let offset = 0; offset < projectIds.length; offset += 100) {
+                            const params = new URLSearchParams();
+                            projectIds.slice(offset, offset + 100).forEach((id) => params.append('project_ids[]', id));
+                            const response = await fetch({{ \Illuminate\Support\Js::from(route('projekte.gantt.personen')) }} + '?' + params.toString(), {
+                                headers: { Accept: 'application/json' },
+                            });
+                            if (!response.ok) {
+                                throw new Error('Could not load project people');
+                            }
+                            const data = await response.json();
+                            Object.assign(nextPeopleByProject, data.people_by_project || {});
+                        }
+
+                        peopleByProject = nextPeopleByProject;
+                        Object.values(peopleByProject).flat().forEach((person) => {
+                            if (!knownPersonIds.has(person.id)) {
+                                knownPersonIds.add(person.id);
+                                selectedPersonIds.add(person.id);
+                            }
+                        });
+                        loadedProjectIdsKey = key;
+                        saveGanttSettings();
+                    })();
+
+                    peopleLoading = { key, promise };
+                    try {
+                        await promise;
+                    } finally {
+                        if (peopleLoading?.promise === promise) {
+                            peopleLoading = null;
+                        }
+                    }
+                };
+
+                window.openProjectGantt = function (refreshPeople = true) {
+                    if (!settingsLoaded) {
+                        if (ganttBody()) {
+                            ganttBody().textContent = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
+                        }
+                        window.dispatchEvent(new CustomEvent('open-modal', { detail: 'project-gantt' }));
+                        loadGanttSettings()
+                            .then(() => window.openProjectGantt(refreshPeople))
+                            .catch(() => {
+                                if (ganttBody()) {
+                                    ganttBody().textContent = {{ \Illuminate\Support\Js::from(__('Gantt-Einstellungen konnten nicht geladen werden.')) }};
+                                }
+                            });
+                        return;
+                    }
+
+                    if (ganttBody()) {
+                        const previousScale = ganttBody().querySelector('[data-gantt-scale]')?.value;
+                        const previousDateScroll = ganttBody().querySelector('[data-gantt-date-scroll]');
+                        const previousProjectScroll = ganttBody().querySelector('[data-gantt-project-scroll]');
+                        const scrollLeft = previousDateScroll?.scrollLeft || 0;
+                        const scrollTop = previousProjectScroll?.scrollTop || 0;
+                        ganttResizeObserver?.disconnect();
+                        ganttBody().innerHTML = renderGantt();
+                        syncGanttHeaderHeights();
+
+                        const scaleInput = ganttBody().querySelector('[data-gantt-scale]');
+                        const visibleDaysLabel = ganttBody().querySelector('[data-gantt-visible-days]');
+                        const dateGrid = ganttBody().querySelector('[data-gantt-date-grid]');
+                        const dateScroll = ganttBody().querySelector('[data-gantt-date-scroll]');
+                        const projectScroll = ganttBody().querySelector('[data-gantt-project-scroll]');
+                        const bodyRows = ganttBody().querySelector('[data-gantt-body-rows]');
+                        const gridTracks = ganttBody().querySelectorAll('[data-gantt-grid-track]');
+                        const bars = ganttBody().querySelectorAll('.gantt-project-bar');
+
+                        if (dateScroll && bodyRows) {
+                            dateScroll.addEventListener('scroll', () => {
+                                bodyRows.scrollLeft = dateScroll.scrollLeft;
+                                if (projectScroll) {
+                                    projectScroll.scrollTop = dateScroll.scrollTop;
+                                }
+                            }, { passive: true });
+                        }
+
+                        if (projectScroll && dateScroll) {
+                            projectScroll.addEventListener('scroll', () => {
+                                dateScroll.scrollTop = projectScroll.scrollTop;
+                            }, { passive: true });
+                        }
+
+                        const updateVisibleDays = () => {
+                            if (!dateScroll || !dateGrid || !scaleInput || !visibleDaysLabel || !dateScroll.clientWidth) {
+                                return;
+                            }
+
+                            const dayWidth = Number(scaleInput.value);
+                            const visibleDays = Math.min(dateGrid.children.length, Math.floor(dateScroll.clientWidth / dayWidth));
+                            visibleDaysLabel.textContent = `${visibleDays} Tage`;
+                        };
+
+                        const applyScale = (value) => {
+                            const width = clamp(Number(value) || 28, 18, 60);
+                            const baseWidth = 28;
+                            const ratio = width / baseWidth;
+                            const previousWidth = Number(dateGrid?.firstElementChild?.style.width.replace('px', '')) || baseWidth;
+                            const leftmostDay = dateScroll ? dateScroll.scrollLeft / previousWidth : 0;
+
+                            if (dateGrid) {
+                                const totalDays = Number(dateGrid.dataset.dayCount || dateGrid.children.length || 0);
+                                dateGrid.style.width = `${totalDays * width}px`;
+                            }
+
+                            const gridWidth = (dateGrid?.children.length || 0) * width;
+                            ganttBody().querySelectorAll('.gantt-header, .gantt-body-rows, .gantt-row, .gantt-row > div, .gantt-date-grid, .gantt-grid-track').forEach((element) => {
+                                element.style.minWidth = `${gridWidth}px`;
+                            });
+
+                            gridTracks.forEach((track) => {
+                                const totalDays = Number(dateGrid?.dataset.dayCount || dateGrid?.children.length || 0);
+                                track.style.width = `${totalDays * width}px`;
+                                track.style.backgroundSize = `${width}px 100%, ${width * 7}px 100%`;
+                                track.style.backgroundPosition = `0 0, -${Number(track.dataset.mondayOffset) * width}px 0`;
+                            });
+
+                            ganttBody().querySelectorAll('.gantt-date-header').forEach((cell) => {
+                                cell.style.width = `${width}px`;
+                            });
+
+                            bars.forEach((bar) => {
+                                const left = Number(bar.dataset.barLeft || 0);
+                                const barWidth = Number(bar.dataset.barWidth || 0);
+                                bar.style.left = `${left * ratio}px`;
+                                bar.style.width = `${barWidth * ratio}px`;
+                            });
+
+                            if (dateScroll) {
+                                dateScroll.scrollLeft = leftmostDay * width;
+                            }
+
+                            updateVisibleDays();
+                        };
+
+                        if (scaleInput) {
+                            if (previousScale) {
+                                scaleInput.value = previousScale;
+                            } else {
+                                scaleInput.value = savedScale;
+                            }
+                            scaleInput.addEventListener('input', (event) => {
+                                savedScale = Number(event.target.value);
+                                saveGanttSettings(true);
+                                applyScale(event.target.value);
+                            });
+                            scaleInput.addEventListener('change', () => saveGanttSettings());
+                            applyScale(scaleInput.value);
+                        }
+
+                        if (dateScroll) {
+                            dateScroll.scrollLeft = scrollLeft;
+                            dateScroll.scrollTop = scrollTop;
+                        }
+                        if (projectScroll) {
+                            projectScroll.scrollTop = scrollTop;
+                        }
+
+                        if (dateScroll) {
+                            ganttResizeObserver = new ResizeObserver(updateVisibleDays);
+                            ganttResizeObserver.observe(dateScroll);
+                        }
+
+                    }
+                    window.dispatchEvent(new CustomEvent('open-modal', { detail: 'project-gantt' }));
+                    if (refreshPeople && loadedProjectIdsKey !== visibleProjectIds().join(',')) {
+                        loadGanttPeople().then(() => window.openProjectGantt(false)).catch(() => {});
+                    }
+                };
+
+                window.openProjectGanttWithLoading = async function () {
+                    if (ganttOpening) {
+                        return;
+                    }
+                    const loading = document.getElementById('project-gantt-loading');
+                    if (!loading) {
+                        return;
+                    }
+
+                    ganttOpening = true;
+                    loading.classList.remove('hidden');
+                    loading.classList.add('flex');
+                    try {
+                        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+                        await loadGanttSettings();
+                        await loadGanttProjects();
+                        let peopleLoadFailed = false;
+                        try {
+                            await loadGanttPeople();
+                        } catch (error) {
+                            peopleLoadFailed = true;
+                        }
+                        window.openProjectGantt(false);
+                        if (peopleLoadFailed) {
+                            const status = ganttBody()?.querySelector('[data-gantt-save-status]');
+                            if (status) {
+                                status.textContent = {{ \Illuminate\Support\Js::from(__('Projektbeteiligte konnten nicht geladen werden.')) }};
+                            }
+                        }
+                    } catch (error) {
+                        if (ganttBody()) {
+                            ganttBody().textContent = error.ganttLimitMessage
+                                ? error.ganttLimitMessage
+                                : {{ \Illuminate\Support\Js::from(__('Gantt-Daten konnten nicht geladen werden.')) }};
+                        }
+                        window.dispatchEvent(new CustomEvent('open-modal', { detail: 'project-gantt' }));
+                    } finally {
+                        loading.classList.add('hidden');
+                        loading.classList.remove('flex');
+                        ganttOpening = false;
+                    }
+                };
+
+                window.openProjectGanttPeople = async function () {
+                    const list = document.getElementById('project-gantt-people-list');
+                    const loading = document.getElementById('project-gantt-loading');
+                    if (!list || !loading) {
+                        return;
+                    }
+
+                    list.replaceChildren();
+                    loading.classList.remove('hidden');
+                    loading.classList.add('flex');
+                    document.querySelectorAll('input[name="gantt-people-mode"]').forEach((radio) => {
+                        radio.checked = radio.value === peopleMode;
+                    });
+                    window.dispatchEvent(new CustomEvent('open-modal', { detail: 'project-gantt-people' }));
+
+                    try {
+                        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+                        if (!visibleProjectIds().length) {
+                            list.textContent = {{ \Illuminate\Support\Js::from(__('Keine Projektbeteiligten vorhanden.')) }};
+                            return;
+                        }
+
+                        await loadGanttPeople();
+
+                        const people = new Map();
+                        Object.values(peopleByProject).flat().forEach((person) => people.set(person.id, person));
+                        const sortedPeople = [...people.values()].sort((a, b) => a.name.localeCompare(b.name, 'de'));
+
+                        list.replaceChildren();
+                        if (!sortedPeople.length) {
+                            list.textContent = {{ \Illuminate\Support\Js::from(__('Keine Projektbeteiligten vorhanden.')) }};
+                        }
+                        sortedPeople.forEach((person) => {
+                            const label = document.createElement('label');
+                            label.className = `flex items-center gap-2 ${person.inactive ? 'text-gray-400' : 'text-gray-700'}`;
+                            const checkbox = document.createElement('input');
+                            checkbox.type = 'checkbox';
+                            checkbox.value = String(person.id);
+                            checkbox.checked = selectedPersonIds.has(person.id);
+                            checkbox.addEventListener('change', () => {
+                                if (checkbox.checked) {
+                                    selectedPersonIds.add(person.id);
+                                } else {
+                                    selectedPersonIds.delete(person.id);
+                                }
+                                saveGanttSettings();
+                                window.openProjectGantt(false);
+                            });
+                            const name = document.createElement('span');
+                            name.textContent = `${person.name}${person.inactive ? ' [i]' : ''}`;
+                            label.append(checkbox, name);
+                            if (person.affiliation) {
+                                const affiliation = document.createElement('span');
+                                affiliation.className = 'text-xs text-gray-400';
+                                affiliation.textContent = `(${person.affiliation})`;
+                                label.append(affiliation);
+                            }
+                            list.append(label);
+                        });
+                        window.openProjectGantt(false);
+                    } catch (error) {
+                        list.textContent = {{ \Illuminate\Support\Js::from(__('Projektbeteiligte konnten nicht geladen werden.')) }};
+                    } finally {
+                        loading.classList.add('hidden');
+                        loading.classList.remove('flex');
+                    }
+                };
+
+                document.querySelectorAll('input[name="gantt-people-mode"]').forEach((radio) => {
+                    radio.addEventListener('change', () => {
+                        if (radio.checked) {
+                            peopleMode = radio.value;
+                            saveGanttSettings();
+                            window.openProjectGantt(false);
+                        }
+                    });
+                });
+
+                document.querySelectorAll('[data-gantt-select-people]').forEach((button) => {
+                    button.addEventListener('click', () => {
+                        const checkboxes = document.querySelectorAll('#project-gantt-people-list input[type="checkbox"]');
+                        const checked = button.dataset.ganttSelectPeople === 'all';
+                        checkboxes.forEach((checkbox) => {
+                            checkbox.checked = checked;
+                            if (checked) {
+                                selectedPersonIds.add(Number(checkbox.value));
+                            } else {
+                                selectedPersonIds.delete(Number(checkbox.value));
+                            }
+                        });
+                        saveGanttSettings();
+                        window.openProjectGantt(false);
+                    });
+                });
+
+                window.toggleModalMaximize = function (name) {
+                    const root = document.querySelector('[data-modal-name="' + name + '"]');
+                    if (!root) {
+                        return;
+                    }
+                    const data = Alpine.$data(root);
+                    if (data && typeof data.toggleMaximize === 'function') {
+                        data.toggleMaximize();
+                    }
+                };
+            })();
+        </script>
+
         {{--
             Global Personen-Detail-Overlay: von der Personenverwaltung per
             Namensklick (x-person-link) öffenbar - gleiches Grundmuster wie

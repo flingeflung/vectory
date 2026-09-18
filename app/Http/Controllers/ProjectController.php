@@ -22,6 +22,7 @@ use App\Models\ProjectTypeSub;
 use App\Models\ProjectWorkflowStep;
 use App\Models\ProjectWorkflowStepPerson;
 use App\Models\RecentlyViewedProject;
+use App\Models\Setting;
 use App\Models\SystemSetting;
 use App\Models\Tenant;
 use App\Models\Workflow;
@@ -194,6 +195,30 @@ class ProjectController extends Controller
         ])->render();
 
         return response($html)->header('X-Has-More', $projects->count() === $take ? '1' : '0');
+    }
+
+    public function ganttProjects(Request $request): JsonResponse
+    {
+        [$sort, $direction] = $this->sortFromRequest($request);
+        $filters = $this->filtersFromRequest($request);
+        $query = $this->orderedQuery($sort, $direction, $filters);
+        $limit = Setting::ganttMaxProjects();
+        $count = $query->count();
+
+        if ($count > $limit) {
+            return response()->json([
+                'code' => 'project_limit_exceeded',
+                'message' => __(':count Projekte gefunden. Bitte den Projektfilter so einstellen, dass höchstens :limit Projekte angezeigt werden, oder die max. Projektanzahl in der Gantt-Anzeige durch einen Admin ändern lassen.', [
+                    'count' => $count,
+                    'limit' => $limit,
+                ]),
+            ], 422);
+        }
+
+        $projects = $query
+            ->get(['projects.id', 'projects.source_pn', 'projects.title', 'projects.start_date', 'projects.end_date']);
+
+        return response()->json(['projects' => $projects]);
     }
 
     private function eagerLoadForColumns(Builder $query, array $visibleColumns): Builder
@@ -769,7 +794,7 @@ class ProjectController extends Controller
         $filters = $this->filtersFromRequest($request);
 
         return [
-            'project' => $project->loadMissing(['markets', 'projectPeople.person', 'projectPeople.functionGroup', 'workflow', 'activities.user', 'projectWorkflowSteps.workflowStep.functionGroups', 'projectWorkflowSteps.people.functionGroup', 'projectWorkflowSteps.people.person', 'graphicOrders.initiatedBy', 'graphicOrders.illustrator', 'projectChecklists.checklist.sections.points', 'projectChecklists.activatedBy', 'projectChecklistPoints.doneBy', 'products.productGroup', 'products.projects:id,source_pn,title']),
+            'project' => $project->loadMissing(['hauptprojekt', 'unterprojekte' => fn ($query) => $query->orderBy('source_pn'), 'markets', 'projectPeople.person', 'projectPeople.functionGroup', 'workflow', 'activities.user', 'projectWorkflowSteps.workflowStep.functionGroups', 'projectWorkflowSteps.people.functionGroup', 'projectWorkflowSteps.people.person', 'graphicOrders.initiatedBy', 'graphicOrders.illustrator', 'projectChecklists.checklist.sections.points', 'projectChecklists.activatedBy', 'projectChecklistPoints.doneBy', 'products.productGroup', 'products.projects:id,source_pn,title']),
             // Für den "Checklisten auswählen"-Dialog - der aktuell zugewiesene
             // Katalog, gleiches Prinzip wie bei availableWorkflows unten (auch
             // inaktive Checklisten bleiben sichtbar, wenn schon zugewiesen).
@@ -844,6 +869,24 @@ class ProjectController extends Controller
                 continue;
             }
 
+            if ($key === 'project_person') {
+                if (! is_array($value)) {
+                    continue;
+                }
+                $personId = filter_var($value['person_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+                $person = collect($available[$key]['options'])->firstWhere('id', $personId);
+                if ($person) {
+                    $groupId = filter_var($value['function_group_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+                    $group = collect($person['groups'])->firstWhere('id', $groupId);
+                    $filters[$key] = [
+                        'person_id' => $personId,
+                        'function_group_id' => $group['id'] ?? null,
+                    ];
+                }
+
+                continue;
+            }
+
             if (in_array($key, self::DATE_RANGE_FIELDS, true)) {
                 $from = trim((string) ($value['from'] ?? ''));
                 $to = trim((string) ($value['to'] ?? ''));
@@ -880,6 +923,17 @@ class ProjectController extends Controller
     private function applyFilters(Builder $query, array $filters): void
     {
         foreach ($filters as $key => $value) {
+            if ($key === 'project_person') {
+                $query->whereHas('projectPeople', function (Builder $peopleQuery) use ($value) {
+                    $peopleQuery->where('person_id', $value['person_id']);
+                    if (! empty($value['function_group_id'])) {
+                        $peopleQuery->where('function_group_id', $value['function_group_id']);
+                    }
+                });
+
+                continue;
+            }
+
             if ($key === 'schnellsuche') {
                 $this->applyQuickSearchTerm($query, $value);
 

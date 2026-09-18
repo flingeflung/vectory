@@ -10,6 +10,8 @@
                     class="h-3 w-auto shrink-0"
                 >
             @endif
+            <x-hauptprojekt-icon :project="$project" />
+            <x-unterprojekt-icon :project="$project" />
             <x-pn-link :project="$project" />
             <span class="min-w-0 flex-1 truncate text-gray-700">{{ $project->title }}</span>
             <x-favorite-star :project="$project" :is-favorite="true" size="h-3.5 w-3.5" />

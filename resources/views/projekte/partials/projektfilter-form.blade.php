@@ -80,6 +80,44 @@
                                         >{{ $optionLabel }}</option>
                                     @endforeach
                                 </select>
+                            @elseif ($field['type'] === 'person_group')
+                                <div
+                                    x-data="{
+                                        people: {{ \Illuminate\Support\Js::from($field['options']) }},
+                                        personId: {{ \Illuminate\Support\Js::from((string) ($currentValue['person_id'] ?? '')) }},
+                                        groupId: {{ \Illuminate\Support\Js::from((string) ($currentValue['function_group_id'] ?? '')) }},
+                                        search: '',
+                                        open: false,
+                                        get selectedPerson() { return this.people.find(person => String(person.id) === this.personId); },
+                                        get matches() { return this.people.filter(person => person.label.toLocaleLowerCase().includes(this.search.toLocaleLowerCase())).slice(0, 50); },
+                                        select(person) { this.personId = String(person.id); this.groupId = ''; this.open = false; this.search = ''; },
+                                        clear() { this.personId = ''; this.groupId = ''; this.open = false; this.search = ''; },
+                                    }"
+                                    @click.outside="open = false"
+                                    class="space-y-2"
+                                >
+                                    <input type="hidden" name="filter[project_person][person_id]" x-model="personId">
+                                    <input type="hidden" name="filter[project_person][function_group_id]" x-model="groupId">
+                                    <div class="flex gap-2">
+                                        <button type="button" @click="open = !open" class="min-w-0 flex-1 truncate rounded border border-gray-300 bg-white px-2 py-1.5 text-left text-sm" x-text="selectedPerson?.label || {{ \Illuminate\Support\Js::from(__('– Alle –')) }}"></button>
+                                        <button type="button" @click="clear()" class="rounded border border-gray-300 bg-white px-2 text-gray-500" :disabled="!personId" aria-label="{{ __('Personenauswahl löschen') }}">×</button>
+                                    </div>
+                                    <div x-show="open" x-cloak class="rounded border border-gray-300 bg-white p-2">
+                                        <input type="search" x-model="search" placeholder="{{ __('Nach Person suchen') }}" class="mb-2 w-full rounded border-gray-300 py-1 text-sm">
+                                        <div class="max-h-40 overflow-y-auto">
+                                            <template x-for="person in matches" :key="person.id">
+                                                <button type="button" @click="select(person)" class="block w-full rounded px-2 py-1 text-left text-sm hover:bg-indigo-50" x-text="person.label"></button>
+                                            </template>
+                                            <p x-show="matches.length === 0" class="px-2 py-1 text-xs text-gray-500">{{ __('Keine Personen gefunden.') }}</p>
+                                        </div>
+                                    </div>
+                                    <select x-model="groupId" :disabled="!personId" class="w-full rounded border-gray-300 py-1 text-sm">
+                                        <option value="">{{ __('Alle Funktionsgruppen') }}</option>
+                                        <template x-for="group in selectedPerson?.groups || []" :key="group.id">
+                                            <option :value="String(group.id)" x-text="group.label"></option>
+                                        </template>
+                                    </select>
+                                </div>
                             @elseif ($field['type'] === 'multiselect')
                                 @php
                                     $selected = array_map('strval', (array) old('filter.'.$field['key'], $filters[$field['key']] ?? []));

@@ -115,6 +115,20 @@
                         <input type="email" name="notification_email" value="{{ $selectedTenant->notification_email }}" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                         <p class="mt-0.5 text-xs text-gray-400">{{ __('Empfänger für automatische Mitteilungen an diesen Kunden, z. B. Projektanfragen.') }}</p>
                     </div>
+                    <div class="flex flex-wrap gap-4">
+                        <label class="block text-xs text-gray-500">{{ __('Maximale Anzahl Projekte im Gantt') }}
+                            <input type="number" name="gantt_max_projects" value="{{ old('gantt_max_projects', $selectedTenant->gantt_max_projects) }}" min="1" max="200" step="1" required class="mt-0.5 block w-28 rounded-md border-gray-300 text-sm text-gray-800">
+                        </label>
+                        <label class="block text-xs text-gray-500">{{ __('Zeitraster') }}
+                            <select name="jobload_time_grid" required class="mt-0.5 block rounded-md border-gray-300 text-sm text-gray-800">
+                                <option value="60" @selected(old('jobload_time_grid', $selectedTenant->jobload_time_grid) == 60)>{{ __('Volle Stunden') }}</option>
+                                <option value="30" @selected(old('jobload_time_grid', $selectedTenant->jobload_time_grid) == 30)>{{ __('Halbe Stunden') }}</option>
+                                <option value="15" @selected(old('jobload_time_grid', $selectedTenant->jobload_time_grid) == 15)>{{ __('Viertelstunden') }}</option>
+                            </select>
+                        </label>
+                    </div>
+                    <x-input-error :messages="$errors->get('gantt_max_projects')" />
+                    <x-input-error :messages="$errors->get('jobload_time_grid')" />
                 </form>
 
                 @unless ($selectedTenant->hasData())

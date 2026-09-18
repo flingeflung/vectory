@@ -94,6 +94,10 @@ class TenantController extends Controller
     {
         abort_unless(SystemSetting::multiTenantEnabled() || $tenant->id === CurrentTenant::id(), 403);
 
+        $settings = $request->validate([
+            'gantt_max_projects' => ['required', 'integer', 'between:1,200'],
+            'jobload_time_grid' => ['required', 'integer', 'in:60,30,15'],
+        ]);
         $name = trim((string) $request->string('name'));
         abort_if($name === '', 422);
 
@@ -102,6 +106,7 @@ class TenantController extends Controller
             'short_name' => $this->normalizedShortName($request, $name),
             'project_path' => $this->normalizedProjectPath($request),
             'notification_email' => $this->normalizedNotificationEmail($request),
+            ...$settings,
         ]);
 
         return redirect()->back()->with('status', 'tenant-updated');

@@ -8,6 +8,11 @@
 @forelse ($projects as $project)
     <tr
         class="{{ $project->verbund_rolle === 2 ? 'bg-gray-50 hover:bg-gray-100' : 'hover:bg-gray-50' }}"
+        data-project-id="{{ $project->id }}"
+        data-project-pn="{{ $project->source_pn }}"
+        data-project-title="{{ $project->title }}"
+        data-project-start="{{ $project->start_date?->format('Y-m-d') ?? '' }}"
+        data-project-end="{{ $project->end_date?->format('Y-m-d') ?? '' }}"
         @if ($project->verbund_rolle === 1)
             x-data="{ verbundExpanded: true }"
         @elseif ($project->verbund_rolle === 2)

@@ -61,50 +61,11 @@
             </div>
         </div>
 
-        @if ($settings->isNotEmpty())
-            <div class="rounded-lg border border-gray-200 bg-white p-4">
-                <div
-                    x-data="{ dirty: false, show: false }"
-                    x-init="@if (session('status') === 'config-updated') show = true; setTimeout(() => show = false, 2000) @endif"
-                >
-                    <form method="POST" action="{{ route('admin.config.update') }}" @input="dirty = window.formIsDirty($el, window.__configDirtyForms)" class="space-y-5">
-                        @csrf
-
-                        @foreach ($settings as $setting)
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">{{ $setting['label'] }}</label>
-                                <input
-                                    type="text"
-                                    name="values[{{ $setting['key'] }}]"
-                                    value="{{ old('values.'.$setting['key'], $setting['value']) }}"
-                                    class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                >
-                                <p class="mt-1 text-xs text-gray-400">{{ $setting['description'] }}</p>
-                                <x-input-error :messages="$errors->get('values.'.$setting['key'])" class="mt-1" />
-                            </div>
-                        @endforeach
-
-                        <div class="flex items-center gap-4">
-                            <button
-                                type="submit"
-                                x-show="dirty"
-                                x-cloak
-                                class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover"
-                            >
-                                {{ __('Speichern') }}
-                            </button>
-                            <p x-show="show" x-cloak x-transition class="text-sm text-green-600">{{ __('Gespeichert.') }}</p>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        @endif
-
         @unless ($multiTenantEnabled)
             {{-- Ohne Mandantenfähigkeit gibt's nur den einen Mandanten - der
                  Projektpfad wird hier direkt gepflegt, statt in einer
                  "Kunden verwalten"-Liste (die es in diesem Modus nicht gibt). --}}
-            <div class="{{ $settings->isNotEmpty() ? 'mt-6 ' : '' }}rounded-lg border border-gray-200 bg-white p-4">
+            <div class="rounded-lg border border-gray-200 bg-white p-4">
                 <div
                     x-data="{ dirty: false, show: false }"
                     x-init="@if (session('status') === 'tenant-updated') show = true; setTimeout(() => show = false, 2000) @endif"
@@ -129,6 +90,21 @@
                             class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                         >
                         <p class="text-xs text-gray-400">{{ __('Ziel für von Vectory verschickte Mails, z.B. Projektanfragen.') }}</p>
+
+                        <div class="flex flex-wrap gap-4">
+                            <label class="block text-sm font-medium text-gray-700">{{ __('Maximale Anzahl Projekte im Gantt') }}
+                                <input type="number" name="gantt_max_projects" value="{{ old('gantt_max_projects', $currentTenant->gantt_max_projects) }}" min="1" max="200" step="1" required class="mt-1 block w-28 rounded-md border-gray-300 text-sm">
+                            </label>
+                            <label class="block text-sm font-medium text-gray-700">{{ __('Zeitraster') }}
+                                <select name="jobload_time_grid" required class="mt-1 block rounded-md border-gray-300 text-sm">
+                                    <option value="60" @selected(old('jobload_time_grid', $currentTenant->jobload_time_grid) == 60)>{{ __('Volle Stunden') }}</option>
+                                    <option value="30" @selected(old('jobload_time_grid', $currentTenant->jobload_time_grid) == 30)>{{ __('Halbe Stunden') }}</option>
+                                    <option value="15" @selected(old('jobload_time_grid', $currentTenant->jobload_time_grid) == 15)>{{ __('Viertelstunden') }}</option>
+                                </select>
+                            </label>
+                        </div>
+                        <x-input-error :messages="$errors->get('gantt_max_projects')" />
+                        <x-input-error :messages="$errors->get('jobload_time_grid')" />
 
                         <div class="flex items-center gap-4 pt-2">
                             <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">

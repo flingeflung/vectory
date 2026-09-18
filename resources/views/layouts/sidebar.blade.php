@@ -176,6 +176,27 @@
         </a>
         <a
             onclick="return window.navigateOrConfirm(event)"
+            href="{{ route('jobload') }}"
+            class="flex items-center px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('jobload*') ? 'bg-sidebar-active text-sidebar-active-content' : 'text-sidebar-content hover:bg-sidebar-hover hover:text-sidebar-content-hover' }}"
+        >
+            {{ __('Zeiterfassung') }}
+        </a>
+        @if (request()->routeIs('jobload*'))
+            <div class="ml-3 space-y-1 border-l border-gray-200 pl-4">
+                <a
+                    onclick="return window.navigateOrConfirm(event)"
+                    href="{{ route('jobload') }}"
+                    class="block px-3 py-1.5 rounded-md text-sm {{ request()->routeIs('jobload') ? 'bg-sidebar-active text-sidebar-active-content' : 'text-sidebar-content hover:bg-sidebar-hover hover:text-sidebar-content-hover' }}"
+                >{{ __('Meine Jobs') }}</a>
+                <a
+                    onclick="return window.navigateOrConfirm(event)"
+                    href="{{ route('jobload.overview') }}"
+                    class="block px-3 py-1.5 rounded-md text-sm {{ request()->routeIs('jobload.overview') ? 'bg-sidebar-active text-sidebar-active-content' : 'text-sidebar-content hover:bg-sidebar-hover hover:text-sidebar-content-hover' }}"
+                >{{ __('Übersicht') }}</a>
+            </div>
+        @endif
+        <a
+            onclick="return window.navigateOrConfirm(event)"
             href="{{ route('illustrationen') }}"
             class="flex items-center px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('illustrationen') ? 'bg-sidebar-active text-sidebar-active-content' : 'text-sidebar-content hover:bg-sidebar-hover hover:text-sidebar-content-hover' }}"
         >

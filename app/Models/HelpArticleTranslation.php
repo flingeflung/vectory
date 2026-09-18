@@ -114,9 +114,14 @@ class HelpArticleTranslation extends Model
 
             $target = self::query()->where('locale', $this->locale)
                 ->whereRaw('LOWER(title) = ?', [mb_strtolower($title)])
+                ->with('article')
                 ->first();
 
-            if (! $target) {
+            // Auch, wenn der Zielartikel existiert, aber für den gerade
+            // lesenden Nutzer nicht sichtbar ist (visible_role) - genauso
+            // behandelt wie "nicht gefunden", kein Hinweis auf die Existenz
+            // einer für ihn gesperrten Seite.
+            if (! $target || ! $target->article->isVisibleTo(auth()->user())) {
                 return '<span class="text-red-500 underline decoration-dotted" title="'.e(__('Kein Hilfeartikel mit diesem Titel gefunden.')).'">'.e($title).'</span>';
             }
 

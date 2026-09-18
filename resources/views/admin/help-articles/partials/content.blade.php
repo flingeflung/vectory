@@ -61,6 +61,17 @@
                         <input type="text" name="route_names" value="{{ implode(', ', $selected->route_names ?? []) }}" placeholder="{{ __('z. B. admin.kunden') }}" class="mt-0.5 w-full rounded-md border-gray-300 font-mono text-sm">
                     </div>
 
+                    <div>
+                        <label class="block text-xs text-gray-500">{{ __('Sichtbar für') }}</label>
+                        <select name="visible_role" class="mt-0.5 w-56 rounded-md border-gray-300 text-sm">
+                            <option value="" @selected($selected->visible_role === null)>{{ __('Alle') }}</option>
+                            @foreach (\App\Models\HelpArticle::VISIBILITY_LEVELS as $value => $label)
+                                <option value="{{ $value }}" @selected($selected->visible_role === $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Gilt nur für diese Seite selbst, nicht für ihre Unterseiten.') }}</p>
+                    </div>
+
                     <div class="border-b border-gray-200">
                         <div class="flex gap-3 text-xs">
                             @foreach ($locales as $localeCode => $localeLabel)

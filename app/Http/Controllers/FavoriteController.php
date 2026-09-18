@@ -15,6 +15,7 @@ class FavoriteController extends Controller
         $favoriteProjectIds = Favorite::query()->where('user_id', $request->user()->id)->pluck('project_id');
 
         $projects = Project::query()
+            ->with(['hauptprojekt', 'projectTypeSub'])
             ->whereIn('id', $favoriteProjectIds)
             ->orderBy('source_pn')
             ->get();

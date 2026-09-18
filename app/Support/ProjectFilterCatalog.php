@@ -11,6 +11,7 @@ use App\Models\ProjectTypeMain;
 use App\Models\User;
 use App\Models\Workflow;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Verfügbare Kriterien für den Projektfilter: feste Felder + variable
@@ -62,6 +63,7 @@ class ProjectFilterCatalog
             // Controller::showInOverview()), aber auch normal manuell
             // wählbar wie jeder andere Filter.
             ['key' => 'project_group_id', 'label' => __('Projektgruppe'), 'type' => 'select', 'options' => self::projectGroupOptions()],
+            ['key' => 'project_person', 'label' => __('Projektbeteiligte Person'), 'type' => 'person_group', 'options' => self::projectPersonOptions($tenantId)],
             ['key' => 'verbund', 'label' => __('Verbund'), 'type' => 'select', 'options' => [
                 'ja' => __('nur Verbundprojekte'),
                 'nein' => __('keine Verbundprojekte'),
@@ -141,6 +143,36 @@ class ProjectFilterCatalog
     private static function productGroupOptions(int $tenantId): array
     {
         return ProductGroup::query()->where('tenant_id', $tenantId)->orderBy('sort')->pluck('name', 'id')->all();
+    }
+
+    private static function projectPersonOptions(int $tenantId): array
+    {
+        // Collator('de_DE') statt SORT_NATURAL - sortiert Ä/Ö/Ü wie A/O/U
+        // ein statt hinter Z (Ralf-Bug-Report, siehe MultichangeController::sortedFields()).
+        $collator = new \Collator('de_DE');
+
+        return DB::table('project_people as pp')
+            ->join('people as p', 'p.id', '=', 'pp.person_id')
+            ->join('function_groups as fg', 'fg.id', '=', 'pp.function_group_id')
+            ->where('pp.tenant_id', $tenantId)
+            ->distinct()
+            ->get(['p.id', 'p.first_name', 'p.last_name', 'p.active', 'fg.id as group_id', 'fg.name as group_name'])
+            ->groupBy('id')
+            ->map(function ($entries, $id) use ($collator) {
+                $person = $entries->first();
+
+                return [
+                    'id' => (int) $id,
+                    'label' => trim($person->last_name.', '.$person->first_name, ', ').($person->active ? '' : ' [i]'),
+                    'groups' => $entries->map(fn ($entry) => [
+                        'id' => (int) $entry->group_id,
+                        'label' => $entry->group_name,
+                    ])->sort(fn ($a, $b) => $collator->compare($a['label'], $b['label']))->values()->all(),
+                ];
+            })
+            ->sort(fn ($a, $b) => $collator->compare($a['label'], $b['label']))
+            ->values()
+            ->all();
     }
 
     private static function workflowOptions(int $tenantId): array
@@ -255,8 +287,17 @@ class ProjectFilterCatalog
                 isset($value['from']) ? Carbon::parse($value['from'])->format('d.m.Y') : null,
                 isset($value['to']) ? Carbon::parse($value['to'])->format('d.m.Y') : null,
             ])->filter()->implode(' – '),
+            'person_group' => self::describePersonGroup($field, $value),
             default => (string) $value,
         };
+    }
+
+    private static function describePersonGroup(array $field, mixed $value): string
+    {
+        $person = collect($field['options'])->firstWhere('id', (int) ($value['person_id'] ?? 0));
+        $group = collect($person['groups'] ?? [])->firstWhere('id', (int) ($value['function_group_id'] ?? 0));
+
+        return ($person['label'] ?? (string) ($value['person_id'] ?? '')).($group ? ' ('.$group['label'].')' : '');
     }
 
     /**

@@ -1,6 +1,12 @@
 <div x-data x-on:open-project.window="$dispatch('close-modal', 'favorites')">
     @forelse ($projects as $project)
+        @php $typeSub = $project->project_type_sub_model; @endphp
         <div class="flex items-center gap-2 border-b border-gray-100 py-2 text-sm last:border-0">
+            @if ($typeSub?->smallSymbol())
+                <img src="{{ asset('images/dashboard-icons/'.$typeSub->smallSymbol()) }}" alt="{{ $typeSub->name }}" title="{{ $typeSub->main ? $typeSub->main->name.': '.$typeSub->name : $typeSub->name }}" class="h-3 w-auto shrink-0">
+            @endif
+            <x-hauptprojekt-icon :project="$project" />
+            <x-unterprojekt-icon :project="$project" />
             <x-pn-link :project="$project" class="font-semibold shrink-0" />
             <span class="truncate text-gray-600">{{ $project->title }}</span>
         </div>

@@ -66,6 +66,16 @@
                     {{ __('Gruppieren') }}
                 </button>
 
+                <button
+                    type="button"
+                    onclick="window.openProjectGanttWithLoading()"
+                    data-gantt-query="{{ http_build_query(['filter' => $filters, 'sort' => $sort, 'direction' => $direction]) }}"
+                    class="inline-flex items-center rounded-md border border-sky-300 bg-sky-50 px-3 py-1.5 text-sm font-medium text-sky-800 hover:bg-sky-100"
+                    aria-label="Gantt"
+                >
+                    {{ __('Gantt') }}
+                </button>
+
                 @can('project.multichange')
                     {{--
                         Ralf, 2026-09-13: "Das Gruppieren soll losgelöst sein

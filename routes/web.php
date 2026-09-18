@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\CopyTemplateController;
 use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\FunctionGroupController;
 use App\Http\Controllers\Admin\HelpArticleController;
+use App\Http\Controllers\Admin\JobTypeController;
 use App\Http\Controllers\Admin\LegacyRoleController;
 use App\Http\Controllers\Admin\MailTemplateController;
 use App\Http\Controllers\Admin\MarketController;
@@ -26,6 +27,8 @@ use App\Http\Controllers\FavoriteController;
 use App\Http\Controllers\GraphicOrderController;
 use App\Http\Controllers\HelpController;
 use App\Http\Controllers\IllustrationOverviewController;
+use App\Http\Controllers\JobloadController;
+use App\Http\Controllers\JobloadOverviewController;
 use App\Http\Controllers\LocaleSwitchController;
 use App\Http\Controllers\MultichangeController;
 use App\Http\Controllers\ProductController;
@@ -33,6 +36,8 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectChecklistController;
 use App\Http\Controllers\ProjectConnectionController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectGanttPeopleController;
+use App\Http\Controllers\ProjectGanttPreferenceController;
 use App\Http\Controllers\ProjectCopyController;
 use App\Http\Controllers\ProjectDirectoryController;
 use App\Http\Controllers\ProjectFormatController;
@@ -59,8 +64,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/jobload', [JobloadController::class, 'index'])->name('jobload');
+    Route::get('/jobload/uebersicht', [JobloadOverviewController::class, 'index'])->name('jobload.overview');
+    Route::get('/jobload/uebersicht/wochenwerte', [JobloadOverviewController::class, 'weekDetail'])->name('jobload.overview.week-detail');
+    Route::post('/jobload/stunden', [JobloadController::class, 'saveHours'])->name('jobload.hours');
+    Route::post('/jobload/jobs', [JobloadController::class, 'saveJobs'])->name('jobload.jobs');
+    Route::post('/jobload/wochenende', [JobloadController::class, 'saveWeekendPreference'])->name('jobload.weekend');
+});
+
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/projekte', [ProjectController::class, 'index'])->name('projekte');
     Route::get('/projekte/mehr', [ProjectController::class, 'more'])->name('projekte.mehr');
+    Route::get('/projekte/gantt/projekte', [ProjectController::class, 'ganttProjects'])->name('projekte.gantt.projekte');
+    Route::get('/projekte/gantt/personen', ProjectGanttPeopleController::class)->name('projekte.gantt.personen');
+    Route::get('/projekte/gantt/einstellungen', [ProjectGanttPreferenceController::class, 'show'])->name('projekte.gantt.einstellungen.show');
+    Route::put('/projekte/gantt/einstellungen', [ProjectGanttPreferenceController::class, 'update'])->name('projekte.gantt.einstellungen.update');
     Route::get('/schnellsuche', [ProjectController::class, 'quickSearch'])->name('projekte.schnellsuche');
 
     Route::get('/projektgruppen', [ProjectGroupController::class, 'panel'])->name('projektgruppen.panel');
@@ -150,6 +168,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage::class])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/jobtypen', [JobTypeController::class, 'index'])->name('jobtypen');
+    Route::post('/jobtypen/gruppen', [JobTypeController::class, 'storeGroup'])->name('jobtypen.gruppen.store');
+    Route::post('/jobtypen/gruppen/reihenfolge', [JobTypeController::class, 'reorderGroups'])->name('jobtypen.gruppen.reorder');
+    Route::post('/jobtypen/gruppen/{jobGroup}', [JobTypeController::class, 'updateGroup'])->name('jobtypen.gruppen.update');
+    Route::post('/jobtypen', [JobTypeController::class, 'store'])->name('jobtypen.store');
+    Route::post('/jobtypen/{jobType}', [JobTypeController::class, 'update'])->name('jobtypen.update');
     Route::redirect('/', '/admin/personen')->name('index');
     Route::get('/rechte', [AdminPermissionController::class, 'index'])->name('rechte');
     Route::post('/rechte/sets', [AdminPermissionController::class, 'store'])->name('rechte.sets.store');
@@ -291,7 +315,6 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     Route::delete('/personen/{person}', [AdminPersonController::class, 'destroy'])->name('personen.destroy');
 
     Route::get('/konfig', [ConfigController::class, 'index'])->name('config');
-    Route::post('/konfig', [ConfigController::class, 'update'])->name('config.update');
 
     Route::get('/kunden', [TenantController::class, 'index'])->name('kunden');
     Route::post('/kunden', [TenantController::class, 'store'])->name('kunden.store');

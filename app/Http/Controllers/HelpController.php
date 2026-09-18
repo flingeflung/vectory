@@ -26,10 +26,14 @@ class HelpController extends Controller
         $query = trim((string) $request->query('q', ''));
 
         if ($query !== '') {
+            $results = HelpArticle::search($query, $locale)
+                ->filter(fn (HelpArticle $article) => $article->isVisibleTo($request->user()))
+                ->values();
+
             return view('help._results', [
                 'mode' => 'search',
                 'query' => $query,
-                'results' => HelpArticle::search($query, $locale),
+                'results' => $results,
                 'article' => null,
                 'translation' => null,
             ]);
@@ -39,6 +43,10 @@ class HelpController extends Controller
         $article = $routeName !== ''
             ? HelpArticle::query()->forRoute($routeName)->with('translations')->first()
             : null;
+
+        if ($article && ! $article->isVisibleTo($request->user())) {
+            $article = null;
+        }
 
         return view('help._results', [
             'mode' => 'article',
@@ -59,8 +67,10 @@ class HelpController extends Controller
      * Ein bestimmter Artikel, unabhängig von der aktuellen Seite - z.B.
      * nach Klick auf einen Suchtreffer.
      */
-    public function show(HelpArticle $helpArticle): View
+    public function show(Request $request, HelpArticle $helpArticle): View
     {
+        abort_unless($helpArticle->isVisibleTo($request->user()), 404);
+
         $locale = app()->getLocale();
 
         return view('help._results', [

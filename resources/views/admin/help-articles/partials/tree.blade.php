@@ -43,7 +43,12 @@
                         @if ($selected?->id === $node->id) data-selected @endif
                         class="flex min-w-0 flex-1 flex-col py-1 pr-2 {{ $selected?->id === $node->id ? 'font-medium text-indigo-700' : 'text-gray-700' }}"
                     >
-                        <span class="truncate">{{ $nodeTitle }}</span>
+                        <span class="truncate">
+                            {{ $nodeTitle }}
+                            @if ($node->visible_role)
+                                <span class="text-gray-400" title="{{ __('Sichtbar für: :level', ['level' => \App\Models\HelpArticle::VISIBILITY_LEVELS[$node->visible_role]]) }}">🔒</span>
+                            @endif
+                        </span>
                         @if (empty($node->route_names))
                             <span class="text-xs font-normal text-gray-400">{{ __('kein Seitenbezug') }}</span>
                         @endif

@@ -90,7 +90,7 @@
             }"
         >
             <div class="w-56 shrink-0 overflow-y-auto border-r border-gray-100 px-3 py-3 text-sm">
-                @include('help._nav', ['nodes' => \App\Models\HelpArticle::tree(), 'topLevel' => true])
+                @include('help._nav', ['nodes' => \App\Models\HelpArticle::filterVisible(\App\Models\HelpArticle::tree(), auth()->user()), 'topLevel' => true])
             </div>
             <div class="min-h-0 flex-1 overflow-y-auto px-4 py-3">
                 <div id="help-results">{{ __('Lädt…') }}</div>
