@@ -15,7 +15,7 @@ use Illuminate\Support\Collection;
 
 #[Fillable([
     'tenant_id', 'source_pn', 'title', 'codename', 'initiator', 'system_model',
-    'construction_year', 'project_type_main_id', 'project_type_sub_id', 'version',
+    'construction_year', 'project_type_main_id', 'project_type_sub_id', 'project_template_id', 'version',
     'status', 'creation_type', 'archived', 'localization', 'publication_date', 'start_date', 'end_date', 'remarks',
     'attributes', 'workflow_id', 'verbund_rolle', 'hauptprojekt_id',
     'paper_format_combination_id', 'input_format_free_text', 'output_format_free_text',
@@ -107,6 +107,11 @@ class Project extends Model
         // main mitladen - für die zweizeilige Icon-Darstellung
         // (Kategorie: Art) in Übersicht/Dashboard-Kacheln, sonst N+1.
         return $this->belongsTo(ProjectTypeSub::class, 'project_type_sub_id')->with('main');
+    }
+
+    public function projectTemplate(): BelongsTo
+    {
+        return $this->belongsTo(ProjectTemplate::class);
     }
 
     public function paperFormatCombination(): BelongsTo

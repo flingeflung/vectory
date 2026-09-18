@@ -17,6 +17,7 @@ use App\Models\MarketSet;
 use App\Models\Project;
 use App\Models\ProjectGroup;
 use App\Models\ProjectPerson;
+use App\Models\ProjectTemplate;
 use App\Models\ProjectTypeMain;
 use App\Models\ProjectTypeSub;
 use App\Models\ProjectWorkflowStep;
@@ -523,6 +524,7 @@ class ProjectController extends Controller
         $validator = Validator::make($request->all(), [
             'title' => ['required', 'string', 'max:255'],
             'project_type_sub_id' => ['nullable', 'integer', Rule::exists('project_type_subs', 'id')->where('tenant_id', $project->tenant_id)],
+            'project_template_id' => ['nullable', 'integer', Rule::exists('project_templates', 'id')->where('tenant_id', $project->tenant_id)],
             'version' => ['nullable', 'integer'],
             'status' => ['required', 'integer', 'in:0,1,2,3'],
             'creation_type' => ['nullable', 'integer', 'in:1,2'],
@@ -817,6 +819,13 @@ class ProjectController extends Controller
                 ->where('tenant_id', $project->tenant_id)
                 ->where(fn (Builder $query) => $query->where('active', true)->orWhere('id', $project->workflow_id))
                 ->orderBy('sort')
+                ->orderBy('name')
+                ->get(),
+            // Gleiches Prinzip wie bei availableWorkflows oben - die aktuell
+            // zugewiesene Schablone muss auch inaktiv in der Liste bleiben.
+            'availableProjectTemplates' => ProjectTemplate::query()
+                ->where('tenant_id', $project->tenant_id)
+                ->where(fn (Builder $query) => $query->where('active', true)->orWhere('id', $project->project_template_id))
                 ->orderBy('name')
                 ->get(),
             'sort' => $sort,

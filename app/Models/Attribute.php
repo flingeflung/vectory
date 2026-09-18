@@ -103,6 +103,10 @@ class Attribute extends Model
             'project_connections' => 'Projektverknüpfungen',
             'remarks_echo' => 'Bemerkungen',
             'change_log' => 'Änderungsprotokoll',
+            // Ralf, 2026-09-18: reiner Verweis auf eine Projektschablone
+            // (Step 1 der Kapa-Planung), keine Werteübernahme ins Projekt -
+            // Ralf: "das ist aus meiner Sicht mehr 'Ablauf'".
+            'project_template' => 'Projektschablone',
         ],
     ];
 
