@@ -413,6 +413,27 @@
         </script>
 
         <script>
+            /**
+             * Die "klitzekleinen" Verwalten-Overlays (Firma/Abteilung/
+             * Geschäftsbereich/Rolle) sollen den Katalog DER ANGEZEIGTEN
+             * PERSON bearbeiten, nicht den des gerade aktiven Kunden (Ralf,
+             * 2026-09-18: "möchte ich doch nicht die Strukturen meiner
+             * Kunden verwalten, sondern höchstens die meiner eigenen
+             * Firma") - die "verwalten"-Buttons im Personen-Overlay setzen
+             * dafür window.__personOverlayTenantId, siehe
+             * admin/personen/partials/edit-body.blade.php.
+             */
+            window.managerCatalogUrl = function (baseUrl) {
+                if (!window.__personOverlayTenantId) {
+                    return baseUrl;
+                }
+                const url = new URL(baseUrl, window.location.origin);
+                url.searchParams.set('tenant_id', window.__personOverlayTenantId);
+                return url.toString();
+            };
+        </script>
+
+        <script>
             window.reloadManageListPreservingEdits = async function (body, url, headers = {}) {
                 const snapshot = new Map();
                 body.querySelectorAll('form[data-row-form]').forEach((form) => {
@@ -1624,7 +1645,7 @@
                 };
 
                 const load = async () => {
-                    await window.reloadManageListPreservingEdits(body(), {{ \Illuminate\Support\Js::from(route('admin.companies')) }});
+                    await window.reloadManageListPreservingEdits(body(), window.managerCatalogUrl({{ \Illuminate\Support\Js::from(route('admin.companies')) }}));
                     snapshot();
                 };
 
@@ -1715,7 +1736,7 @@
                 };
 
                 const load = async () => {
-                    await window.reloadManageListPreservingEdits(body(), {{ \Illuminate\Support\Js::from(route('admin.departments')) }});
+                    await window.reloadManageListPreservingEdits(body(), window.managerCatalogUrl({{ \Illuminate\Support\Js::from(route('admin.departments')) }}));
                     snapshot();
                 };
 
@@ -1805,7 +1826,7 @@
                 };
 
                 const load = async () => {
-                    await window.reloadManageListPreservingEdits(body(), {{ \Illuminate\Support\Js::from(route('admin.geschaeftsbereiche')) }});
+                    await window.reloadManageListPreservingEdits(body(), window.managerCatalogUrl({{ \Illuminate\Support\Js::from(route('admin.geschaeftsbereiche')) }}));
                     snapshot();
                 };
 
@@ -1915,7 +1936,7 @@
                 };
 
                 const load = async () => {
-                    await window.reloadManageListPreservingEdits(body(), {{ \Illuminate\Support\Js::from(route('admin.legacy-roles')) }});
+                    await window.reloadManageListPreservingEdits(body(), window.managerCatalogUrl({{ \Illuminate\Support\Js::from(route('admin.legacy-roles')) }}));
                     snapshot();
                 };
 

@@ -187,7 +187,7 @@
                             <label class="block text-xs text-gray-500">{{ \App\Models\SystemSetting::companyLabel() }}</label>
                             <button
                                 type="button"
-                                onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'company-manager' }))"
+                                onclick="window.__personOverlayTenantId = {{ $person->tenant_id }}; window.dispatchEvent(new CustomEvent('open-modal', { detail: 'company-manager' }))"
                                 class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
                             >{{ __('verwalten') }}</button>
                         </div>
@@ -203,7 +203,7 @@
                             <label class="block text-xs text-gray-500">{{ __('Rolle') }}</label>
                             <button
                                 type="button"
-                                onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'legacy-role-manager' }))"
+                                onclick="window.__personOverlayTenantId = {{ $person->tenant_id }}; window.dispatchEvent(new CustomEvent('open-modal', { detail: 'legacy-role-manager' }))"
                                 class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
                             >{{ __('verwalten') }}</button>
                         </div>
@@ -219,7 +219,7 @@
                             <label class="block text-xs text-gray-500">{{ __('Abteilung') }}</label>
                             <button
                                 type="button"
-                                onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'department-manager' }))"
+                                onclick="window.__personOverlayTenantId = {{ $person->tenant_id }}; window.dispatchEvent(new CustomEvent('open-modal', { detail: 'department-manager' }))"
                                 class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
                             >{{ __('verwalten') }}</button>
                         </div>
@@ -235,7 +235,7 @@
                             <label class="block text-xs text-gray-500">{{ __('Geschäftsbereich') }}</label>
                             <button
                                 type="button"
-                                onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'business-unit-manager' }))"
+                                onclick="window.__personOverlayTenantId = {{ $person->tenant_id }}; window.dispatchEvent(new CustomEvent('open-modal', { detail: 'business-unit-manager' }))"
                                 class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
                             >{{ __('verwalten') }}</button>
                         </div>

@@ -98,6 +98,23 @@ class CurrentTenant
             && Tenant::query()->whereKey($user->tenant_id)->value('is_home_tenant');
     }
 
+    /**
+     * Darf $user den Organisationskatalog (Firma/Abteilung/Geschäftsbereich/
+     * Rolle) von $tenantId verwalten? Ralf, 2026-09-18: "Wenn ich meine
+     * eigenen Personendaten anschaue, möchte ich doch nicht die Strukturen
+     * meiner Kunden verwalten, sondern höchstens die meiner eigenen Firma" -
+     * die "verwalten"-Buttons im Personen-Overlay sollen den Katalog DER
+     * ANGEZEIGTEN PERSON bearbeiten, nicht den des gerade aktiven Kunden.
+     * Bewusst OHNE die person_tenant-Ausleihe hier (anders als
+     * userCanAccess()) - eine Ausleihe regelt nur Sichtbarkeit/Zuweisbarkeit
+     * von PERSONEN, keine Verwaltungsrechte über einen fremden
+     * Organisationskatalog.
+     */
+    public static function canManageTenantCatalog(User $user, int $tenantId): bool
+    {
+        return $tenantId === self::id() || $user->role === 'super_admin' || self::isHomeTenantAdmin($user);
+    }
+
     public static function switchTo(int $tenantId): void
     {
         $user = Auth::user();

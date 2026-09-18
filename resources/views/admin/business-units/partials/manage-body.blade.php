@@ -1,4 +1,8 @@
 <div class="space-y-3" x-data="{ creating: false }">
+    {{-- Ralf, 2026-09-18: "ein Hinweis für den Benutzer, damit er sieht, in
+         welchem Kontext er gerade arbeitet" - dieser Katalog gehört der
+         angezeigten PERSON, nicht zwingend dem gerade aktiven Kunden. --}}
+    <p class="text-xs text-gray-500">{{ __('Kunde') }}: <span class="font-medium text-gray-700">{{ $tenantName ?? '–' }}</span></p>
     <div x-show="!creating">
         <button type="button" @click="creating = true; $nextTick(() => $refs.newName.focus())" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover">
             + {{ __('Geschäftsbereich anlegen') }}
@@ -6,6 +10,7 @@
     </div>
     <form x-show="creating" x-cloak method="POST" action="{{ route('admin.geschaeftsbereiche.store') }}" class="flex items-end gap-2 rounded-md border border-gray-200 p-2">
         @csrf
+        <input type="hidden" name="tenant_id" value="{{ $tenantId }}">
         <div class="flex-1">
             <label class="block text-xs text-gray-500">{{ __('Name') }}</label>
             <input type="text" name="name" x-ref="newName" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
