@@ -217,6 +217,23 @@
             get isMultiField() { return this.fieldTypes[this.field] === 'attribute_select_multiple'; },
         }"
         @submit.prevent="window.reloadMultichange({{ \Illuminate\Support\Js::from(route('projekte.multichange.preview')) }}, { group_id: groupId, field, value: isMultiField ? multiValue : value, overwrite_different_workflow: overwrite ? 1 : 0, multi_mode: multiMode, function_group_id: functionGroupId })"
+        {{--
+            Ralf-Bug-Report, 2026-09-18: Klick auf "Prüfen" tat scheinbar
+            nichts bzw. zeigte "Neuer Wert ist erforderlich", obwohl Werte
+            sichtbar gewählt waren - Ursache: alle Feldtypen teilen sich
+            EIN "value"-Alpine-Property (siehe x-data oben). Jeder Tausch
+            von "value" (z.B. Personen-ID 168) landet per x-model auch in
+            den unsichtbaren <input>s der anderen, gerade nicht gezeigten
+            Felder (nur per x-show/CSS ausgeblendet, nicht aus dem DOM
+            entfernt) - z.B. in einem Zahlenfeld mit max="2". Die native
+            Browser-Validierung blockiert dann das ganze Formular still
+            (kein Fokus möglich, da kein "name"-Attribut), noch bevor
+            @submit.prevent überhaupt läuft. novalidate überlässt die
+            Validierung komplett dem Server/$formErrors oben - passt auch
+            zur bestehenden Konvention, keine nativen Browser-Dialoge zu
+            verwenden.
+        --}}
+        novalidate
         class="space-y-3"
     >
         @if (isset($formErrors))
