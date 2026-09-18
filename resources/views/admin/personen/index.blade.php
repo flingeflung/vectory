@@ -23,7 +23,7 @@
                 @if ($canSearchAllTenants)
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('Kunde') }}</label>
-                        <select name="tenant_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-sm">
+                        <select name="tenant_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-xs">
                             <option value="all" @selected(request('tenant_id') === 'all')>{{ __('– Alle –') }}</option>
                             <option value="" @selected(! request()->filled('tenant_id'))>{{ __('Aktiver Kunde (+ Zugriff)') }}</option>
                             @foreach ($tenants as $tenant)
@@ -37,7 +37,7 @@
                         <label class="block text-xs text-gray-500">{{ \App\Models\SystemSetting::companyLabel() }}</label>
                         <x-edit-icon-button modal="company-manager" :title="\App\Models\SystemSetting::companyLabelPlural().' verwalten'" />
                     </div>
-                    <select id="filter-company_id" name="company_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-sm">
+                    <select id="filter-company_id" name="company_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-xs">
                         <option value="">{{ __('– Alle –') }}</option>
                         <option value="none" @selected(request('company_id') === 'none')>{{ __('– nicht zugewiesen –') }}</option>
                         @foreach ($companies as $company)
@@ -50,7 +50,7 @@
                         <label class="block text-xs text-gray-500">{{ __('Abteilung') }}</label>
                         <x-edit-icon-button modal="department-manager" :title="__('Abteilungen verwalten')" />
                     </div>
-                    <select id="filter-department_id" name="department_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-sm">
+                    <select id="filter-department_id" name="department_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-xs">
                         <option value="">{{ __('– Alle –') }}</option>
                         <option value="none" @selected(request('department_id') === 'none')>{{ __('– nicht zugewiesen –') }}</option>
                         @foreach ($departments as $department)
@@ -63,7 +63,7 @@
                         <label class="block text-xs text-gray-500">{{ __('Geschäftsbereich') }}</label>
                         <x-edit-icon-button modal="business-unit-manager" :title="__('Geschäftsbereiche verwalten')" />
                     </div>
-                    <select id="filter-business_unit_id" name="business_unit_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-sm">
+                    <select id="filter-business_unit_id" name="business_unit_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-xs">
                         <option value="">{{ __('– Alle –') }}</option>
                         <option value="none" @selected(request('business_unit_id') === 'none')>{{ __('– nicht zugewiesen –') }}</option>
                         @foreach ($businessUnits as $unit)
@@ -73,7 +73,7 @@
                 </div>
                 <div>
                     <label class="block text-xs text-gray-500">{{ __('Rechte-Set') }}</label>
-                    <select name="permission_template_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-sm">
+                    <select name="permission_template_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-xs">
                         <option value="">{{ __('– Alle –') }}</option>
                         <option value="none" @selected(request('permission_template_id') === 'none')>{{ __('– nicht zugewiesen –') }}</option>
                         @foreach ($permissionTemplates as $template)
@@ -86,7 +86,7 @@
                         <label class="block text-xs text-gray-500">{{ __('Rolle') }}</label>
                         <x-edit-icon-button modal="legacy-role-manager" :title="__('Rollen verwalten')" />
                     </div>
-                    <select id="filter-legacy_role_id" name="legacy_role_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-sm">
+                    <select id="filter-legacy_role_id" name="legacy_role_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-xs">
                         <option value="">{{ __('– Alle –') }}</option>
                         <option value="none" @selected(request('legacy_role_id') === 'none')>{{ __('– nicht zugewiesen –') }}</option>
                         @foreach ($legacyRoles as $role)
@@ -96,7 +96,7 @@
                 </div>
                 <div>
                     <label class="block text-xs text-gray-500">{{ __('Typ') }}</label>
-                    <select name="typ" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-sm">
+                    <select name="typ" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-xs">
                         <option value="">{{ __('– Alle –') }}</option>
                         <option value="login" @selected(request('typ') === 'login')>{{ __('Login-User') }}</option>
                         <option value="kontakt" @selected(request('typ') === 'kontakt')>{{ __('Kontaktperson') }}</option>

@@ -148,6 +148,7 @@ class PersonController extends Controller
     public function update(Request $request, Person $person): RedirectResponse|Response
     {
         abort_unless($this->personVisibleInCurrentTenant($request, $person), 404);
+        abort_unless($this->personFullyEditableByCurrentUser($request, $person), 403);
         $this->abortIfProtectedFromEditing($request, $person);
 
         $isOverlay = $this->isOverlayRequest($request);
@@ -228,6 +229,7 @@ class PersonController extends Controller
     public function createLogin(Request $request, Person $person): RedirectResponse|Response
     {
         abort_unless($this->personVisibleInCurrentTenant($request, $person), 404);
+        abort_unless($this->personFullyEditableByCurrentUser($request, $person), 403);
         $this->abortIfProtectedFromEditing($request, $person);
         abort_if($person->user, 422);
 
@@ -272,6 +274,7 @@ class PersonController extends Controller
     public function resetPassword(Request $request, Person $person): RedirectResponse|Response
     {
         abort_unless($this->personVisibleInCurrentTenant($request, $person), 404);
+        abort_unless($this->personFullyEditableByCurrentUser($request, $person), 403);
         $this->abortIfProtectedFromEditing($request, $person);
         abort_unless($person->user, 404);
 
@@ -308,6 +311,7 @@ class PersonController extends Controller
     public function updateTenantAccess(Request $request, Person $person): RedirectResponse|Response
     {
         abort_unless($this->personVisibleInCurrentTenant($request, $person), 404);
+        abort_unless($this->personFullyEditableByCurrentUser($request, $person), 403);
         $this->abortIfProtectedFromEditing($request, $person);
         abort_unless(SystemSetting::multiTenantEnabled(), 403);
 
@@ -340,6 +344,7 @@ class PersonController extends Controller
     public function destroy(Request $request, Person $person): RedirectResponse|Response
     {
         abort_unless($this->personVisibleInCurrentTenant($request, $person), 404);
+        abort_unless($this->personFullyEditableByCurrentUser($request, $person), 403);
         $this->abortIfProtectedFromEditing($request, $person);
         abort_if($person->hasData(), 422, __('Diese Person hat bereits Daten und kann nicht gelöscht werden.'));
 
@@ -455,6 +460,7 @@ class PersonController extends Controller
             'multiTenantEnabled' => $multiTenantEnabled,
             'otherTenants' => $multiTenantEnabled ? Tenant::query()->where('id', '!=', $personTenantId)->orderBy('name')->get() : collect(),
             'actingUserIsSuperAdmin' => $request->user()->role === 'super_admin',
+            'canFullyEdit' => $this->personFullyEditableByCurrentUser($request, $person),
             'filters' => $filters,
             'previousPerson' => $this->adjacentPerson($request, $filters, $person, 'previous', $tenantId),
             'nextPerson' => $this->adjacentPerson($request, $filters, $person, 'next', $tenantId),
@@ -586,11 +592,32 @@ class PersonController extends Controller
      */
     private function personVisibleInCurrentTenant(Request $request, Person $person): bool
     {
-        if (in_array($request->user()->role, ['admin', 'super_admin'], true)) {
+        if ($request->user()->role === 'super_admin' || CurrentTenant::isHomeTenantAdmin($request->user())) {
             return true;
         }
 
         return $person->isVisibleInTenant(CurrentTenant::id());
+    }
+
+    /**
+     * Bewusst eine EIGENE, strengere Prüfung als personVisibleInCurrentTenant()
+     * - "sichtbar/zuweisbar, weil ausgeliehen" ist etwas grundsätzlich
+     * anderes als "volle Bearbeitung inkl. Ausleih-Verwaltung" (Ralf,
+     * 2026-09-18: Kundekunde-Admin darf eine ausgeliehene Heimat-Person
+     * sehen und im eigenen Mandanten zuweisen, aber nicht ihre Stammdaten
+     * ändern oder gar steuern, an welche anderen Kunden sie sonst noch
+     * verliehen ist). Bewusst hart im Code, nicht über das Rechte-System -
+     * das hier ist eine Mandanten-Grenze zwischen unterschiedlichen
+     * zahlenden Kunden, keine normale Funktions-Berechtigung, die versehentlich
+     * über ein falsch konfiguriertes Rechte-Set aufweichbar sein dürfte.
+     */
+    private function personFullyEditableByCurrentUser(Request $request, Person $person): bool
+    {
+        $user = $request->user();
+
+        return $user->role === 'super_admin'
+            || $person->tenant_id === CurrentTenant::id()
+            || CurrentTenant::isHomeTenantAdmin($user);
     }
 
     private function isOverlayRequest(Request $request): bool

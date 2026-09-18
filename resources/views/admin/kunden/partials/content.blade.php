@@ -129,6 +129,13 @@
                     </div>
                     <x-input-error :messages="$errors->get('gantt_max_projects')" />
                     <x-input-error :messages="$errors->get('jobload_time_grid')" />
+                    <div class="rounded-md border border-gray-200 bg-gray-50 p-2">
+                        <label class="flex items-center gap-2 text-sm text-gray-700">
+                            <input type="checkbox" name="is_home_tenant" value="1" @checked($selectedTenant->is_home_tenant) class="rounded border-gray-300">
+                            {{ __('Heimat-Mandant (Dienstleister selbst)') }}
+                        </label>
+                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Admins dieses Mandanten sehen und bearbeiten alle Mandanten. Admins jedes anderen Mandanten bleiben auf ihren eigenen beschränkt und sehen von ausgeliehenen Personen nur eingeschränkte Angaben. Nur EIN Mandant kann Heimat-Mandant sein - beim Aktivieren hier wird ein anderer automatisch deaktiviert.') }}</p>
+                    </div>
                 </form>
 
                 @unless ($selectedTenant->hasData())

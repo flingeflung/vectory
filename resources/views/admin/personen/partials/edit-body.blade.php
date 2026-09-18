@@ -98,6 +98,45 @@
         @endif
 
         <div class="{{ $isOverlay ? '' : 'max-w-2xl' }} space-y-4">
+            @unless ($canFullyEdit)
+                {{--
+                    Ausgeliehene Person, angesehen von einem Kundekunde-Admin
+                    (Ralf, 2026-09-18): nur ein eingeschränkter Satz an
+                    Angaben sichtbar, nichts davon bearbeitbar - das ist eine
+                    Mandanten-Grenze zwischen unterschiedlichen zahlenden
+                    Kunden, bewusst hart hier verdrahtet statt über das
+                    Rechte-System lösbar (siehe PersonController::
+                    personFullyEditableByCurrentUser()).
+                --}}
+                <div class="space-y-3 rounded-lg border border-gray-200 bg-white p-4">
+                    <p class="text-xs text-gray-400">{{ __('Diese Person gehört zu :tenant und ist hier nur ausgeliehen - nur eingeschränkte Angaben sichtbar, keine Bearbeitung möglich.', ['tenant' => $person->tenant?->name ?? '–']) }}</p>
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                            <span class="block text-xs text-gray-500">{{ __('Name') }}</span>
+                            {{ $person->fullName() }}{{ $person->short_name ? ' ('.$person->short_name.')' : '' }}
+                        </div>
+                        <div>
+                            <span class="block text-xs text-gray-500">{{ __('E-Mail') }}</span>
+                            {{ $person->email ?: '–' }}
+                        </div>
+                        <div>
+                            <span class="block text-xs text-gray-500">{{ __('Abteilung') }}</span>
+                            {{ $person->department?->name ?? '–' }}
+                        </div>
+                        <div>
+                            <span class="block text-xs text-gray-500">{{ __('Rolle') }}</span>
+                            {{ $person->legacyRole?->name ?? '–' }}
+                        </div>
+                        <div class="col-span-2">
+                            <span class="block text-xs text-gray-500">{{ __('Status') }}</span>
+                            {{ $person->active ? __('Aktiv') : __('Inaktiv') }}
+                            @if ($person->is_absent)
+                                · {{ __('Abwesend') }}{{ $person->absent_until ? ' '.__('bis').' '.$person->absent_until->format('d.m.Y') : '' }}
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            @else
             <form method="POST" action="{{ route('admin.personen.update', $person) }}" class="space-y-4 rounded-lg border border-gray-200 bg-white p-4">
                 <div>
                     <label class="block text-xs text-gray-500">{{ __('ID') }}</label>
@@ -299,7 +338,9 @@
                     </button>
                 </div>
             </form>
+            @endunless
 
+            @if ($canFullyEdit)
             <div class="rounded-lg border border-gray-200 bg-white p-4">
                 <div class="mb-2 text-xs font-semibold text-gray-500">{{ __('Login-Zugang') }}</div>
 
@@ -420,6 +461,7 @@
                     </form>
                 </div>
             @endunless
+            @endif
         </div>
     </div>
 </div>

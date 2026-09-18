@@ -69,7 +69,7 @@ class CurrentTenant
      */
     public static function userCanAccess(User $user, int $tenantId): bool
     {
-        if ($user->tenant_id === $tenantId || in_array($user->role, ['admin', 'super_admin'], true)) {
+        if ($user->tenant_id === $tenantId || $user->role === 'super_admin' || self::isHomeTenantAdmin($user)) {
             return true;
         }
 
@@ -81,6 +81,21 @@ class CurrentTenant
             ->where('person_id', $user->person_id)
             ->where('tenant_id', $tenantId)
             ->exists();
+    }
+
+    /**
+     * Heimat-Admin (Ralf, 2026-09-18): Admin des einen Mandanten, der den
+     * Dienstleister selbst repräsentiert (tenants.is_home_tenant), bekommt
+     * Vollzugriff auf ALLE Mandanten - anders als ein Admin jedes anderen
+     * (Kundekunden-)Mandanten, der auf seinen eigenen beschränkt bleibt
+     * (siehe PersonController für die zugehörige Bearbeitungs-Sperre bei
+     * ausgeliehenen Personen). Bewusst NICHT mehr "jeder admin darf alles"
+     * wie vorher - das war die eigentliche Berechtigungslücke.
+     */
+    public static function isHomeTenantAdmin(User $user): bool
+    {
+        return $user->role === 'admin'
+            && Tenant::query()->whereKey($user->tenant_id)->value('is_home_tenant');
     }
 
     public static function switchTo(int $tenantId): void

@@ -101,11 +101,20 @@ class TenantController extends Controller
         $name = trim((string) $request->string('name'));
         abort_if($name === '', 422);
 
+        $isHomeTenant = $request->boolean('is_home_tenant');
+        // Höchstens ein Heimat-Mandant gleichzeitig (Ralf, 2026-09-18:
+        // Heimat-Admin bekommt Vollzugriff auf alle Mandanten - bei zwei
+        // gleichzeitig markierten wäre nicht mehr eindeutig, wer das ist).
+        if ($isHomeTenant) {
+            Tenant::query()->where('id', '!=', $tenant->id)->update(['is_home_tenant' => false]);
+        }
+
         $tenant->update([
             'name' => $name,
             'short_name' => $this->normalizedShortName($request, $name),
             'project_path' => $this->normalizedProjectPath($request),
             'notification_email' => $this->normalizedNotificationEmail($request),
+            'is_home_tenant' => $isHomeTenant,
             ...$settings,
         ]);
 
