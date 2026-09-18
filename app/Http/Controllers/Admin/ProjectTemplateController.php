@@ -83,10 +83,17 @@ class ProjectTemplateController extends Controller
         // in CLAUDE.md statt der "aktiv ODER gerade zugewiesen"-Variante.
         $workflows = Workflow::query()->where('tenant_id', $tenantId)->orderBy('sort')->orderBy('name')->get();
 
-        // Für "Von anderem Kunden holen" (Ralf, 2026-09-18) - gleiches
-        // Muster wie Papierformate: pull-basiert, nur aus Kunden erreichbar,
-        // auf die der Nutzer laut Mandanten-Umschalter sowieso Zugriff hat.
-        $otherTenants = CurrentTenant::availableTenants()->reject(fn ($t) => $t->id === $tenantId)->values();
+        // "Von anderem Kunden importieren" (Ralf, 2026-09-18) - gleiches
+        // Muster wie Papierformate: pull-basiert. Bewusst nur für Heimat-
+        // Admin/Super-Admin (Ralf: "das darf ja wieder nur vom H-Admin aus
+        // möglich sein", gleiche Mandanten-Grenze wie sonst im Rollenmodell) -
+        // eigener Check statt sich allein auf availableTenants() zu
+        // verlassen, das über person_tenant auch einzelnen ausgeliehenen
+        // Personen Zugriff auf einen fremden Mandanten geben kann, was hier
+        // NICHT reichen soll (Katalog-Import ist keine Personen-Ausleihe).
+        $otherTenants = CurrentTenant::isHomeTenantAdmin($request->user()) || $request->user()->role === 'super_admin'
+            ? CurrentTenant::availableTenants()->reject(fn ($t) => $t->id === $tenantId)->values()
+            : collect();
 
         return [
             'templates' => $templates,
@@ -212,6 +219,9 @@ class ProjectTemplateController extends Controller
      */
     public function catalogFromTenant(Request $request): JsonResponse
     {
+        $user = $request->user();
+        abort_unless(CurrentTenant::isHomeTenantAdmin($user) || $user->role === 'super_admin', 403);
+
         $source = CurrentTenant::availableTenants()->firstWhere('id', $request->integer('tenant_id'));
         abort_if($source === null || $source->id === CurrentTenant::id(), 422);
 
@@ -236,6 +246,9 @@ class ProjectTemplateController extends Controller
      */
     public function importFromTenant(Request $request): RedirectResponse
     {
+        $user = $request->user();
+        abort_unless(CurrentTenant::isHomeTenantAdmin($user) || $user->role === 'super_admin', 403);
+
         $tenantId = CurrentTenant::id();
         $source = CurrentTenant::availableTenants()->firstWhere('id', $request->integer('source_tenant_id'));
         abort_if($source === null || $source->id === $tenantId, 422);

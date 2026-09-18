@@ -90,8 +90,15 @@ class WorkflowController extends Controller
         // dort bewusst kein Sortierkriterium (kein D&D für diese Liste).
         $functionGroups = FunctionGroup::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('name')->get(['id', 'name']);
 
-        $otherTenants = SystemSetting::multiTenantEnabled()
-            ? Tenant::query()->where('id', '!=', $tenantId)->orderBy('name')->get(['id', 'name'])
+        // "Zu anderem Kunden kopieren" bewusst nur für Heimat-Admin/
+        // Super-Admin (Ralf, 2026-09-18: "das darf ja wieder nur vom
+        // H-Admin aus möglich sein", beim Projektschablonen-Import-Feature
+        // entdeckte Mandanten-Grenzen-Lücke, hier nachgezogen - vorher
+        // konnte JEDER Admin, auch der eines einzelnen Kundekunden-
+        // Mandanten, in JEDEN anderen Mandanten hineinkopieren).
+        $user = $request->user();
+        $otherTenants = SystemSetting::multiTenantEnabled() && (CurrentTenant::isHomeTenantAdmin($user) || $user->role === 'super_admin')
+            ? CurrentTenant::availableTenants()->reject(fn (Tenant $t) => $t->id === $tenantId)->values()
             : collect();
 
         return [
@@ -339,9 +346,18 @@ class WorkflowController extends Controller
         abort_unless($workflow->tenant_id === CurrentTenant::id(), 404);
         abort_unless(SystemSetting::multiTenantEnabled(), 403);
 
-        $targetTenant = Tenant::query()
-            ->where('id', '!=', $workflow->tenant_id)
-            ->findOrFail($request->integer('target_tenant_id'));
+        // Bewusst nur für Heimat-Admin/Super-Admin (Ralf, 2026-09-18) - siehe
+        // buildIndexData() oben. Ohne diesen Check hätte vorher jeder Admin
+        // eines beliebigen Kundekunden-Mandanten hier per direktem POST in
+        // JEDEN anderen Mandanten hineinkopieren können, unabhängig von der
+        // (nur clientseitigen) Sichtbarkeit der Auswahlliste.
+        $user = $request->user();
+        abort_unless(CurrentTenant::isHomeTenantAdmin($user) || $user->role === 'super_admin', 403);
+
+        $targetTenant = CurrentTenant::availableTenants()
+            ->reject(fn (Tenant $t) => $t->id === $workflow->tenant_id)
+            ->firstWhere('id', $request->integer('target_tenant_id'));
+        abort_if($targetTenant === null, 404);
 
         DB::transaction(function () use ($workflow, $targetTenant) {
             // withoutGlobalScope('tenant') nötig: der automatische Scope

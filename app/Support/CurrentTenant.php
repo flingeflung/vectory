@@ -138,12 +138,18 @@ class CurrentTenant
     }
 
     /**
-     * Für den Umschalter in der Kopfzeile: eigener Heimat-Mandant + alle
-     * zusätzlich gewährten Kunden (siehe person_tenant). Admin und
-     * Super-Admin sehen automatisch ALLE Mandanten - braucht keine
-     * einzelnen Freigaben (Ralf: "als Admin brauche ich Zugriff auf alle
-     * Kunden meiner DL-Firma"). Leer, wenn Mandantenfähigkeit aus ist - der
-     * Umschalter bleibt dann komplett unsichtbar.
+     * Für den Umschalter in der Kopfzeile UND für "von anderem Kunden
+     * importieren"-Funktionen (Papierformate, Projektschablonen): eigener
+     * Heimat-Mandant + alle zusätzlich gewährten Kunden (siehe
+     * person_tenant). Volle Sicht auf ALLE Mandanten nur für Super-Admin
+     * und den Heimat-Admin (Ralf, 2026-09-18: "das darf ja wieder nur vom
+     * H-Admin aus möglich sein") - ein Admin eines Kundekunden-Mandanten
+     * bleibt auf seinen eigenen Mandanten (+ Ausleihen) beschränkt, gleiche
+     * Mandanten-Grenze wie bei isHomeTenantAdmin()/userCanAccess() oben.
+     * Bewusst NICHT mehr "jeder admin sieht alles" (Doku-Stand vor der
+     * Heimat-/Kundekunde-Admin-Trennung, hier nachgezogen). Leer, wenn
+     * Mandantenfähigkeit aus ist - der Umschalter bleibt dann komplett
+     * unsichtbar.
      *
      * @return \Illuminate\Support\Collection<int, Tenant>
      */
@@ -155,7 +161,7 @@ class CurrentTenant
             return collect();
         }
 
-        if (in_array($user->role, ['admin', 'super_admin'], true)) {
+        if ($user->role === 'super_admin' || self::isHomeTenantAdmin($user)) {
             return Tenant::query()->orderBy('name')->get();
         }
 

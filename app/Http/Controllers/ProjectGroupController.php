@@ -298,9 +298,18 @@ class ProjectGroupController extends Controller
     {
         $this->authorizeViewer($group);
 
+        // Admins ANDERER Mandanten bewusst nur mitlisten, wenn der GERADE
+        // ANSCHAUENDE Nutzer selbst Heimat-Admin/Super-Admin ist (Ralf,
+        // 2026-09-18: "das darf ja wieder nur vom H-Admin aus möglich
+        // sein") - sonst könnte ein Admin eines einzelnen Kundekunden-
+        // Mandanten seine Projektgruppe (und damit die enthaltenen Projekte)
+        // mit dem Admin eines völlig fremden Kunden teilen.
         $tenantId = CurrentTenant::id();
+        $user = Auth::user();
+        $canReachAllTenants = CurrentTenant::isHomeTenantAdmin($user) || $user->role === 'super_admin';
         $users = User::query()
-            ->where(fn ($query) => $query->where('tenant_id', $tenantId)->orWhereIn('role', ['admin', 'super_admin']))
+            ->where(fn ($query) => $query->where('tenant_id', $tenantId)
+                ->when($canReachAllTenants, fn ($query) => $query->orWhereIn('role', ['admin', 'super_admin'])))
             ->orderBy('name')
             ->get();
 
@@ -314,6 +323,16 @@ class ProjectGroupController extends Controller
     public function share(Request $request, ProjectGroup $group, User $user): Response
     {
         $this->authorizeViewer($group);
+
+        // Server-seitig dieselbe Grenze wie in shareOptions() erzwingen -
+        // die Auswahlliste dort ist nur eine UI-Hilfe, ohne diesen Check
+        // könnte ein direkter POST mit einer beliebigen User-ID trotzdem mit
+        // jedem Nutzer irgendeines fremden Mandanten teilen.
+        $actingUser = $request->user();
+        $canReachAllTenants = CurrentTenant::isHomeTenantAdmin($actingUser) || $actingUser->role === 'super_admin';
+        $targetAllowed = $user->tenant_id === CurrentTenant::id()
+            || ($canReachAllTenants && in_array($user->role, ['admin', 'super_admin'], true));
+        abort_unless($targetAllowed, 403);
 
         if (! $group->viewers()->where('users.id', $user->id)->exists()) {
             $group->viewers()->attach($user->id);

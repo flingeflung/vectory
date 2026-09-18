@@ -49,8 +49,13 @@ class ChecklistController extends Controller
 
         $selectedChecklist = $checklistId ? $checklists->firstWhere('id', $checklistId) : null;
 
-        $otherTenants = SystemSetting::multiTenantEnabled()
-            ? Tenant::query()->where('id', '!=', $tenantId)->orderBy('name')->get(['id', 'name'])
+        // "Zu anderem Kunden kopieren" bewusst nur für Heimat-Admin/
+        // Super-Admin (Ralf, 2026-09-18: "das darf ja wieder nur vom
+        // H-Admin aus möglich sein", gleiche Mandanten-Grenzen-Lücke wie
+        // bei Workflows/Projektschablonen entdeckt und hier nachgezogen).
+        $user = $request->user();
+        $otherTenants = SystemSetting::multiTenantEnabled() && (CurrentTenant::isHomeTenantAdmin($user) || $user->role === 'super_admin')
+            ? CurrentTenant::availableTenants()->reject(fn (Tenant $t) => $t->id === $tenantId)->values()
             : collect();
 
         return [
@@ -229,9 +234,16 @@ class ChecklistController extends Controller
         abort_unless($checklist->tenant_id === CurrentTenant::id(), 404);
         abort_unless(SystemSetting::multiTenantEnabled(), 403);
 
-        $targetTenant = Tenant::query()
-            ->where('id', '!=', $checklist->tenant_id)
-            ->findOrFail($request->integer('target_tenant_id'));
+        // Bewusst nur für Heimat-Admin/Super-Admin (Ralf, 2026-09-18) - siehe
+        // buildIndexData() oben, gleiche Begründung wie bei
+        // WorkflowController::copyToTenant().
+        $user = $request->user();
+        abort_unless(CurrentTenant::isHomeTenantAdmin($user) || $user->role === 'super_admin', 403);
+
+        $targetTenant = CurrentTenant::availableTenants()
+            ->reject(fn (Tenant $t) => $t->id === $checklist->tenant_id)
+            ->firstWhere('id', $request->integer('target_tenant_id'));
+        abort_if($targetTenant === null, 404);
 
         DB::transaction(function () use ($checklist, $targetTenant) {
             $nextSort = 1 + (int) Checklist::withoutGlobalScope('tenant')->where('tenant_id', $targetTenant->id)->max('sort');

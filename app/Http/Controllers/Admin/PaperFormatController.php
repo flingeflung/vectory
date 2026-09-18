@@ -10,6 +10,7 @@ use App\Services\PaperFormatCatalogImporter;
 use App\Support\CurrentTenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 /**
@@ -33,7 +34,17 @@ class PaperFormatController extends Controller
             ])
             ->values();
 
-        $otherTenants = CurrentTenant::availableTenants()->reject(fn (Tenant $t) => $t->id === CurrentTenant::id())->values();
+        // "Von anderem Kunden importieren" bewusst nur für Heimat-Admin/
+        // Super-Admin (Ralf, 2026-09-18: "das darf ja wieder nur vom H-Admin
+        // aus möglich sein", gleiche Mandanten-Grenze wie bei Projekt-
+        // schablonen) - eigener Check statt sich allein auf
+        // availableTenants() zu verlassen, das über person_tenant auch
+        // einzelnen ausgeliehenen Personen Zugriff geben kann, was hier
+        // NICHT reichen soll (Katalog-Import ist keine Personen-Ausleihe).
+        $user = Auth::user();
+        $otherTenants = CurrentTenant::isHomeTenantAdmin($user) || $user->role === 'super_admin'
+            ? CurrentTenant::availableTenants()->reject(fn (Tenant $t) => $t->id === CurrentTenant::id())->values()
+            : collect();
 
         return view('admin.papierformate.index', ['formats' => $formats, 'combinations' => $combinations, 'otherTenants' => $otherTenants]);
     }
@@ -124,12 +135,16 @@ class PaperFormatController extends Controller
 
     /**
      * Übernimmt den Formate-Katalog eines anderen Kunden (Schritt 5, siehe
-     * PaperFormatCatalogImporter) - pull-basiert, nur aus Kunden erreichbar,
-     * auf die der aktuelle Nutzer laut Mandanten-Umschalter sowieso Zugriff
-     * hat (kein Weg, sich Formate aus einem fremden Kunden zu "ziehen").
+     * PaperFormatCatalogImporter) - pull-basiert. Bewusst nur für Heimat-
+     * Admin/Super-Admin (Ralf, 2026-09-18), nicht jeden mit availableTenants()-
+     * Zugriff - eine per person_tenant ausgeliehene Person soll sich damit
+     * keine Kataloge aus dem verleihenden Mandanten ziehen können.
      */
     public function importFromTenant(Request $request, PaperFormatCatalogImporter $importer): RedirectResponse
     {
+        $user = $request->user();
+        abort_unless(CurrentTenant::isHomeTenantAdmin($user) || $user->role === 'super_admin', 403);
+
         $target = Tenant::query()->findOrFail(CurrentTenant::id());
         $sourceId = $request->integer('source_tenant_id');
 
