@@ -1,4 +1,10 @@
 <x-admin-layout>
+    {{-- Gleiches Dirty-Tracking-Muster wie Workflows/Projektkategorien
+         (mehrere unabhängige Formulare: Haupt-Formular + Stunden-je-Fktgrp). --}}
+    <script>
+        window.__projectTemplatesDirtyForms = new Set();
+    </script>
+
     @if (session('status') === 'projektschablonen-updated')
         <x-flash-message class="mb-3 shrink-0 px-3 py-2 text-sm">{{ __('Gespeichert.') }}</x-flash-message>
     @endif
@@ -7,50 +13,27 @@
         {{ __('Gespeichert.') }}
     </div>
 
-    <p class="mb-3 shrink-0 text-xs text-gray-500">
-        {{ __('Erfahrungswerte-Katalog für die Redaktionsleitung: Merkmale eines typischen Projekts + geschätzte Brutto-Bearbeitungsdauer. Grundlage für die spätere Kapazitätsplanung: ein gekoppelter Workflow bestimmt die beteiligten Funktionsgruppen, dafür lassen sich geplante Stunden hinterlegen.') }}
-    </p>
+    @include('admin.project-templates.partials.content')
 
-    <form method="GET" action="{{ route('admin.projektschablonen') }}" class="mb-3 shrink-0 flex flex-wrap items-end gap-3">
-        @foreach (\App\Models\ProjectTemplate::filterableFields() as $field)
-            @php($meta = \App\Models\ProjectTemplate::characteristicFields()[$field])
-            <div>
-                <label class="block text-xs text-gray-500">{{ $meta['label'] }}</label>
-                <select name="{{ $field }}" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 py-1 text-sm">
-                    <option value="">{{ __('– alle –') }}</option>
-                    @foreach ($meta['options'] as $value => $option)
-                        <option value="{{ $value }}" @selected((string) request($field) === (string) $value)>{{ $option['label'] }}</option>
-                    @endforeach
-                </select>
-            </div>
-        @endforeach
-        @if (collect(\App\Models\ProjectTemplate::filterableFields())->contains(fn ($field) => request()->filled($field)))
-            <a href="{{ route('admin.projektschablonen') }}" class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
-                {{ __('Filter löschen') }}
-            </a>
-        @endif
-    </form>
-
-    <div id="project-templates-content" class="min-h-0 flex-1 overflow-y-auto">
-        @include('admin.project-templates.partials.content')
-    </div>
-
+    {{-- Gleiches Muster wie Workflows/Projektkategorien: Speichern läuft per
+         fetch() statt vollem Formular-POST, um ungespeicherte Eingaben in
+         der jeweils anderen Formularhälfte nicht wegzuwischen. Anlegen-/
+         Löschen-Formulare bleiben normale Seiten-POSTs. --}}
     <script>
         (function () {
             const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
             const container = () => document.getElementById('project-templates-content');
 
             document.addEventListener('submit', async (event) => {
-                if (!container() || !container().contains(event.target)) {
+                if (!container() || !container().contains(event.target) || !event.target.hasAttribute('data-row-form')) {
                     return;
                 }
 
                 event.preventDefault();
-                const isRowForm = event.target.hasAttribute('data-row-form');
 
                 const formData = new FormData(event.target);
                 const response = await fetch(event.target.action, {
-                    method: event.target.method,
+                    method: 'POST',
                     headers: { 'X-CSRF-TOKEN': csrfToken },
                     body: formData,
                 });
@@ -62,9 +45,7 @@
                 }
 
                 await window.reloadManageListPreservingEdits(container(), window.location.href, { 'X-Overlay': '1' });
-                if (isRowForm) {
-                    window.showManageSavedToast('project-templates-toast');
-                }
+                window.showManageSavedToast('project-templates-toast');
             });
         })();
     </script>

@@ -23,17 +23,31 @@ use Illuminate\View\View;
  * (2026-09-18): "Zuerst muss ein WF gekoppelt werden, erst dadurch ergeben
  * sich die Fktgrps", siehe ProjectTemplate::relevantFunctionGroups().
  *
- * Gleiches Grundmuster wie die "klitzekleinen" Verwalten-Overlays (Firma/
- * Abteilung/...): eine Liste von Zeilen-Formularen (data-row-form, siehe
- * View) + ein Anlegen-Formular, per fetch() gespeichert und per
- * reloadManageListPreservingEdits() neu geladen statt vollem Seiten-Reload -
- * nur hier auf einer eigenen Seite statt in einem globalen Modal, weil
- * Projektschablonen (anders als Firma/Abteilung) ein eigenständiger
- * Admin-Bereich sind, kein Unterbereich der Personenverwaltung.
+ * Master-Detail-Layout (Ralf, 2026-09-18: "nach dem bewährten Muster von
+ * Projektkategorien, Workflows usw.: links die Schablonen, rechts die
+ * Details") - links die (ggf. gefilterte) Liste, rechts entweder die
+ * gewählte Schablone zum Bearbeiten (?schablone=<id>), ein Anlegen-Formular
+ * (?neu=1) oder ein Platzhalter. Gleiches Grundmuster wie WorkflowController:
+ * Umbenennen/Speichern läuft per fetch() + reloadManageListPreservingEdits()
+ * (X-Overlay-Header) statt vollem Seiten-Reload.
  */
 class ProjectTemplateController extends Controller
 {
     public function index(Request $request): View|Response
+    {
+        $data = $this->buildIndexData($request, $request->filled('schablone') ? (int) $request->query('schablone') : null);
+
+        if ($this->isOverlayRequest($request)) {
+            return response()->view('admin.project-templates.partials.content', $data);
+        }
+
+        return view('admin.project-templates.index', $data);
+    }
+
+    /**
+     * @return array{templates: \Illuminate\Support\Collection, selectedTemplate: ?ProjectTemplate, workflows: \Illuminate\Support\Collection, creating: bool}
+     */
+    private function buildIndexData(Request $request, ?int $templateId): array
     {
         $tenantId = CurrentTenant::id();
 
@@ -45,19 +59,21 @@ class ProjectTemplateController extends Controller
             }
         }
 
-        $templates = $query->with([
-            'createdByUser.person', 'updatedByUser.person',
-            'functionGroups',
-            // Für relevantFunctionGroups() (Model) - ohne diese Vorladung
-            // würde jede Schablonen-Karte einzeln nachladen (N+1).
-            'workflow.steps.functionGroups',
-        ])
-            // FIELD(): Wochen-Einträge vor Monate-Einträgen (gleiche
-            // Reihenfolge wie Viettos gakat.php, intDauerEinheit 1=Wochen
-            // zuerst) - alphabetisch wäre "months" fälschlich vor "weeks".
-            ->orderByRaw("FIELD(duration_unit, 'weeks', 'months')")
+        // FIELD(): Wochen-Einträge vor Monate-Einträgen (gleiche Reihenfolge
+        // wie Viettos gakat.php, intDauerEinheit 1=Wochen zuerst) -
+        // alphabetisch wäre "months" fälschlich vor "weeks".
+        $templates = $query->orderByRaw("FIELD(duration_unit, 'weeks', 'months')")
             ->orderBy('duration_value')->orderBy('name')
             ->get();
+
+        // Nur für die AUSGEWÄHLTE Schablone die schwereren Relationen laden
+        // (gleiches Muster wie WorkflowController: steps() nur für
+        // $selectedWorkflow) - die Liste links bleibt schlank.
+        $selectedTemplate = $templateId
+            ? ProjectTemplate::query()->where('tenant_id', $tenantId)
+                ->with(['createdByUser.person', 'updatedByUser.person', 'functionGroups', 'workflow.steps.functionGroups'])
+                ->find($templateId)
+            : null;
 
         // Alle Workflows des Mandanten fürs Auswahlfeld, auch inaktive/
         // ersetzte (grau markiert in der View) - eine Schablone könnte
@@ -65,13 +81,12 @@ class ProjectTemplateController extends Controller
         // in CLAUDE.md statt der "aktiv ODER gerade zugewiesen"-Variante.
         $workflows = Workflow::query()->where('tenant_id', $tenantId)->orderBy('sort')->orderBy('name')->get();
 
-        $data = ['templates' => $templates, 'workflows' => $workflows];
-
-        if ($this->isOverlayRequest($request)) {
-            return response()->view('admin.project-templates.partials.content', $data);
-        }
-
-        return view('admin.project-templates.index', $data);
+        return [
+            'templates' => $templates,
+            'selectedTemplate' => $selectedTemplate,
+            'workflows' => $workflows,
+            'creating' => ! $selectedTemplate && $request->boolean('neu'),
+        ];
     }
 
     private function isOverlayRequest(Request $request): bool
@@ -84,13 +99,13 @@ class ProjectTemplateController extends Controller
         $tenantId = CurrentTenant::id();
         $validated = $this->validated($request, $tenantId);
 
-        ProjectTemplate::query()->create([
+        $template = ProjectTemplate::query()->create([
             ...$validated,
             'tenant_id' => $tenantId,
             'created_by_user_id' => Auth::id(),
         ]);
 
-        return redirect()->route('admin.projektschablonen')->with('status', 'projektschablonen-updated');
+        return redirect()->route('admin.projektschablonen', ['schablone' => $template->id])->with('status', 'projektschablonen-updated');
     }
 
     public function update(Request $request, ProjectTemplate $template): RedirectResponse
@@ -105,7 +120,7 @@ class ProjectTemplateController extends Controller
             'updated_by_user_id' => Auth::id(),
         ]);
 
-        return redirect()->route('admin.projektschablonen')->with('status', 'projektschablonen-updated');
+        return redirect()->route('admin.projektschablonen', ['schablone' => $template->id])->with('status', 'projektschablonen-updated');
     }
 
     /**
@@ -136,7 +151,7 @@ class ProjectTemplateController extends Controller
 
         $template->functionGroups()->sync($syncData);
 
-        return redirect()->route('admin.projektschablonen')->with('status', 'projektschablonen-updated');
+        return redirect()->route('admin.projektschablonen', ['schablone' => $template->id])->with('status', 'projektschablonen-updated');
     }
 
     public function destroy(Request $request, ProjectTemplate $template): RedirectResponse
