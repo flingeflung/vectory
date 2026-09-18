@@ -9,7 +9,22 @@
          CLAUDE.md-Konvention "Boxen mit Kopf-/Fußbereich + Liste". --}}
     <div id="personen-content" class="flex flex-1 min-h-0 flex-col rounded-lg border border-gray-200 bg-white">
         <div class="shrink-0 flex flex-wrap items-end gap-3 border-b border-gray-100 p-3">
-            <form method="GET" action="{{ route('admin.personen') }}" class="flex flex-1 flex-wrap items-end gap-3">
+            <form method="GET" action="{{ route('admin.personen') }}" class="flex flex-1 flex-col gap-3">
+                @if ($canSearchAllTenants)
+                    <div class="flex flex-wrap items-end gap-3">
+                        <div>
+                            <label class="block text-xs text-gray-500">{{ __('Kunde') }}</label>
+                            <select name="tenant_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-xs">
+                                <option value="all" @selected(request('tenant_id') === 'all')>{{ __('– Alle –') }}</option>
+                                <option value="" @selected(! request()->filled('tenant_id'))>{{ __('Aktiver Kunde (+ Zugriff)') }}</option>
+                                @foreach ($tenants as $tenant)
+                                    <option value="{{ $tenant->id }}" @selected(request('tenant_id') == $tenant->id)>{{ $tenant->short_name ?? $tenant->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                @endif
+                <div class="flex flex-wrap items-end gap-3">
                 <div>
                     <label class="block text-xs text-gray-500">{{ __('Nachname') }}</label>
                     <input
@@ -20,18 +35,6 @@
                         class="mt-0.5 rounded-md border-gray-300 text-sm"
                     >
                 </div>
-                @if ($canSearchAllTenants)
-                    <div>
-                        <label class="block text-xs text-gray-500">{{ __('Kunde') }}</label>
-                        <select name="tenant_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-xs">
-                            <option value="all" @selected(request('tenant_id') === 'all')>{{ __('– Alle –') }}</option>
-                            <option value="" @selected(! request()->filled('tenant_id'))>{{ __('Aktiver Kunde (+ Zugriff)') }}</option>
-                            @foreach ($tenants as $tenant)
-                                <option value="{{ $tenant->id }}" @selected(request('tenant_id') == $tenant->id)>{{ $tenant->short_name ?? $tenant->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                @endif
                 <div>
                     <div class="flex items-center gap-1">
                         <label class="block text-xs text-gray-500">{{ \App\Models\SystemSetting::companyLabel() }}</label>
@@ -109,6 +112,7 @@
                 @if (request()->anyFilled(['search', 'company_id', 'department_id', 'business_unit_id', 'permission_template_id', 'legacy_role_id', 'typ', 'tenant_id']) || request()->boolean('show_inactive'))
                     <a href="{{ route('admin.personen') }}" class="mb-1.5 inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Filter zurücksetzen') }}</a>
                 @endif
+                </div>
             </form>
 
             <form

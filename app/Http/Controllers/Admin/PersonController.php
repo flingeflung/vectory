@@ -56,13 +56,18 @@ class PersonController extends Controller
         $filters = $this->filtersFromRequest($request);
 
         // Kunden-Filter (Wert "all" = alle Kunden, eine konkrete ID = genau
-        // dieser Kunde) nur für Admin/Super-Admin bei aktiver
+        // dieser Kunde) nur für Heimat-Admin/Super-Admin bei aktiver
         // Mandantenfähigkeit (Ralf: Kollege ruft an, "Herr XY hat
         // angerufen" - ohne das müsste man jeden Kunden einzeln
-        // durchklicken, um eine Person wiederzufinden). Hier zusätzlich
-        // gegen Missbrauch über die Query-String abgesichert, nicht nur in
-        // der Oberfläche versteckt.
-        $canSearchAllTenants = SystemSetting::multiTenantEnabled() && in_array($request->user()->role, ['admin', 'super_admin'], true);
+        // durchklicken, um eine Person wiederzufinden). Ein Kundekunde-Admin
+        // bekommt das NICHT (Ralf, 2026-09-18: "das darf er natürlich
+        // nicht: Alle sehen!") - er würde sonst über dieses Dropdown auch
+        // fremde Kunden/deren Kataloge durchsuchen können (siehe unten,
+        // die Kataloge folgen jetzt diesem Filter). Hier zusätzlich gegen
+        // Missbrauch über die Query-String abgesichert, nicht nur in der
+        // Oberfläche versteckt.
+        $canSearchAllTenants = SystemSetting::multiTenantEnabled()
+            && ($request->user()->role === 'super_admin' || CurrentTenant::isHomeTenantAdmin($request->user()));
         if (! $canSearchAllTenants) {
             unset($filters['tenant_id']);
         }
@@ -93,29 +98,51 @@ class PersonController extends Controller
         // hier). Bewusst aus den GRUNDSÄTZLICH sichtbaren Mandanten
         // abgeleitet (nicht aus der schon gefilterten Personenliste) -
         // sonst würden die Dropdowns beim Filtern unerwartet schrumpfen.
-        $visibleTenantIds = Person::visibleTenantIds($tenantId);
+        //
+        // Ralf, 2026-09-18: die Kataloge (Firma/Abteilung/Geschäftsbereich/
+        // Rechte-Set/Rolle) sollen sich nach dem "Kunde"-Filter DIESER
+        // Seite richten, nicht nach dem globalen Mandanten-Umschalter -
+        // "Kunde"=konkreter Kunde -> NUR dessen Katalog (kein
+        // Freigabe-Zuschlag, gleiche "reine Mitgliedschaft"-Bedeutung wie
+        // bei der Personenliste selbst, siehe filteredPeopleQuery()),
+        // "Kunde"=Alle -> alle sichtbaren Kunden, sonst (Standard) wie
+        // gehabt der aktive Mandant + Freigaben. Für einen Kundekunde-Admin
+        // ist der "Kunde"-Filter oben gar nicht erst verfügbar
+        // (canSearchAllTenants), er landet also immer im Standardfall -
+        // sieht dadurch automatisch nur die eigenen Kataloge.
+        $tenantFilter = $filters['tenant_id'] ?? null;
+        if ($tenantFilter === 'all') {
+            $catalogTenantIds = Tenant::query()->pluck('id');
+            $catalogHomeTenantId = $tenantId;
+        } elseif ($tenantFilter !== null) {
+            $catalogTenantIds = collect([(int) $tenantFilter]);
+            $catalogHomeTenantId = (int) $tenantFilter;
+        } else {
+            $catalogTenantIds = Person::visibleTenantIds($tenantId);
+            $catalogHomeTenantId = $tenantId;
+        }
 
         return view('admin.personen.index', [
             'people' => $people,
-            'companies' => Company::query()->withoutGlobalScope('tenant')->whereIn('tenant_id', $visibleTenantIds)->orderBy('name')->get(),
-            'departments' => Department::query()->withoutGlobalScope('tenant')->whereIn('tenant_id', $visibleTenantIds)->where('active', true)->orderBy('name')->get(),
-            'businessUnits' => BusinessUnit::query()->withoutGlobalScope('tenant')->whereIn('tenant_id', $visibleTenantIds)->where('active', true)->orderBy('name')->get(),
-            'permissionTemplates' => PermissionTemplate::query()->withoutGlobalScope('tenant')->whereIn('tenant_id', $visibleTenantIds)->orderBy('sort')->get(),
-            'legacyRoles' => LegacyRole::query()->withoutGlobalScope('tenant')->whereIn('tenant_id', $visibleTenantIds)->orderBy('name')->get(),
+            'companies' => Company::query()->withoutGlobalScope('tenant')->whereIn('tenant_id', $catalogTenantIds)->orderBy('name')->get(),
+            'departments' => Department::query()->withoutGlobalScope('tenant')->whereIn('tenant_id', $catalogTenantIds)->where('active', true)->orderBy('name')->get(),
+            'businessUnits' => BusinessUnit::query()->withoutGlobalScope('tenant')->whereIn('tenant_id', $catalogTenantIds)->where('active', true)->orderBy('name')->get(),
+            'permissionTemplates' => PermissionTemplate::query()->withoutGlobalScope('tenant')->whereIn('tenant_id', $catalogTenantIds)->orderBy('sort')->get(),
+            'legacyRoles' => LegacyRole::query()->withoutGlobalScope('tenant')->whereIn('tenant_id', $catalogTenantIds)->orderBy('name')->get(),
             'multiTenantEnabled' => SystemSetting::multiTenantEnabled(),
             'canSearchAllTenants' => $canSearchAllTenants,
             'tenants' => $canSearchAllTenants ? Tenant::query()->orderBy('name')->get() : collect(),
             'filters' => $filters,
-            'tenantId' => $tenantId,
+            'tenantId' => $catalogHomeTenantId,
             // Ralf, 2026-09-18: "ich habe immer noch doppelte Einträge dort,
             // die ich nicht auseinanderhalten kann" - Firma/Abteilung/
             // Geschäftsbereich/Rechte-Set/Rolle können aus mehreren
-            // Mandanten stammen (siehe visibleTenantIds oben), Einträge mit
+            // Mandanten stammen (siehe $catalogTenantIds oben), Einträge mit
             // gleichem Namen aus verschiedenen Mandanten sahen bisher
-            // identisch aus. Name eines NICHT vom aktiven Mandanten
-            // stammenden Eintrags bekommt in der View einen "(Kundenname)"-
-            // Zusatz, siehe Blade-Template.
-            'tenantNames' => Tenant::query()->whereIn('id', $visibleTenantIds)->pluck('name', 'id'),
+            // identisch aus. Name eines NICHT vom "Heimat"-Bezugspunkt
+            // ($catalogHomeTenantId) stammenden Eintrags bekommt in der
+            // View einen "(Kundenname)"-Zusatz, siehe Blade-Template.
+            'tenantNames' => Tenant::query()->whereIn('id', $catalogTenantIds)->pluck('name', 'id'),
         ]);
     }
 
