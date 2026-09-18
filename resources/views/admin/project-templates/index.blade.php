@@ -8,7 +8,7 @@
     </div>
 
     <p class="mb-3 shrink-0 text-xs text-gray-500">
-        {{ __('Erfahrungswerte-Katalog für die Redaktionsleitung: Merkmale eines typischen Projekts + geschätzte Brutto-Bearbeitungsdauer. Grundlage für die spätere Kapazitätsplanung (Workflow-Kopplung und Stunden je Funktionsgruppe folgen als nächste Ausbaustufen).') }}
+        {{ __('Erfahrungswerte-Katalog für die Redaktionsleitung: Merkmale eines typischen Projekts + geschätzte Brutto-Bearbeitungsdauer. Grundlage für die spätere Kapazitätsplanung: ein gekoppelter Workflow bestimmt die beteiligten Funktionsgruppen, dafür lassen sich geplante Stunden hinterlegen.') }}
     </p>
 
     <form method="GET" action="{{ route('admin.projektschablonen') }}" class="mb-3 shrink-0 flex flex-wrap items-end gap-3">

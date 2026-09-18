@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * je Stufe, analog zu Viettos get_anteilXX()-Funktionen.
  */
 #[Fillable([
-    'tenant_id', 'name', 'format', 'reusable_content_share', 'languages_count', 'product_maturity',
+    'tenant_id', 'name', 'format', 'workflow_id', 'reusable_content_share', 'languages_count', 'product_maturity',
     'product_change_delays', 'contact_availability', 'localizer_availability', 'software_share',
     'product_complexity', 'print_variants_count', 'images_count', 'duration_value', 'duration_unit',
     'remarks', 'active', 'created_by_user_id', 'updated_by_user_id',
@@ -41,16 +41,43 @@ class ProjectTemplate extends Model
     }
 
     /**
-     * Step 2 der Kapa-Planung (Ralf, 2026-09-18): geplante Stunden je
-     * Funktionsgruppe - noch manuell zusammengestellt, Step 3 leitet die
-     * beteiligten Fktgrp später stattdessen aus der gekoppelten
-     * Workflow-Zuordnung ab.
+     * Step 3 der Kapa-Planung (Ralf-Korrektur, 2026-09-18): erst die
+     * Workflow-Kopplung, DADURCH ergeben sich die relevanten Funktions-
+     * gruppen (relevantFunctionGroups() unten) - nicht umgekehrt.
+     */
+    public function workflow(): BelongsTo
+    {
+        return $this->belongsTo(Workflow::class);
+    }
+
+    /**
+     * Geplante Stunden je Funktionsgruppe (Step 2) - welche Fktgrp hier
+     * überhaupt sinnvoll sind, bestimmt relevantFunctionGroups() unten,
+     * abgeleitet aus dem gekoppelten Workflow.
      */
     public function functionGroups(): BelongsToMany
     {
         return $this->belongsToMany(FunctionGroup::class, 'project_template_function_group')
             ->withPivot('planned_hours')
             ->withTimestamps();
+    }
+
+    /**
+     * Die Funktionsgruppen, die über die Schritte des gekoppelten Workflows
+     * tatsächlich beteiligt sind - keine Schablone ohne Workflow-Kopplung
+     * hat also überhaupt zuweisbare Fktgrp (Ralf, 2026-09-18: "Zuerst muss
+     * ein WF gekoppelt werden, erst dadurch ergeben sich die Fktgrps").
+     * Erwartet workflow.steps.functionGroups vorgeladen (siehe Controller).
+     *
+     * @return \Illuminate\Support\Collection<int, FunctionGroup>
+     */
+    public function relevantFunctionGroups(): \Illuminate\Support\Collection
+    {
+        if (! $this->workflow) {
+            return collect();
+        }
+
+        return $this->workflow->steps->flatMap->functionGroups->unique('id')->sortBy('name')->values();
     }
 
     public static function durationUnitOptions(): array

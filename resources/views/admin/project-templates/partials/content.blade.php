@@ -45,11 +45,17 @@
                     Step 2 der Kapa-Planung (Ralf, 2026-09-18): geplante
                     Stunden je Funktionsgruppe - eigenes Formular/eigener
                     Speichern-Vorgang (sync auf die Pivot-Tabelle), nicht Teil
-                    des Haupt-Formulars oben. Fktgrp-Auswahl noch manuell,
-                    Step 3 leitet sie später aus der Workflow-Kopplung ab.
+                    des Haupt-Formulars oben. Welche Fktgrp hier auftauchen,
+                    bestimmt Step 3 (Workflow-Kopplung) - Ralf-Korrektur
+                    2026-09-18: "Zuerst muss ein WF gekoppelt werden, erst
+                    dadurch ergeben sich die Fktgrps", siehe
+                    ProjectTemplate::relevantFunctionGroups().
                 --}}
-                @if ($functionGroups->isEmpty())
-                    <p class="mt-3 border-t border-gray-100 pt-2 text-xs text-gray-400">{{ __('Noch keine Funktionsgruppen angelegt.') }}</p>
+                @php($relevantFunctionGroups = $template->relevantFunctionGroups())
+                @if (! $template->workflow_id)
+                    <p class="mt-3 border-t border-gray-100 pt-2 text-xs text-gray-400">{{ __('Erst einen Workflow koppeln, um Stunden je Funktionsgruppe zu planen.') }}</p>
+                @elseif ($relevantFunctionGroups->isEmpty())
+                    <p class="mt-3 border-t border-gray-100 pt-2 text-xs text-gray-400">{{ __('Der gekoppelte Workflow hat noch keinen Schritten Funktionsgruppen zugeordnet.') }}</p>
                 @else
                     @php($plannedHours = $template->functionGroups->mapWithKeys(fn ($fg) => [(string) $fg->id => (string) $fg->pivot->planned_hours]))
                     <form
@@ -69,7 +75,7 @@
                             </p>
                         </div>
                         <div class="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-                            @foreach ($functionGroups as $fg)
+                            @foreach ($relevantFunctionGroups as $fg)
                                 <label class="flex items-center gap-1 text-xs text-gray-600">
                                     <span class="min-w-0 flex-1 truncate" title="{{ $fg->name }}">{{ $fg->short_name }}</span>
                                     <input type="number" name="hours[{{ $fg->id }}]" x-model="hours['{{ $fg->id }}']" min="0" max="999" step="0.5" placeholder="–" class="w-16 rounded-md border-gray-300 py-0.5 text-xs">

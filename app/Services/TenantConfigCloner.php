@@ -115,12 +115,7 @@ class TenantConfigCloner
             // kopierende User im Zielmandanten hat mit der ursprünglichen
             // Erfassung nichts zu tun (gleiche Begründung wie beim
             // ausgelassenen legacy_id bei Kunden).
-            $projectTemplateMap = $this->copySimple(ProjectTemplate::class, $source->id, $target->id, [
-                'name', 'format', 'reusable_content_share', 'languages_count', 'product_maturity',
-                'product_change_delays', 'contact_availability', 'localizer_availability', 'software_share',
-                'product_complexity', 'print_variants_count', 'images_count', 'duration_value', 'duration_unit',
-                'remarks', 'active',
-            ]);
+            $projectTemplateMap = $this->copyProjectTemplates($source->id, $target->id, $workflowMap);
             $this->copyProjectTemplateFunctionGroups($target->id, $projectTemplateMap, $functionGroupMap);
 
             unset($departmentMap);
@@ -381,6 +376,48 @@ class TenantConfigCloner
                     'updated_at' => now(),
                 ]);
             });
+    }
+
+    /**
+     * Bewusst OHNE created_by_user_id/updated_by_user_id - der kopierende
+     * User im Zielmandanten hat mit der ursprünglichen Erfassung nichts zu
+     * tun (gleiche Begründung wie beim ausgelassenen legacy_id bei Kunden).
+     * workflow_id wird über $workflowMap umgemappt (Step 3, Ralf-Korrektur
+     * 2026-09-18) - deshalb eigene Methode statt copySimple(), das FKs
+     * nicht umschreiben kann.
+     *
+     * @return array<int, int> Alte Schablonen-ID => neue Schablonen-ID
+     */
+    private function copyProjectTemplates(int $sourceTenantId, int $targetTenantId, array $workflowMap): array
+    {
+        $map = [];
+
+        ProjectTemplate::query()->withoutGlobalScope('tenant')->where('tenant_id', $sourceTenantId)->get()
+            ->each(function (ProjectTemplate $row) use ($targetTenantId, $workflowMap, &$map) {
+                $new = ProjectTemplate::query()->create([
+                    'tenant_id' => $targetTenantId,
+                    'name' => $row->name,
+                    'format' => $row->format,
+                    'workflow_id' => $workflowMap[$row->workflow_id] ?? null,
+                    'reusable_content_share' => $row->reusable_content_share,
+                    'languages_count' => $row->languages_count,
+                    'product_maturity' => $row->product_maturity,
+                    'product_change_delays' => $row->product_change_delays,
+                    'contact_availability' => $row->contact_availability,
+                    'localizer_availability' => $row->localizer_availability,
+                    'software_share' => $row->software_share,
+                    'product_complexity' => $row->product_complexity,
+                    'print_variants_count' => $row->print_variants_count,
+                    'images_count' => $row->images_count,
+                    'duration_value' => $row->duration_value,
+                    'duration_unit' => $row->duration_unit,
+                    'remarks' => $row->remarks,
+                    'active' => $row->active,
+                ]);
+                $map[$row->id] = $new->id;
+            });
+
+        return $map;
     }
 
     /**
