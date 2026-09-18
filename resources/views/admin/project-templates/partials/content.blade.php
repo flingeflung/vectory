@@ -151,11 +151,22 @@
                                     {{ __('Summe') }}: <span x-text="Object.values(hours).reduce((sum, v) => sum + (parseFloat(v) || 0), 0).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })"></span> h
                                 </p>
                             </div>
+                            {{--
+                                Gestaltgesetz der Nähe (Ralf, 2026-09-18):
+                                Label und Eingabefeld gehören sichtbar
+                                zusammengefasst, nicht nur per Reihenfolge -
+                                das vorherige flex-1 auf dem Namen drückte das
+                                Feld an den rechten Zellenrand, wo es optisch
+                                näher am NÄCHSTEN Label stand als am eigenen.
+                                Eine umrandete Box je Fktgrp (statt reiner
+                                Abstands-Steuerung) macht die Zuordnung
+                                eindeutig, unabhängig von der Textlänge.
+                            --}}
                             <div class="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                                 @foreach ($relevantFunctionGroups as $fg)
-                                    <label class="flex items-center gap-1 text-xs text-gray-600">
-                                        <span class="min-w-0 flex-1 truncate" title="{{ $fg->name }}">{{ $fg->short_name }}</span>
-                                        <input type="number" name="hours[{{ $fg->id }}]" x-model="hours['{{ $fg->id }}']" min="0" max="999" step="0.5" placeholder="–" class="w-16 rounded-md border-gray-300 py-0.5 text-xs">
+                                    <label class="flex items-center justify-between gap-1 rounded-md border border-gray-200 px-1.5 py-1 text-xs text-gray-600">
+                                        <span class="min-w-0 truncate" title="{{ $fg->name }}">{{ $fg->short_name }}</span>
+                                        <input type="number" name="hours[{{ $fg->id }}]" x-model="hours['{{ $fg->id }}']" min="0" max="999" step="0.5" placeholder="–" class="w-14 shrink-0 rounded-md border-gray-300 py-0.5 text-xs">
                                     </label>
                                 @endforeach
                             </div>
