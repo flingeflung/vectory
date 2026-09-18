@@ -381,14 +381,14 @@
                                 <input type="radio" x-model="multiMode" value="add" class="mt-0.5 text-indigo-600">
                                 <span>
                                     {{ __('Hinzufügen') }}
-                                    <span class="block text-gray-400">{{ __('Die Person wird der gewählten Funktionsgruppe auf allen Projekten zugeordnet, wo sie dort noch fehlt.') }}</span>
+                                    <span class="block text-gray-400">{{ __('Die Person wird der gewählten Funktionsgruppe bei allen Projekten zugeordnet.') }}</span>
                                 </span>
                             </label>
                             <label class="flex items-start gap-1.5 text-xs text-gray-700">
                                 <input type="radio" x-model="multiMode" value="remove" class="mt-0.5 text-indigo-600">
                                 <span>
                                     {{ __('Entfernen') }}
-                                    <span class="block text-gray-400">{{ __('Die Person wird aus der gewählten Funktionsgruppe auf allen Projekten entfernt, wo sie zugeordnet ist.') }}</span>
+                                    <span class="block text-gray-400">{{ __('Die Person wird aus der gewählten Funktionsgruppe bei allen Projekten entfernt.') }}</span>
                                 </span>
                             </label>
                         </div>

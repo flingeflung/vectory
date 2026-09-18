@@ -338,8 +338,8 @@ class MultichangeFieldCatalog
             ])->all(),
             'function_groups' => $functionGroups->mapWithKeys(fn (FunctionGroup $fg) => [$fg->id => $fg->name])->all(),
             'hint' => [
-                __('Hinzufügen: Die Person wird der gewählten Funktionsgruppe auf allen Projekten zugeordnet, wo sie dort noch fehlt.'),
-                __('Entfernen: Die Person wird aus der gewählten Funktionsgruppe auf allen Projekten entfernt, wo sie zugeordnet ist.'),
+                __('Hinzufügen: Die Person wird der gewählten Funktionsgruppe bei allen Projekten zugeordnet.'),
+                __('Entfernen: Die Person wird aus der gewählten Funktionsgruppe bei allen Projekten entfernt.'),
             ],
         ]];
     }
