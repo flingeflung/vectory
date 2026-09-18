@@ -193,7 +193,7 @@
                                 @foreach ($relevantFunctionGroups as $fg)
                                     <label class="flex items-center justify-between gap-1 rounded-md border border-gray-200 px-1.5 py-1 text-xs text-gray-600">
                                         <span class="min-w-0 truncate" title="{{ $fg->name }}">{{ $fg->short_name }}</span>
-                                        <input type="number" name="hours[{{ $fg->id }}]" x-model="hours['{{ $fg->id }}']" min="0" max="999" step="0.5" placeholder="–" class="w-14 shrink-0 rounded-md border-gray-300 py-0.5 text-xs">
+                                        <input type="number" name="hours[{{ $fg->id }}]" x-model="hours['{{ $fg->id }}']" min="0" max="999" step="0.5" placeholder="–" class="w-20 shrink-0 rounded-md border-gray-300 py-0.5 text-xs">
                                     </label>
                                 @endforeach
                             </div>
