@@ -20,7 +20,18 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Siehe App\Support\Translation\Translator - behebt einen
+        // trans_choice()-Locale-Bug (Ralf-Bug-Report 2026-09-18). Per
+        // extend() statt eigenem singleton()-Rebind, weil Laravels
+        // TranslationServiceProvider deferred ist und 'translator' sonst
+        // erst beim ersten tatsaechlichen Zugriff (spaeter als register()
+        // hier) registriert wird und unseren Rebind ueberschreiben wuerde.
+        $this->app->extend('translator', function (\Illuminate\Translation\Translator $translator) {
+            $custom = new \App\Support\Translation\Translator($translator->getLoader(), $translator->getLocale());
+            $custom->setFallback($translator->getFallback());
+
+            return $custom;
+        });
     }
 
     /**
