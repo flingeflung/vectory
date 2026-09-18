@@ -28,9 +28,9 @@ class AdminNav
             ],
             __('Projekt-Konfiguration') => [
                 ['route' => 'admin.projektkategorien', 'match' => 'admin.projektkategorien*', 'label' => __('Projektkategorien')],
-                ['route' => 'admin.projektschablonen', 'match' => 'admin.projektschablonen*', 'label' => __('Projektschablonen')],
                 ['route' => 'admin.projektattribute', 'match' => 'admin.projektattribute*', 'label' => __('Projektattribute')],
                 ['route' => 'admin.projektkopie-vorlagen', 'match' => 'admin.projektkopie-vorlagen*', 'label' => __('Projektkopie-Vorlagen')],
+                ['route' => 'admin.projektschablonen', 'match' => 'admin.projektschablonen*', 'label' => __('Projektschablonen')],
                 ['route' => 'admin.maerkte', 'match' => 'admin.maerkte*', 'label' => __('Märkte')],
                 ['route' => 'admin.workflows', 'match' => 'admin.workflows*', 'label' => __('Workflows')],
                 ['route' => 'admin.checklisten', 'match' => 'admin.checklisten*', 'label' => __('Checklisten')],
