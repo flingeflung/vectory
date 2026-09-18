@@ -413,6 +413,7 @@ class Project extends Model
         return Attribute::query()
             ->where('tenant_id', $this->tenant_id)
             ->where('section', $section)
+            ->whereNotIn('key', Attribute::HIDDEN_SYSTEM_FIELDS)
             ->with('options')
             ->orderBy('sort')
             ->get();

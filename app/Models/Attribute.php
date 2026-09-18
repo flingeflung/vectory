@@ -39,6 +39,18 @@ class Attribute extends Model
     public const LABEL_EDITABLE_SYSTEM_FIELDS = ['system_model'];
 
     /**
+     * System-Felder, die als Attribute-Zeile bestehen bleiben (andere
+     * Stellen hängen daran, siehe unten), aber weder im Projekt-Detail
+     * noch in der Projektattribute-Verwaltung angezeigt werden. Ralf,
+     * 2026-09-19: "checklist" raus aus den Projektdetails+Verwaltung,
+     * "dafür haben wir ja einen eigenen Reiter" (Checklisten-Tab) - die
+     * Kopieroption "Checkliste" bei den Kopiervorlagen (ProjectCopyController,
+     * CopyTemplate::fields()) hängt aber an genau dieser Attribute-Zeile
+     * und soll laut Ralf bestehen bleiben, deshalb kein echtes Löschen.
+     */
+    public const HIDDEN_SYSTEM_FIELDS = ['checklist'];
+
+    /**
      * Feste Felder, die es schon vor der Attribut-Verwaltung gab (Ralf,
      * 2026-09-10: "frei mischbar mit Zusatzfeldern") - bekommen jetzt
      * eigene Attribute-Zeilen (system=true) statt nur einer hartkodierten

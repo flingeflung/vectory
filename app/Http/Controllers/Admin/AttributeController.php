@@ -40,7 +40,13 @@ class AttributeController extends Controller
     {
         $tenantId = CurrentTenant::id();
 
-        $allAttributes = Attribute::query()->where('tenant_id', $tenantId)->with('options')->orderBy('sort')->get();
+        // HIDDEN_SYSTEM_FIELDS bewusst ausgeschlossen (Ralf, 2026-09-19:
+        // "checklist" raus aus dieser Verwaltung, eigener Reiter dafür) -
+        // die Attribute-Zeile bleibt bestehen (siehe Docblock dort), nur
+        // hier nicht mehr auftauchen/umsortierbar.
+        $allAttributes = Attribute::query()->where('tenant_id', $tenantId)
+            ->whereNotIn('key', Attribute::HIDDEN_SYSTEM_FIELDS)
+            ->with('options')->orderBy('sort')->get();
 
         // Ralf, 2026-09-11: "wenn > 0: komplett sperren, nur für Super-Admin
         // zu löschen" - ein Admin mit noch nicht gesperrtem Zugang könnte
