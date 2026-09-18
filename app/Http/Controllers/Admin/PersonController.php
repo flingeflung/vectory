@@ -114,7 +114,14 @@ class PersonController extends Controller
         $tenantFilter = $filters['tenant_id'] ?? null;
         if ($tenantFilter === 'all') {
             $catalogTenantIds = Tenant::query()->pluck('id');
-            $catalogHomeTenantId = $tenantId;
+            // 0 statt $tenantId: bei "Alle" gibt es keinen sinnvollen
+            // "Heimat"-Bezugspunkt - sonst hätte der gerade aktive Kunde
+            // (oben rechts umschaltbar) den Zusatz "(Kundenname)" mal
+            // bekommen, mal nicht, obwohl die Liste selbst gleich bleibt
+            // (Ralf-Bug-Report 2026-09-18: "Alle" ausgewählt, trotzdem
+            // ändert sich die Beschriftung mit dem oberen Umschalter). Bei
+            // "Alle" bekommen deshalb konsequent ALLE Einträge den Zusatz.
+            $catalogHomeTenantId = 0;
         } elseif ($tenantFilter !== null) {
             $catalogTenantIds = collect([(int) $tenantFilter]);
             $catalogHomeTenantId = (int) $tenantFilter;
