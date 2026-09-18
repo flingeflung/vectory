@@ -106,6 +106,16 @@ class PersonController extends Controller
             'canSearchAllTenants' => $canSearchAllTenants,
             'tenants' => $canSearchAllTenants ? Tenant::query()->orderBy('name')->get() : collect(),
             'filters' => $filters,
+            'tenantId' => $tenantId,
+            // Ralf, 2026-09-18: "ich habe immer noch doppelte Einträge dort,
+            // die ich nicht auseinanderhalten kann" - Firma/Abteilung/
+            // Geschäftsbereich/Rechte-Set/Rolle können aus mehreren
+            // Mandanten stammen (siehe visibleTenantIds oben), Einträge mit
+            // gleichem Namen aus verschiedenen Mandanten sahen bisher
+            // identisch aus. Name eines NICHT vom aktiven Mandanten
+            // stammenden Eintrags bekommt in der View einen "(Kundenname)"-
+            // Zusatz, siehe Blade-Template.
+            'tenantNames' => Tenant::query()->whereIn('id', $visibleTenantIds)->pluck('name', 'id'),
         ]);
     }
 

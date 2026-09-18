@@ -41,7 +41,7 @@
                         <option value="">{{ __('– Alle –') }}</option>
                         <option value="none" @selected(request('company_id') === 'none')>{{ __('– nicht zugewiesen –') }}</option>
                         @foreach ($companies as $company)
-                            <option value="{{ $company->id }}" @selected(request('company_id') == $company->id)>{{ $company->name }}</option>
+                            <option value="{{ $company->id }}" @selected(request('company_id') == $company->id)>{{ $company->name }}{{ $company->tenant_id !== $tenantId ? ' ('.$tenantNames->get($company->tenant_id).')' : '' }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -54,7 +54,7 @@
                         <option value="">{{ __('– Alle –') }}</option>
                         <option value="none" @selected(request('department_id') === 'none')>{{ __('– nicht zugewiesen –') }}</option>
                         @foreach ($departments as $department)
-                            <option value="{{ $department->id }}" @selected(request('department_id') == $department->id)>{{ $department->name }}</option>
+                            <option value="{{ $department->id }}" @selected(request('department_id') == $department->id)>{{ $department->name }}{{ $department->tenant_id !== $tenantId ? ' ('.$tenantNames->get($department->tenant_id).')' : '' }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -67,7 +67,7 @@
                         <option value="">{{ __('– Alle –') }}</option>
                         <option value="none" @selected(request('business_unit_id') === 'none')>{{ __('– nicht zugewiesen –') }}</option>
                         @foreach ($businessUnits as $unit)
-                            <option value="{{ $unit->id }}" @selected(request('business_unit_id') == $unit->id)>{{ $unit->name }}</option>
+                            <option value="{{ $unit->id }}" @selected(request('business_unit_id') == $unit->id)>{{ $unit->name }}{{ $unit->tenant_id !== $tenantId ? ' ('.$tenantNames->get($unit->tenant_id).')' : '' }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -77,7 +77,7 @@
                         <option value="">{{ __('– Alle –') }}</option>
                         <option value="none" @selected(request('permission_template_id') === 'none')>{{ __('– nicht zugewiesen –') }}</option>
                         @foreach ($permissionTemplates as $template)
-                            <option value="{{ $template->id }}" @selected(request('permission_template_id') == $template->id)>{{ $template->name }}</option>
+                            <option value="{{ $template->id }}" @selected(request('permission_template_id') == $template->id)>{{ $template->name }}{{ $template->tenant_id !== $tenantId ? ' ('.$tenantNames->get($template->tenant_id).')' : '' }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -90,12 +90,12 @@
                         <option value="">{{ __('– Alle –') }}</option>
                         <option value="none" @selected(request('legacy_role_id') === 'none')>{{ __('– nicht zugewiesen –') }}</option>
                         @foreach ($legacyRoles as $role)
-                            <option value="{{ $role->id }}" @selected(request('legacy_role_id') == $role->id)>{{ $role->name }}</option>
+                            <option value="{{ $role->id }}" @selected(request('legacy_role_id') == $role->id)>{{ $role->name }}{{ $role->tenant_id !== $tenantId ? ' ('.$tenantNames->get($role->tenant_id).')' : '' }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs text-gray-500">{{ __('Typ') }}</label>
+                    <label class="block text-xs text-gray-500" title="{{ __('Login-User können sich anmelden. Kontaktpersonen haben keinen Zugang, sie sind nur zu Info-Zwecken hinterlegt (z. B. für Mail-Benachrichtigungen).') }}">{{ __('Typ') }}</label>
                     <select name="typ" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-xs">
                         <option value="">{{ __('– Alle –') }}</option>
                         <option value="login" @selected(request('typ') === 'login')>{{ __('Login-User') }}</option>
