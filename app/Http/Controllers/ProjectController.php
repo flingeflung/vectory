@@ -503,6 +503,24 @@ class ProjectController extends Controller
         ]);
     }
 
+    /**
+     * Ralf, 2026-09-19: kleiner Info-Button neben dem Projektschablone-
+     * Pulldown in den Projektdetails - zeigt die Merkmale/Stunden der
+     * gewählten Schablone rein lesend im globalen Fetch-Overlay (gleiches
+     * Prinzip wie das Projekt-Overlay selbst). Mandantengrenze kommt schon
+     * über ProjectTemplates BelongsToTenant-Scope beim Route-Model-Binding.
+     */
+    public function projectTemplateInfo(Request $request, ProjectTemplate $projectTemplate): View
+    {
+        abort_unless($request->user()->can('project.view'), 403);
+
+        $projectTemplate->loadMissing(['workflow', 'functionGroups']);
+
+        return view('projekte.partials.project-template-info', [
+            'template' => $projectTemplate,
+        ]);
+    }
+
     public function update(Request $request, Project $project): RedirectResponse|Response
     {
         abort_unless($request->user()->can('project.edit'), 403);

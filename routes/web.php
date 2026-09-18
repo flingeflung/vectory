@@ -113,6 +113,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/projekte', [ProjectController::class, 'store'])->name('projekte.store');
     Route::get('/projekte/anfrage', [ProjectController::class, 'requestForm'])->name('projekte.request-form');
     Route::post('/projekte/anfrage', [ProjectController::class, 'submitRequest'])->name('projekte.request-submit');
+    Route::get('/projekte/projektschablonen/{projectTemplate}/info', [ProjectController::class, 'projectTemplateInfo'])->name('projekte.projektschablonen.info');
     Route::get('/projekte/{project}', [ProjectController::class, 'show'])->name('projekte.show');
     Route::get('/projekte/{project}/projektbeteiligte', [ProjectController::class, 'peopleField'])->name('projekte.projektbeteiligte.show');
     Route::patch('/projekte/{project}', [ProjectController::class, 'update'])->name('projekte.update');

@@ -202,6 +202,16 @@
                 @endif
             </div>
         @endforeach
+        {{--
+            Ralf-Bug-Report, 2026-09-19: bleibt die rechte Spalte einer Zeile
+            leer (ein einzelnes schmales Feld ohne Partner, z.B. am Ende der
+            Liste), fehlte dort die Trennlinie zur Vorzeile - der leere Slot
+            wurde bisher einfach gar nicht gerendert. Leerer Füll-Div mit
+            derselben border-t schließt die Zeile optisch.
+        --}}
+        @if ($col === 1)
+            <div class="{{ $row > 0 ? 'border-t border-gray-100' : '' }}"></div>
+        @endif
         </div>
 
         </div>
@@ -253,6 +263,10 @@
                 @endif
             </div>
         @endforeach
+        {{-- siehe Kommentar bei der Stammdaten-Schleife oben --}}
+        @if ($col === 1)
+            <div class="{{ $row > 0 ? 'border-t border-gray-100' : '' }}"></div>
+        @endif
         </div>
 
         </div>

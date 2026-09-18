@@ -2920,6 +2920,46 @@
         </script>
 
         {{--
+            Ralf, 2026-09-19: Info-Button neben dem Projektschablone-Pulldown
+            in den Projektdetails - reine Anzeige, gleiches Fetch-Overlay-
+            Prinzip wie project-directory-content oben. Statischer Titel
+            (wie bei Multichange), der Schablonen-Name steht als erste Zeile
+            im geladenen Inhalt selbst.
+        --}}
+        <x-modal name="project-template-info" max-width="lg">
+            <div class="flex max-h-[85vh] flex-col">
+                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Projektschablone') }}</h3>
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-template-info' }))"
+                        class="text-gray-400 hover:text-gray-600"
+                        aria-label="{{ __('Schließen') }}"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="project-template-info-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
+                    {{ __('Lädt…') }}
+                </div>
+            </div>
+        </x-modal>
+
+        <script>
+            (function () {
+                const body = () => document.getElementById('project-template-info-body');
+
+                window.openProjectTemplateInfo = async (templateId) => {
+                    body().innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
+                    window.dispatchEvent(new CustomEvent('open-modal', { detail: 'project-template-info' }));
+                    body().innerHTML = await fetch(`/projekte/projektschablonen/${templateId}/info`).then((r) => r.text());
+                };
+            })();
+        </script>
+
+        {{--
             Projektverzeichnis anlegen - nur für ein bestehendes Projekt ohne
             Verzeichnis (siehe Ralfs Scope-Entscheidung: "Projekt neu
             anlegen" selbst ist nicht Teil dieses Features), analog Viettos
