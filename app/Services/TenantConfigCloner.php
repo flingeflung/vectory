@@ -10,6 +10,7 @@ use App\Models\FunctionGroup;
 use App\Models\LegacyRole;
 use App\Models\Market;
 use App\Models\MarketSet;
+use App\Models\ProjectTemplate;
 use App\Models\ProjectTypeMain;
 use App\Models\ProjectTypeSub;
 use App\Models\Tenant;
@@ -110,6 +111,16 @@ class TenantConfigCloner
             $workflowMap = $this->copyWorkflows($source->id, $target->id);
             $workflowStepMap = $this->copyWorkflowSteps($source->id, $target->id, $workflowMap);
             $this->copyWorkflowStepFunctionGroups($target->id, $workflowStepMap, $functionGroupMap);
+            // Bewusst OHNE created_by_user_id/updated_by_user_id - der
+            // kopierende User im Zielmandanten hat mit der ursprünglichen
+            // Erfassung nichts zu tun (gleiche Begründung wie beim
+            // ausgelassenen legacy_id bei Kunden).
+            $this->copySimple(ProjectTemplate::class, $source->id, $target->id, [
+                'name', 'format', 'reusable_content_share', 'languages_count', 'product_maturity',
+                'product_change_delays', 'contact_availability', 'localizer_availability', 'software_share',
+                'product_complexity', 'print_variants_count', 'images_count', 'duration_value', 'duration_unit',
+                'remarks', 'active',
+            ]);
 
             unset($departmentMap);
         });
@@ -126,7 +137,7 @@ class TenantConfigCloner
         $tables = [
             'departments', 'legacy_roles', 'business_units', 'function_groups',
             'markets', 'attributes', 'project_type_mains', 'project_type_subs',
-            'market_sets', 'workflows', 'workflow_steps',
+            'market_sets', 'workflows', 'workflow_steps', 'project_templates',
         ];
 
         foreach ($tables as $table) {

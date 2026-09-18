@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\PaperFormatCombinationController;
 use App\Http\Controllers\Admin\PaperFormatController;
 use App\Http\Controllers\Admin\PermissionController as AdminPermissionController;
 use App\Http\Controllers\Admin\PersonController as AdminPersonController;
+use App\Http\Controllers\Admin\ProjectTemplateController;
 use App\Http\Controllers\Admin\ProjectTypeController;
 use App\Http\Controllers\Admin\SuperAdminController;
 use App\Http\Controllers\Admin\TenantController;
@@ -223,6 +224,11 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     Route::delete('/projektkategorien/arten/{sub}', [ProjectTypeController::class, 'subDestroy'])->name('projektkategorien.arten.destroy');
     Route::post('/projektkategorien/{category}', [ProjectTypeController::class, 'mainUpdate'])->name('projektkategorien.update');
     Route::delete('/projektkategorien/{category}', [ProjectTypeController::class, 'mainDestroy'])->name('projektkategorien.destroy');
+
+    Route::get('/projektschablonen', [ProjectTemplateController::class, 'index'])->name('projektschablonen');
+    Route::post('/projektschablonen', [ProjectTemplateController::class, 'store'])->name('projektschablonen.store');
+    Route::post('/projektschablonen/{template}', [ProjectTemplateController::class, 'update'])->name('projektschablonen.update');
+    Route::delete('/projektschablonen/{template}', [ProjectTemplateController::class, 'destroy'])->name('projektschablonen.destroy');
 
     Route::get('/workflows', [WorkflowController::class, 'index'])->name('workflows');
     Route::post('/workflows', [WorkflowController::class, 'store'])->name('workflows.store');
