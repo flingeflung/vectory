@@ -4,13 +4,24 @@
         <div class="flex flex-1 min-h-0 flex-col rounded-lg border border-gray-200 bg-white">
             <div class="shrink-0 flex items-center justify-between border-b border-gray-100 p-2">
                 <span class="text-xs font-semibold text-gray-500">{{ __('Projektschablonen') }}</span>
-                <a
-                    href="{{ route('admin.projektschablonen', ['neu' => 1]) }}"
-                    onclick="return window.navigateOrConfirm(event)"
-                    class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
-                >
-                    + {{ __('Neu') }}
-                </a>
+                <div class="flex items-center gap-1">
+                    @if ($otherTenants->isNotEmpty())
+                        <button
+                            type="button"
+                            onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'projektschablonen-uebernehmen' }))"
+                            class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                        >
+                            {{ __('Von anderem Kunden holen') }}
+                        </button>
+                    @endif
+                    <a
+                        href="{{ route('admin.projektschablonen', ['neu' => 1]) }}"
+                        onclick="return window.navigateOrConfirm(event)"
+                        class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                    >
+                        + {{ __('Neu') }}
+                    </a>
+                </div>
             </div>
 
             <form method="GET" action="{{ route('admin.projektschablonen') }}" class="shrink-0 grid grid-cols-2 gap-1.5 border-b border-gray-100 p-2">
@@ -82,17 +93,33 @@
             @php($updatedByName = $template->updatedByUser?->person?->fullName() ?? $template->updatedByUser?->name)
             <div class="shrink-0 flex items-center justify-between border-b border-gray-100 p-3" x-data>
                 <div class="text-sm font-medium text-gray-900">{{ $template->name }}</div>
-                <form method="POST" action="{{ route('admin.projektschablonen.destroy', $template) }}" x-ref="deleteForm" class="hidden">
-                    @csrf
-                    @method('DELETE')
-                </form>
-                <button
-                    type="button"
-                    @click="window.deleteWithConfirm($refs.deleteForm, { message: {{ \Illuminate\Support\Js::from(__('Diese Projektschablone wirklich endgültig löschen?')) }} })"
-                    class="rounded-md border border-red-300 px-2 py-0.5 text-xs font-medium text-red-600 hover:bg-red-50"
-                >
-                    {{ __('Löschen') }}
-                </button>
+                <div class="flex items-center gap-2">
+                    <form method="POST" action="{{ route('admin.projektschablonen.duplicate', $template) }}" x-ref="duplicateForm" class="hidden">
+                        @csrf
+                    </form>
+                    <button
+                        type="button"
+                        @click="window.deleteWithConfirm($refs.duplicateForm, {
+                            title: {{ \Illuminate\Support\Js::from(__('Schablone klonen')) }},
+                            message: {{ \Illuminate\Support\Js::from(__('Legt eine vollständige Kopie dieser Schablone (inkl. Workflow-Kopplung und Stunden je Funktionsgruppe) an. Die Kopie startet inaktiv.')) }},
+                            confirmLabel: {{ \Illuminate\Support\Js::from(__('Klonen')) }},
+                        })"
+                        class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                    >
+                        {{ __('Klonen') }}
+                    </button>
+                    <form method="POST" action="{{ route('admin.projektschablonen.destroy', $template) }}" x-ref="deleteForm" class="hidden">
+                        @csrf
+                        @method('DELETE')
+                    </form>
+                    <button
+                        type="button"
+                        @click="window.deleteWithConfirm($refs.deleteForm, { message: {{ \Illuminate\Support\Js::from(__('Diese Projektschablone wirklich endgültig löschen?')) }} })"
+                        class="rounded-md border border-red-300 px-2 py-0.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                    >
+                        {{ __('Löschen') }}
+                    </button>
+                </div>
             </div>
 
             <div class="flex-1 min-h-0 overflow-y-auto p-3 space-y-4">

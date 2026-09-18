@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\ProjectTemplate;
 use App\Models\Workflow;
 use App\Support\CurrentTenant;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -81,10 +83,16 @@ class ProjectTemplateController extends Controller
         // in CLAUDE.md statt der "aktiv ODER gerade zugewiesen"-Variante.
         $workflows = Workflow::query()->where('tenant_id', $tenantId)->orderBy('sort')->orderBy('name')->get();
 
+        // Für "Von anderem Kunden holen" (Ralf, 2026-09-18) - gleiches
+        // Muster wie Papierformate: pull-basiert, nur aus Kunden erreichbar,
+        // auf die der Nutzer laut Mandanten-Umschalter sowieso Zugriff hat.
+        $otherTenants = CurrentTenant::availableTenants()->reject(fn ($t) => $t->id === $tenantId)->values();
+
         return [
             'templates' => $templates,
             'selectedTemplate' => $selectedTemplate,
             'workflows' => $workflows,
+            'otherTenants' => $otherTenants,
             'creating' => ! $selectedTemplate && $request->boolean('neu'),
         ];
     }
@@ -161,6 +169,124 @@ class ProjectTemplateController extends Controller
         $template->delete();
 
         return redirect()->route('admin.projektschablonen')->with('status', 'projektschablonen-updated');
+    }
+
+    /**
+     * "Klonen" (Ralf, 2026-09-18) - vollständige Kopie IM SELBEN Mandanten,
+     * inklusive Workflow-Kopplung und Stunden je Funktionsgruppe (die bleiben
+     * gültig, anders als beim Übernehmen von einem anderen Kunden unten).
+     * Startet inaktiv, gleiches Prinzip wie Workflow::duplicate() - "Kopie,
+     * die man erst noch durchsieht/anpasst", bevor sie in der Liste als
+     * vollwertig auftaucht.
+     */
+    public function duplicate(ProjectTemplate $template): RedirectResponse
+    {
+        abort_unless($template->tenant_id === CurrentTenant::id(), 404);
+
+        $new = DB::transaction(function () use ($template) {
+            $new = ProjectTemplate::query()->create([
+                ...$this->characteristicsData($template),
+                'tenant_id' => $template->tenant_id,
+                'name' => $template->name.' '.__('(Kopie)'),
+                'workflow_id' => $template->workflow_id,
+                'active' => false,
+                'created_by_user_id' => Auth::id(),
+            ]);
+
+            $template->functionGroups->each(fn ($fg) => $new->functionGroups()->attach($fg->id, [
+                'tenant_id' => $template->tenant_id,
+                'planned_hours' => $fg->pivot->planned_hours,
+            ]));
+
+            return $new;
+        });
+
+        return redirect()->route('admin.projektschablonen', ['schablone' => $new->id])->with('status', 'projektschablonen-updated');
+    }
+
+    /**
+     * Liefert den Schablonen-Katalog EINES anderen (erreichbaren) Kunden für
+     * den zweiten Auswahlschritt im "Von anderem Kunden holen"-Dialog (siehe
+     * View) - withoutGlobalScope('tenant'), da $sourceTenantId absichtlich
+     * NICHT der aktive Mandant ist.
+     */
+    public function catalogFromTenant(Request $request): JsonResponse
+    {
+        $source = CurrentTenant::availableTenants()->firstWhere('id', $request->integer('tenant_id'));
+        abort_if($source === null || $source->id === CurrentTenant::id(), 422);
+
+        $templates = ProjectTemplate::query()->withoutGlobalScope('tenant')
+            ->where('tenant_id', $source->id)->orderBy('name')->get();
+
+        return response()->json($templates->map(fn (ProjectTemplate $t) => [
+            'id' => $t->id,
+            'label' => $t->name.' ('.rtrim(rtrim((string) $t->duration_value, '0'), '.').' '.ProjectTemplate::durationUnitOptions()[$t->duration_unit].')',
+        ]));
+    }
+
+    /**
+     * "Von einem anderen Kunden holen" (Ralf, 2026-09-18) - pull-basiert wie
+     * bei den Papierformaten abgestimmt ("Stand im Zielkunden, Quelle
+     * wählen"), hier aber gezielt EINE einzelne Schablone statt des ganzen
+     * Katalogs (Ralfs Entscheidung: Schablonen sind fachlich zu
+     * unterschiedlich für einen Alles-oder-nichts-Import). Bewusst OHNE
+     * Workflow-Kopplung/Fktgrp-Stunden - Workflows/Funktionsgruppen
+     * unterscheiden sich je Kunde, gleiche Begründung wie bei
+     * WorkflowController::copyToTenant(). Startet inaktiv (siehe duplicate()).
+     */
+    public function importFromTenant(Request $request): RedirectResponse
+    {
+        $tenantId = CurrentTenant::id();
+        $source = CurrentTenant::availableTenants()->firstWhere('id', $request->integer('source_tenant_id'));
+        abort_if($source === null || $source->id === $tenantId, 422);
+
+        $sourceTemplate = ProjectTemplate::query()->withoutGlobalScope('tenant')
+            ->where('tenant_id', $source->id)->findOrFail($request->integer('source_template_id'));
+
+        $new = ProjectTemplate::query()->create([
+            ...$this->characteristicsData($sourceTemplate),
+            'tenant_id' => $tenantId,
+            'name' => $this->uniqueTemplateName($sourceTemplate->name, $tenantId),
+            'active' => false,
+            'created_by_user_id' => Auth::id(),
+        ]);
+
+        return redirect()->route('admin.projektschablonen', ['schablone' => $new->id])->with('status', 'projektschablonen-updated');
+    }
+
+    /**
+     * Windows-übliches Namensschema bei Kollision, gleiches Muster wie
+     * WorkflowController::uniqueWorkflowName().
+     */
+    private function uniqueTemplateName(string $name, int $tenantId): string
+    {
+        if (! ProjectTemplate::query()->where('tenant_id', $tenantId)->where('name', $name)->exists()) {
+            return $name;
+        }
+
+        $counter = 1;
+        while (ProjectTemplate::query()->where('tenant_id', $tenantId)->where('name', "{$name} ({$counter})")->exists()) {
+            $counter++;
+        }
+
+        return "{$name} ({$counter})";
+    }
+
+    /**
+     * Gemeinsame Feldliste für duplicate()/importFromTenant() - alles außer
+     * Name/Mandant/Workflow/Aktiv/Ersteller, die je nach Aufrufer variieren.
+     *
+     * @return array<string, mixed>
+     */
+    private function characteristicsData(ProjectTemplate $source): array
+    {
+        $data = ['format' => $source->format, 'duration_value' => $source->duration_value, 'duration_unit' => $source->duration_unit, 'remarks' => $source->remarks];
+
+        foreach (array_keys(ProjectTemplate::characteristicFields()) as $field) {
+            $data[$field] = $source->$field;
+        }
+
+        return $data;
     }
 
     private function validated(Request $request, int $tenantId): array
