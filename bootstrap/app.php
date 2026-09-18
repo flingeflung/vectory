@@ -33,6 +33,17 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null;
             }
 
+            // Ralf-Bug-Report, 2026-09-18: ERR_TOO_MANY_REDIRECTS - back()
+            // landete auf genau der URL, die gerade erst mit dieser
+            // Exception fehlgeschlagen ist (die "vorherige" Seite WAR die
+            // aktuelle), jeder erneute Aufruf scheiterte identisch ->
+            // Endlosschleife. Zielt "zurück" auf dieselbe URL wie die
+            // aktuelle, stattdessen zu einer garantiert ungated Startseite.
+            $target = url()->previous();
+            if ($target === $request->fullUrl()) {
+                return redirect()->route('dashboard')->with('error', $e->getMessage());
+            }
+
             return redirect()->back()->with('error', $e->getMessage());
         });
     })->create();
