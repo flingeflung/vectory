@@ -43,7 +43,16 @@
     x-show="show"
     x-cloak
     x-on:keydown.escape.window="if (show) { show = false; resolve(null); }"
-    class="fixed inset-0 z-[60] overflow-y-auto"
+    {{-- z-[1000] statt z-[60]: <x-modal> vergibt seit der Gantt-Vollbild-
+         Funktion eine gestaffelte Rangfolge (50 + Stapeltiefe*10, siehe
+         components/modal.blade.php) - bei zwei verschachtelten Fenstern
+         (z.B. Personen-Overlay + eine "verwalten"-Box darüber) übertraf das
+         den bisherigen festen Wert hier, der Lösch-Dialog öffnete sich dann
+         unsichtbar dahinter (Ralf-Bug-Report 2026-09-18: "Klick auf Löschen
+         -> nix tut sich"). Deutlich höherer fester Wert statt Nachbau der
+         Stapel-Logik, damit dieser globale Dialog immer garantiert über
+         jeder realistischen Verschachtelungstiefe liegt. --}}
+    class="fixed inset-0 z-[1000] overflow-y-auto"
     style="display: none"
 >
     <div class="flex min-h-full items-center justify-center p-4">

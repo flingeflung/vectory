@@ -27,7 +27,11 @@
     x-show="show"
     x-cloak
     x-on:keydown.escape.window="if (show) { show = false; resolve(alertOnly ? true : false); }"
-    class="fixed inset-0 z-[60] overflow-y-auto"
+    {{-- z-[1000] statt z-[60]: siehe delete-confirm-dialog.blade.php - bei
+         verschachtelten <x-modal>-Fenstern (gestaffelte Rangfolge seit der
+         Gantt-Vollbild-Funktion) landete dieser globale Dialog sonst
+         unsichtbar dahinter. --}}
+    class="fixed inset-0 z-[1000] overflow-y-auto"
     style="display: none"
 >
     <div class="flex min-h-full items-center justify-center p-4">
