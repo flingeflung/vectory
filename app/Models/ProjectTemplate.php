@@ -160,7 +160,7 @@ class ProjectTemplate extends Model
             'product_complexity' => ['label' => __('Produktkomplexität'), 'options' => self::productComplexityOptions()],
             'product_maturity' => ['label' => __('Entwicklungsstand Produkt'), 'options' => self::productMaturityOptions()],
             'software_share' => ['label' => __('Anteil Software'), 'options' => self::softwareShareOptions()],
-            'languages_count' => ['label' => __('Anzahl Märkte/Sprachen'), 'options' => self::languagesCountOptions()],
+            'languages_count' => ['label' => __('Anzahl zusätzlicher Märkte/Sprachen'), 'options' => self::languagesCountOptions()],
             'product_change_delays' => ['label' => __('Verzögerungen durch Produktänderungen'), 'options' => self::productChangeDelaysOptions()],
             'contact_availability' => ['label' => __('Verfügbarkeit Ansprechpartner (PT/PM)'), 'options' => self::contactAvailabilityOptions()],
             'localizer_availability' => ['label' => __('Verfügbarkeit Lokalisierer'), 'options' => self::localizerAvailabilityOptions()],
