@@ -278,8 +278,15 @@ class PersonController extends Controller
         // Login hat - gleiche Logik wie PermissionController::
         // assignTemplate(), hier dupliziert statt extrahiert, weil beide
         // Stellen bewusst unabhängige, kleine Aufrufer bleiben sollen.
+        // withoutGlobalScope('tenant'): das Rechte-Set gehört dem Heimat-
+        // Mandanten DER PERSON, nicht zwingend dem gerade aktiven Mandanten
+        // - Ralf-Bug-Report 2026-09-18: eigene Person gespeichert, während
+        // ein ANDERER Kunde aktiv war, PermissionTemplate::find() lieferte
+        // dadurch null (Scope filterte das Set des eigenen Mandanten weg),
+        // die Rolle fiel fälschlich auf "user" zurück - Heimat-Admin
+        // stillschweigend zum einfachen User degradiert.
         if ($person->user && $person->permission_template_id) {
-            $person->user->update(['role' => PermissionTemplate::query()->find($person->permission_template_id)?->role ?? 'user']);
+            $person->user->update(['role' => PermissionTemplate::query()->withoutGlobalScope('tenant')->find($person->permission_template_id)?->role ?? 'user']);
         }
 
         // function_group_member.tenant_id ist NOT NULL ohne Default - sync()
@@ -457,7 +464,10 @@ class PersonController extends Controller
             abort_unless($remainingSuperAdmins, 422, __('Der letzte verbliebene Super-Admin kann nicht zurückgestuft werden.'));
         }
 
-        $person->user->update(['role' => $makeSuperAdmin ? 'super_admin' : ($person->permissionTemplate?->role ?? 'user')]);
+        // withoutGlobalScope('tenant'): siehe update() oben - dieselbe
+        // Scope-Falle gilt auch hier.
+        $fallbackRole = PermissionTemplate::query()->withoutGlobalScope('tenant')->find($person->permission_template_id)?->role ?? 'user';
+        $person->user->update(['role' => $makeSuperAdmin ? 'super_admin' : $fallbackRole]);
 
         $isOverlay = $this->isOverlayRequest($request);
 

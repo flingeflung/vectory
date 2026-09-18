@@ -54,14 +54,26 @@ class Person extends Model
         return $this->hasOne(User::class);
     }
 
+    /**
+     * withoutGlobalScope('tenant') auf company/department/businessUnit/
+     * legacyRole/functionGroups (Ralf-Bug-Report 2026-09-18, mehrfach
+     * wiederholt): diese Attribute gehören immer dem HEIMAT-Mandanten DER
+     * PERSON, nicht dem gerade aktiven - ohne die Scope-Umgehung lieferten
+     * sie bei einer per Kundenzugriff sichtbaren Person je nach aktivem
+     * Mandanten leere/falsche Werte (Pulldowns leer, Häkchen fälschlich
+     * nicht gesetzt, Rolle beim Speichern stillschweigend auf "user"
+     * zurückgefallen). Gleiches Prinzip wie permissionTemplate() unten,
+     * das diese Scope-Umgehung von Anfang an schon hatte - jetzt an allen
+     * fünf Stellen konsistent statt nur einer.
+     */
     public function company(): BelongsTo
     {
-        return $this->belongsTo(Company::class);
+        return $this->belongsTo(Company::class)->withoutGlobalScope('tenant');
     }
 
     public function department(): BelongsTo
     {
-        return $this->belongsTo(Department::class);
+        return $this->belongsTo(Department::class)->withoutGlobalScope('tenant');
     }
 
     /**
@@ -71,12 +83,12 @@ class Person extends Model
      */
     public function businessUnit(): BelongsTo
     {
-        return $this->belongsTo(BusinessUnit::class);
+        return $this->belongsTo(BusinessUnit::class)->withoutGlobalScope('tenant');
     }
 
     public function legacyRole(): BelongsTo
     {
-        return $this->belongsTo(LegacyRole::class);
+        return $this->belongsTo(LegacyRole::class)->withoutGlobalScope('tenant');
     }
 
     /**
@@ -98,7 +110,7 @@ class Person extends Model
      */
     public function functionGroups(): BelongsToMany
     {
-        return $this->belongsToMany(FunctionGroup::class, 'function_group_member');
+        return $this->belongsToMany(FunctionGroup::class, 'function_group_member')->withoutGlobalScope('tenant');
     }
 
     /**

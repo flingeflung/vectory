@@ -85,7 +85,12 @@ class FunctionGroupController extends Controller
                 ->with(['department' => fn ($query) => $query->withoutGlobalScope('tenant')])
                 ->find($request->query('person'));
             if ($selectedPerson) {
-                $personGroupIds = $selectedPerson->functionGroups()->pluck('function_groups.id');
+                // withoutGlobalScope('tenant'): bei einer per Kundenzugriff
+                // sichtbaren Person gehören ihre Funktionsgruppen zu ihrem
+                // Heimat-Mandanten, nicht zum aktiven - sonst zeigten die
+                // Häkchen fälschlich "keine Gruppe zugeordnet" (gleicher
+                // Fehler wie beim Rechte-Set, siehe PersonController).
+                $personGroupIds = $selectedPerson->functionGroups()->withoutGlobalScope('tenant')->pluck('function_groups.id');
             }
         }
 
