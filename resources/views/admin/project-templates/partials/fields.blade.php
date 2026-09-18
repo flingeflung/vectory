@@ -66,6 +66,7 @@
                     'border-lime-300 bg-lime-50': colors[value] === 'lime',
                     'border-amber-300 bg-amber-50': colors[value] === 'amber',
                     'border-red-300 bg-red-50': colors[value] === 'red',
+                    'border-gray-300 bg-gray-50': colors[value] === 'gray',
                     'border-gray-300': !colors[value],
                 }"
                 class="mt-0.5 w-full rounded-md py-1 text-sm"

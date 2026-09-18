@@ -99,9 +99,18 @@ class ProjectTemplate extends Model
         ];
     }
 
+    /**
+     * Zusätzlich zu hoch/mittel/gering ein "nicht zutreffend" (Ralf,
+     * 2026-09-18) - nicht jedes Projekt braucht überhaupt eine
+     * Lokalisierung (z.B. reine Einzelmarkt-Projekte), anders als bei
+     * contactAvailabilityOptions() (PT/PM sind immer relevant).
+     */
     public static function localizerAvailabilityOptions(): array
     {
-        return self::contactAvailabilityOptions();
+        return [
+            ...self::contactAvailabilityOptions(),
+            4 => ['label' => __('nicht zutreffend'), 'color' => 'gray'],
+        ];
     }
 
     public static function softwareShareOptions(): array
