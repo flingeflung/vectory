@@ -353,29 +353,61 @@
                         {{--
                             Ralf, 2026-09-18: "Wir brauchen Projektbeteiligte
                             Personen bei MC" - Ziel ist die Funktionsgruppe
-                            (nicht das Projekt als Ganzes), zwei unabhängige
-                            Auswahlfelder (jede Person ist frei jeder Fktgrp
-                            zuordenbar, keine Kaskade wie bei Workflow-Schritt)
-                            plus eigene Hinzufügen/Entfernen-Aktion (Ralf:
-                            "mach Entfernen und Hinzufügen separat, dann kann
-                            der Benutzer selber wählen") - wiederverwendet
-                            multiMode wie beim Mehrfachauswahl-Pulldown oben,
-                            hier mit den Werten add/remove statt add/overwrite.
+                            (nicht das Projekt als Ganzes), plus eigene
+                            Hinzufügen/Entfernen-Aktion ("mach Entfernen und
+                            Hinzufügen separat, dann kann der Benutzer selber
+                            wählen") - wiederverwendet multiMode wie beim
+                            Mehrfachauswahl-Pulldown oben, hier mit den Werten
+                            add/remove statt add/overwrite.
+
+                            Ralf-Korrektur, gleicher Tag: "Das darf doch nur
+                            dort passieren, wo die Person auch Mitglied in der
+                            gewählten Funktionsgruppe ist" - Personen-Auswahl
+                            ist deshalb doch eine Kaskade (Fktgrp zuerst),
+                            aber clientseitig gefiltert statt per fetch()
+                            nachgeladen wie beim "Von anderem Kunden
+                            importieren"-Dialog: die komplette Personen-Liste
+                            + Mitgliederzuordnung je Fktgrp steckt schon im
+                            Feld (siehe MultichangeFieldCatalog), ein Wechsel
+                            der Funktionsgruppe braucht also keinen weiteren
+                            Serverkontakt. x-if statt x-show auf den
+                            <option>-Elementen (Ralf-Bug-Report vom
+                            Projektschablonen-Import-Dialog, gleicher Tag:
+                            x-show verhält sich auf <option> unzuverlässig).
                         --}}
                         <label class="block text-xs text-gray-500">{{ __('Funktionsgruppe') }}</label>
-                        <select x-model="functionGroupId" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                        <select x-model="functionGroupId" @change="value = ''" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                             <option value="">{{ __('– Funktionsgruppe wählen –') }}</option>
                             @foreach ($f['function_groups'] as $fgId => $fgName)
                                 <option value="{{ $fgId }}">{{ $fgName }}</option>
                             @endforeach
                         </select>
-                        <label class="mt-2 block text-xs text-gray-500">{{ __('Person') }}</label>
-                        <select x-model="value" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
-                            <option value="">{{ __('– Person wählen –') }}</option>
-                            @foreach ($f['options'] as $personId => $personLabel)
-                                <option value="{{ $personId }}">{{ $personLabel }}</option>
-                            @endforeach
-                        </select>
+                        <div
+                            x-data="{
+                                allPeople: {{ \Illuminate\Support\Js::from(collect($f['options'])->map(fn ($label, $id) => ['id' => (string) $id, 'label' => $label])->values()) }},
+                                functionGroupMembers: {{ \Illuminate\Support\Js::from(collect($f['function_group_members'])->map(fn ($ids) => collect($ids)->map(fn ($id) => (string) $id)->all())) }},
+                                get filteredPeople() {
+                                    const memberIds = this.functionGroupMembers[this.functionGroupId] || [];
+                                    return this.allPeople.filter((p) => memberIds.includes(p.id));
+                                },
+                            }"
+                        >
+                            <label class="mt-2 block text-xs text-gray-500">{{ __('Person') }}</label>
+                            <select x-model="value" :disabled="!functionGroupId" class="mt-0.5 w-full rounded-md border-gray-300 text-sm disabled:bg-gray-100 disabled:text-gray-400">
+                                <template x-if="!functionGroupId">
+                                    <option value="">{{ __('– zuerst Funktionsgruppe wählen –') }}</option>
+                                </template>
+                                <template x-if="functionGroupId && filteredPeople.length === 0">
+                                    <option value="">{{ __('– keine Mitglieder in dieser Funktionsgruppe –') }}</option>
+                                </template>
+                                <template x-if="functionGroupId && filteredPeople.length > 0">
+                                    <option value="">{{ __('– Person wählen –') }}</option>
+                                </template>
+                                <template x-for="p in filteredPeople" :key="p.id">
+                                    <option :value="p.id" x-text="p.label"></option>
+                                </template>
+                            </select>
+                        </div>
                         <div class="mt-2 space-y-1.5 rounded-md border border-gray-200 bg-gray-50 p-2">
                             <label class="flex items-start gap-1.5 text-xs text-gray-700">
                                 <input type="radio" x-model="multiMode" value="add" class="mt-0.5 text-indigo-600">

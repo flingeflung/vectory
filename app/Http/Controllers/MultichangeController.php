@@ -105,7 +105,7 @@ class MultichangeController extends Controller
         $this->authorizeFieldValue($request, $field, $value);
         $overwriteDifferentWorkflow = $request->boolean('overwrite_different_workflow');
         $multiMode = (string) $request->string('multi_mode') ?: 'add';
-        $functionGroupId = $this->validateFunctionGroupId($request, $field);
+        $functionGroupId = $this->validateFunctionGroupId($request, $field, $value);
         $preview = $this->buildPreview($group, $field, $value, $overwriteDifferentWorkflow, $multiMode, $functionGroupId);
         $changeRows = $this->describeChangeRows($preview, $field, $value, $multiMode, $functionGroupId);
 
@@ -152,7 +152,7 @@ class MultichangeController extends Controller
         $this->authorizeFieldValue($request, $field, $value);
         $overwriteDifferentWorkflow = $request->boolean('overwrite_different_workflow');
         $multiMode = (string) $request->string('multi_mode') ?: 'add';
-        $functionGroupId = $this->validateFunctionGroupId($request, $field);
+        $functionGroupId = $this->validateFunctionGroupId($request, $field, $value);
         $preview = $this->buildPreview($group, $field, $value, $overwriteDifferentWorkflow, $multiMode, $functionGroupId);
 
         $applied = DB::transaction(function () use ($preview, $field, $value, $multiMode, $functionGroupId) {
@@ -207,7 +207,7 @@ class MultichangeController extends Controller
      * behandlung: nur bei einem manipulierten Request erreichbar, das
      * normale Formular bietet immer nur gültige Funktionsgruppen an.
      */
-    private function validateFunctionGroupId(Request $request, array $field): ?int
+    private function validateFunctionGroupId(Request $request, array $field, mixed $value = null): ?int
     {
         if ($field['key'] !== 'project_people') {
             return null;
@@ -215,6 +215,14 @@ class MultichangeController extends Controller
 
         $id = $request->integer('function_group_id');
         abort_unless(array_key_exists($id, $field['function_groups']), 422, __('Bitte eine Funktionsgruppe auswählen.'));
+
+        // Ralf-Korrektur, 2026-09-18: "Das darf doch nur dort passieren, wo
+        // die Person auch Mitglied in der gewählten Funktionsgruppe ist" -
+        // das Formular bietet dank der Kaskade (siehe MultichangeFieldCatalog/
+        // View) ohnehin nur Mitglieder an, dieser Check ist die serverseitige
+        // Absicherung dagegen (analog zu den übrigen abort()-Checks hier).
+        $memberIds = $field['function_group_members'][$id] ?? [];
+        abort_unless(in_array((int) $value, $memberIds, true), 422, __('Diese Person ist kein Mitglied der gewählten Funktionsgruppe.'));
 
         return $id;
     }

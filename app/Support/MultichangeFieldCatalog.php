@@ -314,7 +314,17 @@ class MultichangeFieldCatalog
      */
     private static function projectPeopleField(int $tenantId): array
     {
+        // Ralf-Korrektur, 2026-09-18: "Das darf doch nur dort passieren, wo
+        // die Person auch Mitglied in der gewählten Funktionsgruppe ist" -
+        // Personen-Auswahl muss sich also nach der gewählten Funktionsgruppe
+        // richten (Kaskade wie bei 'workflow_step', nur clientseitig gefiltert
+        // statt nachgeladen - Mitgliederzahl je Fktgrp ist überschaubar).
+        // withoutGlobalScope('tenant') auf members(): auch per Kundenzugriff
+        // freigegebene DL-Mitarbeiter zählen als Mitglied, gleiches Muster
+        // wie FunctionGroupController::index() (Ralf dort: "Ich bin in der
+        // Maschinen AG. Ich kann hier gar keine TR der Fktgrp zuweisen").
         $functionGroups = FunctionGroup::query()->where('tenant_id', $tenantId)->where('active', true)
+            ->with(['members' => fn ($query) => $query->withoutGlobalScope('tenant')])
             ->orderBy('name')->get(['id', 'name']);
 
         // withoutGlobalScope + visibleInTenant: auch per Kundenzugriff
@@ -330,16 +340,26 @@ class MultichangeFieldCatalog
             'label' => __('Projektbeteiligte Personen'),
             'type' => 'project_people',
             'required' => true,
-            // Für Validierung + describeValue() - reine Personen-Liste, die
-            // Funktionsgruppe wird separat über 'function_groups' geführt/
-            // validiert (kein gemeinsamer Wert wie bei 'workflow_step').
+            // Für Validierung + describeValue() - volle Personen-Liste
+            // (Mitgliedschafts-Einschränkung läuft separat über
+            // 'function_group_members', siehe MultichangeController::
+            // validateFunctionGroupId()) - ein Wert ohne Mitgliedschaft ist
+            // damit trotzdem noch ein "echter" Personen-Wert, nur fachlich
+            // unzulässig für diese Fktgrp.
             'options' => $people->mapWithKeys(fn (Person $p) => [
                 $p->id => $p->fullName().(! $p->active ? ' [i]' : ''),
             ])->all(),
             'function_groups' => $functionGroups->mapWithKeys(fn (FunctionGroup $fg) => [$fg->id => $fg->name])->all(),
+            // Für die clientseitige Personen-Kaskade in der View (Fktgrp
+            // wählen -> nur deren Mitglieder zur Auswahl) UND für die
+            // serverseitige Mitgliedschafts-Prüfung im Controller.
+            'function_group_members' => $functionGroups->mapWithKeys(fn (FunctionGroup $fg) => [
+                $fg->id => $fg->members->pluck('id')->all(),
+            ])->all(),
             'hint' => [
                 __('Hinzufügen: Die Person wird der gewählten Funktionsgruppe bei allen Projekten zugeordnet.'),
                 __('Entfernen: Die Person wird aus der gewählten Funktionsgruppe bei allen Projekten entfernt.'),
+                __('Nur Personen, die Mitglied der gewählten Funktionsgruppe sind, stehen zur Auswahl.'),
             ],
         ]];
     }
