@@ -444,17 +444,24 @@ class PersonController extends Controller
                 'functionGroups',
                 'user', 'accessibleTenants', 'tenant',
             ]),
-            'companies' => Company::query()->where('tenant_id', $personTenantId)->orderBy('name')->get(),
-            'departments' => Department::query()->where('tenant_id', $personTenantId)->where('active', true)->orderBy('name')->get(),
-            'businessUnits' => BusinessUnit::query()->where('tenant_id', $personTenantId)->where('active', true)->orderBy('name')->get(),
-            'legacyRoles' => LegacyRole::query()->where('tenant_id', $personTenantId)->orderBy('name')->get(),
-            'permissionTemplates' => PermissionTemplate::query()->where('tenant_id', $personTenantId)->orderBy('sort')->get(),
+            // withoutGlobalScope('tenant'): $personTenantId ist der Heimat-
+            // Mandant DER PERSON, nicht zwingend der gerade aktive Mandant
+            // (z.B. beim Bearbeiten einer ausgeliehenen Person, oder wenn
+            // der eigene Heimat-Mandant vom gerade aktiven Kunden abweicht,
+            // siehe Ralf-Bug-Report 2026-09-18: Pulldowns leer, obwohl
+            // "verwalten" Einträge zeigte - das zeigte allerdings den
+            // Katalog des AKTIVEN statt des Heimat-Mandanten).
+            'companies' => Company::query()->withoutGlobalScope('tenant')->where('tenant_id', $personTenantId)->orderBy('name')->get(),
+            'departments' => Department::query()->withoutGlobalScope('tenant')->where('tenant_id', $personTenantId)->where('active', true)->orderBy('name')->get(),
+            'businessUnits' => BusinessUnit::query()->withoutGlobalScope('tenant')->where('tenant_id', $personTenantId)->where('active', true)->orderBy('name')->get(),
+            'legacyRoles' => LegacyRole::query()->withoutGlobalScope('tenant')->where('tenant_id', $personTenantId)->orderBy('name')->get(),
+            'permissionTemplates' => PermissionTemplate::query()->withoutGlobalScope('tenant')->where('tenant_id', $personTenantId)->orderBy('sort')->get(),
             // Inaktive Gruppen bleiben in der Liste, wenn die Person schon
             // Mitglied ist (gleiches Prinzip wie Abteilung/Geschäftsbereich
             // bei den vier "klitzekleinen" Verwalten-Overlays) - sonst würde
             // ein Speichern eine bestehende Mitgliedschaft in einer
             // inzwischen deaktivierten Gruppe stillschweigend entfernen.
-            'functionGroups' => FunctionGroup::query()->where('tenant_id', $personTenantId)
+            'functionGroups' => FunctionGroup::query()->withoutGlobalScope('tenant')->where('tenant_id', $personTenantId)
                 ->where(fn ($query) => $query->where('active', true)->orWhereIn('id', $person->functionGroups->pluck('id')))
                 ->orderBy('name')->get(),
             'multiTenantEnabled' => $multiTenantEnabled,
