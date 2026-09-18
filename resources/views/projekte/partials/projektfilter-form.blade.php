@@ -150,12 +150,21 @@
                                 <div class="max-h-48 overflow-y-auto rounded border border-gray-300 bg-white p-2 space-y-2">
                                     @foreach ($field['groups'] as $group)
                                         <div>
-                                            <div class="text-xs font-semibold text-gray-700">{{ $group['label'] }}</div>
+                                            <label class="flex items-center gap-1.5 text-xs font-semibold text-gray-700">
+                                                <input
+                                                    type="checkbox"
+                                                    class="rounded border-gray-300"
+                                                    title="{{ __('Alle in dieser Gruppe an-/abwählen') }}"
+                                                    onchange="this.closest('div').querySelectorAll('[data-group-option]').forEach(cb => cb.checked = this.checked)"
+                                                >
+                                                {{ $group['label'] }}
+                                            </label>
                                             <div class="mt-0.5 pl-3 space-y-0.5">
                                                 @foreach ($group['options'] as $option)
                                                     <label class="flex items-center gap-1.5 text-xs text-gray-600">
                                                         <input
                                                             type="checkbox"
+                                                            data-group-option
                                                             name="filter[{{ $field['key'] }}][]"
                                                             value="{{ $option['value'] }}"
                                                             class="rounded border-gray-300"

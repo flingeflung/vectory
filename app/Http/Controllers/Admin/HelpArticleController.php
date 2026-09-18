@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\HelpArticle;
+use App\Models\HelpArticleTranslation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -113,6 +114,25 @@ class HelpArticleController extends Controller
         }
 
         return redirect()->route('admin.hilfeseiten', ['article' => $helpArticle->id])->with('status', 'help-article-updated');
+    }
+
+    /**
+     * Vorschau des gerade bearbeiteten (noch nicht gespeicherten) Titels/
+     * Texts - Ralf: "kurz die aktuell in Bearbeitung befindliche Seite
+     * visuell testen, ohne zu Speichern". Baut ein NICHT gespeichertes
+     * HelpArticleTranslation-Objekt und lässt es durch dieselbe
+     * bodyHtml()-Logik wie einen echten Artikel laufen (Bild-Platzhalter,
+     * {Button}-Zitate, [[Verweise]] auf andere Artikel, route:-Links).
+     */
+    public function preview(Request $request): View
+    {
+        $translation = new HelpArticleTranslation([
+            'title' => (string) $request->string('title'),
+            'body' => (string) $request->string('body'),
+            'locale' => app()->getLocale(),
+        ]);
+
+        return view('help._article', ['translation' => $translation]);
     }
 
     public function destroy(HelpArticle $helpArticle): RedirectResponse

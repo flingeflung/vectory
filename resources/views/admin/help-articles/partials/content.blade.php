@@ -134,9 +134,18 @@
                     >
                         {{ __('Löschen') }}
                     </button>
-                    <button type="submit" form="help-article-form-{{ $selected->id }}" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
-                        {{ __('Speichern') }}
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onclick="window.previewHelpArticle({{ \Illuminate\Support\Js::from($selected->id) }})"
+                            class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                        >
+                            {{ __('Vorschau') }}
+                        </button>
+                        <button type="submit" form="help-article-form-{{ $selected->id }}" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
+                            {{ __('Speichern') }}
+                        </button>
+                    </div>
                 </div>
             </div>
         @else
@@ -146,3 +155,53 @@
         @endif
     </div>
 </div>
+
+{{--
+    Vorschau des gerade bearbeiteten (noch nicht gespeicherten) Titels/
+    Texts - Ralf: "kurz visuell testen, ohne zu speichern, die echte Hilfe
+    aufzurufen, das Stichwort eingeben usw." Bewusst OHNE die
+    Baum-Navigation des echten Hilfe-Panels (nicht gebraucht) - gleiche
+    Render-Logik (help._article) wie ein echter Artikel, nur mit den
+    aktuellen Formularwerten statt der gespeicherten.
+--}}
+<x-modal name="help-article-preview" max-width="lg" :draggable="true">
+    <div class="flex max-h-[80vh] flex-col">
+        <div class="flex shrink-0 cursor-move select-none items-center justify-between border-b border-gray-200 bg-gray-100 px-4 py-2" data-drag-handle title="{{ __('Ziehen zum Verschieben') }}">
+            <h2 class="text-sm font-semibold text-gray-900">{{ __('Vorschau') }}</h2>
+            <button type="button" @click="$dispatch('close-modal', 'help-article-preview')" class="text-gray-400 hover:text-gray-600" aria-label="{{ __('Schließen') }}">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <div id="help-article-preview-body" class="min-h-0 flex-1 overflow-y-auto p-4"></div>
+    </div>
+</x-modal>
+
+<script>
+    window.previewHelpArticle = async function (articleId) {
+        const form = document.getElementById('help-article-form-' + articleId);
+        const locale = Alpine.$data(form).locale;
+        const title = form.querySelector(`[name="translations[${locale}][title]"]`)?.value ?? '';
+        const body = form.querySelector(`[name="translations[${locale}][body]"]`)?.value ?? '';
+
+        const html = await fetch({{ \Illuminate\Support\Js::from(route('admin.hilfeseiten.vorschau')) }}, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': {{ \Illuminate\Support\Js::from(csrf_token()) }} },
+            body: JSON.stringify({ title, body }),
+        }).then((r) => r.text());
+
+        const previewBody = document.getElementById('help-article-preview-body');
+        previewBody.innerHTML = html;
+        // Echte Links (Tool-Seiten, extern) sollen die Vorschau nicht
+        // verlassen - sonst gehen ungespeicherte Änderungen kommentarlos
+        // verloren (Ralf: "das Risiko ist mir zu hoch"). [[Verweise]] auf
+        // andere Hilfeseiten (href="#") bleiben unangetastet, die tun in
+        // der Vorschau ohnehin nichts.
+        previewBody.querySelectorAll('a[href]:not([href="#"])').forEach((link) => {
+            link.target = '_blank';
+            link.rel = 'noopener';
+        });
+        window.dispatchEvent(new CustomEvent('open-modal', { detail: 'help-article-preview' }));
+    };
+</script>
