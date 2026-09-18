@@ -3,6 +3,8 @@
 namespace App\Support;
 
 use App\Models\Attribute;
+use App\Models\FunctionGroup;
+use App\Models\Person;
 use App\Models\ProjectNote;
 use App\Models\ProjectTypeMain;
 use App\Models\Workflow;
@@ -170,6 +172,7 @@ class MultichangeFieldCatalog
                 ],
             ],
             ...self::workflowStepField($tenantId),
+            ...self::projectPeopleField($tenantId),
             ...self::pulldownAttributeFields($tenantId),
             ...self::numberAttributeFields($tenantId),
             ...self::booleanAttributeFields($tenantId),
@@ -288,6 +291,57 @@ class MultichangeFieldCatalog
                 ],
             ],
         ];
+    }
+
+    /**
+     * Eigener Feld-Typ 'project_people' (Ralf, 2026-09-18: "Wir brauchen
+     * Projektbeteiligte Personen bei MC") - Ziel ist bewusst die
+     * FUNKTIONSGRUPPE, nicht das Projekt als Ganzes (Ralf: "Ich würde dann
+     * tatsächlich die Fktgrp als Ziel sehen"). Zwei unabhängige Werte
+     * (Funktionsgruppe + Person, kein WF-Schritt-artiger Kaskaden-Zwang -
+     * jede Person ist frei jeder Fktgrp zuordenbar) plus eigene
+     * Hinzufügen/Entfernen-Aktion (Ralf: "mach Entfernen und Hinzufügen
+     * separat, dann kann der Benutzer selber wählen") - wiederverwendet
+     * dafür denselben multi_mode-Mechanismus wie attribute_select_multiple
+     * (dort 'add'/'overwrite', hier 'add'/'remove'), siehe
+     * MultichangeController::buildPreview()/applyValue().
+     *
+     * is_primary bleibt beim Hinzufügen IMMER unangetastet (Ralf, 2026-09-18:
+     * "das ist eine nicht ganz so wichtige Sache") - eine neu hinzugefügte
+     * Person wird nie automatisch hauptverantwortlich.
+     *
+     * @return list<array{key: string, label: string, type: string, options: array<int, string>, function_groups: array<int, string>}>
+     */
+    private static function projectPeopleField(int $tenantId): array
+    {
+        $functionGroups = FunctionGroup::query()->where('tenant_id', $tenantId)->where('active', true)
+            ->orderBy('name')->get(['id', 'name']);
+
+        // withoutGlobalScope + visibleInTenant: auch per Kundenzugriff
+        // freigegebene DL-Mitarbeiter zur Auswahl, gleiches Bedürfnis wie
+        // FunctionGroupController::index() (Ralf dort: "Ich bin in der
+        // Maschinen AG. Ich kann hier gar keine TR der Fktgrp zuweisen").
+        $people = Person::query()->withoutGlobalScope('tenant')->visibleInTenant($tenantId)
+            ->orderBy('last_name')->orderBy('first_name')
+            ->get(['id', 'first_name', 'last_name', 'active']);
+
+        return [[
+            'key' => 'project_people',
+            'label' => __('Projektbeteiligte Personen'),
+            'type' => 'project_people',
+            'required' => true,
+            // Für Validierung + describeValue() - reine Personen-Liste, die
+            // Funktionsgruppe wird separat über 'function_groups' geführt/
+            // validiert (kein gemeinsamer Wert wie bei 'workflow_step').
+            'options' => $people->mapWithKeys(fn (Person $p) => [
+                $p->id => $p->fullName().(! $p->active ? ' [i]' : ''),
+            ])->all(),
+            'function_groups' => $functionGroups->mapWithKeys(fn (FunctionGroup $fg) => [$fg->id => $fg->name])->all(),
+            'hint' => [
+                __('Hinzufügen: Die Person wird der gewählten Funktionsgruppe auf allen Projekten zugeordnet, wo sie dort noch fehlt.'),
+                __('Entfernen: Die Person wird aus der gewählten Funktionsgruppe auf allen Projekten entfernt, wo sie zugeordnet ist.'),
+            ],
+        ]];
     }
 
     /**

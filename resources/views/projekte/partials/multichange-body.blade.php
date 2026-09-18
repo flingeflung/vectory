@@ -172,6 +172,7 @@
                             value: {{ \Illuminate\Support\Js::from($value) }},
                             overwrite_different_workflow: {{ $overwriteDifferentWorkflow ? 1 : 0 }},
                             multi_mode: {{ \Illuminate\Support\Js::from($multiMode ?? 'add') }},
+                            function_group_id: {{ \Illuminate\Support\Js::from((string) ($functionGroupId ?? '')) }},
                         }
                     );
                 },
@@ -179,7 +180,7 @@
         >
             <button
                 type="button"
-                onclick="window.openMultichange({{ $group->id }}, {{ \Illuminate\Support\Js::from($field['key']) }}, {{ \Illuminate\Support\Js::from($field['type'] === 'attribute_select_multiple' ? (array) $value : (string) $value) }}, {{ $overwriteDifferentWorkflow ? 'true' : 'false' }}, {{ \Illuminate\Support\Js::from($multiMode ?? 'add') }})"
+                onclick="window.openMultichange({{ $group->id }}, {{ \Illuminate\Support\Js::from($field['key']) }}, {{ \Illuminate\Support\Js::from($field['type'] === 'attribute_select_multiple' ? (array) $value : (string) $value) }}, {{ $overwriteDifferentWorkflow ? 'true' : 'false' }}, {{ \Illuminate\Support\Js::from($multiMode ?? 'add') }}, {{ \Illuminate\Support\Js::from((string) ($functionGroupId ?? '')) }})"
                 class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
             >
                 {{ __('Zurück') }}
@@ -206,6 +207,7 @@
             value: {{ \Illuminate\Support\Js::from($selectedValueIsArray ? '' : ($selectedValue ?? '')) }},
             multiValue: {{ \Illuminate\Support\Js::from($selectedValueIsArray ? $selectedValue : []) }},
             multiMode: {{ \Illuminate\Support\Js::from($selectedMultiMode ?? 'add') }},
+            functionGroupId: {{ \Illuminate\Support\Js::from((string) ($selectedFunctionGroupId ?? '')) }},
             overwrite: {{ ($selectedOverwriteDifferentWorkflow ?? false) ? 'true' : 'false' }},
             // Ralf, 2026-09-15: Mehrfachauswahl-Pulldown-Zusatzfelder
             // schicken multiValue statt value (siehe unten) - fieldTypes
@@ -214,7 +216,7 @@
             fieldTypes: {{ \Illuminate\Support\Js::from(collect($fields)->pluck('type', 'key')) }},
             get isMultiField() { return this.fieldTypes[this.field] === 'attribute_select_multiple'; },
         }"
-        @submit.prevent="window.reloadMultichange({{ \Illuminate\Support\Js::from(route('projekte.multichange.preview')) }}, { group_id: groupId, field, value: isMultiField ? multiValue : value, overwrite_different_workflow: overwrite ? 1 : 0, multi_mode: multiMode })"
+        @submit.prevent="window.reloadMultichange({{ \Illuminate\Support\Js::from(route('projekte.multichange.preview')) }}, { group_id: groupId, field, value: isMultiField ? multiValue : value, overwrite_different_workflow: overwrite ? 1 : 0, multi_mode: multiMode, function_group_id: functionGroupId })"
         class="space-y-3"
     >
         @if (isset($formErrors))
@@ -241,7 +243,7 @@
         <div x-show="groupId" x-cloak class="space-y-3 border-t border-gray-100 pt-3">
             <div>
                 <label class="block text-xs text-gray-500">{{ __('Feld') }}</label>
-                <select x-model="field" @change="value = ''; multiValue = []; multiMode = 'add'" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                <select x-model="field" @change="value = ''; multiValue = []; multiMode = 'add'; functionGroupId = ''" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                     <option value="">{{ __('– Feld wählen –') }}</option>
                     @foreach ($fields as $f)
                         <option value="{{ $f['key'] }}">{{ $f['label'] }}</option>
@@ -262,7 +264,7 @@
                             <p class="mb-1 text-xs text-amber-700">{{ $f['hint'] }}</p>
                         @endif
                     @endif
-                    @unless (in_array($f['type'], ['workflow_step', 'attribute_select_multiple'], true))
+                    @unless (in_array($f['type'], ['workflow_step', 'attribute_select_multiple', 'project_people'], true))
                         <label class="block text-xs text-gray-500">{{ __('Neuer Wert') }}</label>
                     @endunless
                     @if (in_array($f['type'], ['text', 'attribute_text'], true))
@@ -344,6 +346,49 @@
                                 <span>
                                     {{ __('Überschreiben') }}
                                     <span class="block text-gray-400">{{ __('Die bisherige Auswahl wird bei jedem Projekt komplett durch die hier gewählten Werte ersetzt.') }}</span>
+                                </span>
+                            </label>
+                        </div>
+                    @elseif ($f['type'] === 'project_people')
+                        {{--
+                            Ralf, 2026-09-18: "Wir brauchen Projektbeteiligte
+                            Personen bei MC" - Ziel ist die Funktionsgruppe
+                            (nicht das Projekt als Ganzes), zwei unabhängige
+                            Auswahlfelder (jede Person ist frei jeder Fktgrp
+                            zuordenbar, keine Kaskade wie bei Workflow-Schritt)
+                            plus eigene Hinzufügen/Entfernen-Aktion (Ralf:
+                            "mach Entfernen und Hinzufügen separat, dann kann
+                            der Benutzer selber wählen") - wiederverwendet
+                            multiMode wie beim Mehrfachauswahl-Pulldown oben,
+                            hier mit den Werten add/remove statt add/overwrite.
+                        --}}
+                        <label class="block text-xs text-gray-500">{{ __('Funktionsgruppe') }}</label>
+                        <select x-model="functionGroupId" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                            <option value="">{{ __('– Funktionsgruppe wählen –') }}</option>
+                            @foreach ($f['function_groups'] as $fgId => $fgName)
+                                <option value="{{ $fgId }}">{{ $fgName }}</option>
+                            @endforeach
+                        </select>
+                        <label class="mt-2 block text-xs text-gray-500">{{ __('Person') }}</label>
+                        <select x-model="value" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                            <option value="">{{ __('– Person wählen –') }}</option>
+                            @foreach ($f['options'] as $personId => $personLabel)
+                                <option value="{{ $personId }}">{{ $personLabel }}</option>
+                            @endforeach
+                        </select>
+                        <div class="mt-2 space-y-1.5 rounded-md border border-gray-200 bg-gray-50 p-2">
+                            <label class="flex items-start gap-1.5 text-xs text-gray-700">
+                                <input type="radio" x-model="multiMode" value="add" class="mt-0.5 text-indigo-600">
+                                <span>
+                                    {{ __('Hinzufügen') }}
+                                    <span class="block text-gray-400">{{ __('Die Person wird der gewählten Funktionsgruppe auf allen Projekten zugeordnet, wo sie dort noch fehlt.') }}</span>
+                                </span>
+                            </label>
+                            <label class="flex items-start gap-1.5 text-xs text-gray-700">
+                                <input type="radio" x-model="multiMode" value="remove" class="mt-0.5 text-indigo-600">
+                                <span>
+                                    {{ __('Entfernen') }}
+                                    <span class="block text-gray-400">{{ __('Die Person wird aus der gewählten Funktionsgruppe auf allen Projekten entfernt, wo sie zugeordnet ist.') }}</span>
                                 </span>
                             </label>
                         </div>

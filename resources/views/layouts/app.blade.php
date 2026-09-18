@@ -2842,19 +2842,21 @@
                     }
                 };
 
-                window.openMultichange = async (groupId, field, value, overwriteDifferentWorkflow, multiMode) => {
+                window.openMultichange = async (groupId, field, value, overwriteDifferentWorkflow, multiMode, functionGroupId) => {
                     multichangeBody().innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
                     window.dispatchEvent(new CustomEvent('open-modal', { detail: 'multichange' }));
-                    // field/value/overwriteDifferentWorkflow/multiMode: nur
-                    // beim "Zurück"-Klick aus der Vorschau gesetzt, damit die
-                    // Auswahl erhalten bleibt (Ralf: "werde ich bestraft und
-                    // muss nochmal von vorne beginnen").
+                    // field/value/overwriteDifferentWorkflow/multiMode/
+                    // functionGroupId: nur beim "Zurück"-Klick aus der
+                    // Vorschau gesetzt, damit die Auswahl erhalten bleibt
+                    // (Ralf: "werde ich bestraft und muss nochmal von vorne
+                    // beginnen").
                     const params = new URLSearchParams();
                     if (groupId) params.set('group_id', groupId);
                     if (field) params.set('field', field);
                     appendParam(params, 'value', value);
                     if (overwriteDifferentWorkflow) params.set('overwrite_different_workflow', '1');
                     if (multiMode) params.set('multi_mode', multiMode);
+                    if (functionGroupId) params.set('function_group_id', functionGroupId);
                     const query = params.toString() ? `?${params.toString()}` : '';
                     multichangeBody().innerHTML = await fetch(`/projekte/multichange${query}`).then((r) => r.text());
                 };
