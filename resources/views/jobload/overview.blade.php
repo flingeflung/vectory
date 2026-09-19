@@ -130,8 +130,10 @@
                         color(index) { return this.palette[index % this.palette.length]; },
                         async init() {
                             try { this.type = localStorage.getItem('jobload-evaluation-type') === 'bar' ? 'bar' : 'pie'; } catch (error) { /* ohne Web Storage: Torte */ }
-                            if (!this.$refs.canvas) return;
                             ChartClass = await window.loadChartJs();
+                            // $refs sind in init() noch nicht befüllt (Kinder werden erst danach
+                            // von Alpine initialisiert) - deshalb erst nach dem Nachladen prüfen.
+                            await new Promise((resolve) => setTimeout(resolve, 0));
                             this.render();
                         },
                         setType(type) {
