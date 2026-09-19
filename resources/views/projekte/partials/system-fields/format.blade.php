@@ -41,11 +41,11 @@
         <div class="grid grid-cols-2 gap-2">
             <div>
                 <label class="block text-xs text-gray-500">{{ __('Ausgangsformat') }}</label>
-                <input type="text" name="input_format_free_text" value="{{ old('input_format_free_text', $project->input_format_free_text) }}" placeholder="{{ __('z. B. 70 x 100 mm') }}" class="mt-0.5 w-full rounded border-gray-300 text-sm">
+                <input type="text" name="input_format_free_text" value="{{ old('input_format_free_text', $project->input_format_free_text) }}" placeholder="{{ __('z. B. 70 x 100 mm') }}" class="mt-0.5 w-full rounded border-gray-300 py-1 text-sm">
             </div>
             <div>
                 <label class="block text-xs text-gray-500">{{ __('Endformat') }}</label>
-                <input type="text" name="output_format_free_text" value="{{ old('output_format_free_text', $project->output_format_free_text) }}" placeholder="{{ __('z. B. DIN A4 hoch') }}" class="mt-0.5 w-full rounded border-gray-300 text-sm">
+                <input type="text" name="output_format_free_text" value="{{ old('output_format_free_text', $project->output_format_free_text) }}" placeholder="{{ __('z. B. DIN A4 hoch') }}" class="mt-0.5 w-full rounded border-gray-300 py-1 text-sm">
             </div>
         </div>
     @endif

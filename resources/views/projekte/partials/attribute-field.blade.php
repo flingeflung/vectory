@@ -15,7 +15,7 @@
                 name="attributes[{{ $attribute->key }}]"
                 rows="2"
                 @if ($attribute->max_length) maxlength="{{ $attribute->max_length }}" @endif
-                class="mt-0.5 w-full rounded border-gray-300 text-sm"
+                class="mt-0.5 w-full rounded border-gray-300 py-1 text-sm"
             >{{ $value }}</textarea>
             @if ($attribute->max_length)
                 <p class="mt-0.5 text-xs text-gray-400">{{ __('Max. :max Zeichen', ['max' => $attribute->max_length]) }}</p>
@@ -33,7 +33,7 @@
                 @if ($attribute->number_min !== null) min="{{ $attribute->numberMinDisplay() }}" @endif
                 @if ($attribute->number_max !== null) max="{{ $attribute->numberMaxDisplay() }}" @endif
                 step="{{ $step }}"
-                class="mt-0.5 w-full rounded border-gray-300 text-sm"
+                class="mt-0.5 w-full rounded border-gray-300 py-1 text-sm"
             >
             @if ($attribute->number_min !== null || $attribute->number_max !== null)
                 <p class="mt-0.5 text-xs text-gray-400">
@@ -49,7 +49,7 @@
             @break
 
         @case('date')
-            <input type="date" name="attributes[{{ $attribute->key }}]" value="{{ $value }}" class="mt-0.5 rounded border-gray-300 text-sm">
+            <input type="date" name="attributes[{{ $attribute->key }}]" value="{{ $value }}" class="mt-0.5 rounded border-gray-300 py-1 text-sm">
             @break
 
         @case('boolean')
@@ -62,13 +62,13 @@
 
         @case('select')
             @if ($attribute->multiple)
-                <select name="attributes[{{ $attribute->key }}][]" multiple size="{{ min(4, max(2, $attribute->options->count())) }}" class="mt-0.5 w-full rounded border-gray-300 text-sm">
+                <select name="attributes[{{ $attribute->key }}][]" multiple size="{{ min(4, max(2, $attribute->options->count())) }}" class="mt-0.5 w-full rounded border-gray-300 py-1 text-sm">
                     @foreach ($attribute->options as $option)
                         <option value="{{ $option->value }}" @selected(in_array($option->value, (array) $value, true))>{{ $option->label }}</option>
                     @endforeach
                 </select>
             @else
-                <select name="attributes[{{ $attribute->key }}]" class="mt-0.5 w-full rounded border-gray-300 text-sm">
+                <select name="attributes[{{ $attribute->key }}]" class="mt-0.5 w-full rounded border-gray-300 py-1 text-sm">
                     <option value="">{{ __('– nicht gesetzt –') }}</option>
                     @foreach ($attribute->options as $option)
                         <option value="{{ $option->value }}" @selected($value === $option->value)>{{ $option->label }}</option>
@@ -83,7 +83,7 @@
                 name="attributes[{{ $attribute->key }}]"
                 value="{{ $value }}"
                 maxlength="{{ $attribute->max_length ?? 255 }}"
-                class="mt-0.5 w-full rounded border-gray-300 text-sm"
+                class="mt-0.5 w-full rounded border-gray-300 py-1 text-sm"
             >
             @if ($attribute->max_length)
                 <p class="mt-0.5 text-xs text-gray-400">{{ __('Max. :max Zeichen', ['max' => $attribute->max_length]) }}</p>
