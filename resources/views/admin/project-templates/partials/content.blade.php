@@ -39,19 +39,38 @@
                 @endif
             </form>
 
-            <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-data x-init="$nextTick(() => $el.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' }))">
+            {{-- Ralf, 2026-09-19: Reihenfolge per Drag & Drop (Griff links), gespeichert beim Loslassen.
+                 Mit aktivem Merkmal-Filter verschiebt man nur innerhalb der sichtbaren Schablonen. --}}
+            <div
+                class="flex-1 min-h-0 overflow-y-auto p-2 text-sm"
+                x-data="{
+                    async saveOrder() {
+                        const ids = [...$el.querySelectorAll('[x-sort\\:item]')].map((el) => el.getAttribute('x-sort:item'));
+                        await fetch({{ \Illuminate\Support\Js::from(route('admin.projektschablonen.reorder')) }}, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': {{ \Illuminate\Support\Js::from(csrf_token()) }} },
+                            body: JSON.stringify({ templates: ids }),
+                        });
+                    },
+                }"
+                x-init="$nextTick(() => $el.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' }))"
+                x-sort="saveOrder()"
+            >
                 @forelse ($templates as $template)
-                    <a
-                        href="{{ route('admin.projektschablonen', ['schablone' => $template->id]) }}"
-                        onclick="return window.navigateOrConfirm(event)"
-                        @if ($selectedTemplate?->id === $template->id) data-selected @endif
-                        class="block rounded px-2 py-1.5 {{ $selectedTemplate?->id === $template->id ? 'bg-indigo-50 font-medium text-indigo-700' : 'hover:bg-gray-50' }}"
-                    >
-                        <div class="flex items-center justify-between gap-2">
-                            <span class="truncate {{ $selectedTemplate?->id === $template->id ? '' : ($template->active ? 'text-gray-700' : 'text-gray-400') }}">{{ $template->name }}{{ ! $template->active ? ' [i]' : '' }}</span>
-                            <span class="shrink-0 text-xs text-gray-400">{{ rtrim(rtrim((string) $template->duration_value, '0'), '.') }} {{ \App\Models\ProjectTemplate::durationUnitOptions()[$template->duration_unit] }}</span>
-                        </div>
-                    </a>
+                    <div x-sort:item="{{ $template->id }}" class="flex items-center gap-1 rounded {{ $selectedTemplate?->id === $template->id ? 'bg-indigo-50' : 'hover:bg-gray-50' }}">
+                        <span x-sort:handle class="cursor-move px-1 text-gray-300 hover:text-gray-500" title="{{ __('Verschieben') }}">⠿</span>
+                        <a
+                            href="{{ route('admin.projektschablonen', ['schablone' => $template->id]) }}"
+                            onclick="return window.navigateOrConfirm(event)"
+                            @if ($selectedTemplate?->id === $template->id) data-selected @endif
+                            class="block min-w-0 flex-1 rounded py-1.5 pr-2 {{ $selectedTemplate?->id === $template->id ? 'font-medium text-indigo-700' : '' }}"
+                        >
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="truncate {{ $selectedTemplate?->id === $template->id ? '' : ($template->active ? 'text-gray-700' : 'text-gray-400') }}">{{ $template->name }}{{ ! $template->active ? ' [i]' : '' }}</span>
+                                <span class="shrink-0 text-xs text-gray-400">{{ rtrim(rtrim((string) $template->duration_value, '0'), '.') }} {{ \App\Models\ProjectTemplate::durationUnitOptions()[$template->duration_unit] }}</span>
+                            </div>
+                        </a>
+                    </div>
                 @empty
                     <div class="px-2 py-1 text-gray-400">{{ __('Noch keine Projektschablonen angelegt.') }}</div>
                 @endforelse

@@ -61,12 +61,10 @@ class ProjectTemplateController extends Controller
             }
         }
 
-        // FIELD(): Wochen-Einträge vor Monate-Einträgen (gleiche Reihenfolge
-        // wie Viettos gakat.php, intDauerEinheit 1=Wochen zuerst) -
-        // alphabetisch wäre "months" fälschlich vor "weeks".
-        $templates = $query->orderByRaw("FIELD(duration_unit, 'weeks', 'months')")
-            ->orderBy('duration_value')->orderBy('name')
-            ->get();
+        // Ralf, 2026-09-19: frei per Drag & Drop sortierbar (Spalte sort). Die
+        // Startreihenfolge kam aus der früheren festen Sortierung nach Dauer
+        // (Wochen vor Monaten wie in Viettos gakat.php), siehe Migration.
+        $templates = $query->orderBy('sort')->orderBy('name')->get();
 
         // Nur für die AUSGEWÄHLTE Schablone die schwereren Relationen laden
         // (gleiches Muster wie WorkflowController: steps() nur für
@@ -121,6 +119,37 @@ class ProjectTemplateController extends Controller
         ]);
 
         return redirect()->route('admin.projektschablonen', ['schablone' => $template->id])->with('status', 'projektschablonen-updated');
+    }
+
+    /**
+     * Drag & Drop in der Liste links. Mit aktivem Merkmal-Filter kommt nur die
+     * gefilterte Teilmenge in neuer Reihenfolge an - sie tauscht dann nur die
+     * Plätze untereinander, alle nicht sichtbaren Schablonen behalten ihre
+     * Position (sonst würde ein Verschieben im Filter die übrige Reihenfolge
+     * durcheinanderbringen).
+     */
+    public function reorder(Request $request): Response
+    {
+        $tenantId = CurrentTenant::id();
+        $received = collect($request->array('templates'))->map(fn ($id) => (int) $id)->unique()->values();
+
+        $all = ProjectTemplate::query()->where('tenant_id', $tenantId)->orderBy('sort')->orderBy('name')->pluck('id');
+        $subset = $received->filter(fn ($id) => $all->contains($id))->values();
+        abort_if($subset->isEmpty(), 422);
+
+        // Plätze der Teilmenge in ihrer bisherigen Reihenfolge, neu belegt in der empfangenen Reihenfolge.
+        $queue = $subset->all();
+        // Normales Closure mit Referenz - eine Arrow-Funktion würde $queue nur kopieren
+        // und immer wieder das erste Element liefern.
+        $ordered = $all->map(function ($id) use ($subset, &$queue) {
+            return $subset->contains($id) ? array_shift($queue) : $id;
+        });
+
+        DB::transaction(function () use ($ordered, $tenantId) {
+            $ordered->each(fn ($id, $index) => ProjectTemplate::query()->where('tenant_id', $tenantId)->whereKey($id)->update(['sort' => $index + 1]));
+        });
+
+        return response()->noContent();
     }
 
     public function update(Request $request, ProjectTemplate $template): RedirectResponse

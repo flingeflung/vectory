@@ -236,6 +236,7 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     // als ID interpretiert (404, gleiche Falle wie bei Projektkategorien/Workflows).
     Route::get('/projektschablonen/fremdkatalog', [ProjectTemplateController::class, 'catalogFromTenant'])->name('projektschablonen.fremdkatalog');
     Route::post('/projektschablonen/uebernehmen', [ProjectTemplateController::class, 'importFromTenant'])->name('projektschablonen.uebernehmen');
+    Route::post('/projektschablonen/reihenfolge', [ProjectTemplateController::class, 'reorder'])->name('projektschablonen.reorder');
     Route::post('/projektschablonen/{template}', [ProjectTemplateController::class, 'update'])->name('projektschablonen.update');
     Route::post('/projektschablonen/{template}/funktionsgruppen', [ProjectTemplateController::class, 'updateFunctionGroups'])->name('projektschablonen.funktionsgruppen.update');
     Route::post('/projektschablonen/{template}/duplizieren', [ProjectTemplateController::class, 'duplicate'])->name('projektschablonen.duplicate');

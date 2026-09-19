@@ -393,7 +393,8 @@ class TenantConfigCloner
     {
         $map = [];
 
-        ProjectTemplate::query()->withoutGlobalScope('tenant')->where('tenant_id', $sourceTenantId)->get()
+        // In der Reihenfolge des Quellkunden (sort), damit die eigene Sortierung mit kopiert wird.
+        ProjectTemplate::query()->withoutGlobalScope('tenant')->where('tenant_id', $sourceTenantId)->orderBy('sort')->orderBy('id')->get()
             ->each(function (ProjectTemplate $row) use ($targetTenantId, $workflowMap, &$map) {
                 $new = ProjectTemplate::query()->create([
                     'tenant_id' => $targetTenantId,

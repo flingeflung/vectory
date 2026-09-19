@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * je Stufe, analog zu Viettos get_anteilXX()-Funktionen.
  */
 #[Fillable([
-    'tenant_id', 'name', 'format', 'workflow_id', 'reusable_content_share', 'languages_count', 'product_maturity',
+    'tenant_id', 'name', 'sort', 'format', 'workflow_id', 'reusable_content_share', 'languages_count', 'product_maturity',
     'product_change_delays', 'contact_availability', 'localizer_availability', 'software_share',
     'product_complexity', 'print_variants_count', 'images_count', 'duration_value', 'duration_unit',
     'remarks', 'active', 'created_by_user_id', 'updated_by_user_id',
@@ -28,6 +28,19 @@ class ProjectTemplate extends Model
     protected function casts(): array
     {
         return ['active' => 'boolean', 'duration_value' => 'decimal:1'];
+    }
+
+    /**
+     * Neue Schablonen (Anlegen, Klonen, Import, Kunden klonen) stehen zunächst
+     * am Ende der frei sortierbaren Liste (Ralf, 2026-09-19).
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (self $template) {
+            if (! $template->sort) {
+                $template->sort = 1 + (int) static::query()->withoutGlobalScope('tenant')->where('tenant_id', $template->tenant_id)->max('sort');
+            }
+        });
     }
 
     public function createdByUser(): BelongsTo
