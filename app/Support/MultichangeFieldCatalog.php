@@ -324,7 +324,7 @@ class MultichangeFieldCatalog
             'hint' => [
                 __('Hinzufügen: Die gewählten Märkte werden bei allen Projekten ergänzt, bestehende bleiben erhalten.'),
                 __('Entfernen: Die gewählten Märkte werden bei allen Projekten entfernt.'),
-                __('Überschreiben: Die bisherigen Märkte werden bei allen Projekten komplett durch die gewählten ersetzt.'),
+                __('Überschreiben: Bei allen Projekten werden die gespeicherten Märkte entfernt und stattdessen die gewählten gespeichert.'),
             ],
         ]];
     }

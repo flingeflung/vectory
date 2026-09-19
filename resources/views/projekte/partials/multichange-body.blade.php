@@ -402,7 +402,7 @@
                                 <input type="radio" x-model="multiMode" value="overwrite" class="mt-0.5 text-indigo-600">
                                 <span>
                                     {{ __('Überschreiben') }}
-                                    <span class="block text-gray-400">{{ __('Die bisherigen Märkte werden bei allen Projekten komplett durch die gewählten ersetzt.') }}</span>
+                                    <span class="block text-gray-400">{{ __('Bei allen Projekten werden die gespeicherten Märkte entfernt und stattdessen die gewählten gespeichert.') }}</span>
                                 </span>
                             </label>
                         </div>
