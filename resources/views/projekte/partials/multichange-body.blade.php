@@ -142,7 +142,7 @@
             aber ohne die frühere (jetzt redundante) Aufzählung.
         --}}
         @if (! empty($changeRows))
-            <div data-mc-scroll class="max-h-64 overflow-auto rounded-md border border-gray-200">
+            <div data-mc-scroll class="max-h-[min(16rem,40vh)] overflow-auto rounded-md border border-gray-200">
                 <table class="min-w-full divide-y divide-gray-200 text-xs">
                     <thead class="sticky top-0 bg-gray-50">
                         <tr>
@@ -211,8 +211,11 @@
             <div class="text-xs text-gray-400">{{ __('Keine Projekte übrig, auf die dies angewendet werden könnte.') }}</div>
         @endif
 
+        {{-- Ralf-Bug-Report, 2026-09-19: bei vielen Zeilen/kleinem Fenster rutschten die Knöpfe aus dem Sichtbereich, und die
+             (bei Fluent-Overlay-Scrollbars unsichtbare) Bildlaufleiste verriet nicht, dass man scrollen kann. Knöpfe deshalb
+             immer am unteren Rand des Dialogs festgehalten (nur der Inhalt darüber scrollt). --}}
         <div
-            class="flex gap-2"
+            class="sticky -bottom-3 z-10 -mx-4 -mb-3 flex gap-2 border-t border-gray-100 bg-white px-4 py-3"
             x-data="{
                 async apply() {
                     const ok = await window.confirmDialog({
