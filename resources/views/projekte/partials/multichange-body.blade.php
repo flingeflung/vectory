@@ -137,6 +137,13 @@
             </div>
         @endif
 
+        {{-- Ralf, 2026-09-19: Sternchen im Kurzformat der Märkte erklären (wie in den
+             Projektdetails, siehe system-fields/markets.blade.php) - sonst versteht man
+             die Kennzeichnung in der Vorschau nicht. Nur wenn wirklich eines vorkommt. --}}
+        @if (($field['key'] ?? null) === 'markets' && (str_contains($actionText, '*') || collect($changeRows ?? [])->contains(fn ($row) => str_contains($row['old'].$row['new'], '*'))))
+            <div class="text-xs text-gray-400">* {{ __('Es wird keine Übersetzung für diesen Markt durchgeführt') }}</div>
+        @endif
+
         @if (! empty($unchangedNote))
             <div class="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
                 {{ $unchangedNote }}
