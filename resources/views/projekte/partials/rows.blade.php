@@ -106,7 +106,8 @@
                     @if ($project->products->isEmpty())
                         <span class="text-gray-400">&ndash;</span>
                     @else
-                        {{ $project->products->pluck('name')->implode(', ') }}
+                        {{-- Ralf, 2026-09-19: Spalte breitenbegrenzen, viele Modelle dürfen umbrechen. --}}
+                        <div class="max-w-[14rem] whitespace-normal">{{ $project->products->pluck('name')->implode(', ') }}</div>
                     @endif
                 @elseif ($column['key'] === 'product_group_number')
                     @php $groupNumbers = $project->products->pluck('productGroup.number')->filter()->unique(); @endphp
