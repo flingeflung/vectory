@@ -75,15 +75,27 @@ class JobloadOverviewController extends Controller
 
         $filters = $request->validate([
             'year' => ['nullable', 'integer', 'between:2000,2100'],
-            'mode' => ['nullable', Rule::in(['person', 'job'])],
+            'mode' => ['nullable', Rule::in(['person', 'job', 'group'])],
             'person_id' => ['nullable', 'integer'],
             'job_id' => ['nullable', 'integer'],
+            'group_id' => ['nullable', 'integer'],
         ]);
         $year = (int) ($filters['year'] ?? CarbonImmutable::today()->isoWeekYear());
         $currentWeekKey = sprintf('%04d-W%02d', CarbonImmutable::today()->isoWeekYear(), CarbonImmutable::today()->isoWeek());
         $mode = $filters['mode'] ?? 'person';
+        // Ralf, 2026-09-19: die Auswertung nach Jobgruppen gilt über alle Stunden des
+        // Kunden - deshalb nur mit dem Recht "alle Personen + Auswertung sehen".
+        if ($mode === 'group' && ! $canViewAll) {
+            $mode = 'person';
+        }
         $start = CarbonImmutable::now()->setISODate($year, 1)->startOfWeek();
         $end = CarbonImmutable::now()->setISODate($year + 1, 1)->startOfWeek();
+
+        if ($mode === 'group') {
+            return view('jobload.overview', $this->groupEvaluation($tenantId, $start, $end, $filters['group_id'] ?? null, $hourDecimals) + [
+                'year' => $year, 'mode' => $mode, 'canViewAll' => $canViewAll,
+            ]);
+        }
 
         $people = DB::table('people')->where(function ($query) use ($tenantId, $ownPersonId) {
             $query->where('people.tenant_id', $tenantId)
@@ -193,5 +205,47 @@ class JobloadOverviewController extends Controller
             'year', 'currentWeekKey', 'mode', 'people', 'showInactive', 'personId', 'jobs', 'jobId', 'canViewAll',
             'weeks', 'monthSegments', 'rows', 'weekTotals', 'yearTotal', 'hourDecimals'
         ));
+    }
+    /**
+     * Auswertung "Nach Jobgruppen" (Ralf, 2026-09-19): alle Stunden des Kunden im
+     * Jahr. Ohne gewählte Gruppe nach Jobgruppen aufgelöst (Anteil an der
+     * Gesamtsumme), mit gewählter Gruppe nach deren Jobtypen (Anteil an der
+     * Summe dieser Gruppe).
+     *
+     * @return array<string, mixed>
+     */
+    private function groupEvaluation(int $tenantId, CarbonImmutable $start, CarbonImmutable $end, ?int $groupId, int $hourDecimals): array
+    {
+        $groups = DB::table('job_groups')->where('tenant_id', $tenantId)->orderBy('sort')->orderBy('name')->get(['id', 'name']);
+        $selectedGroup = $groupId !== null ? $groups->firstWhere('id', $groupId) : null;
+
+        $base = fn () => DB::table('job_hours')
+            ->join('job_types', 'job_types.id', '=', 'job_hours.job_type_id')
+            ->where('job_hours.tenant_id', $tenantId)
+            ->where('job_types.tenant_id', $tenantId)
+            ->where('job_hours.work_date', '>=', $start->toDateString())
+            ->where('job_hours.work_date', '<', $end->toDateString())
+            ->where('job_hours.hours', '>', 0);
+
+        $hoursByGroup = $base()->groupBy('job_types.job_group_id')
+            ->selectRaw('job_types.job_group_id as id, SUM(job_hours.hours) as hours')->pluck('hours', 'id');
+
+        if ($selectedGroup) {
+            $items = $base()->where('job_types.job_group_id', $selectedGroup->id)->groupBy('job_types.id', 'job_types.code', 'job_types.name')
+                ->selectRaw('job_types.code, job_types.name, SUM(job_hours.hours) as hours')->get()
+                ->map(fn ($row) => ['label' => ($row->code ? $row->code.' – ' : '').$row->name, 'hours' => (float) $row->hours]);
+        } else {
+            $items = $groups->map(fn ($group) => ['label' => $group->name, 'hours' => (float) ($hoursByGroup[$group->id] ?? 0)])
+                ->filter(fn ($item) => $item['hours'] > 0);
+        }
+
+        $total = (float) $items->sum('hours');
+        $items = $items->sortByDesc('hours')->values()
+            ->map(fn ($item) => $item + ['percent' => $total > 0 ? $item['hours'] / $total * 100 : 0.0]);
+
+        return [
+            'groups' => $groups, 'selectedGroup' => $selectedGroup, 'hoursByGroup' => $hoursByGroup,
+            'evaluation' => $items, 'evaluationTotal' => $total, 'hourDecimals' => $hourDecimals,
+        ];
     }
 }

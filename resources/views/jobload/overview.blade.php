@@ -9,6 +9,9 @@
                 <legend class="sr-only">{{ __('Darstellung') }}</legend>
                 <label class="flex items-center gap-1.5"><input type="radio" name="mode" value="person" onchange="window.submitJobloadOverview(this.form)" @checked($mode === 'person') class="border-gray-300 text-btn-primary">{{ __('Nach Personen') }}</label>
                 <label class="flex items-center gap-1.5"><input type="radio" name="mode" value="job" onchange="window.submitJobloadOverview(this.form)" @checked($mode === 'job') class="border-gray-300 text-btn-primary">{{ __('Nach Themen') }}</label>
+                @if ($canViewAll)
+                    <label class="flex items-center gap-1.5"><input type="radio" name="mode" value="group" onchange="window.submitJobloadOverview(this.form)" @checked($mode === 'group') class="border-gray-300 text-btn-primary">{{ __('Nach Jobgruppen') }}</label>
+                @endif
             </fieldset>
             <label class="flex items-center gap-2 text-gray-700">{{ __('Jahr') }}
                 <input type="number" name="year" value="{{ $year }}" min="2000" max="2100" onchange="window.submitJobloadOverview(this.form)" class="w-24 rounded-md border-gray-300 py-1 text-sm">
@@ -27,7 +30,7 @@
                         {{ __('Inaktive zeigen') }}
                     </label>
                 @endif
-            @else
+            @elseif ($mode === 'job')
                 <label class="flex items-center gap-2 text-gray-700">{{ __('Thema') }}
                     <select name="job_id" onchange="window.submitJobloadOverview(this.form)" class="max-w-80 rounded-md border-gray-300 py-1 text-sm">
                         <option value="" @selected($jobId === null)>{{ __('Alle Themen') }}</option>
@@ -39,6 +42,133 @@
             @endif
         </form>
 
+        @if ($mode === 'group')
+            @php
+                $fmt = fn ($hours) => number_format($hours, $hourDecimals, ',', '.');
+                $groupLink = fn ($id) => route('jobload.overview', array_filter(['mode' => 'group', 'year' => $year, 'group_id' => $id]));
+                $evalTitle = $selectedGroup?->name ?? __('Alle Jobgruppen');
+            @endphp
+            <div class="flex min-h-0 flex-1 gap-4">
+                <div class="flex w-64 shrink-0 flex-col rounded-lg border border-gray-200 bg-white">
+                    <div class="shrink-0 border-b border-gray-100 p-2 text-xs font-semibold text-gray-500">{{ __('Jobgruppen') }}</div>
+                    <div class="min-h-0 flex-1 overflow-y-auto p-2 text-sm">
+                        <a href="{{ $groupLink(null) }}" class="flex justify-between rounded px-2 py-1.5 {{ $selectedGroup === null ? 'bg-indigo-50 font-medium text-indigo-700' : 'text-gray-700 hover:bg-gray-50' }}">
+                            <span>{{ __('– Alle –') }}</span>
+                            <span class="text-xs text-gray-400 tabular-nums">{{ $fmt($hoursByGroup->sum()) }}</span>
+                        </a>
+                        @foreach ($groups as $group)
+                            <a href="{{ $groupLink($group->id) }}" class="flex justify-between gap-2 rounded px-2 py-1.5 {{ $selectedGroup?->id === $group->id ? 'bg-indigo-50 font-medium text-indigo-700' : 'text-gray-700 hover:bg-gray-50' }}">
+                                <span class="truncate">{{ $group->name }}</span>
+                                <span class="shrink-0 text-xs text-gray-400 tabular-nums">{{ $fmt($hoursByGroup[$group->id] ?? 0) }}</span>
+                            </a>
+                        @endforeach
+                    </div>
+                </div>
+
+                <div
+                    class="flex min-w-0 flex-1 flex-col rounded-lg border border-gray-200 bg-white"
+                    x-data="jobloadEvaluationChart({{ \Illuminate\Support\Js::from([
+                        'labels' => $evaluation->pluck('label'),
+                        'hours' => $evaluation->pluck('hours'),
+                        'percents' => $evaluation->pluck('percent'),
+                    ]) }})"
+                >
+                    <div class="flex shrink-0 items-center justify-between gap-2 border-b border-gray-100 p-3">
+                        <div>
+                            <div class="text-sm font-medium text-gray-900">{{ $evalTitle }} · {{ $year }}</div>
+                            <div class="text-xs text-gray-500">
+                                {{ $selectedGroup ? __('Verteilung nach Jobtypen') : __('Verteilung nach Jobgruppen') }}
+                            </div>
+                        </div>
+                        <div class="inline-flex overflow-hidden rounded-md border border-gray-300 text-xs">
+                            <button type="button" @click="setType('pie')" :class="type === 'pie' ? 'bg-btn-primary text-white' : 'bg-btn-secondary text-gray-700 hover:bg-btn-secondary-hover'" class="px-2.5 py-1 font-medium">{{ __('Torte') }}</button>
+                            <button type="button" @click="setType('bar')" :class="type === 'bar' ? 'bg-btn-primary text-white' : 'bg-btn-secondary text-gray-700 hover:bg-btn-secondary-hover'" class="border-l border-gray-300 px-2.5 py-1 font-medium">{{ __('Balken') }}</button>
+                        </div>
+                    </div>
+
+                    @if ($evaluation->isEmpty())
+                        <p class="p-6 text-sm text-gray-500">{{ __('Keine Stunden im gewählten Jahr erfasst.') }}</p>
+                    @else
+                        <div class="flex min-h-0 flex-1 flex-wrap items-start gap-6 overflow-y-auto p-4">
+                            <div class="relative h-80 min-w-64 flex-1"><canvas x-ref="canvas"></canvas></div>
+                            <table class="w-full max-w-md text-sm lg:w-auto">
+                                <thead>
+                                    <tr class="border-b border-gray-200 text-xs text-gray-500">
+                                        <th class="py-1 pr-3 text-left font-medium">{{ $selectedGroup ? __('Jobtyp') : __('Jobgruppe') }}</th>
+                                        <th class="px-3 py-1 text-right font-medium">{{ __('Stunden') }}</th>
+                                        <th class="py-1 pl-3 text-right font-medium">{{ __('Anteil') }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach ($evaluation as $index => $item)
+                                        <tr class="border-b border-gray-100">
+                                            <td class="py-1 pr-3"><span class="mr-2 inline-block h-2.5 w-2.5 rounded-sm" :style="`background-color: ${color({{ $index }})}`"></span>{{ $item['label'] }}</td>
+                                            <td class="px-3 py-1 text-right tabular-nums">{{ $fmt($item['hours']) }}</td>
+                                            <td class="py-1 pl-3 text-right tabular-nums">{{ number_format($item['percent'], 1, ',', '.') }} %</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                                <tfoot>
+                                    <tr class="font-semibold text-gray-800">
+                                        <td class="py-1 pr-3">{{ __('Summe') }}</td>
+                                        <td class="px-3 py-1 text-right tabular-nums">{{ $fmt($evaluationTotal) }}</td>
+                                        <td class="py-1 pl-3 text-right tabular-nums">100,0 %</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    @endif
+                </div>
+            </div>
+            <script>
+                document.addEventListener('alpine:init', () => {
+                    // Chart.js-Objekte bewusst außerhalb des reaktiven Alpine-Zustands
+                    // (Proxys vertragen sich schlecht mit Chart.js).
+                    Alpine.data('jobloadEvaluationChart', (data) => { let chart = null; let ChartClass = null; return ({
+                        type: 'pie',
+                        palette: ['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6', '#ec4899', '#84cc16', '#64748b'],
+                        color(index) { return this.palette[index % this.palette.length]; },
+                        async init() {
+                            try { this.type = localStorage.getItem('jobload-evaluation-type') === 'bar' ? 'bar' : 'pie'; } catch (error) { /* ohne Web Storage: Torte */ }
+                            if (!this.$refs.canvas) return;
+                            ChartClass = await window.loadChartJs();
+                            this.render();
+                        },
+                        setType(type) {
+                            this.type = type;
+                            try { localStorage.setItem('jobload-evaluation-type', type); } catch (error) { /* egal */ }
+                            this.render();
+                        },
+                        render() {
+                            if (!ChartClass || !this.$refs.canvas) return;
+                            chart?.destroy();
+                            const isPie = this.type === 'pie';
+                            const format = (value) => value.toLocaleString('de-DE', { minimumFractionDigits: {{ $hourDecimals }}, maximumFractionDigits: {{ $hourDecimals }} });
+                            chart = new ChartClass(this.$refs.canvas, {
+                                type: this.type,
+                                data: {
+                                    labels: data.labels,
+                                    datasets: [{ data: data.hours, backgroundColor: data.labels.map((_, index) => this.color(index)), borderWidth: isPie ? 1 : 0 }],
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: { display: false },
+                                        tooltip: {
+                                            callbacks: {
+                                                label: (context) => `${format(context.parsed.y ?? context.parsed)} h · ${data.percents[context.dataIndex].toLocaleString('de-DE', { maximumFractionDigits: 1 })} %`,
+                                            },
+                                        },
+                                    },
+                                    scales: isPie ? {} : { y: { beginAtZero: true, title: { display: true, text: {{ \Illuminate\Support\Js::from(__('Stunden')) }} } } },
+                                },
+                            });
+                        },
+                    }); });
+                });
+            </script>
+        @else
         <div id="jobload-overview-scroll" class="min-h-0 flex-1 overflow-auto rounded-lg border border-gray-200 bg-white">
             <table class="min-w-max border-collapse text-xs">
                 <thead class="sticky top-0 z-10 bg-gray-50 text-gray-700">
@@ -94,6 +224,7 @@
             </table>
         </div>
         <div class="shrink-0 text-xs text-gray-500">{{ trans_choice(':count Eintrag|:count Einträge', $rows->count(), ['count' => $rows->count()]) }} · {{ __('Jahressumme') }}: {{ number_format($yearTotal, $hourDecimals, ',', '.') }} {{ __('Stunden') }}</div>
+        @endif
     </div>
 
     <x-modal name="jobload-week-detail" max-width="xl" :draggable="true">
@@ -115,14 +246,14 @@
             const savedScroll = sessionStorage.getItem(jobloadScrollKey);
             if (savedScroll !== null) {
                 sessionStorage.removeItem(jobloadScrollKey);
-                requestAnimationFrame(() => { jobloadScroll.scrollLeft = Number(savedScroll) || 0; });
+                requestAnimationFrame(() => { if (jobloadScroll) jobloadScroll.scrollLeft = Number(savedScroll) || 0; });
             }
         } catch (error) {
             // Die Übersicht bleibt auch ohne Web Storage nutzbar.
         }
         window.submitJobloadOverview = function (form) {
             try {
-                sessionStorage.setItem(jobloadScrollKey, String(jobloadScroll.scrollLeft));
+                sessionStorage.setItem(jobloadScrollKey, String(jobloadScroll?.scrollLeft ?? 0));
             } catch (error) {
                 // Die Filter funktionieren auch ohne Web Storage.
             }
