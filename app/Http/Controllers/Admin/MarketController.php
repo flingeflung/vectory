@@ -182,6 +182,11 @@ class MarketController extends Controller
             $marketIds->push($market->id);
         }
 
+        // Neue Märkte kamen bisher mit der nächsten freien Nummer ans Ende -
+        // Reihenfolge nach der Vietto-Regel (DE, International, ohne, Rest
+        // alphabetisch) wiederherstellen, siehe Market::sortedForDisplay().
+        Market::renumberForTenant($tenantId);
+
         // market_set_market.tenant_id ist NOT NULL ohne Default - sync()
         // füllt Pivot-Spalten sonst nicht automatisch, deshalb explizit je
         // Zeile mitgeben (gleiches Muster wie function_group_member).

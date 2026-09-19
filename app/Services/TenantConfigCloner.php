@@ -102,6 +102,7 @@ class TenantConfigCloner
             $marketMap = $this->copySimple(Market::class, $source->id, $target->id, [
                 'country_iso', 'country_name', 'country_short_name', 'language_code', 'language_name', 'no_translation', 'sort',
             ]);
+            Market::renumberForTenant($target->id);
             $attributeMap = $this->copyAttributes($source->id, $target->id);
             $projectTypeMainMap = $this->copySimple(ProjectTypeMain::class, $source->id, $target->id, ['name', 'sort']);
 
