@@ -34,7 +34,8 @@
     @else
         <div class="mt-1 space-y-1">
             @foreach ($connections as $entry)
-                <div class="flex items-center justify-between gap-2">
+                {{-- Ralf, 2026-09-19: das × hing bei justify-between ganz rechts, weit weg vom Eintrag - jetzt direkt hinter dem Text. --}}
+                <div class="flex items-center gap-1.5">
                     <div class="min-w-0">
                         <span class="text-gray-500">{{ $entry->label }}:</span>
                         <a
@@ -46,7 +47,7 @@
                     <button
                         type="button"
                         @click="removeConnection({{ $entry->connection->id }}, {{ $project->id }})"
-                        class="shrink-0 text-gray-400 hover:text-red-600"
+                        class="shrink-0 rounded px-1 text-base leading-none text-gray-400 hover:bg-red-50 hover:text-red-600"
                         title="{{ __('Verknüpfung entfernen') }}"
                     >&times;</button>
                 </div>
