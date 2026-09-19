@@ -180,8 +180,15 @@ class JobloadOverviewController extends Controller
         // mäßig ausblenden, die aktuell gewählte und die eigene Person bleiben
         // aber immer in der Liste (sonst passt die Auswahl nicht zur Anzeige).
         $showInactive = $request->boolean('show_inactive');
-        $people = $people->filter(fn ($person) => $showInactive || $person->active
-            || (int) $person->id === $personId || (int) $person->id === $ownPersonId)->values();
+        // Ralf, 2026-09-19: Personen ohne Einträge im gewählten Jahr sind in
+        // der Auswahl sinnlos - gewählte und eigene Person bleiben trotzdem
+        // drin (Fallback, sonst passt die Auswahl nicht zur Anzeige).
+        $peopleWithEntries = DB::table('job_hours')->where('tenant_id', $tenantId)
+            ->where('work_date', '>=', $start->toDateString())
+            ->where('work_date', '<', $end->toDateString())
+            ->where('hours', '>', 0)->distinct()->pluck('person_id')->flip();
+        $people = $people->filter(fn ($person) => (int) $person->id === $personId || (int) $person->id === $ownPersonId
+            || ($peopleWithEntries->has($person->id) && ($showInactive || $person->active)))->values();
 
         return view('jobload.overview', compact(
             'year', 'currentWeekKey', 'mode', 'people', 'showInactive', 'personId', 'jobs', 'jobId', 'canViewAll',
