@@ -14,7 +14,15 @@ class DisplayFilterController extends Controller
 
         $set = $this->ownedSet($request, (int) $request->input('set_id'));
 
-        $set->update(['config' => ['columns' => $this->columnsFromRequest($request)]]);
+        // Ralf-Bug-Report, 2026-09-19: "irgendwie rutscht immer wieder der Initiator/
+        // die Bezeichnung in den Projektfilter" - config wurde hier komplett durch
+        // ['columns' => ...] ersetzt und verlor dabei die im selben Set gespeicherte
+        // Projektfilter-Feldauswahl (filter_fields) samt letzten Filterwerten
+        // (filter_values); ohne sie greift ProjectFilterCatalog::DEFAULT_ACTIVE
+        // (title, status, initiator). Nur 'columns' ersetzen, den Rest erhalten.
+        $config = $set->config;
+        $config['columns'] = $this->columnsFromRequest($request);
+        $set->update(['config' => $config]);
 
         return back()->with('status', 'display-filter-saved');
     }
@@ -28,6 +36,8 @@ class DisplayFilterController extends Controller
 
         $user = $request->user();
 
+        $previous = DisplayFilterSet::where('user_id', $user->id)->where('is_active', true)->first();
+
         DisplayFilterSet::where('user_id', $user->id)->update(['is_active' => false]);
 
         $set = DisplayFilterSet::create([
@@ -36,6 +46,7 @@ class DisplayFilterController extends Controller
             'config' => ['columns' => $this->columnsFromRequest($request)],
             'is_active' => true,
         ]);
+        $this->carryOverFilterConfig($previous, $set);
 
         return back()->with('status', 'display-filter-created')->with('newSetId', $set->id);
     }
@@ -44,8 +55,11 @@ class DisplayFilterController extends Controller
     {
         $this->authorizeOwnership($request, $displayFilterSet);
 
+        $previous = DisplayFilterSet::where('user_id', $request->user()->id)->where('is_active', true)->first();
+
         DisplayFilterSet::where('user_id', $request->user()->id)->update(['is_active' => false]);
         $displayFilterSet->update(['is_active' => true]);
+        $this->carryOverFilterConfig($previous, $displayFilterSet);
 
         return back()->with('status', 'display-filter-activated');
     }
@@ -64,10 +78,40 @@ class DisplayFilterController extends Controller
         $displayFilterSet->delete();
 
         if ($wasActive) {
-            DisplayFilterSet::where('user_id', $user->id)->oldest()->first()?->update(['is_active' => true]);
+            $next = DisplayFilterSet::where('user_id', $user->id)->oldest()->first();
+            $next?->update(['is_active' => true]);
+            $this->carryOverFilterConfig($displayFilterSet, $next);
         }
 
         return back()->with('status', 'display-filter-deleted');
+    }
+
+    /**
+     * Die Projektfilter-Feldauswahl (filter_fields) und die letzten Filterwerte
+     * (filter_values) liegen im Config des jeweils aktiven Sets (siehe
+     * ProjectFilterCatalog). Beim Anlegen/Aktivieren/Löschen eines Sets darf die
+     * Auswahl nicht verloren gehen - fehlt sie im Ziel-Set, wird sie vom bisher
+     * aktiven übernommen (ein Set, das sie schon hat, bleibt unangetastet).
+     */
+    private function carryOverFilterConfig(?DisplayFilterSet $from, ?DisplayFilterSet $to): void
+    {
+        if (! $from || ! $to || $from->is($to)) {
+            return;
+        }
+
+        $config = $to->config ?? [];
+        $changed = false;
+
+        foreach (['filter_fields', 'filter_values'] as $key) {
+            if (! array_key_exists($key, $config) && array_key_exists($key, $from->config ?? [])) {
+                $config[$key] = $from->config[$key];
+                $changed = true;
+            }
+        }
+
+        if ($changed) {
+            $to->update(['config' => $config]);
+        }
     }
 
     private function ownedSet(Request $request, int $setId): DisplayFilterSet
