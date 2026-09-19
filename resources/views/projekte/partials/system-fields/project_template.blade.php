@@ -25,6 +25,10 @@
         @foreach ($availableProjectTemplates as $template)
             <option
                 value="{{ $template->id }}"
+                {{-- @selected trotz x-model: der Snapshot der Änderungsprüfung (projectOverlayIsDirty) wird
+                     vor Alpines Initialisierung genommen - ohne serverseitig gesetzte Auswahl meldete der
+                     Dialog "Ungespeicherte Änderungen", obwohl schon gespeichert war. --}}
+                @selected((string) old('project_template_id', $project->project_template_id) === (string) $template->id)
                 @class(['text-gray-400' => ! $template->active])
             >{{ $template->name }}{{ ! $template->active ? ' [i]' : '' }}</option>
         @endforeach
