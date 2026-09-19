@@ -26,7 +26,14 @@
         x-data="{
             loading: false,
             sharing: false,
+            notice: '',
+            noticeTimer: null,
             renameValue: '',
+            showNotice(text) {
+                this.notice = text;
+                clearTimeout(this.noticeTimer);
+                this.noticeTimer = setTimeout(() => { this.notice = ''; }, 2500);
+            },
             newGroupName: '',
             async refresh() {
                 this.loading = true;
@@ -125,11 +132,26 @@
                 await this.refresh();
             },
             @if ($project)
+            {{--
+                Ralf-Bug-Report, 2026-09-19: ein Klick, bei dem sich nichts
+                sichtbar änderte (Projekt war schon Mitglied), wirkte
+                wirkungslos - jetzt sind die Buttons zustandsabhängig
+                (siehe project-group-panel.blade.php), dazu eine kurze
+                Rückmeldung. Die Übersicht dahinter wird per 'projekte-
+                refresh' aktualisiert (Verbund-Zuordnung ändert die
+                Unterprojekt-Darstellung).
+            --}}
             async addThisProject() {
-                await fetch('/projektgruppen/' + $store.projectGrouping.groupId + '/projekte/{{ $project->id }}', {
+                const response = await fetch('/projektgruppen/' + $store.projectGrouping.groupId + '/projekte/{{ $project->id }}', {
                     method: 'PUT', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
                 });
+                if (! response.ok || response.redirected) {
+                    await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Dieses Projekt ist bereits Teil eines anderen Verbunds.')) }});
+                    return;
+                }
                 await this.refresh();
+                this.showNotice({{ \Illuminate\Support\Js::from(__('Zur Gruppe hinzugefügt.')) }});
+                window.dispatchEvent(new CustomEvent('projekte-refresh'));
             },
             async removeThisProject() {
                 const response = await fetch('/projektgruppen/' + $store.projectGrouping.groupId + '/projekte/{{ $project->id }}', {
@@ -140,6 +162,8 @@
                     return;
                 }
                 await this.refresh();
+                this.showNotice({{ \Illuminate\Support\Js::from(__('Aus der Gruppe entfernt.')) }});
+                window.dispatchEvent(new CustomEvent('projekte-refresh'));
             },
             @else
             showUrl() {
@@ -255,6 +279,8 @@
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
         </div>
+
+        <div x-show="notice" x-cloak x-transition.opacity class="mx-4 mt-3 shrink-0 rounded-md border border-green-200 bg-green-50 px-3 py-1.5 text-xs text-green-800" x-text="notice"></div>
 
         <div class="min-h-0 flex-1 overflow-y-auto p-4 text-sm">
             <div id="project-group-panel-body-{{ $project?->id ?? 'uebersicht' }}">

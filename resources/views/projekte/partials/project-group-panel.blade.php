@@ -44,12 +44,30 @@
     </select>
 </div>
 
-<div x-show="$store.projectGrouping.groupId" x-cloak class="mt-3 space-y-1.5 border-t border-gray-100 pt-2 text-xs">
+<div
+    x-show="$store.projectGrouping.groupId"
+    x-cloak
     @if ($project)
-        <button type="button" @click="addThisProject()" class="block w-full rounded border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-left font-medium text-gray-700 hover:bg-btn-secondary-hover">
+        {{-- Ralf, 2026-09-19: Mitgliedschaft dieses Projekts je Gruppe (vom Server
+             beim Laden des Panels mitgegeben) - steuert Statuszeile und welche
+             der beiden Aktionen sinnvoll ist. --}}
+        x-data="{
+            memberIds: {{ \Illuminate\Support\Js::from($memberGroupIds->map(fn ($id) => (int) $id)->values()) }},
+            get isMember() { return this.memberIds.includes(Number($store.projectGrouping.groupId)); },
+        }"
+    @endif
+    class="mt-3 space-y-1.5 border-t border-gray-100 pt-2 text-xs"
+>
+    @if ($project)
+        <p
+            class="pb-0.5"
+            :class="isMember ? 'text-green-700' : 'text-gray-500'"
+            x-text="isMember ? {{ \Illuminate\Support\Js::from('✓ '.__('Dieses Projekt gehört zu dieser Gruppe.')) }} : {{ \Illuminate\Support\Js::from(__('Dieses Projekt gehört nicht zu dieser Gruppe.')) }}"
+        ></p>
+        <button type="button" @click="addThisProject()" :disabled="isMember" class="block w-full rounded border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-left font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-btn-secondary">
             {{ __('Dieses Projekt zur gewählten Gruppe hinzufügen') }}
         </button>
-        <button type="button" @click="removeThisProject()" class="block w-full rounded border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-left font-medium text-gray-700 hover:bg-btn-secondary-hover">
+        <button type="button" @click="removeThisProject()" :disabled="! isMember" class="block w-full rounded border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-left font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-btn-secondary">
             {{ __('Dieses Projekt aus gewählter Gruppe entfernen') }}
         </button>
     @else
