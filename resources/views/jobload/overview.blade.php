@@ -90,8 +90,8 @@
                         <p class="p-6 text-sm text-gray-500">{{ __('Keine Stunden im gewählten Jahr erfasst.') }}</p>
                     @else
                         <div class="flex min-h-0 flex-1 flex-wrap items-start gap-6 overflow-y-auto p-4">
-                            <div class="relative h-80 min-w-64 flex-1"><canvas x-ref="canvas"></canvas></div>
-                            <table class="w-full max-w-md text-sm lg:w-auto">
+                            <div class="relative h-80 min-w-[22rem] flex-1"><canvas x-ref="canvas"></canvas></div>
+                            <table class="min-w-[22rem] flex-1 text-sm">
                                 <thead>
                                     <tr class="border-b border-gray-200 text-xs text-gray-500">
                                         <th class="py-1 pr-3 text-left font-medium">{{ $selectedGroup ? __('Jobtyp') : __('Jobgruppe') }}</th>
@@ -102,17 +102,23 @@
                                 <tbody>
                                     @foreach ($evaluation as $index => $item)
                                         <tr class="border-b border-gray-100">
-                                            <td class="py-1 pr-3"><span class="mr-2 inline-block h-2.5 w-2.5 rounded-sm" :style="`background-color: ${color({{ $index }})}`"></span>{{ $item['label'] }}</td>
-                                            <td class="px-3 py-1 text-right tabular-nums">{{ $fmt($item['hours']) }}</td>
-                                            <td class="py-1 pl-3 text-right tabular-nums">{{ number_format($item['percent'], 1, ',', '.') }} %</td>
+                                            <td class="py-1 pr-3">
+                                                {{-- Hängender Einzug: umbrochener Text bleibt unter dem Text, nicht unter dem Farbfeld. --}}
+                                                <div class="flex items-start gap-2">
+                                                    <span class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-sm" :style="`background-color: ${color({{ $index }})}`"></span>
+                                                    <span>{{ $item['label'] }}</span>
+                                                </div>
+                                            </td>
+                                            <td class="px-3 py-1 whitespace-nowrap text-right tabular-nums">{{ $fmt($item['hours']) }}</td>
+                                            <td class="py-1 pl-3 whitespace-nowrap text-right tabular-nums">{{ number_format($item['percent'], 1, ',', '.') }} %</td>
                                         </tr>
                                     @endforeach
                                 </tbody>
                                 <tfoot>
                                     <tr class="font-semibold text-gray-800">
                                         <td class="py-1 pr-3">{{ __('Summe') }}</td>
-                                        <td class="px-3 py-1 text-right tabular-nums">{{ $fmt($evaluationTotal) }}</td>
-                                        <td class="py-1 pl-3 text-right tabular-nums">100,0 %</td>
+                                        <td class="px-3 py-1 whitespace-nowrap text-right tabular-nums">{{ $fmt($evaluationTotal) }}</td>
+                                        <td class="py-1 pl-3 whitespace-nowrap text-right tabular-nums">100,0 %</td>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -146,8 +152,44 @@
                             chart?.destroy();
                             const isPie = this.type === 'pie';
                             const format = (value) => value.toLocaleString('de-DE', { minimumFractionDigits: {{ $hourDecimals }}, maximumFractionDigits: {{ $hourDecimals }} });
+                            // Ralf, 2026-09-19: Prozentwerte direkt im Diagramm - auf den Tortenstücken
+                            // (kleine Stücke unter 4 % bleiben unbeschriftet, sonst überlappen sie),
+                            // über den Balken zusätzlich mit den Stunden. Eigenes kleines Plugin statt
+                            // eines weiteren Pakets.
+                            const valueLabels = {
+                                id: 'valueLabels',
+                                afterDatasetsDraw: (instance) => {
+                                    const ctx = instance.ctx;
+                                    instance.getDatasetMeta(0).data.forEach((element, index) => {
+                                        const percent = data.percents[index];
+                                        const percentText = percent.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' %';
+                                        ctx.save();
+                                        ctx.textAlign = 'center';
+                                        if (isPie) {
+                                            if (percent >= 4) {
+                                                const position = element.tooltipPosition();
+                                                ctx.textBaseline = 'middle';
+                                                ctx.font = 'bold 13px sans-serif';
+                                                ctx.fillStyle = '#ffffff';
+                                                ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+                                                ctx.shadowBlur = 3;
+                                                ctx.fillText(percentText, position.x, position.y);
+                                            }
+                                        } else {
+                                            ctx.textBaseline = 'bottom';
+                                            ctx.fillStyle = '#374151';
+                                            ctx.font = 'bold 12px sans-serif';
+                                            ctx.fillText(percentText, element.x, element.y - 16);
+                                            ctx.font = '11px sans-serif';
+                                            ctx.fillText(`${format(data.hours[index])} h`, element.x, element.y - 4);
+                                        }
+                                        ctx.restore();
+                                    });
+                                },
+                            };
                             chart = new ChartClass(this.$refs.canvas, {
                                 type: this.type,
+                                plugins: [valueLabels],
                                 data: {
                                     labels: data.labels,
                                     datasets: [{ data: data.hours, backgroundColor: data.labels.map((_, index) => this.color(index)), borderWidth: isPie ? 1 : 0 }],
@@ -155,6 +197,7 @@
                                 options: {
                                     responsive: true,
                                     maintainAspectRatio: false,
+                                    layout: { padding: { top: isPie ? 0 : 36 } },
                                     plugins: {
                                         legend: { display: false },
                                         tooltip: {
@@ -163,7 +206,12 @@
                                             },
                                         },
                                     },
-                                    scales: isPie ? {} : { y: { beginAtZero: true, title: { display: true, text: {{ \Illuminate\Support\Js::from(__('Stunden')) }} } } },
+                                    // Achsenbeschriftung gekürzt (volle Namen stehen in der Tabelle und im Tooltip),
+                                    // sonst drücken lange Jobtyp-Namen das Diagramm klein.
+                                    scales: isPie ? {} : {
+                                        x: { ticks: { maxRotation: 0, autoSkip: false, callback(value) { const label = this.getLabelForValue(value); return label.length > 10 ? label.slice(0, 9) + '…' : label; } } },
+                                        y: { beginAtZero: true, title: { display: true, text: {{ \Illuminate\Support\Js::from(__('Stunden')) }} } },
+                                    },
                                 },
                             });
                         },
