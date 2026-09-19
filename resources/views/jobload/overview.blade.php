@@ -17,10 +17,16 @@
                 <label class="flex items-center gap-2 text-gray-700">{{ __('Person') }}
                     <select name="person_id" onchange="window.submitJobloadOverview(this.form)" class="max-w-72 rounded-md border-gray-300 py-1 text-sm">
                         @foreach ($people as $person)
-                            <option value="{{ $person->id }}" @selected($personId === $person->id)>{{ $person->last_name }}, {{ $person->first_name }}{{ ! $person->active ? ' [i]' : '' }}</option>
+                            <option value="{{ $person->id }}" @selected($personId === $person->id) @class(['text-gray-400' => ! $person->active])>{{ $person->last_name }}, {{ $person->first_name }}{{ ! $person->active ? ' [i]' : '' }}</option>
                         @endforeach
                     </select>
                 </label>
+                @if ($canViewAll)
+                    <label class="flex items-center gap-1.5 text-gray-600">
+                        <input type="checkbox" name="show_inactive" value="1" @checked($showInactive) onchange="window.submitJobloadOverview(this.form)" class="rounded border-gray-300">
+                        {{ __('Inaktive zeigen') }}
+                    </label>
+                @endif
             @else
                 <label class="flex items-center gap-2 text-gray-700">{{ __('Thema') }}
                     <select name="job_id" onchange="window.submitJobloadOverview(this.form)" class="max-w-80 rounded-md border-gray-300 py-1 text-sm">

@@ -172,8 +172,15 @@ class JobloadOverviewController extends Controller
         }
         $rows = collect($rows)->sortBy('sort')->values();
 
+        // Übliche "Inaktive zeigen"-Umschaltung: inaktive Personen standard-
+        // mäßig ausblenden, die aktuell gewählte und die eigene Person bleiben
+        // aber immer in der Liste (sonst passt die Auswahl nicht zur Anzeige).
+        $showInactive = $request->boolean('show_inactive');
+        $people = $people->filter(fn ($person) => $showInactive || $person->active
+            || (int) $person->id === $personId || (int) $person->id === $ownPersonId)->values();
+
         return view('jobload.overview', compact(
-            'year', 'currentWeekKey', 'mode', 'people', 'personId', 'jobs', 'jobId', 'canViewAll',
+            'year', 'currentWeekKey', 'mode', 'people', 'showInactive', 'personId', 'jobs', 'jobId', 'canViewAll',
             'weeks', 'monthSegments', 'rows', 'weekTotals', 'yearTotal', 'hourDecimals'
         ));
     }
