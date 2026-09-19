@@ -112,13 +112,15 @@ class MultichangeController extends Controller
         $overwriteDifferentWorkflow = $request->boolean('overwrite_different_workflow');
         $multiMode = (string) $request->string('multi_mode') ?: 'add';
         $functionGroupId = $this->validateFunctionGroupId($request, $field, $value);
-        $preview = $this->buildPreview($group, $field, $value, $overwriteDifferentWorkflow, $multiMode, $functionGroupId);
+        $excludedIds = $this->excludedIds($request);
+        $preview = $this->buildPreview($group, $field, $value, $overwriteDifferentWorkflow, $multiMode, $functionGroupId, $excludedIds);
         $changeRows = $this->describeChangeRows($preview, $field, $value, $multiMode, $functionGroupId);
 
         return response()->view('projekte.partials.multichange-body', [
             'groups' => $this->availableGroups(),
             'fields' => $this->sortedFields(),
             'group' => $group,
+            'excludedIds' => $excludedIds,
             'preview' => $preview,
             'field' => $field,
             'value' => $value,
@@ -159,7 +161,7 @@ class MultichangeController extends Controller
         $overwriteDifferentWorkflow = $request->boolean('overwrite_different_workflow');
         $multiMode = (string) $request->string('multi_mode') ?: 'add';
         $functionGroupId = $this->validateFunctionGroupId($request, $field, $value);
-        $preview = $this->buildPreview($group, $field, $value, $overwriteDifferentWorkflow, $multiMode, $functionGroupId);
+        $preview = $this->buildPreview($group, $field, $value, $overwriteDifferentWorkflow, $multiMode, $functionGroupId, $this->excludedIds($request));
 
         $applied = DB::transaction(function () use ($preview, $field, $value, $multiMode, $functionGroupId) {
             foreach ($preview['applicable'] as $project) {
@@ -177,6 +179,7 @@ class MultichangeController extends Controller
             'fields' => $this->sortedFields(),
             'result' => [
                 'applied' => $applied,
+                'excludedCount' => $preview['excluded']->count(),
                 'skipped' => $preview['skipped'],
                 'resultText' => $this->describeResult($field, $applied),
                 'skipReason' => $this->describeSkipReason($field, $preview['skipped']->count()),
@@ -399,7 +402,7 @@ class MultichangeController extends Controller
     /**
      * @return array{applicable: Collection<int, Project>, skipped: Collection<int, Project>, unchanged: Collection<int, Project>}
      */
-    private function buildPreview(ProjectGroup $group, array $field, mixed $value, bool $overwriteDifferentWorkflow = false, string $multiMode = 'add', ?int $functionGroupId = null): array
+    private function buildPreview(ProjectGroup $group, array $field, mixed $value, bool $overwriteDifferentWorkflow = false, string $multiMode = 'add', ?int $functionGroupId = null, array $excludedIds = []): array
     {
         // Frisch aus der DB, nicht aus irgendeinem Client-Zustand übernommen -
         // die Gruppen-Mitgliedschaft kann sich zwischen Vorschau und Anwenden
@@ -531,7 +534,26 @@ class MultichangeController extends Controller
             }
         }
 
-        return ['applicable' => $applicable, 'skipped' => $skipped, 'unchanged' => $unchanged];
+        // Ralf, 2026-09-19: einzelne Projekte per Häkchen von der Änderung ausnehmen -
+        // erst NACH der fachlichen Prüfung (übersprungen/unverändert) abziehen, damit
+        // nur wirklich betroffene Projekte überhaupt ausnehmbar sind. Serverseitig
+        // durchgesetzt (auch beim Anwenden), nicht nur in der Anzeige.
+        $excluded = $applicable->filter(fn (Project $project) => in_array($project->id, $excludedIds, true))->values();
+        $applicable = $applicable->reject(fn (Project $project) => in_array($project->id, $excludedIds, true))->values();
+
+        return ['applicable' => $applicable, 'skipped' => $skipped, 'unchanged' => $unchanged, 'excluded' => $excluded];
+    }
+
+    /**
+     * Projekt-IDs, die der Nutzer in der Vorschau abgehakt hat (exclude[]=...).
+     * Nur ganze Zahlen; IDs, die gar nicht zur Gruppe gehören, sind harmlos, weil
+     * ohnehin nur Projekte der Gruppe geprüft werden.
+     *
+     * @return list<int>
+     */
+    private function excludedIds(Request $request): array
+    {
+        return collect($request->array('exclude'))->map(fn ($id) => (int) $id)->filter()->unique()->values()->all();
     }
 
     /**
@@ -1031,15 +1053,17 @@ class MultichangeController extends Controller
         // project_type_sub_id-Options-Bug oben) - union() erhält sie.
         $statusByProjectId = $preview['applicable']->mapWithKeys(fn (Project $p) => [$p->id => 'applicable'])
             ->union($preview['unchanged']->mapWithKeys(fn (Project $p) => [$p->id => 'unchanged']))
-            ->union($preview['skipped']->mapWithKeys(fn (Project $p) => [$p->id => 'skipped']));
+            ->union($preview['skipped']->mapWithKeys(fn (Project $p) => [$p->id => 'skipped']))
+            ->union($preview['excluded']->mapWithKeys(fn (Project $p) => [$p->id => 'excluded']));
 
-        $allProjects = $preview['applicable']->merge($preview['unchanged'])->merge($preview['skipped'])
+        $allProjects = $preview['applicable']->merge($preview['unchanged'])->merge($preview['skipped'])->merge($preview['excluded'])
             ->sortBy('source_pn')->values();
 
         return $allProjects->map(function (Project $project) use ($statusByProjectId, $field, $value, $multiMode, $functionGroupId) {
             $status = $statusByProjectId[$project->id];
 
             return [
+                'id' => $project->id,
                 'pn' => $project->source_pn,
                 'title' => $project->title,
                 'status' => $status,
@@ -1061,6 +1085,10 @@ class MultichangeController extends Controller
      */
     private function describeExclusionNote(array $field, string $status, string $multiMode = 'add'): string
     {
+        if ($status === 'excluded') {
+            return __('Wird nicht geändert: von Ihnen ausgenommen.');
+        }
+
         if ($status === 'unchanged') {
             if ($field['key'] === 'markets') {
                 return match ($multiMode) {

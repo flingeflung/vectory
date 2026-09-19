@@ -24,6 +24,12 @@
             </div>
         @endif
 
+        @if (! empty($result['excludedCount']))
+            <div class="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                {{ trans_choice(':count Projekt wurde von Ihnen ausgenommen und nicht geändert.|:count Projekte wurden von Ihnen ausgenommen und nicht geändert.', $result['excludedCount'], ['count' => $result['excludedCount']]) }}
+            </div>
+        @endif
+
         @if ($result['skipped']->isNotEmpty())
             <div class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
                 <div class="flex items-center justify-between gap-2">
@@ -63,7 +69,40 @@
         </button>
     </div>
 @elseif (isset($preview))
-    <div class="space-y-3">
+    {{--
+        Ralf, 2026-09-19: "eine Checkbox je Projekt ... Nur alle angehakten werden bei
+        Anwenden auch wirklich geändert ... Beim An- und Abhaken muss die Prüfung
+        neu erfolgen." - excluded = abgehakte (ausgenommene) Projekt-IDs. Jedes
+        Umschalten fragt die Vorschau serverseitig neu an (dort laufen die fachlichen
+        Prüfungen), "Anwenden" schickt dieselbe Liste mit. Scrollposition der
+        Tabelle bleibt erhalten.
+    --}}
+    <div
+        class="space-y-3"
+        x-data="{
+            excluded: {{ \Illuminate\Support\Js::from($excludedIds ?? []) }},
+            async toggle(id, checked) {
+                // Beide Scrollpositionen merken: die Tabellen-Box UND den ganzen Dialog-Inhalt -
+                // sonst finge man nach jeder Änderung wieder oben an zu scrollen.
+                const tableTop = document.querySelector('[data-mc-scroll]')?.scrollTop ?? 0;
+                const bodyTop = document.getElementById('multichange-body')?.scrollTop ?? 0;
+                this.excluded = checked ? this.excluded.filter((x) => x !== id) : [...this.excluded, id];
+                await window.reloadMultichange({{ \Illuminate\Support\Js::from(route('projekte.multichange.preview')) }}, {
+                    group_id: {{ $group->id }},
+                    field: {{ \Illuminate\Support\Js::from($field['key']) }},
+                    value: {{ \Illuminate\Support\Js::from($value) }},
+                    overwrite_different_workflow: {{ $overwriteDifferentWorkflow ? 1 : 0 }},
+                    multi_mode: {{ \Illuminate\Support\Js::from($multiMode ?? 'add') }},
+                    function_group_id: {{ \Illuminate\Support\Js::from((string) ($functionGroupId ?? '')) }},
+                    exclude: this.excluded,
+                });
+                const box = document.querySelector('[data-mc-scroll]');
+                if (box) box.scrollTop = tableTop;
+                const body = document.getElementById('multichange-body');
+                if (body) body.scrollTop = bodyTop;
+            },
+        }"
+    >
         <div class="text-xs text-gray-400">{{ __('Gruppe: :name', ['name' => $group->name]) }}</div>
 
         <div class="text-gray-700">
@@ -72,7 +111,7 @@
 
         @php
             $applicableCount = $preview['applicable']->count();
-            $totalCount = $applicableCount + $preview['skipped']->count() + $preview['unchanged']->count();
+            $totalCount = $applicableCount + $preview['skipped']->count() + $preview['unchanged']->count() + $preview['excluded']->count();
         @endphp
         <div class="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 font-medium text-gray-700">
             {{ trans_choice(
@@ -103,10 +142,11 @@
             aber ohne die frühere (jetzt redundante) Aufzählung.
         --}}
         @if (! empty($changeRows))
-            <div class="max-h-64 overflow-auto rounded-md border border-gray-200">
+            <div data-mc-scroll class="max-h-64 overflow-auto rounded-md border border-gray-200">
                 <table class="min-w-full divide-y divide-gray-200 text-xs">
                     <thead class="sticky top-0 bg-gray-50">
                         <tr>
+                            <th class="w-8 px-2 py-1.5" title="{{ __('Angehakte Projekte werden geändert') }}"></th>
                             <th class="px-2 py-1.5 text-left font-medium text-gray-500">{{ __('Projekt') }}</th>
                             <th class="px-2 py-1.5 text-left font-medium text-gray-500">{{ __('Alter Wert') }}</th>
                             <th class="px-2 py-1.5 text-left font-medium text-gray-500">{{ __('Neuer Wert') }}</th>
@@ -125,7 +165,18 @@
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         @foreach ($changeRows as $row)
-                            <tr @class(['bg-gray-50' => $row['status'] === 'unchanged', 'bg-amber-50' => $row['status'] === 'skipped'])>
+                            <tr @class(['bg-gray-50' => in_array($row['status'], ['unchanged', 'excluded'], true), 'bg-amber-50' => $row['status'] === 'skipped'])>
+                                <td class="px-2 py-1.5 align-top">
+                                    {{-- Nur betroffene Projekte lassen sich an-/abhaken; übersprungene/unveränderte werden ohnehin nicht geändert. --}}
+                                    <input
+                                        type="checkbox"
+                                        class="rounded border-gray-300 text-indigo-600 disabled:opacity-40"
+                                        @checked($row['status'] === 'applicable')
+                                        @disabled(! in_array($row['status'], ['applicable', 'excluded'], true))
+                                        @change="toggle({{ $row['id'] }}, $event.target.checked)"
+                                        title="{{ in_array($row['status'], ['applicable', 'excluded'], true) ? __('Angehakt: Projekt wird geändert') : __('Wird ohnehin nicht geändert') }}"
+                                    >
+                                </td>
                                 <td class="px-2 py-1.5 align-top {{ $row['status'] === 'applicable' ? 'text-gray-700' : 'text-gray-400' }}">{{ $row['pn'] }} – {{ $row['title'] }}</td>
                                 <td class="px-2 py-1.5 align-top {{ $row['status'] === 'applicable' ? 'text-gray-500' : 'text-gray-400' }}">{{ $row['old'] }}</td>
                                 <td class="px-2 py-1.5 align-top {{ $row['status'] === 'applicable' ? 'font-medium text-gray-900' : 'text-gray-400' }}">{{ $row['new'] }}</td>
@@ -180,6 +231,7 @@
                             overwrite_different_workflow: {{ $overwriteDifferentWorkflow ? 1 : 0 }},
                             multi_mode: {{ \Illuminate\Support\Js::from($multiMode ?? 'add') }},
                             function_group_id: {{ \Illuminate\Support\Js::from((string) ($functionGroupId ?? '')) }},
+                            exclude: excluded,
                         }
                     );
                 },
