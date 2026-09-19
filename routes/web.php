@@ -50,6 +50,7 @@ use App\Http\Controllers\ProjectWorkflowStepController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TenantSwitchController;
+use App\Http\Controllers\UserTablePreferenceController;
 use App\Http\Controllers\VerbundController;
 use App\Http\Middleware\RememberLastAdminPage;
 use Illuminate\Support\Facades\Route;
@@ -105,6 +106,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // {group}-Routenparameter (anders als alle /projektgruppen/{group}/...-
     // Routen oben). Vor /projekte/{project} registriert - sonst würde
     // "multichange" als Projekt-ID interpretiert.
+    Route::put('/tabellenbreiten/{tableKey}', [UserTablePreferenceController::class, 'update'])->name('tabellenbreiten.update');
+    Route::delete('/tabellenbreiten/{tableKey}', [UserTablePreferenceController::class, 'destroy'])->name('tabellenbreiten.destroy');
     Route::get('/projekte/multichange', [MultichangeController::class, 'form'])->name('projekte.multichange.form');
     Route::post('/projekte/multichange/vorschau', [MultichangeController::class, 'preview'])->name('projekte.multichange.preview');
     Route::post('/projekte/multichange/anwenden', [MultichangeController::class, 'apply'])->name('projekte.multichange.apply');

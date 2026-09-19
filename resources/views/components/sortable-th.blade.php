@@ -14,7 +14,7 @@
     $sortQuery = array_merge(request()->except('reopen_group'), ['sort' => $field, 'direction' => $nextDirection, 'page' => 1]);
 @endphp
 
-<th class="sticky top-0 z-10 bg-gray-50 px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">
+<th data-col="{{ $field }}" class="sticky top-0 z-10 bg-gray-50 px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">
     <a
         href="{{ request()->url().'?'.http_build_query($sortQuery) }}"
         class="inline-flex items-center gap-1 hover:text-gray-700 {{ $isActive ? 'text-gray-900 font-semibold' : '' }}"

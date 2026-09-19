@@ -47,3 +47,55 @@
     --color-btn-secondary-content: #374151;
     --color-btn-secondary-border: #d1d5db;
 }
+
+/*
+ * Persönlich einstellbare Spaltenbreiten (resources/js/column-resize.js):
+ * Ziehgriff am rechten Rand einer Überschrift + festes Tabellenlayout, sobald
+ * Breiten eingestellt sind. Ohne Einstellung bleibt das automatische Layout.
+ */
+.col-resize-handle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 8px;
+    cursor: col-resize;
+    user-select: none;
+    touch-action: none;
+}
+.col-resize-handle::after {
+    content: '';
+    position: absolute;
+    top: 25%;
+    bottom: 25%;
+    right: 3px;
+    width: 2px;
+    border-radius: 1px;
+    background: transparent;
+}
+th:hover > .col-resize-handle::after {
+    background: #cbd5e1;
+}
+.col-resize-handle:hover::after {
+    background: #6366f1;
+}
+body.col-resizing {
+    cursor: col-resize;
+    user-select: none;
+}
+.col-resize-fixed {
+    table-layout: fixed;
+}
+.col-resize-fixed > thead > tr > th,
+.col-resize-fixed > tbody > tr > td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+/* Standard-Höchstbreite für umbrechenden Zelleninhalt (z.B. Modelle) - bei eigenen Breiten bestimmt die Spalte. */
+.col-cell-limit {
+    max-width: 14rem;
+    white-space: normal;
+}
+.col-resize-fixed .col-cell-limit {
+    max-width: none;
+}

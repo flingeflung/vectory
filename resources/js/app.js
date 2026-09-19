@@ -1,8 +1,10 @@
 
 import Alpine from 'alpinejs';
 import sort from '@alpinejs/sort';
+import columnResize from './column-resize';
 
 Alpine.plugin(sort);
+Alpine.data('columnResize', columnResize);
 
 window.Alpine = Alpine;
 

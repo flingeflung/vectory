@@ -202,7 +202,7 @@
                 }"
                 @projekte-refresh.window="refreshRows()"
             >
-                <div data-scroll-root class="flex-1 min-h-0 overflow-auto">
+                <div data-scroll-root class="flex-1 min-h-0 overflow-auto" x-data="columnResize('projekte', {{ \Illuminate\Support\Js::from($columnWidths) }}, {{ \Illuminate\Support\Js::from(route('tabellenbreiten.update', 'projekte')) }})">
                     <table class="min-w-full divide-y divide-gray-200 text-sm">
                         <thead class="bg-gray-50">
                             <tr>
@@ -225,7 +225,7 @@
                                     @if (in_array($column['key'], ['title', 'version', 'status', 'workflow'], true))
                                         <x-sortable-th :field="$column['key']" :sort="$sort" :direction="$direction">{{ $column['label'] }}</x-sortable-th>
                                     @else
-                                        <th class="sticky top-0 z-10 bg-gray-50 px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ $column['label'] }}</th>
+                                        <th data-col="{{ $column['key'] }}" class="sticky top-0 z-10 bg-gray-50 px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ $column['label'] }}</th>
                                     @endif
                                 @endforeach
                             </tr>

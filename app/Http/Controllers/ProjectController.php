@@ -25,6 +25,7 @@ use App\Models\ProjectWorkflowStepPerson;
 use App\Models\RecentlyViewedProject;
 use App\Models\Setting;
 use App\Models\SystemSetting;
+use App\Models\UserTablePreference;
 use App\Models\Tenant;
 use App\Models\Workflow;
 use App\Models\WorkflowStep;
@@ -142,6 +143,7 @@ class ProjectController extends Controller
         return view('projekte.index', [
             'reopenGroups' => $reopenGroups,
             'reopenMemberIds' => $reopenMemberIds,
+            'columnWidths' => UserTablePreference::widthsFor($user->id, 'projekte'),
             ...$this->rowData($projects, $visibleColumns, $user),
             'columns' => $visibleColumns,
             'allColumns' => $allColumns,
