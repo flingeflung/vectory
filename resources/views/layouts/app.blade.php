@@ -2876,6 +2876,13 @@
                         return;
                     }
                     multichangeBody().innerHTML = await response.text();
+                    // Ralf-Bug-Report, 2026-09-19: Übersicht wurde nicht aktualisiert, wenn der
+                    // Dialog nach dem Anwenden per X statt über den "Schließen"-Knopf im Ergebnis
+                    // geschlossen wurde (nur der Knopf löste das Neuladen aus). Deshalb sofort
+                    // nach einem erfolgreichen Anwenden neu laden - unabhängig vom Schließen.
+                    if (response.ok && url.endsWith('/anwenden')) {
+                        window.dispatchEvent(new CustomEvent('projekte-refresh'));
+                    }
                 };
             })();
         </script>
