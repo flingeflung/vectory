@@ -88,7 +88,11 @@ class JobloadOverviewController extends Controller
                 ->orWhere('people.id', $ownPersonId)
                 ->orWhereIn('people.id', DB::table('person_tenant')->select('person_id')->where('tenant_id', $tenantId))
                 ->orWhereIn('people.id', DB::table('job_hours')->select('person_id')->where('tenant_id', $tenantId));
-        })->orderBy('last_name')->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'active']);
+        })
+            // Ralf, 2026-09-19: Personen ohne Login können keine Stunden buchen -
+            // in der Personen-Auswahl sinnlos.
+            ->whereIn('people.id', DB::table('users')->select('person_id')->whereNotNull('person_id'))
+            ->orderBy('last_name')->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'active']);
         if (! $canViewAll) {
             $people = $people->where('id', $ownPersonId)->values();
         }
