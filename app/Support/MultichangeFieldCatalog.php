@@ -6,6 +6,7 @@ use App\Models\Attribute;
 use App\Models\FunctionGroup;
 use App\Models\Market;
 use App\Models\Person;
+use App\Models\ProjectTemplate;
 use App\Models\ProjectNote;
 use App\Models\ProjectTypeMain;
 use App\Models\Workflow;
@@ -172,6 +173,7 @@ class MultichangeFieldCatalog
                     __('Projekte mit einem ANDEREN Workflow werden übersprungen - außer Sie aktivieren unten "Andere Workflows überschreiben": dann wird dort ebenfalls neu zugewiesen und der bisherige Fortschritt geht verloren.'),
                 ],
             ],
+            ...self::projectTemplateField($tenantId),
             ...self::workflowStepField($tenantId),
             ...self::marketsField($tenantId),
             ...self::projectPeopleField($tenantId),
@@ -293,6 +295,34 @@ class MultichangeFieldCatalog
                 ],
             ],
         ];
+    }
+
+    /**
+     * Projektschablone (Ralf, 2026-09-19: "Projektschablonen per MC zuweisen") -
+     * einfache Set-Semantik auf projects.project_template_id, reiner Verweis
+     * (keine Werteübernahme ins Projekt). Nur aktive Schablonen, in der im Admin
+     * frei festgelegten Reihenfolge. Fehlt jede aktive Schablone, gibt es das
+     * Feld nicht.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private static function projectTemplateField(int $tenantId): array
+    {
+        $templates = ProjectTemplate::query()->where('tenant_id', $tenantId)->where('active', true)
+            ->orderBy('sort')->orderBy('name')->pluck('name', 'id')->all();
+
+        if ($templates === []) {
+            return [];
+        }
+
+        return [[
+            'key' => 'project_template_id',
+            'label' => __('Projektschablone'),
+            'type' => 'select',
+            'required' => true,
+            'options' => $templates,
+            'hint' => __('Die Schablone wird den Projekten nur zugeordnet, es werden keine Werte aus der Schablone in die Projekte übernommen.'),
+        ]];
     }
 
     /**

@@ -846,7 +846,7 @@ class ProjectController extends Controller
             'availableProjectTemplates' => ProjectTemplate::query()
                 ->where('tenant_id', $project->tenant_id)
                 ->where(fn (Builder $query) => $query->where('active', true)->orWhere('id', $project->project_template_id))
-                ->orderBy('name')
+                ->orderBy('sort')->orderBy('name')
                 ->get(),
             'sort' => $sort,
             'direction' => $direction,

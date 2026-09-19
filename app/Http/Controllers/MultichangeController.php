@@ -414,7 +414,7 @@ class MultichangeController extends Controller
         // auch Projekte auftauchen könnten, die im aktuellen Filter gar nicht
         // sichtbar sind, für die es dann keine definierte Position gäbe.
         $projects = $group->projects()->orderBy('source_pn')
-            ->with(['projectWorkflowSteps.workflowStep', 'workflow', 'projectTypeSub.main', 'markets'])->get();
+            ->with(['projectWorkflowSteps.workflowStep', 'workflow', 'projectTypeSub.main', 'markets', 'projectTemplate'])->get();
         $unchanged = collect();
 
         if ($field['key'] === 'status') {
@@ -1157,6 +1157,10 @@ class MultichangeController extends Controller
 
         if ($field['key'] === 'workflow_id') {
             return $project->workflow?->name ?? '–';
+        }
+
+        if ($field['key'] === 'project_template_id') {
+            return $project->projectTemplate?->name ?? '–';
         }
 
         if ($field['key'] === 'workflow_step_id') {
