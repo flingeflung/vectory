@@ -82,6 +82,8 @@ class JobloadOverviewController extends Controller
         $year = (int) ($filters['year'] ?? CarbonImmutable::today()->isoWeekYear());
         $currentWeekKey = sprintf('%04d-W%02d', CarbonImmutable::today()->isoWeekYear(), CarbonImmutable::today()->isoWeek());
         $mode = $filters['mode'] ?? 'person';
+        $start = CarbonImmutable::now()->setISODate($year, 1)->startOfWeek();
+        $end = CarbonImmutable::now()->setISODate($year + 1, 1)->startOfWeek();
 
         $people = DB::table('people')->where(function ($query) use ($tenantId, $ownPersonId) {
             $query->where('people.tenant_id', $tenantId)
@@ -96,6 +98,18 @@ class JobloadOverviewController extends Controller
         if (! $canViewAll) {
             $people = $people->where('id', $ownPersonId)->values();
         }
+        // Ralf, 2026-09-19: Personen ohne Einträge im gewählten Jahr sind in der
+        // Auswahl sinnlos, inaktive nur mit "Inaktive zeigen" - die eigene Person
+        // bleibt als Fallback immer drin. Die Liste reagiert dadurch auf das Feld
+        // "Jahr"; ist die gewählte Person im neuen Jahr nicht mehr dabei, springt
+        // die Auswahl auf die eigene Person.
+        $showInactive = $request->boolean('show_inactive');
+        $peopleWithEntries = DB::table('job_hours')->where('tenant_id', $tenantId)
+            ->where('work_date', '>=', $start->toDateString())
+            ->where('work_date', '<', $end->toDateString())
+            ->where('hours', '>', 0)->distinct()->pluck('person_id')->flip();
+        $people = $people->filter(fn ($person) => (int) $person->id === $ownPersonId
+            || ($peopleWithEntries->has($person->id) && ($showInactive || $person->active)))->values();
         $peopleById = $people->keyBy('id');
         $personId = (int) ($filters['person_id'] ?? $ownPersonId);
         if (! $canViewAll || ! $peopleById->has($personId)) {
@@ -113,8 +127,6 @@ class JobloadOverviewController extends Controller
         $jobId = isset($filters['job_id']) && $jobsById->has((int) $filters['job_id'])
             ? (int) $filters['job_id'] : null;
 
-        $start = CarbonImmutable::now()->setISODate($year, 1)->startOfWeek();
-        $end = CarbonImmutable::now()->setISODate($year + 1, 1)->startOfWeek();
         $weeks = collect();
         $monthSegments = collect();
         for ($day = $start; $day->lessThan($end); $day = $day->addWeek()) {
@@ -176,19 +188,6 @@ class JobloadOverviewController extends Controller
         }
         $rows = collect($rows)->sortBy('sort')->values();
 
-        // Übliche "Inaktive zeigen"-Umschaltung: inaktive Personen standard-
-        // mäßig ausblenden, die aktuell gewählte und die eigene Person bleiben
-        // aber immer in der Liste (sonst passt die Auswahl nicht zur Anzeige).
-        $showInactive = $request->boolean('show_inactive');
-        // Ralf, 2026-09-19: Personen ohne Einträge im gewählten Jahr sind in
-        // der Auswahl sinnlos - gewählte und eigene Person bleiben trotzdem
-        // drin (Fallback, sonst passt die Auswahl nicht zur Anzeige).
-        $peopleWithEntries = DB::table('job_hours')->where('tenant_id', $tenantId)
-            ->where('work_date', '>=', $start->toDateString())
-            ->where('work_date', '<', $end->toDateString())
-            ->where('hours', '>', 0)->distinct()->pluck('person_id')->flip();
-        $people = $people->filter(fn ($person) => (int) $person->id === $personId || (int) $person->id === $ownPersonId
-            || ($peopleWithEntries->has($person->id) && ($showInactive || $person->active)))->values();
 
         return view('jobload.overview', compact(
             'year', 'currentWeekKey', 'mode', 'people', 'showInactive', 'personId', 'jobs', 'jobId', 'canViewAll',
