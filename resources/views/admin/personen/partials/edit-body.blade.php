@@ -174,6 +174,10 @@
                         <label class="block text-xs text-gray-500">{{ __('E-Mail') }}</label>
                         <input type="email" name="email" value="{{ old('email', $person->email) }}" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                     </div>
+                    <div>
+                        <label class="block text-xs text-gray-500" title="{{ __('Wird beim Anlegen eines Logins automatisch mit dem Standardwert des Kunden vorbelegt.') }}">{{ __('Wochenstunden') }}</label>
+                        <input type="number" name="weekly_hours" value="{{ old('weekly_hours', $person->weekly_hours !== null ? rtrim(rtrim(number_format((float) $person->weekly_hours, 1, '.', ''), '0'), '.') : '') }}" min="0" max="80" step="0.5" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                    </div>
                     @if ($multiTenantEnabled)
                         <div>
                             <label class="block text-xs text-gray-500">{{ __('Kunde') }}</label>

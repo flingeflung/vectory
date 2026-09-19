@@ -255,6 +255,7 @@ class PersonController extends Controller
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date'],
             'remarks' => ['nullable', 'string'],
+            'weekly_hours' => ['nullable', 'numeric', 'between:0,80', 'multiple_of:0.5'],
             'active' => ['boolean'],
             'is_absent' => ['boolean'],
             'absent_until' => ['nullable', 'date', 'after_or_equal:today'],
@@ -262,7 +263,7 @@ class PersonController extends Controller
             // Gleiche eigene Meldung wie SettingsController::updateAbsence()
             // (Laravels Standardtext übersetzt "today" nicht).
             'absent_until.after_or_equal' => __('Das Datum darf nicht in der Vergangenheit liegen.'),
-        ], ['short_name' => __('Kürzel'), 'absent_until' => __('Abwesend bis')]);
+        ], ['short_name' => __('Kürzel'), 'absent_until' => __('Abwesend bis'), 'weekly_hours' => __('Wochenstunden')]);
 
         if ($validator->fails()) {
             if ($isOverlay) {
@@ -352,6 +353,17 @@ class PersonController extends Controller
             'email' => $validated['email'],
             'password' => $validated['password'],
         ]);
+
+        // Ralf, 2026-09-19: Wochenstunden werden nur für Personen mit Login
+        // gebraucht (nur die erfassen Zeiten) - beim Anlegen des Logins den
+        // Standardwert des Mandanten der Person übernehmen, aber einen schon
+        // von Hand gepflegten Wert nie überschreiben.
+        if ($person->weekly_hours === null) {
+            $defaultHours = Tenant::query()->whereKey($person->tenant_id)->value('default_weekly_hours');
+            if ($defaultHours !== null) {
+                $person->update(['weekly_hours' => $defaultHours]);
+            }
+        }
 
         if ($isOverlay) {
             $request->session()->flash('status', 'login-created');

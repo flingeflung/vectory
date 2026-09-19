@@ -126,9 +126,13 @@
                                 <option value="15" @selected(old('jobload_time_grid', $selectedTenant->jobload_time_grid) == 15)>{{ __('Viertelstunden') }}</option>
                             </select>
                         </label>
+                        <label class="block text-xs text-gray-500" title="{{ __('Wird beim Anlegen eines Logins automatisch als Wochenstunden der Person eingetragen.') }}">{{ __('Standard-Wochenstunden') }}
+                            <input type="number" name="default_weekly_hours" value="{{ old('default_weekly_hours', rtrim(rtrim(number_format((float) $selectedTenant->default_weekly_hours, 1, '.', ''), '0'), '.')) }}" min="0" max="80" step="0.5" required class="mt-0.5 block w-28 rounded-md border-gray-300 text-sm text-gray-800">
+                        </label>
                     </div>
                     <x-input-error :messages="$errors->get('gantt_max_projects')" />
                     <x-input-error :messages="$errors->get('jobload_time_grid')" />
+                    <x-input-error :messages="$errors->get('default_weekly_hours')" />
                     <div class="rounded-md border border-gray-200 bg-gray-50 p-2">
                         <label class="flex items-center gap-2 text-sm text-gray-700">
                             <input type="checkbox" name="is_home_tenant" value="1" @checked($selectedTenant->is_home_tenant) class="rounded border-gray-300">
