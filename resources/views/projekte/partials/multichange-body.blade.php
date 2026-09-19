@@ -359,14 +359,14 @@
                         </select>
                         <div class="mt-2 space-y-1.5 rounded-md border border-gray-200 bg-gray-50 p-2">
                             <label class="flex items-start gap-1.5 text-xs text-gray-700">
-                                <input type="radio" x-model="multiMode" value="add" class="mt-0.5 text-indigo-600">
+                                <input type="radio" name="multi-mode-select" x-model="multiMode" value="add" class="mt-0.5 text-indigo-600">
                                 <span>
                                     {{ __('Ergänzen') }}
                                     <span class="block text-gray-400">{{ __('Die gewählten Werte werden bei jedem Projekt zu den bestehenden hinzugefügt, nichts geht verloren.') }}</span>
                                 </span>
                             </label>
                             <label class="flex items-start gap-1.5 text-xs text-gray-700">
-                                <input type="radio" x-model="multiMode" value="overwrite" class="mt-0.5 text-indigo-600">
+                                <input type="radio" name="multi-mode-select" x-model="multiMode" value="overwrite" class="mt-0.5 text-indigo-600">
                                 <span>
                                     {{ __('Überschreiben') }}
                                     <span class="block text-gray-400">{{ __('Die bisherige Auswahl wird bei jedem Projekt komplett durch die hier gewählten Werte ersetzt.') }}</span>
@@ -392,21 +392,21 @@
                         </div>
                         <div class="mt-2 space-y-1.5 rounded-md border border-gray-200 bg-gray-50 p-2">
                             <label class="flex items-start gap-1.5 text-xs text-gray-700">
-                                <input type="radio" x-model="multiMode" value="add" class="mt-0.5 text-indigo-600">
+                                <input type="radio" name="multi-mode-markets" x-model="multiMode" value="add" class="mt-0.5 text-indigo-600">
                                 <span>
                                     {{ __('Hinzufügen') }}
                                     <span class="block text-gray-400">{{ __('Die gewählten Märkte werden bei allen Projekten ergänzt, bestehende bleiben erhalten.') }}</span>
                                 </span>
                             </label>
                             <label class="flex items-start gap-1.5 text-xs text-gray-700">
-                                <input type="radio" x-model="multiMode" value="remove" class="mt-0.5 text-indigo-600">
+                                <input type="radio" name="multi-mode-markets" x-model="multiMode" value="remove" class="mt-0.5 text-indigo-600">
                                 <span>
                                     {{ __('Entfernen') }}
                                     <span class="block text-gray-400">{{ __('Die gewählten Märkte werden bei allen Projekten entfernt.') }}</span>
                                 </span>
                             </label>
                             <label class="flex items-start gap-1.5 text-xs text-gray-700">
-                                <input type="radio" x-model="multiMode" value="overwrite" class="mt-0.5 text-indigo-600">
+                                <input type="radio" name="multi-mode-markets" x-model="multiMode" value="overwrite" class="mt-0.5 text-indigo-600">
                                 <span>
                                     {{ __('Überschreiben') }}
                                     <span class="block text-gray-400">{{ __('Bei allen Projekten werden die gespeicherten Märkte entfernt und stattdessen die gewählten gespeichert.') }}</span>
@@ -474,14 +474,14 @@
                         </div>
                         <div class="mt-2 space-y-1.5 rounded-md border border-gray-200 bg-gray-50 p-2">
                             <label class="flex items-start gap-1.5 text-xs text-gray-700">
-                                <input type="radio" x-model="multiMode" value="add" class="mt-0.5 text-indigo-600">
+                                <input type="radio" name="multi-mode-people" x-model="multiMode" value="add" class="mt-0.5 text-indigo-600">
                                 <span>
                                     {{ __('Hinzufügen') }}
                                     <span class="block text-gray-400">{{ __('Die Person wird der gewählten Funktionsgruppe bei allen Projekten zugeordnet.') }}</span>
                                 </span>
                             </label>
                             <label class="flex items-start gap-1.5 text-xs text-gray-700">
-                                <input type="radio" x-model="multiMode" value="remove" class="mt-0.5 text-indigo-600">
+                                <input type="radio" name="multi-mode-people" x-model="multiMode" value="remove" class="mt-0.5 text-indigo-600">
                                 <span>
                                     {{ __('Entfernen') }}
                                     <span class="block text-gray-400">{{ __('Die Person wird aus der gewählten Funktionsgruppe bei allen Projekten entfernt.') }}</span>
