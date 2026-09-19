@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Attribute;
 use App\Models\FunctionGroup;
+use App\Models\Market;
 use App\Models\Person;
 use App\Models\ProjectNote;
 use App\Models\ProjectTypeMain;
@@ -172,6 +173,7 @@ class MultichangeFieldCatalog
                 ],
             ],
             ...self::workflowStepField($tenantId),
+            ...self::marketsField($tenantId),
             ...self::projectPeopleField($tenantId),
             ...self::pulldownAttributeFields($tenantId),
             ...self::numberAttributeFields($tenantId),
@@ -291,6 +293,40 @@ class MultichangeFieldCatalog
                 ],
             ],
         ];
+    }
+
+    /**
+     * Märkte (Ralf, 2026-09-19: "Märkte per MC zuweisen") - echte n:m-Zuordnung
+     * (project_market), deshalb eigener Feldtyp mit drei Modi statt einfacher
+     * Set-Semantik: Hinzufügen (nur ergänzen, nichts geht verloren), Entfernen,
+     * Überschreiben (komplette Auswahl ersetzen). Werte laufen als Liste von
+     * Markt-IDs (wie die Mehrfachauswahl-Pulldowns), Modus über multi_mode.
+     * 'short_options' = kompaktes Format der Projektdetails (z.B. "DEde
+     * Deutschland") für Alter/Neuer Wert in der Vorschau-Tabelle, 'options'
+     * = ausführliche Bezeichnung für die Auswahlliste.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private static function marketsField(int $tenantId): array
+    {
+        $markets = Market::query()->where('tenant_id', $tenantId)->orderBy('sort')->get();
+
+        if ($markets->isEmpty()) {
+            return [];
+        }
+
+        return [[
+            'key' => 'markets',
+            'label' => __('Märkte'),
+            'type' => 'markets',
+            'options' => $markets->mapWithKeys(fn (Market $market) => [$market->id => $market->label()])->all(),
+            'short_options' => $markets->mapWithKeys(fn (Market $market) => [$market->id => $market->shortLabel()])->all(),
+            'hint' => [
+                __('Hinzufügen: Die gewählten Märkte werden bei allen Projekten ergänzt, bestehende bleiben erhalten.'),
+                __('Entfernen: Die gewählten Märkte werden bei allen Projekten entfernt.'),
+                __('Überschreiben: Die bisherigen Märkte werden bei allen Projekten komplett durch die gewählten ersetzt.'),
+            ],
+        ]];
     }
 
     /**

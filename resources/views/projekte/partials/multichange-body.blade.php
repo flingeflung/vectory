@@ -180,7 +180,7 @@
         >
             <button
                 type="button"
-                onclick="window.openMultichange({{ $group->id }}, {{ \Illuminate\Support\Js::from($field['key']) }}, {{ \Illuminate\Support\Js::from($field['type'] === 'attribute_select_multiple' ? (array) $value : (string) $value) }}, {{ $overwriteDifferentWorkflow ? 'true' : 'false' }}, {{ \Illuminate\Support\Js::from($multiMode ?? 'add') }}, {{ \Illuminate\Support\Js::from((string) ($functionGroupId ?? '')) }})"
+                onclick="window.openMultichange({{ $group->id }}, {{ \Illuminate\Support\Js::from($field['key']) }}, {{ \Illuminate\Support\Js::from(in_array($field['type'], ['attribute_select_multiple', 'markets'], true) ? (array) $value : (string) $value) }}, {{ $overwriteDifferentWorkflow ? 'true' : 'false' }}, {{ \Illuminate\Support\Js::from($multiMode ?? 'add') }}, {{ \Illuminate\Support\Js::from((string) ($functionGroupId ?? '')) }})"
                 class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
             >
                 {{ __('Zurück') }}
@@ -214,7 +214,7 @@
             // ist eine einmalig mitgegebene Nachschlagetabelle, damit das
             // Formular beim Abschicken weiß, welches der beiden gemeint ist.
             fieldTypes: {{ \Illuminate\Support\Js::from(collect($fields)->pluck('type', 'key')) }},
-            get isMultiField() { return this.fieldTypes[this.field] === 'attribute_select_multiple'; },
+            get isMultiField() { return ['attribute_select_multiple', 'markets'].includes(this.fieldTypes[this.field]); },
         }"
         @submit.prevent="window.reloadMultichange({{ \Illuminate\Support\Js::from(route('projekte.multichange.preview')) }}, { group_id: groupId, field, value: isMultiField ? multiValue : value, overwrite_different_workflow: overwrite ? 1 : 0, multi_mode: multiMode, function_group_id: functionGroupId })"
         {{--
@@ -281,7 +281,7 @@
                             <p class="mb-1 text-xs text-amber-700">{{ $f['hint'] }}</p>
                         @endif
                     @endif
-                    @unless (in_array($f['type'], ['workflow_step', 'attribute_select_multiple', 'project_people'], true))
+                    @unless (in_array($f['type'], ['workflow_step', 'attribute_select_multiple', 'project_people', 'markets'], true))
                         <label class="block text-xs text-gray-500">{{ __('Neuer Wert') }}</label>
                     @endunless
                     @if (in_array($f['type'], ['text', 'attribute_text'], true))
@@ -363,6 +363,46 @@
                                 <span>
                                     {{ __('Überschreiben') }}
                                     <span class="block text-gray-400">{{ __('Die bisherige Auswahl wird bei jedem Projekt komplett durch die hier gewählten Werte ersetzt.') }}</span>
+                                </span>
+                            </label>
+                        </div>
+                    @elseif ($f['type'] === 'markets')
+                        {{--
+                            Ralf, 2026-09-19: "Märkte per MC zuweisen" - Auswahl als
+                            scrollbare Checkbox-Liste (wie beim Bearbeiten der
+                            Märkte im Projekt selbst) statt eines Mehrfach-Pulldowns,
+                            dazu drei Modi (Hinzufügen/Entfernen/Überschreiben) über
+                            multiMode. Werte laufen als Liste (multiValue).
+                        --}}
+                        <label class="block text-xs text-gray-500">{{ __('Märkte') }}</label>
+                        <div class="mt-0.5 max-h-48 space-y-0.5 overflow-y-auto rounded-md border border-gray-300 p-1.5">
+                            @foreach ($f['options'] as $marketId => $marketLabel)
+                                <label class="flex items-start gap-1.5 text-xs text-gray-700">
+                                    <input type="checkbox" value="{{ $marketId }}" x-model="multiValue" class="mt-0.5 rounded border-gray-300 text-indigo-600">
+                                    <span>{{ $marketLabel }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                        <div class="mt-2 space-y-1.5 rounded-md border border-gray-200 bg-gray-50 p-2">
+                            <label class="flex items-start gap-1.5 text-xs text-gray-700">
+                                <input type="radio" x-model="multiMode" value="add" class="mt-0.5 text-indigo-600">
+                                <span>
+                                    {{ __('Hinzufügen') }}
+                                    <span class="block text-gray-400">{{ __('Die gewählten Märkte werden bei allen Projekten ergänzt, bestehende bleiben erhalten.') }}</span>
+                                </span>
+                            </label>
+                            <label class="flex items-start gap-1.5 text-xs text-gray-700">
+                                <input type="radio" x-model="multiMode" value="remove" class="mt-0.5 text-indigo-600">
+                                <span>
+                                    {{ __('Entfernen') }}
+                                    <span class="block text-gray-400">{{ __('Die gewählten Märkte werden bei allen Projekten entfernt.') }}</span>
+                                </span>
+                            </label>
+                            <label class="flex items-start gap-1.5 text-xs text-gray-700">
+                                <input type="radio" x-model="multiMode" value="overwrite" class="mt-0.5 text-indigo-600">
+                                <span>
+                                    {{ __('Überschreiben') }}
+                                    <span class="block text-gray-400">{{ __('Die bisherigen Märkte werden bei allen Projekten komplett durch die gewählten ersetzt.') }}</span>
                                 </span>
                             </label>
                         </div>

@@ -43,6 +43,12 @@ use Illuminate\Validation\Rule;
 class MultichangeController extends Controller
 {
     /**
+     * Feldtypen, deren "value" eine Liste ist (value[]=...) und die den Modus über
+     * multi_mode wählen (siehe MultichangeFieldCatalog).
+     */
+    private const MULTI_VALUE_TYPES = ['attribute_select_multiple', 'markets'];
+
+    /**
      * Ralf, 2026-09-13: "Das Gruppieren soll losgelöst sein davon, quasi
      * die Grundlage. Das macht man auch nicht ständig... Multichange kann
      * immer mal wieder dazwischen vorkommen." Multichange ist deshalb ein
@@ -81,7 +87,7 @@ class MultichangeController extends Controller
     private function selectedValueFor(Request $request): string|array
     {
         $field = MultichangeFieldCatalog::find(CurrentTenant::id(), (string) $request->string('field'));
-        if ($field && $field['type'] === 'attribute_select_multiple') {
+        if ($field && in_array($field['type'], self::MULTI_VALUE_TYPES, true)) {
             return $request->array('value');
         }
 
@@ -258,6 +264,8 @@ class MultichangeController extends Controller
             // ja auch immer eine gültige Wahl.
             'attribute_select' => ['nullable', 'string', Rule::in(array_keys($field['options']))],
             'attribute_select_multiple' => ['nullable', 'array'],
+            // Ralf, 2026-09-19: Märkte - mindestens ein Markt (Modus über multi_mode).
+            'markets' => ['required', 'array', 'min:1'],
             // Ralf, 2026-09-15: dieselben Grenzen wie im normalen
             // Projektformular (ProjectController::attributeValidationRules())
             // - Mindest-/Höchstwert/Dezimalstellen kommen vom Attribut selbst,
@@ -282,8 +290,13 @@ class MultichangeController extends Controller
         if ($field['type'] === 'attribute_select_multiple') {
             $allRules['value.*'] = ['string', Rule::in(array_keys($field['options']))];
         }
+        if ($field['type'] === 'markets') {
+            $allRules['value.*'] = ['integer', 'distinct', Rule::in(array_keys($field['options']))];
+            $allRules['multi_mode'] = ['nullable', Rule::in(['add', 'remove', 'overwrite'])];
+        }
 
-        $validator = Validator::make($request->all(), $allRules, [], ['value' => __('Neuer Wert')]);
+        $valueLabel = $field['type'] === 'markets' ? __('Märkte') : __('Neuer Wert');
+        $validator = Validator::make($request->all(), $allRules, [], ['value' => $valueLabel, 'value.*' => $valueLabel, 'multi_mode' => __('Modus')]);
         if ($validator->fails()) {
             return ['field' => $field, 'value' => null, 'errors' => $validator->errors()];
         }
@@ -294,6 +307,9 @@ class MultichangeController extends Controller
         // sprechenden String-Wert (AttributeOption::value), NICHT casten.
         if (in_array($field['type'], ['select', 'workflow_step', 'project_people'], true) && $value !== null) {
             $value = (int) $value;
+        }
+        if ($field['type'] === 'markets') {
+            $value = array_values(array_map('intval', (array) $value));
         }
         // Echter PHP-Bool statt "1"/"0"-String - genau das Format, in dem
         // ProjectController::update() Ja/Nein-Zusatzfelder speichert (siehe
@@ -318,7 +334,7 @@ class MultichangeController extends Controller
                 'selectedField' => $field['key'] ?? '',
                 // Eingegebener Wert bleibt auch bei einem Validierungsfehler
                 // erhalten, gleicher Grund wie beim "Zurück"-Button.
-                'selectedValue' => ($field['type'] ?? null) === 'attribute_select_multiple' ? $request->array('value') : (string) $request->string('value'),
+                'selectedValue' => in_array($field['type'] ?? null, self::MULTI_VALUE_TYPES, true) ? $request->array('value') : (string) $request->string('value'),
                 'selectedOverwriteDifferentWorkflow' => $request->boolean('overwrite_different_workflow'),
                 'selectedMultiMode' => (string) $request->string('multi_mode') ?: 'add',
                 'selectedFunctionGroupId' => (string) $request->string('function_group_id'),
@@ -398,7 +414,7 @@ class MultichangeController extends Controller
         // auch Projekte auftauchen könnten, die im aktuellen Filter gar nicht
         // sichtbar sind, für die es dann keine definierte Position gäbe.
         $projects = $group->projects()->orderBy('source_pn')
-            ->with(['projectWorkflowSteps.workflowStep', 'workflow', 'projectTypeSub.main'])->get();
+            ->with(['projectWorkflowSteps.workflowStep', 'workflow', 'projectTypeSub.main', 'markets'])->get();
         $unchanged = collect();
 
         if ($field['key'] === 'status') {
@@ -459,6 +475,23 @@ class MultichangeController extends Controller
             $unchanged = $multiMode === 'remove'
                 ? $projects->reject(fn (Project $project) => $assignedProjectIds->contains($project->id))->values()
                 : $projects->filter(fn (Project $project) => $assignedProjectIds->contains($project->id))->values();
+            $applicable = $projects->reject(fn (Project $project) => $unchanged->contains('id', $project->id))->values();
+            $skipped = collect();
+        } elseif ($field['key'] === 'markets') {
+            // Ralf, 2026-09-19: drei Modi - Hinzufügen (unverändert, wenn das
+            // Projekt alle gewählten Märkte schon hat), Entfernen (unverändert,
+            // wenn es keinen davon hat), Überschreiben (unverändert, wenn die
+            // Mengen exakt übereinstimmen).
+            $selected = collect((array) $value)->map(fn ($id) => (int) $id)->sort()->values();
+            $unchanged = $projects->filter(function (Project $project) use ($selected, $multiMode) {
+                $current = $project->markets->pluck('id')->map(fn ($id) => (int) $id)->sort()->values();
+
+                return match ($multiMode) {
+                    'remove' => $selected->intersect($current)->isEmpty(),
+                    'overwrite' => $current->all() === $selected->all(),
+                    default => $selected->diff($current)->isEmpty(),
+                };
+            })->values();
             $applicable = $projects->reject(fn (Project $project) => $unchanged->contains('id', $project->id))->values();
             $skipped = collect();
         } elseif (in_array($field['type'], ['attribute_select', 'attribute_select_multiple', 'attribute_number', 'attribute_boolean', 'attribute_date', 'attribute_text', 'attribute_textarea'], true)) {
@@ -545,6 +578,21 @@ class MultichangeController extends Controller
      */
     private function applyValue(Project $project, array $field, mixed $value, string $multiMode = 'add', ?int $functionGroupId = null): void
     {
+        if ($field['key'] === 'markets') {
+            $ids = array_map('intval', (array) $value);
+            // Pivot project_market trägt tenant_id (NOT NULL) - wie im normalen
+            // Projektformular explizit mitgeben.
+            $withTenant = collect($ids)->mapWithKeys(fn (int $id) => [$id => ['tenant_id' => $project->tenant_id]])->all();
+
+            match ($multiMode) {
+                'remove' => $project->markets()->detach($ids),
+                'overwrite' => $project->markets()->sync($withTenant),
+                default => $project->markets()->syncWithoutDetaching($withTenant),
+            };
+
+            return;
+        }
+
         if ($field['key'] === 'project_people') {
             if ($multiMode === 'remove') {
                 DB::table('project_people')
@@ -736,6 +784,16 @@ class MultichangeController extends Controller
             return __(':noteLabel wird hinzugefügt: „:value"', ['noteLabel' => $field['note_label'], 'value' => $value]);
         }
 
+        if ($field['key'] === 'markets') {
+            $params = ['value' => $this->describeValue($field, $value)];
+
+            return match ($multiMode) {
+                'remove' => __('Märkte: „:value" wird entfernt.', $params),
+                'overwrite' => __('Märkte werden auf „:value" gesetzt (bisherige werden ersetzt).', $params),
+                default => __('Märkte: „:value" wird hinzugefügt.', $params),
+            };
+        }
+
         if ($field['key'] === 'project_people') {
             $params = ['person' => $this->describeValue($field, $value), 'fg' => $field['function_groups'][$functionGroupId] ?? '?'];
 
@@ -786,6 +844,16 @@ class MultichangeController extends Controller
     {
         if (($field['storage'] ?? 'column') === 'note') {
             return __(':noteLabel per Multichange hinzugefügt: „:value"', ['noteLabel' => $field['note_label'], 'value' => $value]);
+        }
+
+        if ($field['key'] === 'markets') {
+            $params = ['value' => $this->describeValue($field, $value)];
+
+            return match ($multiMode) {
+                'remove' => __('Märkte per Multichange entfernt: „:value"', $params),
+                'overwrite' => __('Märkte per Multichange auf „:value" gesetzt (bisherige ersetzt).', $params),
+                default => __('Märkte per Multichange hinzugefügt: „:value"', $params),
+            };
         }
 
         if ($field['key'] === 'project_people') {
@@ -859,6 +927,14 @@ class MultichangeController extends Controller
             return null;
         }
 
+        if ($field['key'] === 'markets') {
+            return match ($multiMode) {
+                'remove' => trans_choice(':count Projekt hat keinen der gewählten Märkte - bleibt unverändert.|:count Projekte haben keinen der gewählten Märkte - bleiben unverändert.', $count, ['count' => $count]),
+                'overwrite' => trans_choice(':count Projekt hat genau diese Märkte bereits - bleibt unverändert.|:count Projekte haben genau diese Märkte bereits - bleiben unverändert.', $count, ['count' => $count]),
+                default => trans_choice(':count Projekt hat alle gewählten Märkte bereits - bleibt unverändert.|:count Projekte haben alle gewählten Märkte bereits - bleiben unverändert.', $count, ['count' => $count]),
+            };
+        }
+
         if ($field['key'] === 'project_people') {
             return $multiMode === 'remove'
                 ? trans_choice(
@@ -898,6 +974,12 @@ class MultichangeController extends Controller
 
     private function describeValue(array $field, mixed $value): string
     {
+        if ($field['type'] === 'markets') {
+            $labels = collect((array) $value)->map(fn ($v) => $field['short_options'][$v] ?? (string) $v);
+
+            return $labels->isNotEmpty() ? $labels->implode(', ') : __('entfernt');
+        }
+
         if ($field['type'] === 'attribute_select_multiple') {
             $labels = collect((array) $value)->map(fn ($v) => $field['options'][$v] ?? (string) $v);
 
@@ -980,6 +1062,14 @@ class MultichangeController extends Controller
     private function describeExclusionNote(array $field, string $status, string $multiMode = 'add'): string
     {
         if ($status === 'unchanged') {
+            if ($field['key'] === 'markets') {
+                return match ($multiMode) {
+                    'remove' => __('Wird nicht geändert: hat keinen der gewählten Märkte.'),
+                    'overwrite' => __('Wird nicht geändert: hat genau diese Märkte bereits.'),
+                    default => __('Wird nicht geändert: hat alle gewählten Märkte bereits.'),
+                };
+            }
+
             if ($field['key'] === 'project_people') {
                 return $multiMode === 'remove'
                     ? __('Wird nicht geändert: Person ist in dieser Funktionsgruppe ohnehin nicht zugeordnet.')
@@ -1049,6 +1139,10 @@ class MultichangeController extends Controller
             // Anhängen statt Ersetzen (siehe applyValue()) - "alter Wert"
             // ergibt hier konzeptionell keinen Sinn, es gibt keinen einen.
             return '–';
+        }
+
+        if ($field['key'] === 'markets') {
+            return $project->markets->isNotEmpty() ? $project->markets->map(fn ($market) => $market->shortLabel())->implode(', ') : '–';
         }
 
         if ($field['key'] === 'project_people') {
@@ -1135,6 +1229,20 @@ class MultichangeController extends Controller
     {
         if (($field['storage'] ?? 'column') === 'note') {
             return (string) $value;
+        }
+
+        // Märkte: Ergebnis hängt vom Modus und den aktuellen Märkten des Projekts ab.
+        if ($field['key'] === 'markets') {
+            $selected = array_map('intval', (array) $value);
+            $current = $project->markets->pluck('id')->map(fn ($id) => (int) $id)->all();
+            $resulting = match ($multiMode) {
+                'remove' => array_values(array_diff($current, $selected)),
+                'overwrite' => $selected,
+                default => array_values(array_unique([...$current, ...$selected])),
+            };
+            $ordered = collect(array_keys($field['short_options']))->filter(fn ($id) => in_array($id, $resulting, true));
+
+            return $ordered->isNotEmpty() ? $ordered->map(fn ($id) => $field['short_options'][$id])->implode(', ') : '–';
         }
 
         // Gleiche Formulierung wie describeOldValue() ("zugeordnet"/"–") statt
