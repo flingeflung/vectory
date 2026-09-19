@@ -99,3 +99,26 @@ body.col-resizing {
 .col-resize-fixed .col-cell-limit {
     max-width: none;
 }
+
+/*
+ * Projektdetails (Ralf, 2026-09-19: "Farbunterschied zwischen leitender Information
+ * und Nutzinformation zu gering ... Headlines/Captions mittelblau, Trennlinien
+ * prägnanter"): drei Ebenen - Captions/Überschriften blau, Werte dunkel, erklärende
+ * Nebentexte bleiben grau. Nur im Details-Formular (#project-detail-form), die
+ * Farben stehen als Variablen hier an einer Stelle und lassen sich leicht
+ * nachjustieren oder für andere Detailansichten wiederverwenden.
+ */
+#project-detail-form {
+    --detail-caption: #3f6fa8;
+    --detail-value: #111827;
+    --detail-divider: #d1d5db;
+}
+#project-detail-form label.text-gray-500 {
+    color: var(--detail-caption);
+}
+#project-detail-form .text-gray-700 {
+    color: var(--detail-value);
+}
+#project-detail-form .border-gray-100 {
+    border-color: var(--detail-divider);
+}

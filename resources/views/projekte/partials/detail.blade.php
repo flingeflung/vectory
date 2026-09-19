@@ -179,7 +179,7 @@
         <div x-show="activeTab === 'details'">
         <form id="project-detail-form" method="POST" action="{{ route('projekte.update', $project) }}" class="space-y-4 text-sm">
         <div>
-        <div class="text-[11px] font-medium" style="color: #999">{{ __('Stammdaten') }}</div>
+        <div class="text-[11px] font-medium" style="color: var(--detail-caption, #999)">{{ __('Stammdaten') }}</div>
         <div class="border-t-2" style="border-color: #09f"></div>
         <div class="flex gap-3">
         <div class="w-0.5 shrink-0 rounded-full" style="background-color: #09f" title="{{ __('Stammdaten') }}"></div>
@@ -188,13 +188,18 @@
         <div class="grid grid-cols-2 gap-x-4">
         @php $col = 0; $row = 0; @endphp
         @foreach ($stammdatenAttributes as $field)
+            {{-- Ein schmales Feld allein in seiner Zeile, gefolgt von einem breiten: rechte Rasterzelle bleibt leer -
+                 ihr fehlte die Trennlinie (siehe Kommentar nach der Schleife). --}}
+            @if ($col === 1 && $isWideField($field))
+                <div class="{{ $row > 0 ? 'border-t border-gray-100' : '' }}"></div>
+            @endif
             @php
                 $wide = $isWideField($field);
                 if ($wide && $col !== 0) { $row++; $col = 0; }
                 $isFirstRow = $row === 0;
                 if ($wide) { $row++; $col = 0; } else { $col++; if ($col >= 2) { $col = 0; $row++; } }
             @endphp
-            <div class="{{ $wide ? 'col-span-2' : '' }} {{ $isFirstRow ? '' : 'border-t border-gray-100 pt-2' }}">
+            <div class="{{ $wide ? 'col-span-2' : '' }} {{ $isFirstRow ? 'pb-2' : 'border-t border-gray-100 pt-2 pb-2' }}">
                 @if ($field->system)
                     @include('projekte.partials.system-fields.'.$field->key)
                 @else
@@ -220,7 +225,7 @@
 
         @if ($attributes->isNotEmpty())
         <div class="!mt-4">
-        <div class="text-[11px] font-medium" style="color: #999">{{ __('Typspezifische Attribute') }}</div>
+        <div class="text-[11px] font-medium" style="color: var(--detail-caption, #999)">{{ __('Typspezifische Attribute') }}</div>
         <div class="border-t-2" style="border-color: {{ $project->attribute_section_color }}"></div>
         <div class="flex gap-3">
         <div class="w-0.5 shrink-0 rounded-full" style="background-color: {{ $project->attribute_section_color }}" title="{{ __('Typspezifische Attribute') }}"></div>
@@ -240,7 +245,7 @@
         @endif
 
         <div class="!mt-4">
-        <div class="text-[11px] font-medium" style="color: #999">{{ __('Ablaufdaten') }}</div>
+        <div class="text-[11px] font-medium" style="color: var(--detail-caption, #999)">{{ __('Ablaufdaten') }}</div>
         <div class="border-t-2" style="border-color: #396"></div>
         <div class="flex gap-3">
         <div class="w-0.5 shrink-0 rounded-full" style="background-color: #396" title="{{ __('Ablaufdaten') }}"></div>
@@ -249,13 +254,18 @@
         <div class="grid grid-cols-2 gap-x-4">
         @php $col = 0; $row = 0; @endphp
         @foreach ($ablaufdatenAttributes as $field)
+            {{-- Ein schmales Feld allein in seiner Zeile, gefolgt von einem breiten: rechte Rasterzelle bleibt leer -
+                 ihr fehlte die Trennlinie (siehe Kommentar nach der Schleife). --}}
+            @if ($col === 1 && $isWideField($field))
+                <div class="{{ $row > 0 ? 'border-t border-gray-100' : '' }}"></div>
+            @endif
             @php
                 $wide = $isWideField($field);
                 if ($wide && $col !== 0) { $row++; $col = 0; }
                 $isFirstRow = $row === 0;
                 if ($wide) { $row++; $col = 0; } else { $col++; if ($col >= 2) { $col = 0; $row++; } }
             @endphp
-            <div class="{{ $wide ? 'col-span-2' : '' }} {{ $isFirstRow ? '' : 'border-t border-gray-100 pt-2' }}">
+            <div class="{{ $wide ? 'col-span-2' : '' }} {{ $isFirstRow ? 'pb-2' : 'border-t border-gray-100 pt-2 pb-2' }}">
                 @if ($field->system)
                     @include('projekte.partials.system-fields.'.$field->key)
                 @else
