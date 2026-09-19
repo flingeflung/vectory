@@ -174,6 +174,7 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     Route::post('/jobtypen/gruppen', [JobTypeController::class, 'storeGroup'])->name('jobtypen.gruppen.store');
     Route::post('/jobtypen/gruppen/reihenfolge', [JobTypeController::class, 'reorderGroups'])->name('jobtypen.gruppen.reorder');
     Route::post('/jobtypen/gruppen/{jobGroup}', [JobTypeController::class, 'updateGroup'])->name('jobtypen.gruppen.update');
+    Route::post('/jobtypen/uebernehmen', [JobTypeController::class, 'importFromTenant'])->name('jobtypen.uebernehmen');
     Route::post('/jobtypen', [JobTypeController::class, 'store'])->name('jobtypen.store');
     Route::post('/jobtypen/{jobType}', [JobTypeController::class, 'update'])->name('jobtypen.update');
     Route::redirect('/', '/admin/personen')->name('index');

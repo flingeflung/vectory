@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Tenant;
+use App\Services\JobTypeCatalogImporter;
 use App\Support\CurrentTenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -24,7 +27,33 @@ class JobTypeController extends Controller
             ? $groups->firstWhere('id', $request->integer('gruppe'))
             : $groups->first();
 
-        return view('admin.job-types.index', compact('groups', 'jobs', 'selectedGroup'));
+        // Import nur für Heimat-Admin/Super-Admin, gleiche Mandanten-Grenze
+        // wie bei Papierformaten/Projektschablonen (Ralf, 2026-09-18).
+        $user = Auth::user();
+        $otherTenants = CurrentTenant::isHomeTenantAdmin($user) || $user->role === 'super_admin'
+            ? CurrentTenant::availableTenants()->reject(fn (Tenant $t) => $t->id === CurrentTenant::id())->values()
+            : collect();
+
+        return view('admin.job-types.index', compact('groups', 'jobs', 'selectedGroup', 'otherTenants'));
+    }
+
+    /**
+     * Übernimmt Jobgruppen + Jobtypen eines anderen Kunden (siehe
+     * JobTypeCatalogImporter) - pull-basiert, nur Heimat-Admin/Super-Admin.
+     */
+    public function importFromTenant(Request $request, JobTypeCatalogImporter $importer): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless(CurrentTenant::isHomeTenantAdmin($user) || $user->role === 'super_admin', 403);
+
+        $target = Tenant::query()->findOrFail(CurrentTenant::id());
+        $source = CurrentTenant::availableTenants()->firstWhere('id', $request->integer('source_tenant_id'));
+        abort_if($source === null || $source->id === $target->id, 422);
+
+        return redirect()->route('admin.jobtypen')
+            ->with('status', 'jobtypen-import-done')
+            ->with('import_summary', $importer->import($source, $target))
+            ->with('import_source_name', $source->name);
     }
 
     public function storeGroup(Request $request): RedirectResponse

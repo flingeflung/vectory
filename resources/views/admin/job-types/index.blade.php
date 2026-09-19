@@ -5,6 +5,69 @@
     @if ($errors->any())
         <div role="alert" class="mb-3 rounded-md bg-red-50 px-4 py-3 text-sm text-red-800">{{ $errors->first() }}</div>
     @endif
+    @if (session('status') === 'jobtypen-import-done')
+        @php($summary = session('import_summary'))
+        <x-flash-message class="mb-3 shrink-0 px-3 py-2 text-sm">
+            {{ __('Importiert von :name: :groups Jobgruppen (:groupsSkipped bereits vorhanden), :jobs Jobtypen (:jobsSkipped bereits vorhanden).', [
+                'name' => session('import_source_name'),
+                'groups' => $summary['groups_copied'],
+                'groupsSkipped' => $summary['groups_skipped'],
+                'jobs' => $summary['jobs_copied'],
+                'jobsSkipped' => $summary['jobs_skipped'],
+            ]) }}
+        </x-flash-message>
+    @endif
+
+    @if ($otherTenants->isNotEmpty())
+        <div class="mb-3 flex shrink-0 justify-end">
+            <button
+                type="button"
+                onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'jobtypen-uebernehmen' }))"
+                class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+            >
+                {{ __('Von anderem Kunden importieren') }}
+            </button>
+        </div>
+
+        <x-modal name="jobtypen-uebernehmen" max-width="sm">
+            <form method="POST" action="{{ route('admin.jobtypen.uebernehmen') }}">
+                @csrf
+                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Jobtypen importieren') }}</h3>
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'jobtypen-uebernehmen' }))"
+                        class="text-gray-400 hover:text-gray-600"
+                        aria-label="{{ __('Schließen') }}"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div class="p-4 text-sm">
+                    <label class="block text-xs text-gray-500">{{ __('Kunde, von dem importiert werden soll') }}</label>
+                    <select name="source_tenant_id" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                        <option value="">{{ __('– bitte wählen –') }}</option>
+                        @foreach ($otherTenants as $tenant)
+                            <option value="{{ $tenant->id }}">{{ $tenant->name }}</option>
+                        @endforeach
+                    </select>
+                    <p class="mt-2 text-xs text-gray-400">{{ __('Wenn eine Jobgruppe (gleicher Name) oder ein Jobtyp (gleiches Kürzel) hier schon existiert, wird sie übersprungen, nichts wird überschrieben. Zuordnungen zu Personen und gebuchte Stunden werden nicht übernommen.') }}</p>
+                </div>
+                <div class="flex shrink-0 justify-end gap-2 border-t border-gray-100 p-3">
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'jobtypen-uebernehmen' }))"
+                        class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                    >
+                        {{ __('Abbrechen') }}
+                    </button>
+                    <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
+                        {{ __('Importieren') }}
+                    </button>
+                </div>
+            </form>
+        </x-modal>
+    @endif
 
     <div class="flex min-h-0 flex-1 gap-4">
         <div class="flex w-72 shrink-0 flex-col rounded-lg border border-gray-200 bg-white" x-data="{ newGroup: false }">
