@@ -111,6 +111,8 @@
                  Alpine-State geht dabei verloren. Über window gemerkt, damit der
                  gewählte Tab dabei erhalten bleibt statt immer auf Details zu springen. --}}
             activeTab = window.projectOverlayActiveTab || 'details';
+            {{-- Gilt das Workflow-Feld für die Projektart nicht (Ralf, 2026-09-20), gibt es den Reiter nicht. --}}
+            @unless ($project->fieldApplies('workflow_id')) if (activeTab === 'workflow_steps') activeTab = 'details'; @endunless
             $watch('activeTab', value => window.projectOverlayActiveTab = value)
         "
     >
@@ -168,7 +170,9 @@
                 <div class="flex gap-4">
                     <button type="button" @click="activeTab = 'details'" :class="activeTab === 'details' ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700'" class="pb-2">{{ __('Details') }}</button>
                     <button type="button" @click="activeTab = 'vorgaenge'" :class="activeTab === 'vorgaenge' ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700'" class="pb-2">{{ __('Vorgänge') }}</button>
+                    @if ($project->fieldApplies('workflow_id'))
                     <button type="button" @click="activeTab = 'workflow_steps'" :class="activeTab === 'workflow_steps' ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700'" class="pb-2">{{ __('Workflow') }}</button>
+                    @endif
                     <button type="button" @click="activeTab = 'checklisten'" :class="activeTab === 'checklisten' ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700'" class="pb-2">{{ __('Checklisten') }}</button>
                 </div>
 

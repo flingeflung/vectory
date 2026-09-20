@@ -66,7 +66,7 @@
                     // Geltung nach Projektart (Ralf, 2026-09-20): gilt das Feld für die Projektart dieses
                     // Projekts nicht, steht dezent "n.a." statt eines Leerfelds (sonst nicht unterscheidbar
                     // von einem fehlenden Wert).
-                    $fieldKey = str_starts_with($column['key'], 'attribute:') ? substr($column['key'], 10) : (in_array($column['key'], ['system_model', 'markets'], true) ? $column['key'] : null);
+                    $fieldKey = str_starts_with($column['key'], 'attribute:') ? substr($column['key'], 10) : (in_array($column['key'], ['system_model', 'markets', 'publication_date'], true) ? $column['key'] : ($column['key'] === 'workflow' ? 'workflow_id' : null));
                     $notApplicable = $fieldKey !== null && ! $project->fieldApplies($fieldKey);
                 @endphp
                 @if ($notApplicable)

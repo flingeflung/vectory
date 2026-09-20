@@ -540,6 +540,8 @@ class MultichangeController extends Controller
         $notApplicableIds = [];
         $attributeKey = match (true) {
             $field['key'] === 'project_template_id' => 'project_template',
+            in_array($field['key'], ['workflow_id', 'workflow_step_id'], true) => 'workflow_id',
+            $field['key'] === 'publication_date' => 'publication_date',
             $field['key'] === 'markets', ($field['storage'] ?? 'column') === 'attribute' => $field['key'],
             default => null,
         };

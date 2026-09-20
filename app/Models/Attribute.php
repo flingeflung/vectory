@@ -178,7 +178,7 @@ class Attribute extends Model
      * Kernfelder und gelten immer für jedes Projekt (Bezeichnung, Status,
      * Stamm-Version, Workflow, ...).
      */
-    public const RESTRICTABLE_SYSTEM_FIELDS = ['system_model', 'markets', 'project_template'];
+    public const RESTRICTABLE_SYSTEM_FIELDS = ['system_model', 'markets', 'project_template', 'workflow_id', 'publication_date'];
 
     public function isRestrictable(): bool
     {
