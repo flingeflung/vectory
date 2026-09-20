@@ -46,6 +46,10 @@
         </table>
     </div>
 
+    @if ($chain->count() === 1)
+        <p class="text-xs text-gray-500">{{ __('Dieses Dokument hat bisher nur eine Version. Eine neue Version entsteht über „Projekt kopieren“ mit der Option „Neue Version dieses Dokuments“.') }}</p>
+    @endif
+
     @if ($canManage && $chain->count() > 1)
         <div class="flex items-center justify-between gap-3 border-t border-gray-200 pt-3">
             <p class="text-xs text-gray-500">{{ __('Wurde dieses Projekt fälschlich als neue Version angelegt? Dann lösen Sie es aus der Kette; es erhält eine eigene Stamm-ID.') }}</p>

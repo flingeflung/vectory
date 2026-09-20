@@ -147,14 +147,16 @@
                                 onclick="window.notifyDialog({{ \Illuminate\Support\Js::from(__('Die Stamm-ID verbindet alle Versionen desselben Dokuments. Ein neues Dokument und eine Kopie als neues Dokument erhalten eine neue Stamm-ID; nur beim Aufversionieren bleibt sie erhalten. Sie lässt sich nicht von Hand ändern, aber kopieren und in der Suche verwenden.')) }})"
                             />
                         </div>
-                        @if ($stammInfo['total'] > 1)
-                            <button
-                                type="button"
-                                onclick="window.openStammIdChain({{ $project->id }})"
-                                class="{{ $secondaryBtn }} !py-0.5"
-                                title="{{ __('Versionsübersicht öffnen') }}"
-                            >{{ __('Position :n von :total in der Versionskette', ['n' => $stammInfo['position'], 'total' => $stammInfo['total']]) }}</button>
-                        @endif
+                        {{-- Ralf, 2026-09-20: der Button steht IMMER da, auch bei nur
+                             einer Version - sonst fragt man sich, wann er erscheint. --}}
+                        <button
+                            type="button"
+                            onclick="window.openStammIdChain({{ $project->id }})"
+                            class="{{ $secondaryBtn }} !py-0.5"
+                            title="{{ __('Versionsübersicht öffnen') }}"
+                        >{{ $stammInfo['total'] > 1
+                            ? __('Position :n von :total in der Versionskette', ['n' => $stammInfo['position'], 'total' => $stammInfo['total']])
+                            : __('Versionskette: nur 1 Version') }}</button>
                     </div>
                 @endif
             </div>
