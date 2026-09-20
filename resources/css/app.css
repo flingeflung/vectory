@@ -108,7 +108,8 @@ body.col-resizing {
  * Farben stehen als Variablen hier an einer Stelle und lassen sich leicht
  * nachjustieren oder für andere Detailansichten wiederverwenden.
  */
-#project-detail-form {
+#project-detail-form,
+.detail-vars {
     --detail-caption: #3f6fa8;
     --detail-value: #111827;
     --detail-divider: #d1d5db;

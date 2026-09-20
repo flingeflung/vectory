@@ -128,9 +128,9 @@
                      Kette öffnet die Versionsübersicht. --}}
                 @if ($project->stamm_id)
                     @php $stammInfo = $project->stammPositionInfo(); @endphp
-                    <div class="flex shrink-0 flex-col items-end gap-0.5 text-xs text-gray-500">
+                    <div class="detail-vars flex shrink-0 flex-col items-end gap-0.5 text-xs text-gray-500">
                         <div class="flex items-center gap-1">
-                            <span>{{ __('Stamm-ID') }}</span>
+                            <span style="color: var(--detail-caption)">{{ __('Stamm-ID') }}:</span>
                             <span class="select-all font-mono font-medium text-gray-800">{{ \App\Support\StammId::format($project->stamm_id) }}</span>
                             <button
                                 type="button"
