@@ -596,6 +596,11 @@ class ProjectController extends Controller
 
         if ($validator->fails()) {
             if ($isOverlay) {
+                // Ralf, 2026-09-21: bei einem Validierungsfehler (z.B. leeres Pflichtfeld) dürfen die bereits
+                // eingegebenen Werte nicht verloren gehen. Anders als beim normalen Redirect gibt es hier keinen
+                // Folge-Request, der old() füllt - die Eingaben werden deshalb nur für DIESE Antwort bereitgestellt.
+                $request->session()->now('_old_input', $request->all());
+
                 return response()
                     ->view('projekte.partials.detail', [
                         ...$this->detailData($request, $project),
