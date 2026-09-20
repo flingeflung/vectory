@@ -19,6 +19,7 @@ use Illuminate\Support\Collection;
     'status', 'creation_type', 'archived', 'localization', 'publication_date', 'start_date', 'end_date', 'remarks',
     'attributes', 'workflow_id', 'verbund_rolle', 'hauptprojekt_id',
     'paper_format_combination_id', 'input_format_free_text', 'output_format_free_text',
+    'stamm_id', 'stamm_position',
 ])]
 #[ObservedBy(ProjectObserver::class)]
 class Project extends Model
@@ -57,6 +58,7 @@ class Project extends Model
             'publication_date' => $this->publication_date?->format('d.m.Y'),
             'creation_type' => $this->creation_type_label,
             'verbund_rolle' => $this->verbund_rolle_label,
+            'stamm_id' => \App\Support\StammId::format($this->stamm_id),
             default => $this->getAttribute($key),
         };
     }
@@ -367,6 +369,31 @@ class Project extends Model
     public function activities(): HasMany
     {
         return $this->hasMany(Activity::class)->latest('created_at');
+    }
+
+    /**
+     * Versionskette (Ralf, 2026-09-20): alle Projekte mit derselben Stamm-ID
+     * (inkl. dieses), in Reihenfolge der Kette. Mandantengrenze über den
+     * globalen Scope.
+     */
+    public function stammChain(): \Illuminate\Database\Eloquent\Builder
+    {
+        return static::query()->where('stamm_id', $this->stamm_id)->orderBy('stamm_position')->orderBy('id');
+    }
+
+    /** Nächste freie Position am Ende der Kette. */
+    public function nextStammPosition(): int
+    {
+        return ((int) static::query()->where('stamm_id', $this->stamm_id)->max('stamm_position')) + 1;
+    }
+
+    /** Position dieses Projekts in der Kette (1-basiert) und Länge der Kette. */
+    public function stammPositionInfo(): array
+    {
+        $ids = $this->stammChain()->pluck('id')->all();
+        $index = array_search($this->id, $ids, true);
+
+        return ['position' => $index === false ? 1 : $index + 1, 'total' => max(count($ids), 1)];
     }
 
     public function isFavoritedBy(User $user): bool

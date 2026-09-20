@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Models\Project;
 use App\Models\Task;
+use App\Support\StammId;
 use Illuminate\Support\Facades\Auth;
 
 class ProjectObserver
@@ -21,6 +22,14 @@ class ProjectObserver
      */
     public function creating(Project $project): void
     {
+        // Stamm-ID (Ralf, 2026-09-20): jedes neue Dokument startet eine
+        // eigene Versionskette. Wer aufversioniert (Kopieren), gibt die ID
+        // des Vorgängers ausdrücklich mit - dann bleibt sie unangetastet.
+        if (! $project->stamm_id) {
+            $project->stamm_id = StammId::generate();
+            $project->stamm_position = 1;
+        }
+
         if (Auth::check()) {
             $project->created_by_user_id = Auth::id();
         }

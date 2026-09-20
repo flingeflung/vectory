@@ -104,8 +104,17 @@ class ProjectCopyController extends Controller
             'template_id' => ['required', 'integer', Rule::exists('copy_templates', 'id')->where('tenant_id', $tenant->id)],
             'count' => ['required', 'integer', 'min:1', 'max:'.$tenant->max_project_copies],
             'title' => ['required', 'string', 'max:255'],
-            'increment_version' => ['boolean'],
+            // Ralf, 2026-09-20: Beim Kopieren MUSS entschieden werden - neues
+            // Dokument (neue Stamm-ID) oder aufversionieren (Stamm-ID bleibt,
+            // Version +1).
+            'copy_mode' => ['required', Rule::in(['new', 'version'])],
         ]);
+
+        // Aufversionieren nur mit genau einer Kopie: mehrere Nachfolger
+        // derselben Version ergäben keine Kette.
+        if ($validated['copy_mode'] === 'version' && (int) $validated['count'] !== 1) {
+            abort(422, __('Aufversionieren ist nur mit einer Kopie möglich.'));
+        }
 
         $template = CopyTemplate::query()->with('fields')->findOrFail($validated['template_id']);
         $checkedKeys = $template->fields->pluck('key')->all();
@@ -123,12 +132,12 @@ class ProjectCopyController extends Controller
         $tenantId = $sourceProject->tenant_id;
         $baseTitle = trim($validated['title']);
         $count = $validated['count'];
-        $incrementVersion = $request->boolean('increment_version');
+        $asNewVersion = $validated['copy_mode'] === 'version';
         $sourceAttributes = $sourceProject->attributes ?? [];
         $userId = $request->user()->id;
 
         $newProjectIds = DB::transaction(function () use (
-            $sourceProject, $tenantId, $baseTitle, $count, $checkedKeys, $customFieldKeys, $incrementVersion, $sourceAttributes, $userId
+            $sourceProject, $tenantId, $baseTitle, $count, $checkedKeys, $customFieldKeys, $asNewVersion, $sourceAttributes, $userId
         ) {
             // Zeilen-Lock auf den Mandanten als Mutex - gleiches Prinzip wie
             // ProjectController::store(), damit mehrere gleichzeitige
@@ -145,12 +154,22 @@ class ProjectCopyController extends Controller
                     'tenant_id' => $tenantId,
                     'source_pn' => $this->numberAllocator->nextFreePn($year, $tenantId),
                     'title' => $title,
-                    // Version: Ausgangswert nur bei Haken übernommen (siehe
-                    // Tooltipp), sonst wie bei einem frisch angelegten
-                    // Projekt bei 1. Ohne Haken ergibt "+1?" ohnehin keinen
-                    // Sinn (siehe Formular, Checkbox dann ausgeblendet).
-                    'version' => in_array('version', $checkedKeys, true) ? $sourceProject->version : 1,
+                    // Version: beim Aufversionieren immer Vorgänger + 1; als
+                    // neues Dokument Ausgangswert nur bei Haken übernommen
+                    // (siehe Tooltipp), sonst wie bei einem frisch angelegten
+                    // Projekt bei 1.
+                    'version' => $asNewVersion
+                        ? ((int) $sourceProject->version) + 1
+                        : (in_array('version', $checkedKeys, true) ? $sourceProject->version : 1),
                 ];
+
+                // Aufversionieren: Stamm-ID des Vorgängers behalten und ans Ende
+                // der Kette hängen. Sonst vergibt der ProjectObserver beim
+                // Anlegen eine neue Stamm-ID.
+                if ($asNewVersion) {
+                    $attrs['stamm_id'] = $sourceProject->stamm_id;
+                    $attrs['stamm_position'] = $sourceProject->nextStammPosition();
+                }
 
                 if (in_array('project_type', $checkedKeys, true)) {
                     $attrs['project_type_main_id'] = $sourceProject->project_type_main_id;
@@ -182,7 +201,13 @@ class ProjectCopyController extends Controller
 
                 $newProject = Project::query()->create($attrs);
 
-                Activity::log($newProject, ActivityType::ProjectCopied, __('Projekt neu angelegt (Kopie von :pn).', ['pn' => $sourceProject->source_pn]));
+                Activity::log(
+                    $newProject,
+                    ActivityType::ProjectCopied,
+                    $asNewVersion
+                        ? __('Projekt neu angelegt (neue Version von :pn).', ['pn' => $sourceProject->source_pn])
+                        : __('Projekt neu angelegt (Kopie von :pn).', ['pn' => $sourceProject->source_pn])
+                );
 
                 // Ralf: "wenn wir es schon hätten, dann könnte der
                 // Mechanismus die Verknüpfung direkt anlegen" - anders als
@@ -268,10 +293,6 @@ class ProjectCopyController extends Controller
                         $plannedStep->update(['is_current' => true, 'started_at' => now()]);
                         $newProject->update(['status' => 0]);
                     }
-                }
-
-                if (in_array('version', $checkedKeys, true) && $incrementVersion) {
-                    $newProject->increment('version');
                 }
 
                 $basePath = $this->directoryLocator->basePath($tenantId);

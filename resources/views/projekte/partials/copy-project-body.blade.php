@@ -9,6 +9,8 @@
         templateFieldKeys: {{ \Illuminate\Support\Js::from($templateFieldKeys) }},
         copyableFields: {{ \Illuminate\Support\Js::from($copyableFields) }},
         count: 1,
+        mode: 'new',
+        init() { this.$watch('count', (value) => { if (value > 1) this.mode = 'new'; }); },
         has(key) { return (this.templateFieldKeys[this.templateId] || []).includes(key); },
     }"
 >
@@ -71,10 +73,30 @@
                 <p class="mt-0.5 text-xs text-gray-400" x-show="count > 1" x-cloak>{{ __('Bei mehreren Kopien wird automatisch „ Kopie 1“, „ Kopie 2“ usw. angehängt.') }}</p>
             </div>
 
-            <label class="flex items-center gap-1.5 text-gray-700" x-show="has('version')" x-cloak>
-                <input type="checkbox" name="increment_version" value="1" class="rounded border-gray-300">
-                {{ __('Version um 1 erhöhen') }}
-            </label>
+            {{-- Ralf, 2026-09-20 (Stamm-ID): die Weiche muss beim Kopieren
+                 ausdrücklich gestellt werden - neues Dokument (eigene Stamm-ID)
+                 oder Aufversionieren (Stamm-ID bleibt, Version +1). Mehrere
+                 Kopien gehen nur als neue Dokumente. --}}
+            <fieldset class="space-y-1.5 rounded-md border border-gray-200 p-2">
+                <legend class="px-1 text-xs text-gray-500">{{ __('Was soll die Kopie sein?') }}</legend>
+                <label class="flex items-start gap-1.5 text-gray-700">
+                    <input type="radio" name="copy_mode" value="new" x-model="mode" class="mt-0.5 border-gray-300">
+                    <span>
+                        {{ __('Neues Dokument') }}
+                        <span class="block text-xs text-gray-400">{{ __('Erhält eine neue Stamm-ID und beginnt eine eigene Versionskette.') }}</span>
+                    </span>
+                </label>
+                <label class="flex items-start gap-1.5" :class="count > 1 ? 'text-gray-400' : 'text-gray-700'">
+                    <input type="radio" name="copy_mode" value="version" x-model="mode" :disabled="count > 1" class="mt-0.5 border-gray-300">
+                    <span>
+                        {{ __('Neue Version dieses Dokuments (aufversionieren)') }}
+                        <span class="block text-xs text-gray-400">
+                            {{ __('Behält die Stamm-ID :id, die Version wird um 1 erhöht.', ['id' => \App\Support\StammId::format($project->stamm_id)]) }}
+                            <span x-show="count > 1" x-cloak>{{ __('Nur mit einer Kopie möglich.') }}</span>
+                        </span>
+                    </span>
+                </label>
+            </fieldset>
 
             @if ($inactivePeopleNames->isNotEmpty())
                 <div class="rounded-md bg-amber-50 px-2 py-1.5 text-xs text-amber-800" x-show="has('project_people')" x-cloak>

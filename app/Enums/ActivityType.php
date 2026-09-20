@@ -30,6 +30,7 @@ enum ActivityType: string
     case ProjectMultichanged = 'project_multichanged';
     case VerbundRoleChanged = 'verbund_role_changed';
     case VerbundDissolved = 'verbund_dissolved';
+    case StammIdDetached = 'stamm_id_detached';
 
     public function label(): string
     {
@@ -44,6 +45,7 @@ enum ActivityType: string
             self::ProjectMultichanged => __('Per Multichange geändert'),
             self::VerbundRoleChanged => __('Verbund-Rolle geändert'),
             self::VerbundDissolved => __('Verbund aufgelöst'),
+            self::StammIdDetached => __('Aus Versionskette gelöst'),
         };
     }
 
@@ -53,7 +55,7 @@ enum ActivityType: string
             self::WorkflowAssigned, self::WorkflowUnassigned, self::WorkflowStepActivated => ActivityCategory::Workflow,
             self::GraphicOrderStatusChanged => ActivityCategory::Illustration,
             self::ProjectCreated, self::ProjectCopied, self::PublicationDateChanged, self::ProjectMultichanged,
-            self::VerbundRoleChanged, self::VerbundDissolved => ActivityCategory::General,
+            self::VerbundRoleChanged, self::VerbundDissolved, self::StammIdDetached => ActivityCategory::General,
         };
     }
 }

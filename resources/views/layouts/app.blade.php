@@ -2954,6 +2954,87 @@
             </div>
         </x-modal>
 
+        {{--
+            Ralf, 2026-09-20 (Stamm-ID): Versionskette eines Dokuments, gleiches
+            Fetch-Overlay-Prinzip wie project-template-info. "Aus der Kette lösen"
+            (nur mit Recht project.stamm_id.manage) lädt danach das Projekt-Overlay neu.
+        --}}
+        <x-modal name="stamm-id-chain" max-width="2xl">
+            <div class="flex max-h-[85vh] flex-col">
+                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Versionskette') }}</h3>
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'stamm-id-chain' }))"
+                        class="text-gray-400 hover:text-gray-600"
+                        aria-label="{{ __('Schließen') }}"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="stamm-id-chain-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
+                    {{ __('Lädt…') }}
+                </div>
+            </div>
+        </x-modal>
+
+        <script>
+            (function () {
+                const chainBody = () => document.getElementById('stamm-id-chain-body');
+                const csrf = () => document.querySelector('meta[name="csrf-token"]').content;
+
+                window.openStammIdChain = async (projectId) => {
+                    chainBody().innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
+                    window.dispatchEvent(new CustomEvent('open-modal', { detail: 'stamm-id-chain' }));
+                    chainBody().innerHTML = await fetch(`/projekte/${projectId}/stamm-id/kette`).then((r) => r.text());
+                };
+
+                window.detachStammId = async (projectId) => {
+                    const ok = await window.confirmDialog({
+                        title: {{ \Illuminate\Support\Js::from(__('Aus der Versionskette lösen?')) }},
+                        message: {{ \Illuminate\Support\Js::from(__('Das Projekt erhält eine neue, eigene Stamm-ID und gehört danach nicht mehr zu dieser Versionskette. Die übrigen Versionen bleiben unverändert.')) }},
+                        confirmLabel: {{ \Illuminate\Support\Js::from(__('Lösen')) }},
+                        cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
+                    });
+                    if (!ok) return;
+
+                    const response = await fetch(`/projekte/${projectId}/stamm-id/loesen`, {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': csrf(), 'Accept': 'application/json' },
+                    });
+                    if (!response.ok) {
+                        await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Lösen fehlgeschlagen.')) }});
+                        return;
+                    }
+
+                    window.dispatchEvent(new CustomEvent('close-modal', { detail: 'stamm-id-chain' }));
+                    window.dispatchEvent(new CustomEvent('open-project', { detail: { id: projectId } }));
+                    window.dispatchEvent(new CustomEvent('projekte-refresh'));
+                };
+
+                // Stamm-ID in die Zwischenablage (für die Suche). Fallback für
+                // Umgebungen ohne navigator.clipboard (unsicherer Kontext).
+                window.copyStammId = async (button, id) => {
+                    try {
+                        await navigator.clipboard.writeText(id);
+                    } catch (e) {
+                        const field = document.createElement('textarea');
+                        field.value = id;
+                        document.body.appendChild(field);
+                        field.select();
+                        document.execCommand('copy');
+                        field.remove();
+                    }
+                    const original = button.title;
+                    button.title = {{ \Illuminate\Support\Js::from(__('Kopiert')) }};
+                    button.classList.add('text-green-600');
+                    setTimeout(() => { button.title = original; button.classList.remove('text-green-600'); }, 1500);
+                };
+            })();
+        </script>
+
         <script>
             (function () {
                 const body = () => document.getElementById('project-template-info-body');

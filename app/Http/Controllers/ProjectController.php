@@ -34,6 +34,7 @@ use App\Services\ProjectNumberAllocator;
 use App\Support\CurrentTenant;
 use App\Support\ProjectColumnCatalog;
 use App\Support\ProjectFilterCatalog;
+use App\Support\StammId;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -1131,6 +1132,13 @@ class ProjectController extends Controller
                 ->orWhere('attributes->initiator', 'like', "%{$term}%")
                 ->orWhere('attributes->system_model', 'like', "%{$term}%")
                 ->orWhere('attributes_material_number', 'like', "%{$term}%");
+
+            // Stamm-ID (Ralf, 2026-09-20): auch mit Bindestrichen/Kleinschreibung
+            // eingebbar, deshalb auf die kanonische Form normalisiert.
+            $stammTerm = StammId::normalize($term);
+            if (strlen($stammTerm) >= 4) {
+                $query->orWhere('stamm_id', 'like', "%{$stammTerm}%");
+            }
 
             if ($includeRemarks) {
                 $query->orWhere('remarks', 'like', "%{$term}%");

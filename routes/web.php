@@ -37,6 +37,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectChecklistController;
 use App\Http\Controllers\ProjectConnectionController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\StammIdController;
 use App\Http\Controllers\ProjectGanttPeopleController;
 use App\Http\Controllers\ProjectGanttPreferenceController;
 use App\Http\Controllers\ProjectCopyController;
@@ -120,6 +121,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/projekte/{project}', [ProjectController::class, 'show'])->name('projekte.show');
     Route::get('/projekte/{project}/projektbeteiligte', [ProjectController::class, 'peopleField'])->name('projekte.projektbeteiligte.show');
     Route::patch('/projekte/{project}', [ProjectController::class, 'update'])->name('projekte.update');
+    // Versionskette / "Stamm-ID" (Ralf, 2026-09-20)
+    Route::get('/projekte/{project}/stamm-id/kette', [StammIdController::class, 'chain'])->name('projekte.stamm-id.chain');
+    Route::post('/projekte/{project}/stamm-id/loesen', [StammIdController::class, 'detach'])->name('projekte.stamm-id.detach');
     Route::post('/projekte/{project}/favorite', [FavoriteController::class, 'toggle'])->name('projekte.favorite');
     Route::patch('/projekte/{project}/workflow-steps/{projectWorkflowStep}/due-date', [ProjectWorkflowStepController::class, 'updateDueDate'])->name('projekte.workflow-steps.due-date');
     Route::patch('/projekte/{project}/workflow-steps/{projectWorkflowStep}/freigabe', [ProjectWorkflowStepController::class, 'toggleFreigabe'])->name('projekte.workflow-steps.freigabe');

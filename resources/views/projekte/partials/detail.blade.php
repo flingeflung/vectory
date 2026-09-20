@@ -117,9 +117,46 @@
         {{-- Titel, Meldungen und Reiter bleiben fix stehen - nur der Inhalt
              darunter soll scrollen. --}}
         <div class="{{ $isOverlay ? 'shrink-0 px-4 pt-3' : '' }}">
-            <div class="mb-3 flex items-center gap-1.5 text-sm text-gray-600">
-                {{ $project->title }}
-                <x-status-icon :status="$project->status" class="inline-block h-4 w-auto shrink-0 align-middle" />
+            <div class="mb-3 flex items-start justify-between gap-3">
+                <div class="flex items-center gap-1.5 text-sm text-gray-600">
+                    {{ $project->title }}
+                    <x-status-icon :status="$project->status" class="inline-block h-4 w-auto shrink-0 align-middle" />
+                </div>
+
+                {{-- Ralf, 2026-09-20 (Stamm-ID): sichtbar, aber nicht von Hand
+                     änderbar - kopierbar für die Suche. Die Position in der
+                     Kette öffnet die Versionsübersicht. --}}
+                @if ($project->stamm_id)
+                    @php $stammInfo = $project->stammPositionInfo(); @endphp
+                    <div class="flex shrink-0 flex-col items-end gap-0.5 text-xs text-gray-500">
+                        <div class="flex items-center gap-1">
+                            <span>{{ __('Stamm-ID') }}</span>
+                            <span class="select-all font-mono font-medium text-gray-800">{{ \App\Support\StammId::format($project->stamm_id) }}</span>
+                            <button
+                                type="button"
+                                onclick="window.copyStammId(this, {{ \Illuminate\Support\Js::from($project->stamm_id) }})"
+                                title="{{ __('Stamm-ID kopieren') }}"
+                                class="rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                            >
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                            </button>
+                            <x-info-icon-button
+                                :title="__('Was ist die Stamm-ID?')"
+                                onclick="window.notifyDialog({{ \Illuminate\Support\Js::from(__('Die Stamm-ID verbindet alle Versionen desselben Dokuments. Ein neues Dokument und eine Kopie als neues Dokument erhalten eine neue Stamm-ID; nur beim Aufversionieren bleibt sie erhalten. Sie lässt sich nicht von Hand ändern, aber kopieren und in der Suche verwenden.')) }})"
+                            />
+                        </div>
+                        @if ($stammInfo['total'] > 1)
+                            <button
+                                type="button"
+                                onclick="window.openStammIdChain({{ $project->id }})"
+                                class="{{ $secondaryBtn }} !py-0.5"
+                                title="{{ __('Versionsübersicht öffnen') }}"
+                            >{{ __('Position :n von :total in der Versionskette', ['n' => $stammInfo['position'], 'total' => $stammInfo['total']]) }}</button>
+                        @endif
+                    </div>
+                @endif
             </div>
 
             @if (($justSaved ?? false))
