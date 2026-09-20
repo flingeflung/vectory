@@ -393,7 +393,8 @@ class ProjectController extends Controller
                 'tenant_id' => $tenantId,
                 'source_pn' => $this->numberAllocator->nextFreePn($year, $tenantId),
                 'title' => trim($validated['title']),
-                'version' => 1,
+                // Ralf, 2026-09-20: ein neu angelegtes Projekt ist eine Neuerstellung.
+                'creation_type' => 1,
             ]);
 
             Activity::log($project, ActivityType::ProjectCreated, __('Projekt neu angelegt.'));

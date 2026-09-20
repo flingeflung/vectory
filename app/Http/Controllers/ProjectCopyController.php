@@ -201,10 +201,8 @@ class ProjectCopyController extends Controller
                     $attrs['creation_type'] = $sourceProject->creation_type;
                 }
                 // Ralf, 2026-09-20: eine neue Version desselben Dokuments ist per Definition eine
-                // Änderung - unabhängig von der Kopiervorlage.
-                if ($asNewVersion) {
-                    $attrs['creation_type'] = 2;
-                }
+                // Änderung, ein neues Dokument eine Neuerstellung - unabhängig von der Kopiervorlage.
+                $attrs['creation_type'] = $asNewVersion ? 2 : 1;
 
                 // Zusatzfelder (system=false) leben im attributes-JSON,
                 // Wert 1:1 übernehmen, wenn im Ausgangsprojekt gesetzt.
