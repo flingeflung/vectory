@@ -675,7 +675,23 @@ class ProjectController extends Controller
             abort_unless($request->user()->can('project.publication_date.edit'), 403);
         }
 
+        $oldCreationType = $project->creation_type;
+
         $project->update($validated);
+
+        // Ralf, 2026-09-20: manuelles Ändern des Erstellungsstatus gehört in die Vorgänge.
+        if ($project->wasChanged('creation_type')) {
+            $creationTypeLabel = fn (?int $type) => match ($type) {
+                1 => __('Neuerstellung'),
+                2 => __('Änderung'),
+                default => __('nicht gesetzt'),
+            };
+            Activity::log(
+                $project,
+                ActivityType::CreationTypeChanged,
+                __('Erstellungsstatus von „:old“ auf „:new“ geändert.', ['old' => $creationTypeLabel($oldCreationType), 'new' => $creationTypeLabel($project->creation_type)])
+            );
+        }
 
         if ($publicationDateChanged) {
             Activity::log($project, ActivityType::PublicationDateChanged, $project->publication_date
