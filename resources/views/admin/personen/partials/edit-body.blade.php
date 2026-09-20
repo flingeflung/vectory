@@ -137,7 +137,13 @@
                     </div>
                 </div>
             @else
-            <form method="POST" action="{{ route('admin.personen.update', $person) }}" class="space-y-4 rounded-lg border border-gray-200 bg-white p-4">
+            <form
+                method="POST"
+                action="{{ route('admin.personen.update', $person) }}"
+                x-data="{ dirty: false }"
+                @input="dirty = window.formIsDirty($el)"
+                class="space-y-4 rounded-lg border border-gray-200 bg-white p-4"
+            >
                 <div>
                     <label class="block text-xs text-gray-500">{{ __('ID') }}</label>
                     <input type="text" value="{{ $person->id }}" disabled class="mt-0.5 w-20 rounded-md border-gray-300 bg-gray-50 text-sm text-gray-500">
@@ -336,7 +342,7 @@
                      normal, sobald man weiter zu den Boxen darunter
                      (Rechte-Set, Login-Zugang, ...) scrollt - kein separates
                      Fixed-Footer-Layout nötig, das den Rest umbauen würde. --}}
-                <div class="sticky bottom-0 -mx-4 -mb-4 rounded-b-lg border-t border-gray-200 bg-white px-4 py-3">
+                <div x-show="dirty" x-cloak class="sticky bottom-0 -mx-4 -mb-4 rounded-b-lg border-t border-gray-200 bg-white px-4 py-3">
                     <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">
                         {{ __('Speichern') }}
                     </button>
@@ -352,19 +358,19 @@
                     <div class="mb-3 text-sm text-gray-700">
                         {{ __('Benutzername') }}: <span class="font-medium">{{ $person->user->username }}</span>
                     </div>
-                    <form method="POST" action="{{ route('admin.personen.password.reset', $person) }}" class="flex items-end gap-2">
+                    <form method="POST" action="{{ route('admin.personen.password.reset', $person) }}" x-data="{ dirty: false }" @input="dirty = window.formIsDirty($el)" class="flex items-end gap-2">
                         @csrf
                         <div>
                             <label class="block text-xs text-gray-500">{{ __('Neues Passwort') }}</label>
                             <input type="text" name="password" required minlength="4" class="mt-0.5 rounded-md border-gray-300 text-sm">
                         </div>
-                        <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">
+                        <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">
                             {{ __('Speichern') }}
                         </button>
                     </form>
                 @else
                     <div class="mb-2 text-xs text-gray-400">{{ __('Diese Person hat noch keinen Login-Zugang (reine Kontaktperson).') }}</div>
-                    <form method="POST" action="{{ route('admin.personen.login.store', $person) }}" class="flex flex-wrap items-end gap-2">
+                    <form method="POST" action="{{ route('admin.personen.login.store', $person) }}" x-data="{ dirty: false }" @input="dirty = window.formIsDirty($el)" class="flex flex-wrap items-end gap-2">
                         @csrf
                         <div>
                             <label class="block text-xs text-gray-500">{{ __('Benutzername') }}</label>
@@ -378,7 +384,7 @@
                             <label class="block text-xs text-gray-500">{{ __('Passwort') }}</label>
                             <input type="text" name="password" required minlength="4" class="mt-0.5 rounded-md border-gray-300 text-sm">
                         </div>
-                        <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">
+                        <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">
                             {{ __('Login-Zugang anlegen') }}
                         </button>
                     </form>
