@@ -5,11 +5,11 @@
         <input type="text" name="title" id="project-request-title" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
     </div>
     <div>
-        <label class="text-xs text-gray-500">{{ __('Modellnummer(n)/Systemname') }}</label>
+        <label class="text-xs text-gray-500">{{ __('Info zum betroffenen Produkt, z.B. Modellnummer, Produktname o.Ä.') }}</label>
         <input type="text" name="model_or_system" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
     </div>
     <div>
-        <label class="text-xs text-gray-500">{{ __('Termin') }}</label>
+        <label class="text-xs text-gray-500">{{ __('Geplanter Fertigstellungstermin') }}</label>
         <input type="date" name="due_date" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
     </div>
     <div>

@@ -3,10 +3,10 @@
 <p>
     {{ __('Bezeichnung') }}: <strong>{{ $title }}</strong><br>
     @if ($modelOrSystem)
-        {{ __('Modellnummer(n)/Systemname') }}: <strong>{{ $modelOrSystem }}</strong><br>
+        {{ __('Info zum betroffenen Produkt, z.B. Modellnummer, Produktname o.Ä.') }}: <strong>{{ $modelOrSystem }}</strong><br>
     @endif
     @if ($dueDate)
-        {{ __('Termin') }}: <strong>{{ $dueDate }}</strong><br>
+        {{ __('Geplanter Fertigstellungstermin') }}: <strong>{{ $dueDate }}</strong><br>
     @endif
 </p>
 
