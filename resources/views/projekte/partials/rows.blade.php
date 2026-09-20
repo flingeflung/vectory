@@ -197,6 +197,10 @@
                             <x-market-icon :market="$market" />
                         @endforeach
                     @endif
+                @elseif ($column['key'] === 'stamm_id')
+                    {{-- Ralf, 2026-09-20: "viel zu groß im Vergleich zu den anderen ...
+                         ist ja eigentlich nicht so wichtig" - klein, grau, Festbreitenschrift. --}}
+                    <span class="whitespace-nowrap font-mono text-[10px] text-gray-400">{{ $project->columnValue('stamm_id') }}</span>
                 @elseif ($column['boolean'] ?? false)
                     @php $value = $project->columnValue($column['key']); @endphp
                     @if ($value === null)
