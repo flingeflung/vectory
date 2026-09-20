@@ -41,7 +41,6 @@ class ProjectColumnCatalog
             // "system_model" oben (das zeigt die einzelnen Produkte).
             ['key' => 'product_group_number', 'label' => __('Produktgruppennr.'), 'long_text' => false],
             ['key' => 'product_group_name', 'label' => __('Produktgruppenbezeichnung'), 'long_text' => false],
-            ['key' => 'version', 'label' => __('Kundenversion'), 'long_text' => false],
             ['key' => 'stamm_id', 'label' => __('Stamm-ID'), 'long_text' => false],
             // Ralf, 2026-09-20: unsere Zählung (Position in der Versionskette), getrennt von der Kundenversion.
             ['key' => 'stamm_version', 'label' => __('Stamm-Version'), 'long_text' => false],
@@ -93,11 +92,11 @@ class ProjectColumnCatalog
      */
     public static function defaultConfig(): array
     {
-        $visibleByDefault = ['title', 'attribute:format', 'version', 'status', 'start_end'];
+        $visibleByDefault = ['title', 'attribute:format', 'attribute:kundenversion', 'status', 'start_end'];
 
         return array_map(
             fn (string $key) => ['key' => $key, 'visible' => in_array($key, $visibleByDefault, true), 'long_text' => false],
-            ['title', 'attribute:format', 'version', 'status', 'project_type', 'start_end', 'remarks', 'attribute:material_number', 'attribute:farbe', 'attribute:heftung', 'attribute:erstauflage']
+            ['title', 'attribute:format', 'attribute:kundenversion', 'status', 'project_type', 'start_end', 'remarks', 'attribute:material_number', 'attribute:farbe', 'attribute:heftung', 'attribute:erstauflage']
         );
     }
 

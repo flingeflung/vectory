@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['tenant_id', 'section', 'system', 'label_editable', 'applies_to_all_types', 'key', 'label', 'data_type', 'multiple', 'number_min', 'number_max', 'number_decimals', 'max_length', 'sort', 'available_in_mail_templates'])]
+#[Fillable(['tenant_id', 'section', 'system', 'label_editable', 'applies_to_all_types', 'increments_on_new_version', 'key', 'label', 'data_type', 'multiple', 'number_min', 'number_max', 'number_decimals', 'max_length', 'sort', 'available_in_mail_templates'])]
 #[ObservedBy(AttributeObserver::class)]
 class Attribute extends Model
 {
@@ -78,7 +78,9 @@ class Attribute extends Model
             // projects.end_date/creation_type bleiben unverändert bestehen.
             'start_date' => 'Start/Ende',
             'project_type' => 'Projektkategorie/-art',
-            'version' => 'Kundenversion',
+            // Ralf, 2026-09-20: "Stamm-Version" = unsere Zählung (Position in der Versionskette),
+            // schreibgeschützt. Die "Kundenversion" ist ein normales Zusatzfeld je Kunde.
+            'version' => 'Stamm-Version',
             'status' => 'Status/Erstellungsstatus',
             'markets' => 'Markt',
             // Ralf, 2026-09-13: erst als normales (löschbares) Zusatzfeld

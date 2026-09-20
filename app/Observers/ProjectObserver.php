@@ -5,21 +5,10 @@ namespace App\Observers;
 use App\Models\Project;
 use App\Models\Task;
 use App\Support\StammId;
-use App\Support\VersionLabel;
 use Illuminate\Support\Facades\Auth;
 
 class ProjectObserver
 {
-    /**
-     * Kundenversion (Freitext): Zahlenschlüssel fürs Sortieren mitpflegen.
-     */
-    public function saving(Project $project): void
-    {
-        if (! $project->exists || $project->isDirty('version')) {
-            $project->version_sort = VersionLabel::sortKey($project->version);
-        }
-    }
-
     /**
      * Footer "angelegt durch"/"zuletzt geändert" (Ralf, 2026-09-11, nach
      * Vietto-Vorbild: dort aktualisiert ajax_writeaend.php ModUserID/

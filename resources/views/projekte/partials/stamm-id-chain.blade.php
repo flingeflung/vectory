@@ -15,7 +15,9 @@
                 <tr>
                     <th class="px-2 py-1.5 text-left font-medium text-gray-500" title="{{ __('Position in der Versionskette') }}">{{ __('Stamm-Version') }}</th>
                     <th class="px-2 py-1.5 text-left font-medium text-gray-500">{{ __('Projekt') }}</th>
-                    <th class="px-2 py-1.5 text-left font-medium text-gray-500">{{ __('Kundenversion') }}</th>
+                    @if ($versionAttribute)
+                        <th class="px-2 py-1.5 text-left font-medium text-gray-500">{{ $versionAttribute->label }}</th>
+                    @endif
                     <th class="px-2 py-1.5 text-left font-medium text-gray-500">{{ __('Erstellungsstatus') }}</th>
                     <th class="px-2 py-1.5 text-left font-medium text-gray-500" title="{{ __('Publikationsdatum') }}">{{ __('PD') }}</th>
                     <th class="px-2 py-1.5 text-left font-medium text-gray-500">{{ __('Status') }}</th>
@@ -36,7 +38,9 @@
                                 <span class="ml-1 text-[11px] text-indigo-600">{{ __('(angezeigt)') }}</span>
                             @endif
                         </td>
-                        <td class="px-2 py-1.5 text-gray-700">{{ $member->version ?? '–' }}</td>
+                        @if ($versionAttribute)
+                            <td class="px-2 py-1.5 text-gray-700">{{ $member->attributes[$versionAttribute->key] ?? '–' }}</td>
+                        @endif
                         <td class="px-2 py-1.5 text-gray-700">{{ $member->creation_type_label ?: '–' }}</td>
                         <td class="px-2 py-1.5 text-gray-700">{{ $member->publication_date?->format('d.m.Y') ?? '–' }}</td>
                         <td class="px-2 py-1.5 text-gray-700">{{ $member->status_label }}</td>

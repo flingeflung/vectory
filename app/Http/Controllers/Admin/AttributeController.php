@@ -105,6 +105,8 @@ class AttributeController extends Controller
             'multiple' => $multiple,
             ...$numberConstraints,
             'max_length' => $isTextType ? $this->maxLengthConstraint($request) : null,
+            // Ralf, 2026-09-20: nur einzeilige Textfelder ("Kundenversion") können beim Aufversionieren hochgezählt werden.
+            'increments_on_new_version' => $dataType === Attribute::DATA_TYPE_TEXT && $request->boolean('increments_on_new_version'),
             'sort' => 1 + (int) Attribute::query()->where('tenant_id', $tenantId)->where('section', $section)->max('sort'),
         ]);
 
@@ -150,6 +152,7 @@ class AttributeController extends Controller
             'label' => $label,
             ...($attribute->data_type === Attribute::DATA_TYPE_NUMBER ? $this->numberConstraints($request) : []),
             ...($isTextType ? ['max_length' => $this->maxLengthConstraint($request)] : []),
+            ...($attribute->data_type === Attribute::DATA_TYPE_TEXT ? ['increments_on_new_version' => $request->boolean('increments_on_new_version')] : []),
         ]);
 
         return $this->redirectToSection($attribute->section);

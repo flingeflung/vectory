@@ -15,7 +15,7 @@ use Illuminate\Support\Collection;
 
 #[Fillable([
     'tenant_id', 'source_pn', 'title', 'codename', 'initiator', 'system_model',
-    'construction_year', 'project_type_main_id', 'project_type_sub_id', 'project_template_id', 'version',
+    'construction_year', 'project_type_main_id', 'project_type_sub_id', 'project_template_id',
     'status', 'creation_type', 'archived', 'localization', 'publication_date', 'start_date', 'end_date', 'remarks',
     'attributes', 'workflow_id', 'verbund_rolle', 'hauptprojekt_id',
     'paper_format_combination_id', 'input_format_free_text', 'output_format_free_text',
@@ -475,6 +475,22 @@ class Project extends Model
             ->whereNotIn('key', Attribute::HIDDEN_SYSTEM_FIELDS)
             ->applicableTo($this->project_type_sub_id)
             ->with('options')
+            ->orderBy('sort')
+            ->get();
+    }
+
+    /**
+     * Zusatzfelder, die beim Aufversionieren hochgezählt werden ("Kundenversion", Ralf,
+     * 2026-09-20) und für die Projektart dieses Projekts gelten.
+     *
+     * @return Collection<int, Attribute>
+     */
+    public function incrementingVersionAttributes(): Collection
+    {
+        return Attribute::query()
+            ->where('tenant_id', $this->tenant_id)
+            ->where('increments_on_new_version', true)
+            ->applicableTo($this->project_type_sub_id)
             ->orderBy('sort')
             ->get();
     }

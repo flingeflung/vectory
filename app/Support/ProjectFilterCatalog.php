@@ -46,7 +46,6 @@ class ProjectFilterCatalog
             ['key' => 'status', 'label' => __('Status'), 'type' => 'multiselect', 'options' => $statusOptions],
             ['key' => 'project_year', 'label' => __('Projektjahr'), 'type' => 'multiselect', 'options' => self::projectYearOptions($tenantId)],
             ['key' => 'project_type', 'label' => __('Projekttyp/-art'), 'type' => 'grouped_multiselect', 'groups' => self::projectTypeGroups($tenantId)],
-            ['key' => 'version', 'label' => __('Kundenversion'), 'type' => 'text'],
             // Ralf, 2026-09-20: alle Versionen eines Dokuments per Stamm-ID
             // zeigen (Eingabe auch mit Bindestrichen/Kleinschreibung, siehe
             // ProjectController::applyFilters()).

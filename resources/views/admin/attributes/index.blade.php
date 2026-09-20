@@ -95,6 +95,10 @@
                                 <label class="block text-xs text-gray-500">{{ __('Max. Textlänge') }}</label>
                                 <input type="number" name="max_length" min="1" step="1" placeholder="{{ __('unbegrenzt') }}" class="mt-0.5 w-24 rounded-md border-gray-300 py-1 text-sm">
                             </div>
+                            <label x-show="newType === 'text'" x-cloak class="flex items-center gap-1.5 text-xs text-gray-600" title="{{ __('Beim Kopieren als neue Version wird die letzte Zahl im Text um 1 erhöht, z. B. V0015 wird zu V0016.') }}">
+                                <input type="checkbox" name="increments_on_new_version" value="1" class="rounded border-gray-300">
+                                {{ __('Beim Aufversionieren hochzählen (z. B. Kundenversion)') }}
+                            </label>
                             <div class="flex justify-end gap-2">
                                 <button type="button" @click="creating = false" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                                     {{ __('Abbrechen') }}
@@ -234,7 +238,13 @@
                                                     </label>
                                                 </div>
                                             @elseif (in_array($attribute->data_type, ['text', 'textarea'], true))
-                                                <div class="ml-0 flex items-center gap-1 text-xs text-gray-500">
+                                                <div class="ml-0 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
+                                                    @if ($attribute->data_type === 'text')
+                                                        <label class="flex items-center gap-1" title="{{ __('Beim Kopieren als neue Version wird die letzte Zahl im Text um 1 erhöht, z. B. V0015 wird zu V0016.') }}">
+                                                            <input type="checkbox" name="increments_on_new_version" value="1" @checked($attribute->increments_on_new_version) class="rounded border-gray-300">
+                                                            {{ __('Beim Aufversionieren hochzählen') }}
+                                                        </label>
+                                                    @endif
                                                     <label class="flex items-center gap-1">
                                                         {{ __('Max. Textlänge') }}
                                                         <input type="number" min="1" step="1" name="max_length" value="{{ $attribute->max_length }}" placeholder="{{ __('unbegrenzt') }}" class="w-20 rounded border-gray-300 py-0.5 text-xs">

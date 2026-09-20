@@ -30,6 +30,8 @@ class StammIdController extends Controller
             'project' => $project,
             'chain' => $project->stammChain()->get(),
             'canManage' => $request->user()->can('project.stamm_id.manage'),
+            // Die "Kundenversion" ist ein Zusatzfeld je Kunde - Spalte nur, wenn es eines gibt.
+            'versionAttribute' => $project->incrementingVersionAttributes()->first(),
         ]);
     }
 

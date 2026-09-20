@@ -55,7 +55,7 @@ class ProjectController extends Controller
      *
      * @var list<string>
      */
-    private const SORTABLE_COLUMNS = ['source_pn', 'title', 'version', 'status', 'workflow'];
+    private const SORTABLE_COLUMNS = ['source_pn', 'title', 'status', 'workflow'];
 
     private const DATE_RANGE_FIELDS = ['start_date', 'end_date', 'publication_date'];
 
@@ -551,7 +551,6 @@ class ProjectController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'project_type_sub_id' => ['nullable', 'integer', Rule::exists('project_type_subs', 'id')->where('tenant_id', $project->tenant_id)],
             'project_template_id' => ['nullable', 'integer', Rule::exists('project_templates', 'id')->where('tenant_id', $project->tenant_id)],
-            'version' => ['nullable', 'string', 'max:50'],
             'status' => ['required', 'integer', 'in:0,1,2,3'],
             'creation_type' => ['nullable', 'integer', 'in:1,2'],
             'archived' => ['boolean'],

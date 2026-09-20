@@ -217,6 +217,8 @@ class TenantConfigCloner
                     'multiple' => $row->multiple,
                     'available_in_mail_templates' => $row->available_in_mail_templates,
                     'applies_to_all_types' => $row->applies_to_all_types,
+                    'increments_on_new_version' => $row->increments_on_new_version,
+                    'max_length' => $row->max_length,
                     'sort' => $row->sort,
                 ]);
                 $map[$row->id] = $new->id;

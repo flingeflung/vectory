@@ -55,7 +55,7 @@ class ProjectCopyController extends Controller
      * wirklich zählt - gleiche Liste würde sich sonst mit Feldern füllen,
      * die so oder so nichts tun.
      */
-    public const NO_EFFECT_KEYS = ['archived', 'date_progress', 'progress', 'project_connections', 'remarks_echo', 'change_log', 'publication_date', 'start_date'];
+    public const NO_EFFECT_KEYS = ['version', 'archived', 'date_progress', 'progress', 'project_connections', 'remarks_echo', 'change_log', 'publication_date', 'start_date'];
 
     public function form(Project $project): View
     {
@@ -91,8 +91,26 @@ class ProjectCopyController extends Controller
             'templates' => $templates,
             'copyableFields' => $copyableFields,
             'inactivePeopleNames' => $inactivePeopleNames,
-            'nextVersion' => VersionLabel::increment($project->version),
+            'versionHint' => $this->versionHint($project),
         ]);
+    }
+
+    /**
+     * Vorschau für den Kopieren-Dialog: welche Kundenversion würde beim Aufversionieren
+     * entstehen (null = kein hochzählendes Feld für diese Projektart).
+     *
+     * @return array{label: string, from: ?string, to: ?string}|null
+     */
+    private function versionHint(Project $project): ?array
+    {
+        $attribute = $project->incrementingVersionAttributes()->first();
+        if (! $attribute) {
+            return null;
+        }
+
+        $from = $project->attributes[$attribute->key] ?? null;
+
+        return ['label' => $attribute->label, 'from' => $from, 'to' => VersionLabel::increment($from)];
     }
 
     public function store(Request $request, Project $project): JsonResponse
@@ -135,11 +153,12 @@ class ProjectCopyController extends Controller
         $baseTitle = trim($validated['title']);
         $count = $validated['count'];
         $asNewVersion = $validated['copy_mode'] === 'version';
+        $incrementingAttributes = $asNewVersion ? $sourceProject->incrementingVersionAttributes() : collect();
         $sourceAttributes = $sourceProject->attributes ?? [];
         $userId = $request->user()->id;
 
         $newProjectIds = DB::transaction(function () use (
-            $sourceProject, $tenantId, $baseTitle, $count, $checkedKeys, $customFieldKeys, $asNewVersion, $sourceAttributes, $userId
+            $sourceProject, $tenantId, $baseTitle, $count, $checkedKeys, $customFieldKeys, $asNewVersion, $incrementingAttributes, $sourceAttributes, $userId
         ) {
             // Zeilen-Lock auf den Mandanten als Mutex - gleiches Prinzip wie
             // ProjectController::store(), damit mehrere gleichzeitige
@@ -156,14 +175,6 @@ class ProjectCopyController extends Controller
                     'tenant_id' => $tenantId,
                     'source_pn' => $this->numberAllocator->nextFreePn($year, $tenantId),
                     'title' => $title,
-                    // Kundenversion: beim Aufversionieren die letzte Zahl des Vorgängers + 1
-                    // (ohne Zahl im Text bleibt sie leer, siehe VersionLabel); als
-                    // neues Dokument Ausgangswert nur bei Haken übernommen
-                    // (siehe Tooltipp), sonst wie bei einem frisch angelegten
-                    // Projekt bei 1.
-                    'version' => $asNewVersion
-                        ? VersionLabel::increment($sourceProject->version)
-                        : (in_array('version', $checkedKeys, true) ? $sourceProject->version : '1'),
                 ];
 
                 // Aufversionieren: Stamm-ID des Vorgängers behalten und ans Ende
@@ -196,6 +207,17 @@ class ProjectCopyController extends Controller
                 foreach ($customFieldKeys as $key) {
                     if (array_key_exists($key, $sourceAttributes)) {
                         $copiedAttributeValues[$key] = $sourceAttributes[$key];
+                    }
+                }
+                // Kundenversion (Ralf, 2026-09-20): beim Aufversionieren wird jedes als "hochzählend"
+                // markierte Zusatzfeld auf die letzte Zahl des Vorgängers + 1 gesetzt (unabhängig von
+                // der Kopiervorlage); ohne Zahl im Text bleibt es leer (siehe VersionLabel).
+                foreach ($incrementingAttributes as $versionAttribute) {
+                    $next = VersionLabel::increment($sourceAttributes[$versionAttribute->key] ?? null);
+                    if ($next === null) {
+                        unset($copiedAttributeValues[$versionAttribute->key]);
+                    } else {
+                        $copiedAttributeValues[$versionAttribute->key] = $next;
                     }
                 }
                 if ($copiedAttributeValues !== []) {
