@@ -397,6 +397,13 @@ class ProjectController extends Controller
                 'creation_type' => 1,
             ]);
 
+            // Kundenversion (Ralf, 2026-09-20): ein neues Dokument beginnt bei Version 1, wie früher das feste
+            // Versionsfeld - gilt für Zusatzfelder, die beim Aufversionieren hochzählen.
+            $versionDefaults = $project->incrementingVersionAttributes()->mapWithKeys(fn (Attribute $attribute) => [$attribute->key => '1'])->all();
+            if ($versionDefaults !== []) {
+                $project->update(['attributes' => $versionDefaults]);
+            }
+
             Activity::log($project, ActivityType::ProjectCreated, __('Projekt neu angelegt.'));
 
             if ($addAsParticipant && $creator) {

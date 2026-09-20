@@ -153,7 +153,7 @@ class ProjectCopyController extends Controller
         $baseTitle = trim($validated['title']);
         $count = $validated['count'];
         $asNewVersion = $validated['copy_mode'] === 'version';
-        $incrementingAttributes = $asNewVersion ? $sourceProject->incrementingVersionAttributes() : collect();
+        $incrementingAttributes = $sourceProject->incrementingVersionAttributes();
         $sourceAttributes = $sourceProject->attributes ?? [];
         $userId = $request->user()->id;
 
@@ -216,11 +216,17 @@ class ProjectCopyController extends Controller
                 // markierte Zusatzfeld auf die letzte Zahl des Vorgängers + 1 gesetzt (unabhängig von
                 // der Kopiervorlage); ohne Zahl im Text bleibt es leer (siehe VersionLabel).
                 foreach ($incrementingAttributes as $versionAttribute) {
-                    $next = VersionLabel::increment($sourceAttributes[$versionAttribute->key] ?? null);
-                    if ($next === null) {
-                        unset($copiedAttributeValues[$versionAttribute->key]);
-                    } else {
-                        $copiedAttributeValues[$versionAttribute->key] = $next;
+                    if ($asNewVersion) {
+                        $next = VersionLabel::increment($sourceAttributes[$versionAttribute->key] ?? null);
+                        if ($next === null) {
+                            unset($copiedAttributeValues[$versionAttribute->key]);
+                        } else {
+                            $copiedAttributeValues[$versionAttribute->key] = $next;
+                        }
+                    } elseif (! isset($copiedAttributeValues[$versionAttribute->key])) {
+                        // Neues Dokument, das die Kundenversion nicht aus dem Original übernimmt (Vorlage):
+                        // Ausgangsversion 1, wie früher bei jedem neuen Projekt (Ralf, 2026-09-20).
+                        $copiedAttributeValues[$versionAttribute->key] = '1';
                     }
                 }
                 if ($copiedAttributeValues !== []) {
