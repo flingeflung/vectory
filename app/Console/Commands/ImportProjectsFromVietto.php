@@ -6,7 +6,7 @@ use App\Models\Project;
 use App\Models\ProjectTypeMain;
 use App\Models\ProjectTypeSub;
 use App\Models\Tenant;
-use App\Support\StammId;
+use App\Support\ViettoVersionChains;
 use Faker\Factory as FakerFactory;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -85,30 +85,10 @@ class ImportProjectsFromVietto extends Command
             return ((int) $matches[1]) < 1000 ? null : $value;
         };
 
-        // Stamm-ID (Ralf, 2026-09-20): Viettos Versionskette = alle Projekte mit
-        // gleicher Mat.-Nr. (Print/Video) bzw. gleicher ODN (Online), Reihenfolge
-        // nach Projektnummer. Daraus wird hier je Gruppe EINE Stamm-ID (aus dem
-        // Schlüssel abgeleitet, damit ein erneuter Lauf dieselbe ID ergibt) und
-        // die Position in der Kette. Projekte ohne Nummer starten eine eigene
-        // Kette (Vergabe im ProjectObserver).
-        $stammByPn = [];
-        $positionByKey = [];
-        foreach ($rows as $row) {
-            $publicationType = (int) ($row->intPublikationstyp ?? 0);
-            $key = null;
-            if ($publicationType === 1 && trim((string) ($row->strODN ?? '')) !== '') {
-                $key = 'odn:'.trim($row->strODN);
-            } elseif (in_array($publicationType, [2, 3], true) && trim((string) ($row->strMatnr ?? '')) !== '') {
-                $key = 'matnr:'.trim($row->strMatnr);
-            }
-            if ($key !== null) {
-                $positionByKey[$key] = ($positionByKey[$key] ?? 0) + 1;
-                $stammByPn[$row->pn] = [
-                    'stamm_id' => StammId::fromSeed($tenant->id.':'.$key),
-                    'stamm_position' => $positionByKey[$key],
-                ];
-            }
-        }
+        // Stamm-ID (Ralf, 2026-09-20): Viettos Versionsketten (gleiche Mat.-Nr./ODN),
+        // siehe ViettoVersionChains. Projekte ohne Nummer starten eine eigene Kette
+        // (Vergabe im ProjectObserver).
+        $stammByPn = ViettoVersionChains::build($rows, $tenant->id);
 
         foreach ($rows as $row) {
             $faker->seed(crc32($row->pn));
