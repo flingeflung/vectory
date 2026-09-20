@@ -109,6 +109,7 @@ class TenantConfigCloner
             $projectTypeSubMap = $this->copyProjectTypeSubs($source->id, $target->id, $projectTypeMainMap);
             $this->copyMarketSets($source->id, $target->id, $marketMap);
             $this->copyAttributeProjectTypeLinks($attributeMap, $projectTypeSubMap);
+            $this->copySystemAttributeApplicability($source->id, $target->id, $projectTypeSubMap);
             $workflowMap = $this->copyWorkflows($source->id, $target->id);
             $workflowStepMap = $this->copyWorkflowSteps($source->id, $target->id, $workflowMap);
             $this->copyWorkflowStepFunctionGroups($target->id, $workflowStepMap, $functionGroupMap);
@@ -215,6 +216,7 @@ class TenantConfigCloner
                     'data_type' => $row->data_type,
                     'multiple' => $row->multiple,
                     'available_in_mail_templates' => $row->available_in_mail_templates,
+                    'applies_to_all_types' => $row->applies_to_all_types,
                     'sort' => $row->sort,
                 ]);
                 $map[$row->id] = $new->id;
@@ -250,6 +252,42 @@ class TenantConfigCloner
                     ->values();
 
                 $new->markets()->sync($newMarketIds->mapWithKeys(fn ($id) => [$id => ['tenant_id' => $targetTenantId]]));
+            });
+    }
+
+    /**
+     * Geltung nach Projektart (Ralf, 2026-09-20) der einschränkbaren SYSTEM-Felder
+     * (Modelle, Märkte, Projektschablone): die Zeilen selbst legt seedSystemAttributes()
+     * an, hier wird nur die Einschränkung samt Projektart-Zuordnung vom Quellkunden
+     * übernommen - z.B. "Modelle gelten nicht für Konzeption" im Standardkunden.
+     *
+     * @param  array<int, int>  $projectTypeSubMap
+     */
+    private function copySystemAttributeApplicability(int $sourceTenantId, int $targetTenantId, array $projectTypeSubMap): void
+    {
+        Attribute::query()->withoutGlobalScope('tenant')->where('tenant_id', $sourceTenantId)->where('system', true)
+            ->whereIn('key', Attribute::RESTRICTABLE_SYSTEM_FIELDS)->get()
+            ->each(function (Attribute $source) use ($targetTenantId, $projectTypeSubMap) {
+                $target = Attribute::query()->withoutGlobalScope('tenant')->where('tenant_id', $targetTenantId)
+                    ->where('system', true)->where('key', $source->key)->first();
+                if (! $target) {
+                    return;
+                }
+
+                $target->update(['applies_to_all_types' => $source->applies_to_all_types]);
+
+                if ($source->applies_to_all_types) {
+                    return;
+                }
+
+                DB::table('attribute_project_type')->where('attribute_id', $source->id)->get()->each(function ($row) use ($target, $projectTypeSubMap) {
+                    if (isset($projectTypeSubMap[$row->project_type_sub_id])) {
+                        DB::table('attribute_project_type')->updateOrInsert(
+                            ['attribute_id' => $target->id, 'project_type_sub_id' => $projectTypeSubMap[$row->project_type_sub_id]],
+                            ['created_at' => now(), 'updated_at' => now()]
+                        );
+                    }
+                });
             });
     }
 

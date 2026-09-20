@@ -292,6 +292,7 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     Route::delete('/projektattribute/{attribute}', [AttributeController::class, 'destroy'])->name('projektattribute.destroy');
     Route::post('/projektattribute/{attribute}/pulldown', [AttributeController::class, 'updatePulldown'])->name('projektattribute.pulldown.update');
     Route::post('/projektattribute/{attribute}/projektart', [AttributeController::class, 'toggleProjectType'])->name('projektattribute.projektart.toggle');
+    Route::post('/projektattribute/{attribute}/alle-projektarten', [AttributeController::class, 'toggleAllTypes'])->name('projektattribute.alle-projektarten.toggle');
 
     Route::get('/papierformate', [PaperFormatController::class, 'index'])->name('papierformate');
     Route::get('/papierformate/katalog', [PaperFormatController::class, 'catalog'])->name('papierformate.katalog');

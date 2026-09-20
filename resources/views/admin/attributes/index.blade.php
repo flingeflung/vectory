@@ -32,7 +32,18 @@
                         <div class="mb-2 flex items-center justify-between">
                             <div>
                                 <div class="text-xs font-semibold text-gray-500">{{ __('Felder') }}</div>
-                                <p class="text-xs text-gray-400">{{ __('Feste Felder (Schloss-Symbol) lassen sich nur per Drag & Drop einsortieren, nicht umbenennen/löschen.') }}</p>
+                                {{-- Ralf, 2026-09-20: kurze Definition der drei Bereiche und welche Art von
+                                     Feldern dort sinnvoll ist. --}}
+                                <p class="max-w-3xl text-xs text-gray-500">
+                                    @if ($section === 'stammdaten')
+                                        <span class="font-medium text-gray-600">{{ __('Stammdaten') }}</span> {{ __('beschreiben das Projekt selbst und ändern sich kaum, etwa Bezeichnung, Art, Modell-/Produktbezug, Märkte und Ausgangsangaben wie Baujahr oder Initiator. Sinnvoll sind hier Felder, die man einmal einträgt und danach überwiegend nur noch liest.') }}
+                                    @elseif ($section === 'ablaufdaten')
+                                        <span class="font-medium text-gray-600">{{ __('Ablaufdaten') }}</span> {{ __('beschreiben, wie das Projekt abläuft und wo es gerade steht, etwa Termine, Status, Workflow, Beteiligte, Fortschritt und Publikation. Sinnvoll sind hier Felder, die sich im Projektverlauf ändern oder den Ablauf steuern.') }}
+                                    @else
+                                        <span class="font-medium text-gray-600">{{ __('Typspezifische Attribute') }}</span> {{ __('beschreiben Eigenschaften, die nur bei bestimmten Projektarten eine Rolle spielen, etwa Format, Farbigkeit, Heftung oder Auflage bei Druckdokumenten. Sie werden den Projektarten einzeln zugeordnet.') }}
+                                    @endif
+                                </p>
+                                <p class="mt-0.5 text-xs text-gray-400">{{ __('Feste Felder (Schloss-Symbol) lassen sich nur per Drag & Drop einsortieren, nicht umbenennen oder löschen.') }}</p>
                             </div>
                             <button type="button" @click="creating = !creating; if (creating) $nextTick(() => $refs.newAttributeLabel.focus())" class="shrink-0 rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                                 + {{ __('Neu') }}
@@ -327,6 +338,62 @@
                         @endif
                     @endforeach
 
+                    {{-- Geltung nach Projektart (Ralf, 2026-09-20): auch Felder in Stammdaten/Ablaufdaten lassen
+                         sich auf ausgewählte Projektarten beschränken (Standard: gilt für alle). Kernfelder
+                         (Bezeichnung, Status, Stamm-Version, Workflow ...) sind hier nicht aufgeführt - sie gelten immer. --}}
+                    @if ($section !== 'typspezifisch' && $restrictableBySection->get($section, collect())->isNotEmpty())
+                        <div class="rounded-lg border border-gray-200 bg-white p-4">
+                            <div class="mb-2 text-xs font-semibold text-gray-500">{{ __('Geltung nach Projektart') }}</div>
+                            <p class="mb-2 text-xs text-gray-400">{{ __('Standard: ein Feld gilt für alle Projektarten. Wird „alle“ abgewählt, gilt es nur für die angehakten Arten; bei den übrigen wird es nicht angezeigt (bereits eingetragene Werte bleiben erhalten). Ein Klick wirkt sofort, kein Speichern-Button nötig.') }}</p>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-xs">
+                                    <thead>
+                                        <tr>
+                                            <th class="sticky left-0 bg-white pb-2 pr-3">{{ __('Projektart') }}</th>
+                                            @foreach ($restrictableBySection->get($section) as $attribute)
+                                                <th class="whitespace-nowrap px-2 pb-2 text-center font-medium text-gray-600">
+                                                    <div>{{ $attribute->label }}</div>
+                                                    <form method="POST" action="{{ route('admin.projektattribute.alle-projektarten.toggle', $attribute) }}">
+                                                        @csrf
+                                                        <label class="mt-0.5 inline-flex items-center gap-1 font-normal text-gray-500">
+                                                            <input type="checkbox" @checked($attribute->applies_to_all_types) onchange="this.form.submit()" class="rounded border-gray-300">
+                                                            {{ __('alle') }}
+                                                        </label>
+                                                    </form>
+                                                </th>
+                                            @endforeach
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($categories as $category)
+                                            @foreach ($category->subs as $sub)
+                                                <tr class="border-t border-gray-100">
+                                                    <td class="sticky left-0 whitespace-nowrap bg-white py-1.5 pr-3 text-gray-700">{{ $category->name }}: {{ $sub->name }}</td>
+                                                    @foreach ($restrictableBySection->get($section) as $attribute)
+                                                        <td class="px-2 py-1.5 text-center">
+                                                            <input
+                                                                type="checkbox"
+                                                                @disabled($attribute->applies_to_all_types)
+                                                                @checked($attribute->applies_to_all_types || in_array($sub->id, $assignments->get($attribute->id, []), true))
+                                                                @class(['opacity-40' => $attribute->applies_to_all_types])
+                                                                @click="
+                                                                    fetch({{ \Illuminate\Support\Js::from(route('admin.projektattribute.projektart.toggle', $attribute)) }}, {
+                                                                        method: 'POST',
+                                                                        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Content-Type': 'application/x-www-form-urlencoded' },
+                                                                        body: 'project_type_sub_id={{ $sub->id }}',
+                                                                    });
+                                                                "
+                                                            >
+                                                        </td>
+                                                    @endforeach
+                                                </tr>
+                                            @endforeach
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    @endif
                     @if ($section === 'typspezifisch' && $attributesBySection->get('typspezifisch', collect())->isNotEmpty())
                         <div class="rounded-lg border border-gray-200 bg-white p-4">
                             <div class="mb-2 text-xs font-semibold text-gray-500">{{ __('Zuordnung zu Projektarten') }}</div>

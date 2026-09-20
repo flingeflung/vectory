@@ -165,7 +165,7 @@
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         @foreach ($changeRows as $row)
-                            <tr @class(['bg-gray-50' => in_array($row['status'], ['unchanged', 'excluded'], true), 'bg-amber-50' => $row['status'] === 'skipped'])>
+                            <tr @class(['bg-gray-50' => in_array($row['status'], ['unchanged', 'excluded', 'not_applicable'], true), 'bg-amber-50' => $row['status'] === 'skipped'])>
                                 <td class="px-2 py-1.5 align-top">
                                     {{-- Nur betroffene Projekte lassen sich an-/abhaken; übersprungene/unveränderte werden ohnehin nicht geändert. --}}
                                     <input

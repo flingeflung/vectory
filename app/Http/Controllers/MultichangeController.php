@@ -534,6 +534,25 @@ class MultichangeController extends Controller
             }
         }
 
+        // Ralf, 2026-09-20 (Geltung nach Projektart): gilt das Feld für die Projektart eines
+        // Projekts nicht, ist es dort nicht änderbar - wird wie "übersprungen" behandelt, aber
+        // in der Vorschau mit eigener Begründung gezeigt ("not_applicable").
+        $notApplicableIds = [];
+        $attributeKey = match (true) {
+            $field['key'] === 'project_template_id' => 'project_template',
+            $field['key'] === 'markets', ($field['storage'] ?? 'column') === 'attribute' => $field['key'],
+            default => null,
+        };
+        if ($attributeKey !== null) {
+            $doesNotApply = fn (Project $project) => ! $project->fieldApplies($attributeKey);
+            $notApplicable = $applicable->concat($unchanged)->filter($doesNotApply)->values();
+            $notApplicableIds = $notApplicable->pluck('id')->all();
+            $applicable = $applicable->reject($doesNotApply)->values();
+            $unchanged = $unchanged->reject($doesNotApply)->values();
+            $notApplicableIds = array_merge($notApplicableIds, $skipped->filter($doesNotApply)->pluck('id')->all());
+            $skipped = $skipped->concat($notApplicable)->unique('id')->values();
+        }
+
         // Ralf, 2026-09-19: einzelne Projekte per Häkchen von der Änderung ausnehmen -
         // erst NACH der fachlichen Prüfung (übersprungen/unverändert) abziehen, damit
         // nur wirklich betroffene Projekte überhaupt ausnehmbar sind. Serverseitig
@@ -541,7 +560,7 @@ class MultichangeController extends Controller
         $excluded = $applicable->filter(fn (Project $project) => in_array($project->id, $excludedIds, true))->values();
         $applicable = $applicable->reject(fn (Project $project) => in_array($project->id, $excludedIds, true))->values();
 
-        return ['applicable' => $applicable, 'skipped' => $skipped, 'unchanged' => $unchanged, 'excluded' => $excluded];
+        return ['applicable' => $applicable, 'skipped' => $skipped, 'unchanged' => $unchanged, 'excluded' => $excluded, 'not_applicable_ids' => $notApplicableIds];
     }
 
     /**
@@ -1056,6 +1075,10 @@ class MultichangeController extends Controller
             ->union($preview['skipped']->mapWithKeys(fn (Project $p) => [$p->id => 'skipped']))
             ->union($preview['excluded']->mapWithKeys(fn (Project $p) => [$p->id => 'excluded']));
 
+        foreach ($preview['not_applicable_ids'] ?? [] as $notApplicableId) {
+            $statusByProjectId[$notApplicableId] = 'not_applicable';
+        }
+
         $allProjects = $preview['applicable']->merge($preview['unchanged'])->merge($preview['skipped'])->merge($preview['excluded'])
             ->sortBy('source_pn')->values();
 
@@ -1087,6 +1110,10 @@ class MultichangeController extends Controller
     {
         if ($status === 'excluded') {
             return __('Wird nicht geändert: von Ihnen ausgenommen.');
+        }
+
+        if ($status === 'not_applicable') {
+            return __('Wird nicht geändert: Das Feld gilt für die Projektart dieses Projekts nicht.');
         }
 
         if ($status === 'unchanged') {

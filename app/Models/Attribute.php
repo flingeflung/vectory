@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['tenant_id', 'section', 'system', 'label_editable', 'key', 'label', 'data_type', 'multiple', 'number_min', 'number_max', 'number_decimals', 'max_length', 'sort', 'available_in_mail_templates'])]
+#[Fillable(['tenant_id', 'section', 'system', 'label_editable', 'applies_to_all_types', 'key', 'label', 'data_type', 'multiple', 'number_min', 'number_max', 'number_decimals', 'max_length', 'sort', 'available_in_mail_templates'])]
 #[ObservedBy(AttributeObserver::class)]
 class Attribute extends Model
 {
@@ -168,6 +168,58 @@ class Attribute extends Model
     public function projectTypeSubs(): BelongsToMany
     {
         return $this->belongsToMany(ProjectTypeSub::class, 'attribute_project_type');
+    }
+
+    /**
+     * Systemfelder, die sich (wie Zusatzfelder) auf ausgewählte Projektarten
+     * beschränken lassen (Ralf, 2026-09-20). Alle übrigen Systemfelder sind
+     * Kernfelder und gelten immer für jedes Projekt (Bezeichnung, Status,
+     * Stamm-Version, Workflow, ...).
+     */
+    public const RESTRICTABLE_SYSTEM_FIELDS = ['system_model', 'markets', 'project_template'];
+
+    public function isRestrictable(): bool
+    {
+        return ! $this->system || in_array($this->key, self::RESTRICTABLE_SYSTEM_FIELDS, true);
+    }
+
+    /**
+     * Nur Attribute, die für die Projektart gelten: "gilt für alle" oder der
+     * Art zugewiesen (attribute_project_type).
+     */
+    public function scopeApplicableTo(\Illuminate\Database\Eloquent\Builder $query, ?int $projectTypeSubId): void
+    {
+        $query->where(function (\Illuminate\Database\Eloquent\Builder $query) use ($projectTypeSubId) {
+            $query->where('applies_to_all_types', true)
+                ->orWhereIn('id', function ($sub) use ($projectTypeSubId) {
+                    $sub->select('attribute_id')->from('attribute_project_type')->where('project_type_sub_id', $projectTypeSubId);
+                });
+        });
+    }
+
+    /**
+     * Geltung aller einschränkbaren Attribute eines Mandanten: Schlüssel => null
+     * (gilt für alle Projektarten) oder Liste der Projektart-IDs. Pro Anfrage
+     * einmal berechnet (Übersicht: "n.a." in Zellen, für die ein Feld nicht gilt).
+     *
+     * @return array<string, list<int>|null>
+     */
+    public static function applicabilityMap(int $tenantId, bool $refresh = false): array
+    {
+        static $cache = [];
+
+        if ($refresh) {
+            unset($cache[$tenantId]);
+        }
+
+        return $cache[$tenantId] ??= (function () use ($tenantId) {
+            $attributes = static::query()->where('tenant_id', $tenantId)->where('applies_to_all_types', false)->pluck('key', 'id');
+            $links = \Illuminate\Support\Facades\DB::table('attribute_project_type')->whereIn('attribute_id', $attributes->keys())->get()->groupBy('attribute_id');
+
+            return $attributes->map(fn ($key, $id) => $links->get($id, collect())->pluck('project_type_sub_id')->map(fn ($v) => (int) $v)->all())
+                ->mapWithKeys(fn ($ids, $id) => [$attributes[$id] => $ids])
+                ->all();
+        })();
     }
 
     /**

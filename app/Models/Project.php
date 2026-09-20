@@ -452,21 +452,18 @@ class Project extends Model
         return Attribute::query()
             ->where('tenant_id', $this->tenant_id)
             ->where('section', Attribute::SECTION_TYPSPEZIFISCH)
-            ->whereIn('id', function ($query) {
-                $query->select('attribute_id')
-                    ->from('attribute_project_type')
-                    ->where('project_type_sub_id', $this->project_type_sub_id);
-            })
+            ->applicableTo($this->project_type_sub_id)
             ->with('options')
             ->orderBy('sort')
             ->get();
     }
 
     /**
-     * Zusatzattribute für Stammdaten/Ablaufdaten (Ralf, 2026-09-10) - anders
-     * als relevantAttributes() nicht nach Projektart eingeschränkt, gelten
-     * immer für alle Projekte des Mandanten (diese zwei Bereiche sind
-     * inhaltlich nicht an eine Projektart gebunden).
+     * Attribute für Stammdaten/Ablaufdaten (Ralf, 2026-09-10). Seit 2026-09-20
+     * gilt die Zuweisung zu Projektarten in ALLEN Bereichen: ein Feld erscheint
+     * nur, wenn es für alle Projektarten gilt (Standard) oder der Projektart
+     * dieses Projekts zugewiesen ist. Bereits gespeicherte Werte bleiben auch bei
+     * nicht geltenden Feldern erhalten, sie werden nur nicht angezeigt.
      *
      * @return Collection<int, Attribute>
      */
@@ -476,9 +473,25 @@ class Project extends Model
             ->where('tenant_id', $this->tenant_id)
             ->where('section', $section)
             ->whereNotIn('key', Attribute::HIDDEN_SYSTEM_FIELDS)
+            ->applicableTo($this->project_type_sub_id)
             ->with('options')
             ->orderBy('sort')
             ->get();
+    }
+
+    /**
+     * Gilt das Feld (Schlüssel wie "system_model", "markets" oder ein Zusatzfeld-Key) für die
+     * Projektart dieses Projekts? Für die "n.a."-Anzeige in der Übersicht.
+     */
+    public function fieldApplies(string $attributeKey): bool
+    {
+        $map = Attribute::applicabilityMap($this->tenant_id);
+
+        if (! array_key_exists($attributeKey, $map)) {
+            return true;
+        }
+
+        return in_array((int) $this->project_type_sub_id, $map[$attributeKey], true);
     }
 
     /**

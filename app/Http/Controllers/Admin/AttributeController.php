@@ -62,8 +62,11 @@ class AttributeController extends Controller
 
         $categories = ProjectTypeMain::query()->where('tenant_id', $tenantId)->orderBy('sort')->with('subs')->get();
 
+        // Geltung nach Projektart (Ralf, 2026-09-20): gibt es für ALLE Bereiche,
+        // nicht nur Typspezifisch - deshalb Zuordnungen aller einschränkbaren Felder laden.
+        $restrictable = $allAttributes->filter(fn (Attribute $attribute) => $attribute->isRestrictable());
         $assignments = DB::table('attribute_project_type')
-            ->whereIn('attribute_id', $attributes->get(Attribute::SECTION_TYPSPEZIFISCH, collect())->pluck('id'))
+            ->whereIn('attribute_id', $restrictable->pluck('id'))
             ->get()
             ->groupBy('attribute_id')
             ->map(fn ($rows) => $rows->pluck('project_type_sub_id')->all());
@@ -72,6 +75,7 @@ class AttributeController extends Controller
             'attributesBySection' => $attributes,
             'categories' => $categories,
             'assignments' => $assignments,
+            'restrictableBySection' => $restrictable->groupBy('section'),
             'dataTypes' => $this->dataTypeOptions(),
             'valueCounts' => $valueCounts,
         ]);
@@ -277,7 +281,7 @@ class AttributeController extends Controller
     public function toggleProjectType(Request $request, Attribute $attribute): RedirectResponse
     {
         abort_unless($attribute->tenant_id === CurrentTenant::id(), 404);
-        abort_unless($attribute->section === Attribute::SECTION_TYPSPEZIFISCH, 422);
+        abort_unless($attribute->isRestrictable(), 422);
 
         $subId = $request->integer('project_type_sub_id');
         $exists = DB::table('attribute_project_type')->where('attribute_id', $attribute->id)->where('project_type_sub_id', $subId)->exists();
@@ -291,6 +295,33 @@ class AttributeController extends Controller
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+        }
+
+        return $this->redirectToSection($attribute->section);
+    }
+
+    /**
+     * Schalter "gilt für alle Projektarten" (Ralf, 2026-09-20). Beim Umschalten
+     * auf "nur ausgewählte" werden zunächst ALLE Projektarten des Mandanten
+     * zugewiesen - es ändert sich also nichts, bis jemand Arten abwählt (statt
+     * dass das Feld schlagartig überall verschwindet).
+     */
+    public function toggleAllTypes(Request $request, Attribute $attribute): RedirectResponse
+    {
+        abort_unless($attribute->tenant_id === CurrentTenant::id(), 404);
+        abort_unless($attribute->isRestrictable() && $attribute->section !== Attribute::SECTION_TYPSPEZIFISCH, 422);
+
+        $appliesToAll = ! $attribute->applies_to_all_types;
+        $attribute->update(['applies_to_all_types' => $appliesToAll]);
+
+        if (! $appliesToAll) {
+            $subIds = \App\Models\ProjectTypeSub::query()->where('tenant_id', $attribute->tenant_id)->pluck('id');
+            foreach ($subIds as $subId) {
+                DB::table('attribute_project_type')->updateOrInsert(
+                    ['attribute_id' => $attribute->id, 'project_type_sub_id' => $subId],
+                    ['created_at' => now(), 'updated_at' => now()]
+                );
+            }
         }
 
         return $this->redirectToSection($attribute->section);

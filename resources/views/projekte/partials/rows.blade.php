@@ -62,7 +62,16 @@
         </td>
         @foreach ($columns as $column)
             <td class="px-4 py-2 {{ ($column['icons'] ?? false) ? 'text-gray-500' : ($column['long_text'] ? 'text-gray-900 max-w-xs' : 'whitespace-nowrap text-gray-500') }}">
-                @if ($column['type_icon'] ?? false)
+                @php
+                    // Geltung nach Projektart (Ralf, 2026-09-20): gilt das Feld für die Projektart dieses
+                    // Projekts nicht, steht dezent "n.a." statt eines Leerfelds (sonst nicht unterscheidbar
+                    // von einem fehlenden Wert).
+                    $fieldKey = str_starts_with($column['key'], 'attribute:') ? substr($column['key'], 10) : (in_array($column['key'], ['system_model', 'markets'], true) ? $column['key'] : null);
+                    $notApplicable = $fieldKey !== null && ! $project->fieldApplies($fieldKey);
+                @endphp
+                @if ($notApplicable)
+                    <span class="text-gray-300" title="{{ __('Dieses Feld gilt für die Projektart nicht') }}">{{ __('n.a.') }}</span>
+                @elseif ($column['type_icon'] ?? false)
                     @php $typeSub = $project->project_type_sub_model; @endphp
                     @if ($typeSub)
                         <div class="flex items-center gap-2">
