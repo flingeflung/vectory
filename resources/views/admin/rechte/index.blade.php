@@ -251,6 +251,8 @@
                         id="set-form"
                         method="POST"
                         action="{{ route('admin.rechte.sets.update', $selectedTemplate) }}"
+                        x-data="{ dirty: false }"
+                        @input="dirty = window.formIsDirty($el)"
                         class="flex flex-1 min-h-0 flex-col border-r border-gray-100"
                     >
                         @csrf
@@ -274,7 +276,7 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div class="shrink-0 border-t border-gray-100 p-3">
+                        <div class="shrink-0 border-t border-gray-100 p-3" x-show="dirty" x-cloak>
                             <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">
                                 {{ __('Speichern') }}
                             </button>
@@ -323,7 +325,13 @@
                 </div>
 
                 @if ($selectedPersonIsHomeTenant)
-                    <form method="POST" action="{{ route('admin.rechte.personen.update', $selectedPerson) }}" class="flex-1 min-h-0 overflow-y-auto p-3">
+                    <form
+                        method="POST"
+                        action="{{ route('admin.rechte.personen.update', $selectedPerson) }}"
+                        x-data="{ dirty: false }"
+                        @input="dirty = window.formIsDirty($el)"
+                        class="flex-1 min-h-0 overflow-y-auto p-3"
+                    >
                         @csrf
                         <div class="mb-3 text-xs text-gray-500">{{ __('Rechte-Set auswählen - bestimmt die Rechte dieser Person vollständig.') }}</div>
                         <div class="space-y-1">
@@ -334,7 +342,7 @@
                                 </label>
                             @endforeach
                         </div>
-                        <button type="submit" class="mt-3 rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">
+                        <button type="submit" x-show="dirty" x-cloak class="mt-3 rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">
                             {{ __('Speichern') }}
                         </button>
                     </form>
