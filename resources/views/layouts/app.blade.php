@@ -2961,7 +2961,7 @@
         --}}
         <x-modal name="stamm-id-chain" max-width="2xl" :draggable="true">
             <div class="flex max-h-[85vh] flex-col">
-                <div class="flex shrink-0 cursor-move select-none items-center justify-between border-b border-gray-200 px-4 py-3" data-drag-handle title="{{ __('Ziehen zum Verschieben') }}">
+                <div class="flex shrink-0 cursor-move select-none items-center justify-between rounded-t-lg border-b border-gray-200 bg-gray-100 px-4 py-3" data-drag-handle title="{{ __('Ziehen zum Verschieben') }}">
                     <h3 class="text-sm font-semibold text-gray-900">{{ __('Versionskette') }}</h3>
                     <button
                         type="button"
