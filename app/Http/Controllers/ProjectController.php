@@ -358,6 +358,8 @@ class ProjectController extends Controller
         return view('projekte.partials.create-body', [
             'suggestedPn' => $this->numberAllocator->nextFreePn($year, $tenantId),
             'canAddCreatorAsParticipant' => $request->user()->person?->functionGroups()->exists() ?? false,
+            // Projektart ist beim Anlegen Pflicht (Ralf, 2026-09-21): Geltung von Feldern und Vorbelegungen hängt an ihr.
+            'projectTypeCategories' => ProjectTypeMain::query()->where('tenant_id', $tenantId)->orderBy('sort')->with(['subs' => fn ($query) => $query->orderBy('sort')])->get(),
         ]);
     }
 
@@ -372,16 +374,19 @@ class ProjectController extends Controller
     {
         abort_unless($request->user()->can('project.create'), 403);
 
+        $tenantId = CurrentTenant::id();
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
+            'project_type_sub_id' => ['required', 'integer', Rule::exists('project_type_subs', 'id')->where('tenant_id', $tenantId)],
         ]);
 
-        $tenantId = CurrentTenant::id();
+        $typeSub = ProjectTypeSub::query()->where('tenant_id', $tenantId)->findOrFail($validated['project_type_sub_id']);
         $year = (int) now()->format('y');
         $addAsParticipant = $request->boolean('add_as_participant');
         $creator = $request->user()->person;
 
-        $project = DB::transaction(function () use ($validated, $tenantId, $year, $addAsParticipant, $creator) {
+        $project = DB::transaction(function () use ($validated, $typeSub, $tenantId, $year, $addAsParticipant, $creator) {
             // Zeilen-Lock auf den Mandanten als Mutex - serialisiert
             // gleichzeitiges Anlegen für denselben Kunden, damit zwei
             // Nutzer nie dieselbe PN vorgeschlagen bekommen UND zugewiesen
@@ -393,13 +398,15 @@ class ProjectController extends Controller
                 'tenant_id' => $tenantId,
                 'source_pn' => $this->numberAllocator->nextFreePn($year, $tenantId),
                 'title' => trim($validated['title']),
+                'project_type_sub_id' => $typeSub->id,
+                'project_type_main_id' => $typeSub->project_type_main_id,
                 // Ralf, 2026-09-20: ein neu angelegtes Projekt ist eine Neuerstellung.
                 'creation_type' => 1,
             ]);
 
-            // Vorbelegung (Ralf, 2026-09-21, "Weitere Optionen" am Zusatzfeld): beim Anlegen ist die Projektart noch
-            // unbekannt, deshalb greifen nur Felder, die für alle Projektarten gelten (z.B. Kundenversion = 1).
-            $defaults = Attribute::defaultsFor($tenantId, null);
+            // Vorbelegung (Ralf, 2026-09-21, "Weitere Optionen" am Zusatzfeld): die Projektart steht beim Anlegen fest,
+            // es greifen alle Vorbelegungen der für diese Art geltenden Felder (z.B. Kundenversion = 1).
+            $defaults = Attribute::defaultsFor($tenantId, $typeSub->id);
             if ($defaults !== []) {
                 $project->update(['attributes' => $defaults]);
             }

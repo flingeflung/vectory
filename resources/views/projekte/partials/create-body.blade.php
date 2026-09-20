@@ -10,6 +10,24 @@
         <input type="text" name="title" id="project-create-title" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
     </div>
 
+    {{-- Ralf, 2026-09-21: die Projektart muss schon beim Anlegen feststehen - von ihr hängt ab, welche Felder
+         für das Projekt gelten und welche Vorbelegungen greifen. --}}
+    <div>
+        <label class="text-xs text-gray-500">{{ __('Projektkategorie/-art') }}</label>
+        <select name="project_type_sub_id" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+            <option value="">{{ __('– bitte wählen –') }}</option>
+            @foreach ($projectTypeCategories as $category)
+                @if ($category->subs->isNotEmpty())
+                    <optgroup label="{{ $category->name }}">
+                        @foreach ($category->subs as $sub)
+                            <option value="{{ $sub->id }}">{{ $sub->name }}</option>
+                        @endforeach
+                    </optgroup>
+                @endif
+            @endforeach
+        </select>
+    </div>
+
     @if ($canAddCreatorAsParticipant)
         <label class="flex items-center gap-1.5 text-gray-700">
             <input type="checkbox" name="add_as_participant" value="1" checked class="rounded border-gray-300">
