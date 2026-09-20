@@ -477,7 +477,7 @@ class ProjectController extends Controller
             $requester,
             trim($validated['title']),
             isset($validated['model_or_system']) ? trim($validated['model_or_system']) : null,
-            $validated['due_date'] ?? null,
+            isset($validated['due_date']) ? \Illuminate\Support\Carbon::parse($validated['due_date'])->format('d.m.Y') : null,
             isset($validated['remarks']) ? trim($validated['remarks']) : null,
         ));
 

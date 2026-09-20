@@ -26,11 +26,36 @@ class FileLogTransport extends AbstractTransport
         parent::__construct();
     }
 
+    /**
+     * HTML-Mail als lesbarer Text fürs Log (Ralf, 2026-09-21: die Zeilen erschienen wild eingerückt, weil nur die
+     * Tags entfernt wurden und die Einrückung des Templates stehen blieb): <br> und Absätze werden zu Zeilenumbrüchen,
+     * führende Leerzeichen jeder Zeile entfallen, mehr als eine Leerzeile hintereinander wird zu einer.
+     */
+    private function htmlToText(string $html): string
+    {
+        $text = preg_replace('#<br\s*/?>\s*#i', "
+", $html);
+        $text = preg_replace('#</p>#i', "
+
+", $text);
+        $text = html_entity_decode(strip_tags($text), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $lines = array_map(fn (string $line) => trim($line), explode("
+", str_replace(["
+", ""], "
+", $text)));
+
+        return trim(preg_replace("/
+{3,}/", "
+
+", implode("
+", $lines)));
+    }
+
     protected function doSend(SentMessage $message): void
     {
         $email = MessageConverter::toEmail($message->getOriginalMessage());
 
-        $body = trim($email->getTextBody() ?? strip_tags((string) $email->getHtmlBody()));
+        $body = trim($email->getTextBody() ?? $this->htmlToText((string) $email->getHtmlBody()));
         $subject = $email->getSubject();
         $timestamp = now()->format('d.m.Y H:i:s');
 
