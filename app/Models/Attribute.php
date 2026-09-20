@@ -78,7 +78,7 @@ class Attribute extends Model
             // projects.end_date/creation_type bleiben unverändert bestehen.
             'start_date' => 'Start/Ende',
             'project_type' => 'Projektkategorie/-art',
-            'version' => 'Version',
+            'version' => 'Kundenversion',
             'status' => 'Status/Erstellungsstatus',
             'markets' => 'Markt',
             // Ralf, 2026-09-13: erst als normales (löschbares) Zusatzfeld

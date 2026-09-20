@@ -13,9 +13,9 @@
         <table class="min-w-full divide-y divide-gray-200 text-xs">
             <thead class="sticky top-0 bg-gray-50">
                 <tr>
-                    <th class="px-2 py-1.5 text-left font-medium text-gray-500">#</th>
+                    <th class="px-2 py-1.5 text-left font-medium text-gray-500" title="{{ __('Position in der Versionskette') }}">{{ __('Stamm-Version') }}</th>
                     <th class="px-2 py-1.5 text-left font-medium text-gray-500">{{ __('Projekt') }}</th>
-                    <th class="px-2 py-1.5 text-left font-medium text-gray-500">{{ __('Version') }}</th>
+                    <th class="px-2 py-1.5 text-left font-medium text-gray-500">{{ __('Kundenversion') }}</th>
                     <th class="px-2 py-1.5 text-left font-medium text-gray-500">{{ __('Erstellungsstatus') }}</th>
                     <th class="px-2 py-1.5 text-left font-medium text-gray-500" title="{{ __('Publikationsdatum') }}">{{ __('PD') }}</th>
                     <th class="px-2 py-1.5 text-left font-medium text-gray-500">{{ __('Status') }}</th>

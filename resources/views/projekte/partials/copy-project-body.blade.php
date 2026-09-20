@@ -91,7 +91,12 @@
                     <span>
                         {{ __('Neue Version dieses Dokuments (aufversionieren)') }}
                         <span class="block text-xs text-gray-400">
-                            {{ __('Behält die Stamm-ID :id, die Version wird um 1 erhöht.', ['id' => \App\Support\StammId::format($project->stamm_id)]) }}
+                            {{ __('Behält die Stamm-ID :id.', ['id' => \App\Support\StammId::format($project->stamm_id)]) }}
+                            @if ($nextVersion !== null)
+                                {{ __('Die Kundenversion wird von „:from“ auf „:to“ erhöht.', ['from' => $project->version, 'to' => $nextVersion]) }}
+                            @else
+                                {{ __('Die Kundenversion lässt sich nicht automatisch erhöhen (keine Zahl enthalten) und bleibt leer - bitte danach von Hand eintragen.') }}
+                            @endif
                             <span x-show="count > 1" x-cloak>{{ __('Nur mit einer Kopie möglich.') }}</span>
                         </span>
                     </span>

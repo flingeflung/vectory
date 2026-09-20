@@ -17,6 +17,7 @@ use App\Models\WorkflowStep;
 use App\Services\ProjectDirectoryLocator;
 use App\Services\ProjectNumberAllocator;
 use App\Support\CurrentTenant;
+use App\Support\VersionLabel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -90,6 +91,7 @@ class ProjectCopyController extends Controller
             'templates' => $templates,
             'copyableFields' => $copyableFields,
             'inactivePeopleNames' => $inactivePeopleNames,
+            'nextVersion' => VersionLabel::increment($project->version),
         ]);
     }
 
@@ -154,13 +156,14 @@ class ProjectCopyController extends Controller
                     'tenant_id' => $tenantId,
                     'source_pn' => $this->numberAllocator->nextFreePn($year, $tenantId),
                     'title' => $title,
-                    // Version: beim Aufversionieren immer Vorgänger + 1; als
+                    // Kundenversion: beim Aufversionieren die letzte Zahl des Vorgängers + 1
+                    // (ohne Zahl im Text bleibt sie leer, siehe VersionLabel); als
                     // neues Dokument Ausgangswert nur bei Haken übernommen
                     // (siehe Tooltipp), sonst wie bei einem frisch angelegten
                     // Projekt bei 1.
                     'version' => $asNewVersion
-                        ? ((int) $sourceProject->version) + 1
-                        : (in_array('version', $checkedKeys, true) ? $sourceProject->version : 1),
+                        ? VersionLabel::increment($sourceProject->version)
+                        : (in_array('version', $checkedKeys, true) ? $sourceProject->version : '1'),
                 ];
 
                 // Aufversionieren: Stamm-ID des Vorgängers behalten und ans Ende

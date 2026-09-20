@@ -546,7 +546,7 @@ class ProjectController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'project_type_sub_id' => ['nullable', 'integer', Rule::exists('project_type_subs', 'id')->where('tenant_id', $project->tenant_id)],
             'project_template_id' => ['nullable', 'integer', Rule::exists('project_templates', 'id')->where('tenant_id', $project->tenant_id)],
-            'version' => ['nullable', 'integer'],
+            'version' => ['nullable', 'string', 'max:50'],
             'status' => ['required', 'integer', 'in:0,1,2,3'],
             'creation_type' => ['nullable', 'integer', 'in:1,2'],
             'archived' => ['boolean'],
@@ -1054,16 +1054,6 @@ class ProjectController extends Controller
                 continue;
             }
 
-            if ($key === 'version') {
-                // Wert kommt aus einem Pulldown mit Operator+Zahl, z.B. ">= 3".
-                [$operator, $number] = array_pad(explode(' ', $value, 2), 2, null);
-                if (in_array($operator, ['<=', '<', '=', '>=', '>'], true) && is_numeric($number)) {
-                    $query->where('version', $operator, (int) $number);
-                }
-
-                continue;
-            }
-
             if ($key === 'markets') {
                 $query->whereHas('markets', fn (Builder $query) => $query->whereIn('markets.id', $value));
 
@@ -1249,7 +1239,7 @@ class ProjectController extends Controller
             // zusammengeführte Spalte (siehe ProjectColumnCatalog) - sortiert
             // wird weiterhin nach der echten start_date-Spalte.
             'start_end' => $current->start_date,
-            default => $current->{$column},
+            default => $current->{self::sortDbColumn($column)},
         };
         $this->applyFilters($query, $filters);
 
@@ -1359,6 +1349,15 @@ class ProjectController extends Controller
      *
      * @return array{0: string, 1: string} [Sortier-Spalte, id-Spalte]
      */
+    /**
+     * Kundenversion ist Freitext - sortiert wird nach dem Zahlenschlüssel
+     * version_sort (siehe VersionLabel::sortKey()), sonst stünde "10" vor "9".
+     */
+    private static function sortDbColumn(string $column): string
+    {
+        return $column === 'version' ? 'version_sort' : $column;
+    }
+
     private function resolveSortColumns(Builder $query, string $column): array
     {
         // Start/Ende sind in der Übersicht seit 2026-09-14 eine
@@ -1373,7 +1372,7 @@ class ProjectController extends Controller
             // Gruppierung) einen Self-Join auf "projects" (Alias
             // verbund_haupt) einführt - ohne Präfix wäre der Spaltenname
             // sonst zwischen beiden Tabellen mehrdeutig.
-            return ['projects.'.$column, 'projects.id'];
+            return ['projects.'.self::sortDbColumn($column), 'projects.id'];
         }
 
         $query->leftJoin('workflows', 'workflows.id', '=', 'projects.workflow_id')->select('projects.*');
@@ -1404,7 +1403,7 @@ class ProjectController extends Controller
             )';
         }
 
-        $plainColumn = $column === 'start_end' ? 'start_date' : $column;
+        $plainColumn = $column === 'start_end' ? 'start_date' : self::sortDbColumn($column);
 
         return "COALESCE(
             (SELECT verbund_haupt.{$plainColumn} FROM projects AS verbund_haupt WHERE verbund_haupt.id = projects.hauptprojekt_id),

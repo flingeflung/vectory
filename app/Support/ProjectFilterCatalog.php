@@ -46,7 +46,7 @@ class ProjectFilterCatalog
             ['key' => 'status', 'label' => __('Status'), 'type' => 'multiselect', 'options' => $statusOptions],
             ['key' => 'project_year', 'label' => __('Projektjahr'), 'type' => 'multiselect', 'options' => self::projectYearOptions($tenantId)],
             ['key' => 'project_type', 'label' => __('Projekttyp/-art'), 'type' => 'grouped_multiselect', 'groups' => self::projectTypeGroups($tenantId)],
-            ['key' => 'version', 'label' => __('Version'), 'type' => 'select', 'options' => self::versionOptions($tenantId)],
+            ['key' => 'version', 'label' => __('Kundenversion'), 'type' => 'text'],
             // Ralf, 2026-09-20: alle Versionen eines Dokuments per Stamm-ID
             // zeigen (Eingabe auch mit Bindestrichen/Kleinschreibung, siehe
             // ProjectController::applyFilters()).
@@ -109,27 +109,6 @@ class ProjectFilterCatalog
             ->all();
 
         return [...$fixed, ...$attributes];
-    }
-
-    /**
-     * Operator+Zahl-Kombinationen (wie in Vietto), aber mit dynamischer
-     * Obergrenze statt fest 30 – bis zur höchsten tatsächlich vorkommenden
-     * Versionsnummer dieses Mandanten.
-     *
-     * @return array<string, string>
-     */
-    private static function versionOptions(int $tenantId): array
-    {
-        $maxVersion = (int) (Project::query()->where('tenant_id', $tenantId)->max('version') ?? 1);
-
-        $options = [];
-        foreach (range(1, $maxVersion) as $number) {
-            foreach (['<=', '<', '=', '>=', '>'] as $operator) {
-                $options["{$operator} {$number}"] = "{$operator} {$number}";
-            }
-        }
-
-        return $options;
     }
 
     /**

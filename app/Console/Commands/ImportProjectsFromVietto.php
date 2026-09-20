@@ -106,7 +106,8 @@ class ImportProjectsFromVietto extends Command
                     'codename' => $row->strCodename !== null && $row->strCodename !== '' ? $faker->word() : null,
                     'project_type_main_id' => $row->projIDmain ? ($mainsByLegacyId[$row->projIDmain] ?? null) : null,
                     'project_type_sub_id' => $projectTypeSubId,
-                    'version' => $row->intVersion,
+                    // Kundenversion ist Freitext; Viettos -1 heißt "nicht gesetzt".
+                    'version' => $row->intVersion !== null && (int) $row->intVersion >= 0 ? (string) $row->intVersion : null,
                     // Erstellungsstatus (Ralf, 2026-09-20): Vietto intTyp 1 = Neuerstellung,
                     // 2 = Änderung - deckt sich mit Vectorys creation_type.
                     'creation_type' => in_array((int) $row->intTyp, [1, 2], true) ? (int) $row->intTyp : null,
