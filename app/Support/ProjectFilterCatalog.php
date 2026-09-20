@@ -51,6 +51,14 @@ class ProjectFilterCatalog
             // zeigen (Eingabe auch mit Bindestrichen/Kleinschreibung, siehe
             // ProjectController::applyFilters()).
             ['key' => 'stamm_id', 'label' => __('Stamm-ID'), 'type' => 'text'],
+            // Ralf, 2026-09-20: auch danach filtern können, ob überhaupt ein
+            // Erstellungsstatus gesetzt ist ("gesetzt"/"nicht gesetzt").
+            ['key' => 'creation_type', 'label' => __('Erstellungsstatus'), 'type' => 'select', 'options' => [
+                '1' => __('Neuerstellung'),
+                '2' => __('Änderung'),
+                'gesetzt' => __('irgendeiner gesetzt'),
+                'leer' => __('nicht gesetzt'),
+            ]],
             ['key' => 'workflow_id', 'label' => __('Workflow'), 'type' => 'select', 'options' => self::workflowOptions($tenantId)],
             // Ralf, 2026-09-13: label_editable-System-Feld, aber eine echte
             // n:m-Produktverknüpfung statt Freitext - eigener fester

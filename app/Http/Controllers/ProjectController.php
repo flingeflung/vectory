@@ -1008,6 +1008,17 @@ class ProjectController extends Controller
                 continue;
             }
 
+            if ($key === 'creation_type') {
+                match ((string) $value) {
+                    '1', '2' => $query->where('creation_type', (int) $value),
+                    'gesetzt' => $query->whereNotNull('creation_type'),
+                    'leer' => $query->whereNull('creation_type'),
+                    default => null,
+                };
+
+                continue;
+            }
+
             if ($key === 'stamm_id') {
                 // Gespeichert wird die kanonische Form ohne Trenner - Eingabe
                 // wie "apek-ha4c" oder "APEK HA4C" muss deshalb erst
