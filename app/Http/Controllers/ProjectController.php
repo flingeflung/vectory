@@ -675,21 +675,24 @@ class ProjectController extends Controller
             abort_unless($request->user()->can('project.publication_date.edit'), 403);
         }
 
-        $oldCreationType = $project->creation_type;
+        $oldStatus = $project->status;
 
         $project->update($validated);
 
-        // Ralf, 2026-09-20: manuelles Ändern des Erstellungsstatus gehört in die Vorgänge.
-        if ($project->wasChanged('creation_type')) {
-            $creationTypeLabel = fn (?int $type) => match ($type) {
-                1 => __('Neuerstellung'),
-                2 => __('Änderung'),
-                default => __('nicht gesetzt'),
+        // Ralf, 2026-09-20: manuelles Ändern des Status (z.B. auf "Beendet", nur ohne aktuellen
+        // Workflow-Schritt möglich) gehört in die Vorgänge. Der Erstellungsstatus wird bewusst NICHT protokolliert.
+        if ($project->wasChanged('status')) {
+            $statusLabel = fn (int $status) => match ($status) {
+                0 => __('Geplant'),
+                1 => __('In Bearbeitung'),
+                2 => __('Beendet'),
+                3 => __('Verworfen'),
+                default => __('Unbekannt'),
             };
             Activity::log(
                 $project,
-                ActivityType::CreationTypeChanged,
-                __('Erstellungsstatus von „:old“ auf „:new“ geändert.', ['old' => $creationTypeLabel($oldCreationType), 'new' => $creationTypeLabel($project->creation_type)])
+                ActivityType::StatusChanged,
+                __('Status von „:old“ auf „:new“ geändert.', ['old' => $statusLabel((int) $oldStatus), 'new' => $statusLabel((int) $project->status)])
             );
         }
 
