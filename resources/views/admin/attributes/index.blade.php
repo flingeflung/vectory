@@ -43,7 +43,8 @@
                     class="space-y-4"
                 >
                     @if ($hasMatrix)
-                        <div class="flex gap-1.5 text-xs">
+                        {{-- sticky: die Umschalter bleiben beim Scrollen der Feldliste stehen (Ralf, 2026-09-20). --}}
+                        <div class="sticky top-0 z-30 flex gap-1.5 bg-gray-100 pb-1.5 pt-0.5 text-xs">
                             <button
                                 type="button"
                                 @click="view = 'fields'"
