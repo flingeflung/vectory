@@ -12,7 +12,30 @@
 <div class="rounded-lg border border-gray-200 bg-white p-4">
     <div class="mb-2 text-xs font-semibold text-gray-500">{{ $title }}</div>
     <p class="mb-2 text-xs text-gray-400">{{ $description }}</p>
-    <div x-data="{ markRow: null, markCol: null }" class="max-h-[calc(100vh-17rem)] min-h-[12rem] overflow-auto rounded-md border border-gray-100">
+    {{-- Höhe passt sich dem verbleibenden Platz im Fenster an (Ralf, 2026-09-20: die Kopfzeile darf beim
+         Scrollen nie wegrutschen - dafür darf die Tabelle nicht höher sein als der sichtbare Bereich, sonst
+         scrollt zusätzlich die Seite und die Kopfzeile verschwindet oben). Neu berechnet beim Einblenden und Verändern der Fenstergröße. --}}
+    <div
+        x-data="{
+            markRow: null,
+            markCol: null,
+            fit() {
+                const top = this.$el.getBoundingClientRect().top;
+                if (top > 0) { this.$el.style.maxHeight = Math.max(240, window.innerHeight - top - 28) + 'px'; }
+            },
+            init() {
+                this.fit();
+                // Mehrfach absichern: beim Start ist der Bereich oft noch ausgeblendet (Ansicht/Reiter), dann
+                // passt fit() beim Einblenden, bei Größenänderung und spätestens beim ersten Überfahren nach.
+                setTimeout(() => this.fit(), 150);
+                new IntersectionObserver(() => this.fit()).observe(this.$el);
+                window.addEventListener('resize', () => this.fit());
+                window.addEventListener('matrix-shown', () => this.fit());
+            },
+        }"
+        @mouseenter="fit()"
+        class="max-h-[calc(100vh-28rem)] min-h-[12rem] overflow-auto rounded-md border border-gray-100"
+    >
         <table class="w-full border-separate border-spacing-0 text-left text-xs">
             <thead>
                 <tr>

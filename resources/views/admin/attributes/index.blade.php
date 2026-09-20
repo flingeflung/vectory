@@ -27,8 +27,38 @@
 
         <div class="min-h-0 flex-1 overflow-y-auto">
             @foreach (['stammdaten', 'ablaufdaten', 'typspezifisch'] as $section)
-                <div x-show="activeTab === {{ \Illuminate\Support\Js::from($section) }}" x-cloak class="space-y-4">
-                    <div class="rounded-lg border border-gray-200 bg-white p-4" x-data="{ creating: false, newType: 'text' }">
+                @php
+                    // Ralf, 2026-09-20: das Zuordnungs-Raster (kann sehr groß werden) bekommt eine eigene
+                    // Ansicht statt unter der Feldliste zu hängen - so hat es die volle Höhe und die Kopfzeile
+                    // bleibt beim Scrollen sichtbar (zwei verschachtelte Scrollbereiche ließen sie wegrutschen).
+                    $hasMatrix = $section === 'typspezifisch'
+                        ? $attributesBySection->get('typspezifisch', collect())->isNotEmpty()
+                        : $restrictableBySection->get($section, collect())->isNotEmpty();
+                    $matrixTabLabel = $section === 'typspezifisch' ? __('Zuordnung zu Projektarten') : __('Geltung nach Projektart');
+                @endphp
+                <div
+                    x-show="activeTab === {{ \Illuminate\Support\Js::from($section) }}"
+                    x-cloak
+                    x-data="{ view: {{ \Illuminate\Support\Js::from(request('ansicht') === 'geltung' && $hasMatrix ? 'matrix' : 'fields') }} }"
+                    class="space-y-4"
+                >
+                    @if ($hasMatrix)
+                        <div class="flex gap-1.5 text-xs">
+                            <button
+                                type="button"
+                                @click="view = 'fields'"
+                                :class="view === 'fields' ? 'bg-btn-primary text-white' : 'border border-btn-secondary-border bg-btn-secondary text-gray-700 hover:bg-btn-secondary-hover'"
+                                class="rounded-md px-2.5 py-1 font-medium"
+                            >{{ __('Felder') }}</button>
+                            <button
+                                type="button"
+                                @click="view = 'matrix'; $nextTick(() => window.dispatchEvent(new CustomEvent('matrix-shown')))"
+                                :class="view === 'matrix' ? 'bg-btn-primary text-white' : 'border border-btn-secondary-border bg-btn-secondary text-gray-700 hover:bg-btn-secondary-hover'"
+                                class="rounded-md px-2.5 py-1 font-medium"
+                            >{{ $matrixTabLabel }}</button>
+                        </div>
+                    @endif
+                    <div x-show="view === 'fields'" class="rounded-lg border border-gray-200 bg-white p-4" x-data="{ creating: false, newType: 'text' }">
                         <div class="mb-2 flex items-center justify-between">
                             <div>
                                 <div class="text-xs font-semibold text-gray-500">{{ __('Felder') }}</div>
@@ -352,20 +382,24 @@
                          sich auf ausgewählte Projektarten beschränken (Standard: gilt für alle). Kernfelder
                          (Bezeichnung, Status, Stamm-Version, Workflow ...) sind hier nicht aufgeführt - sie gelten immer. --}}
                     @if ($section !== 'typspezifisch' && $restrictableBySection->get($section, collect())->isNotEmpty())
+                        <div x-show="view === 'matrix'" x-cloak>
                         @include('admin.attributes.partials.assignment-matrix', [
                             'matrixAttributes' => $restrictableBySection->get($section),
                             'title' => __('Geltung nach Projektart'),
                             'description' => __('Standard: ein Feld gilt für alle Projektarten. Wird „alle“ abgewählt, gilt es nur für die angehakten Arten; bei den übrigen wird es nicht angezeigt (bereits eingetragene Werte bleiben erhalten). Ein Klick wirkt sofort, kein Speichern-Button nötig. Ein Klick auf eine Überschrift markiert die Spalte bzw. Zeile.'),
                             'withAllSwitch' => true,
                         ])
+                        </div>
                     @endif
                     @if ($section === 'typspezifisch' && $attributesBySection->get('typspezifisch', collect())->isNotEmpty())
+                        <div x-show="view === 'matrix'" x-cloak>
                         @include('admin.attributes.partials.assignment-matrix', [
                             'matrixAttributes' => $attributesBySection->get('typspezifisch'),
                             'title' => __('Zuordnung zu Projektarten'),
                             'description' => __('Klick schaltet die Zuordnung sofort um, kein Speichern-Button nötig. Ein Klick auf eine Überschrift markiert die Spalte bzw. Zeile.'),
                             'withAllSwitch' => false,
                         ])
+                        </div>
                     @endif
                 </div>
             @endforeach

@@ -330,7 +330,8 @@ class AttributeController extends Controller
             }
         }
 
-        return $this->redirectToSection($attribute->section);
+        // Nach dem Umschalten bleibt man in der Geltungs-Ansicht (Raster), nicht zurück bei den Feldern.
+        return $this->redirectToSection($attribute->section, 'geltung');
     }
 
     /**
@@ -339,9 +340,9 @@ class AttributeController extends Controller
      * Query-String verlor, welcher Bereich gerade offen war (die Seite
      * liest das aus ?bereich=, siehe admin/attributes/index.blade.php).
      */
-    private function redirectToSection(string $section): RedirectResponse
+    private function redirectToSection(string $section, ?string $view = null): RedirectResponse
     {
-        return redirect()->route('admin.projektattribute', ['bereich' => $section])->with('status', 'attributes-updated');
+        return redirect()->route('admin.projektattribute', array_filter(['bereich' => $section, 'ansicht' => $view]))->with('status', 'attributes-updated');
     }
 
     /**

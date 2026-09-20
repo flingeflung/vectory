@@ -728,9 +728,14 @@ class ProjectController extends Controller
             }
         }
 
-        $project->markets()->sync(collect($marketIds)->mapWithKeys(fn (int $marketId) => [
-            $marketId => ['tenant_id' => $project->tenant_id],
-        ])->all());
+        // Geltung nach Projektart (Ralf, 2026-09-20): gilt das Feld "Markt" für die Projektart nicht,
+        // fehlt es im Formular - ein Sync mit leerer Liste würde die vorhandenen Märkte löschen.
+        // Werte bleiben bei nicht geltenden Feldern erhalten, also dann gar nicht anfassen.
+        if ($project->fieldApplies('markets')) {
+            $project->markets()->sync(collect($marketIds)->mapWithKeys(fn (int $marketId) => [
+                $marketId => ['tenant_id' => $project->tenant_id],
+            ])->all());
+        }
 
         // Projektbeteiligte Personen: komplett aus der Formularauswahl neu aufbauen.
         // project.people.manage nur einfordern, wenn sich dabei wirklich
