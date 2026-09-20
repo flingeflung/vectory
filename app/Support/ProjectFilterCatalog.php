@@ -47,6 +47,10 @@ class ProjectFilterCatalog
             ['key' => 'project_year', 'label' => __('Projektjahr'), 'type' => 'multiselect', 'options' => self::projectYearOptions($tenantId)],
             ['key' => 'project_type', 'label' => __('Projekttyp/-art'), 'type' => 'grouped_multiselect', 'groups' => self::projectTypeGroups($tenantId)],
             ['key' => 'version', 'label' => __('Version'), 'type' => 'select', 'options' => self::versionOptions($tenantId)],
+            // Ralf, 2026-09-20: alle Versionen eines Dokuments per Stamm-ID
+            // zeigen (Eingabe auch mit Bindestrichen/Kleinschreibung, siehe
+            // ProjectController::applyFilters()).
+            ['key' => 'stamm_id', 'label' => __('Stamm-ID'), 'type' => 'text'],
             ['key' => 'workflow_id', 'label' => __('Workflow'), 'type' => 'select', 'options' => self::workflowOptions($tenantId)],
             // Ralf, 2026-09-13: label_editable-System-Feld, aber eine echte
             // n:m-Produktverknüpfung statt Freitext - eigener fester

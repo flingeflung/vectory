@@ -1008,6 +1008,18 @@ class ProjectController extends Controller
                 continue;
             }
 
+            if ($key === 'stamm_id') {
+                // Gespeichert wird die kanonische Form ohne Trenner - Eingabe
+                // wie "apek-ha4c" oder "APEK HA4C" muss deshalb erst
+                // normalisiert werden (sonst träfe der Teilstring nie).
+                $normalized = StammId::normalize($value);
+                if ($normalized !== '') {
+                    $query->where('stamm_id', 'like', "%{$normalized}%");
+                }
+
+                continue;
+            }
+
             if ($key === 'favorite') {
                 $favoritesQuery = fn (Builder $query) => $query->where('user_id', Auth::id());
                 (bool) $value ? $query->whereHas('favorites', $favoritesQuery) : $query->whereDoesntHave('favorites', $favoritesQuery);
