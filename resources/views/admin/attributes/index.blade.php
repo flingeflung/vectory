@@ -126,10 +126,7 @@
                                 <label class="block text-xs text-gray-500">{{ __('Max. Textlänge') }}</label>
                                 <input type="number" name="max_length" min="1" step="1" placeholder="{{ __('unbegrenzt') }}" class="mt-0.5 w-24 rounded-md border-gray-300 py-1 text-sm">
                             </div>
-                            <label x-show="newType === 'text'" x-cloak class="flex items-center gap-1.5 text-xs text-gray-600" title="{{ __('Beim Kopieren als neue Version wird die letzte Zahl im Text um 1 erhöht, z. B. V0015 wird zu V0016.') }}">
-                                <input type="checkbox" name="increments_on_new_version" value="1" class="rounded border-gray-300">
-                                {{ __('Beim Aufversionieren hochzählen (z. B. Kundenversion)') }}
-                            </label>
+                            @include('admin.attributes.partials.more-options', ['attribute' => null])
                             <div class="flex justify-end gap-2">
                                 <button type="button" @click="creating = false" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                                     {{ __('Abbrechen') }}
@@ -270,18 +267,14 @@
                                                 </div>
                                             @elseif (in_array($attribute->data_type, ['text', 'textarea'], true))
                                                 <div class="ml-0 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
-                                                    @if ($attribute->data_type === 'text')
-                                                        <label class="flex items-center gap-1" title="{{ __('Beim Kopieren als neue Version wird die letzte Zahl im Text um 1 erhöht, z. B. V0015 wird zu V0016.') }}">
-                                                            <input type="checkbox" name="increments_on_new_version" value="1" @checked($attribute->increments_on_new_version) class="rounded border-gray-300">
-                                                            {{ __('Beim Aufversionieren hochzählen') }}
-                                                        </label>
-                                                    @endif
+
                                                     <label class="flex items-center gap-1">
                                                         {{ __('Max. Textlänge') }}
                                                         <input type="number" min="1" step="1" name="max_length" value="{{ $attribute->max_length }}" placeholder="{{ __('unbegrenzt') }}" class="w-20 rounded border-gray-300 py-0.5 text-xs">
                                                     </label>
                                                 </div>
                                             @endif
+                                            @include('admin.attributes.partials.more-options', ['attribute' => $attribute])
                                         </form>
                                         @if ($deletionLocked)
                                             <span class="shrink-0 text-xs text-gray-400" title="{{ __('Wird in :count Projekten verwendet - nur Super-Admin kann Felder mit vorhandenen Werten löschen.', ['count' => $valueCount]) }}">
@@ -359,6 +352,31 @@
                                             </button>
                                         </div>
 
+                                        <details class="rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600">
+                                            <summary class="cursor-pointer select-none font-medium text-gray-500">{{ __('Weitere Optionen') }}</summary>
+                                            <div class="mt-2 space-y-2">
+                                                @unless ($attribute->multiple)
+                                                    <div>
+                                                        <label class="block text-gray-500">{{ __('Vorbelegung bei neuem Projekt') }}</label>
+                                                        <select name="default_option_id" class="mt-0.5 w-full rounded-md border-gray-300 py-0.5 text-xs">
+                                                            <option value="">{{ __('– keine –') }}</option>
+                                                            <template x-for="option in options.filter(o => o.id)" :key="option.id">
+                                                                <option :value="option.id" :selected="option.id === {{ \Illuminate\Support\Js::from($attribute->options->firstWhere('value', $attribute->default_value)?->id) }}" x-text="option.label"></option>
+                                                            </template>
+                                                        </select>
+                                                        <p class="mt-0.5 text-gray-400">{{ __('Neue Optionen erscheinen hier nach dem Speichern.') }}</p>
+                                                    </div>
+                                                @endunless
+                                                <label class="flex items-center gap-1.5">
+                                                    <input type="checkbox" name="required" value="1" @checked($attribute->required) class="rounded border-gray-300">
+                                                    {{ __('Pflichtfeld (muss beim Speichern ausgefüllt sein)') }}
+                                                </label>
+                                                <label class="flex items-center gap-1.5">
+                                                    <input type="checkbox" name="log_changes" value="1" @checked($attribute->log_changes) class="rounded border-gray-300">
+                                                    {{ __('Änderungen in den Vorgängen protokollieren') }}
+                                                </label>
+                                            </div>
+                                        </details>
                                         <div class="flex justify-end gap-2 border-t border-gray-100 pt-3">
                                             <button type="button" onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'pulldown-edit-{{ $attribute->id }}' }))" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                                                 {{ __('Abbrechen') }}

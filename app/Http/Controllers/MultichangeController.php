@@ -289,6 +289,11 @@ class MultichangeController extends Controller
             'attribute_textarea' => array_filter(['nullable', 'string', $field['max_length'] ? 'max:'.$field['max_length'] : null]),
         };
 
+        // Pflichtfelder (Ralf, 2026-09-21) dürfen auch per Multichange nicht geleert werden.
+        if (($field['storage'] ?? 'column') === 'attribute' && \App\Models\Attribute::query()->where('tenant_id', CurrentTenant::id())->where('key', $field['key'])->value('required')) {
+            $rules = array_map(fn ($rule) => $rule === 'nullable' ? 'required' : $rule, $rules);
+        }
+
         $allRules = ['value' => $rules];
         if ($field['type'] === 'attribute_select_multiple') {
             $allRules['value.*'] = ['string', Rule::in(array_keys($field['options']))];

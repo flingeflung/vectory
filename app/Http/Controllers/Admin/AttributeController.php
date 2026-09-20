@@ -107,6 +107,7 @@ class AttributeController extends Controller
             'max_length' => $isTextType ? $this->maxLengthConstraint($request) : null,
             // Ralf, 2026-09-20: nur einzeilige Textfelder ("Kundenversion") können beim Aufversionieren hochgezählt werden.
             'increments_on_new_version' => $dataType === Attribute::DATA_TYPE_TEXT && $request->boolean('increments_on_new_version'),
+            ...$this->moreOptions($request, $dataType, $multiple),
             'sort' => 1 + (int) Attribute::query()->where('tenant_id', $tenantId)->where('section', $section)->max('sort'),
         ]);
 
@@ -153,6 +154,7 @@ class AttributeController extends Controller
             ...($attribute->data_type === Attribute::DATA_TYPE_NUMBER ? $this->numberConstraints($request) : []),
             ...($isTextType ? ['max_length' => $this->maxLengthConstraint($request)] : []),
             ...($attribute->data_type === Attribute::DATA_TYPE_TEXT ? ['increments_on_new_version' => $request->boolean('increments_on_new_version')] : []),
+            ...($attribute->system ? [] : $this->moreOptions($request, $attribute->data_type, (bool) $attribute->multiple)),
         ]);
 
         // Die Markierung "hochzählen" entscheidet, ob die Spalte numerisch (V9 < V10) sortiert.
@@ -218,8 +220,12 @@ class AttributeController extends Controller
             ->filter(fn ($row) => $row['label'] !== '')
             ->values();
 
-        DB::transaction(function () use ($attribute, $label, $submittedOptions) {
-            $attribute->update(['label' => $label]);
+        DB::transaction(function () use ($attribute, $label, $submittedOptions, $request) {
+            $attribute->update([
+                'label' => $label,
+                'required' => $request->boolean('required'),
+                'log_changes' => $request->boolean('log_changes'),
+            ]);
 
             $existingOptions = $attribute->options()->get()->keyBy('id');
             $keptIds = $submittedOptions->pluck('id')->filter()->all();
@@ -243,6 +249,12 @@ class AttributeController extends Controller
                     ]);
                 }
             }
+
+            // Vorbelegung (nur Einfachauswahl): eine der bestehenden Optionen, sonst keine.
+            $defaultOption = ! $attribute->multiple && $request->filled('default_option_id')
+                ? $attribute->options()->where('id', (int) $request->input('default_option_id'))->first()
+                : null;
+            $attribute->update(['default_value' => $defaultOption?->value]);
         });
 
         return $this->redirectToSection($attribute->section);
@@ -332,6 +344,45 @@ class AttributeController extends Controller
 
         // Nach dem Umschalten bleibt man in der Geltungs-Ansicht (Raster), nicht zurück bei den Feldern.
         return $this->redirectToSection($attribute->section, 'geltung');
+    }
+
+    /**
+     * "Weitere Optionen" eines Zusatzfelds (Ralf, 2026-09-21): Vorbelegung, Pflichtfeld, Änderungen protokollieren,
+     * Einheit. Vorbelegung wird gegen den Feldtyp geprüft (Zahl numerisch, Datum gültig, Ja/Nein 1/0); für Pulldowns
+     * gibt es sie nur im Pulldown-Overlay (Auswahl unter den Optionen).
+     *
+     * @return array{default_value: ?string, required: bool, log_changes: bool, unit: ?string}
+     */
+    private function moreOptions(Request $request, string $dataType, bool $multiple): array
+    {
+        $default = trim((string) $request->input('default_value', ''));
+        $default = $default === '' ? null : $default;
+
+        if ($default !== null) {
+            $valid = match ($dataType) {
+                Attribute::DATA_TYPE_NUMBER => is_numeric($default),
+                Attribute::DATA_TYPE_DATE => strtotime($default) !== false,
+                Attribute::DATA_TYPE_BOOLEAN => in_array($default, ['0', '1'], true),
+                Attribute::DATA_TYPE_TEXT => mb_strlen($default) <= 255,
+                Attribute::DATA_TYPE_TEXTAREA => true,
+                default => false, // Pulldown: nur über das Pulldown-Overlay
+            };
+            abort_unless($valid, 422, __('Ungültige Vorbelegung.'));
+            if ($dataType === Attribute::DATA_TYPE_DATE) {
+                $default = date('Y-m-d', strtotime($default));
+            }
+        }
+
+        $unit = in_array($dataType, [Attribute::DATA_TYPE_TEXT, Attribute::DATA_TYPE_NUMBER], true)
+            ? trim((string) $request->input('unit', ''))
+            : '';
+
+        return [
+            'default_value' => $dataType === Attribute::DATA_TYPE_SELECT ? null : $default,
+            'required' => $dataType !== Attribute::DATA_TYPE_BOOLEAN && $request->boolean('required'),
+            'log_changes' => $request->boolean('log_changes'),
+            'unit' => $unit === '' ? null : mb_substr($unit, 0, 30),
+        ];
     }
 
     /**

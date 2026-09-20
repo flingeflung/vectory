@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['tenant_id', 'section', 'system', 'label_editable', 'applies_to_all_types', 'increments_on_new_version', 'key', 'label', 'data_type', 'multiple', 'number_min', 'number_max', 'number_decimals', 'max_length', 'sort', 'available_in_mail_templates'])]
+#[Fillable(['tenant_id', 'section', 'system', 'label_editable', 'applies_to_all_types', 'increments_on_new_version', 'default_value', 'required', 'log_changes', 'unit', 'key', 'label', 'data_type', 'multiple', 'number_min', 'number_max', 'number_decimals', 'max_length', 'sort', 'available_in_mail_templates'])]
 #[ObservedBy(AttributeObserver::class)]
 class Attribute extends Model
 {
@@ -179,6 +179,55 @@ class Attribute extends Model
      * Stamm-Version, Workflow, ...).
      */
     public const RESTRICTABLE_SYSTEM_FIELDS = ['system_model', 'markets', 'project_template', 'workflow_id', 'publication_date'];
+
+    /**
+     * Vorbelegung als echter Wert fürs attributes-JSON (Ralf, 2026-09-21): Zahl als Zahl, Ja/Nein als bool,
+     * alles andere als Text bzw. Datum (Y-m-d) bzw. Optionswert.
+     */
+    public function castedDefault(): mixed
+    {
+        if ($this->default_value === null || $this->default_value === '') {
+            return null;
+        }
+
+        return match ($this->data_type) {
+            self::DATA_TYPE_NUMBER => is_numeric($this->default_value) ? $this->default_value + 0 : null,
+            self::DATA_TYPE_BOOLEAN => $this->default_value === '1',
+            default => $this->default_value,
+        };
+    }
+
+    /**
+     * Vorbelegungen aller Zusatzfelder, die für die Projektart gelten (ohne Art: nur Felder, die für alle
+     * Arten gelten) - Schlüssel => Wert fürs attributes-JSON.
+     *
+     * @return array<string, mixed>
+     */
+    public static function defaultsFor(int $tenantId, ?int $projectTypeSubId): array
+    {
+        return static::query()
+            ->where('tenant_id', $tenantId)
+            ->where('system', false)
+            ->whereNotNull('default_value')
+            ->applicableTo($projectTypeSubId)
+            ->orderBy('sort')
+            ->get()
+            ->mapWithKeys(fn (Attribute $attribute) => [$attribute->key => $attribute->castedDefault()])
+            ->filter(fn ($value) => $value !== null)
+            ->all();
+    }
+
+    /**
+     * Einheiten ("Stück", "mm") aller Felder eines Mandanten, Schlüssel => Einheit - pro Anfrage einmal.
+     *
+     * @return array<string, string>
+     */
+    public static function unitMap(int $tenantId): array
+    {
+        static $cache = [];
+
+        return $cache[$tenantId] ??= static::query()->where('tenant_id', $tenantId)->whereNotNull('unit')->where('unit', '<>', '')->pluck('unit', 'key')->all();
+    }
 
     public function isRestrictable(): bool
     {

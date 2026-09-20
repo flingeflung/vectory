@@ -237,7 +237,7 @@
                     @elseif ($value === null || $value === '')
                         <span class="text-gray-400">&ndash;</span>
                     @else
-                        {{ $value }}
+                        {{ $value }}@if ($unit = (\App\Models\Attribute::unitMap($project->tenant_id)[$fieldKey ?? ''] ?? null)) <span class="text-xs text-gray-400">{{ $unit }}</span>@endif
                     @endif
                 @endif
             </td>

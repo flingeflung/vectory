@@ -397,11 +397,11 @@ class ProjectController extends Controller
                 'creation_type' => 1,
             ]);
 
-            // Kundenversion (Ralf, 2026-09-20): ein neues Dokument beginnt bei Version 1, wie früher das feste
-            // Versionsfeld - gilt für Zusatzfelder, die beim Aufversionieren hochzählen.
-            $versionDefaults = $project->incrementingVersionAttributes()->mapWithKeys(fn (Attribute $attribute) => [$attribute->key => '1'])->all();
-            if ($versionDefaults !== []) {
-                $project->update(['attributes' => $versionDefaults]);
+            // Vorbelegung (Ralf, 2026-09-21, "Weitere Optionen" am Zusatzfeld): beim Anlegen ist die Projektart noch
+            // unbekannt, deshalb greifen nur Felder, die für alle Projektarten gelten (z.B. Kundenversion = 1).
+            $defaults = Attribute::defaultsFor($tenantId, null);
+            if ($defaults !== []) {
+                $project->update(['attributes' => $defaults]);
             }
 
             Activity::log($project, ActivityType::ProjectCreated, __('Projekt neu angelegt.'));
@@ -556,6 +556,9 @@ class ProjectController extends Controller
             ->concat($project->customSectionAttributes(Attribute::SECTION_ABLAUFDATEN));
         $isOverlay = $this->isOverlayRequest($request);
 
+        // Sprechende Feldnamen in Fehlermeldungen (z.B. Pflichtfeld: "Das Feld Auflage ist erforderlich.").
+        $attributeNames = $relevantAttributes->mapWithKeys(fn (Attribute $attribute) => ['attributes.'.$attribute->key => $attribute->label])->all();
+
         $validator = Validator::make($request->all(), [
             'title' => ['required', 'string', 'max:255'],
             'project_type_sub_id' => ['nullable', 'integer', Rule::exists('project_type_subs', 'id')->where('tenant_id', $project->tenant_id)],
@@ -582,7 +585,7 @@ class ProjectController extends Controller
             'project_people_primary.*' => ['nullable', 'integer'],
             'attributes' => ['array'],
             ...$this->attributeValidationRules($relevantAttributes),
-        ]);
+        ], [], $attributeNames);
 
         if ($validator->fails()) {
             if ($isOverlay) {
@@ -627,6 +630,8 @@ class ProjectController extends Controller
         // Nur die für dieses Projekt relevanten Attribute überschreiben (Typspezifisch nach
         // Projektart gefiltert + Stammdaten/Ablaufdaten immer dabei), Rest im JSON unangetastet lassen.
         $attributes = $project->attributes ?? [];
+        $oldAttributes = $attributes;
+        $changedAttributes = [];
         foreach ($relevantAttributes as $attribute) {
             $key = $attribute->key;
 
@@ -648,6 +653,10 @@ class ProjectController extends Controller
                 unset($attributes[$key]);
             } else {
                 $attributes[$key] = $value;
+            }
+
+            if ($attribute->log_changes && ($oldAttributes[$key] ?? null) != ($attributes[$key] ?? null)) {
+                $changedAttributes[] = [$attribute, $oldAttributes[$key] ?? null, $attributes[$key] ?? null];
             }
         }
         $validated['attributes'] = $attributes;
@@ -686,6 +695,20 @@ class ProjectController extends Controller
         $oldStatus = $project->status;
 
         $project->update($validated);
+
+        // "Weitere Optionen" am Zusatzfeld (Ralf, 2026-09-21): Felder mit Protokollierung schreiben jede Änderung
+        // (alt -> neu) in die Vorgänge.
+        foreach ($changedAttributes as [$changedAttribute, $oldValue, $newValue]) {
+            Activity::log(
+                $project,
+                ActivityType::AttributeChanged,
+                __(':field von „:old“ auf „:new“ geändert.', [
+                    'field' => $changedAttribute->label,
+                    'old' => $this->attributeValueForLog($changedAttribute, $oldValue),
+                    'new' => $this->attributeValueForLog($changedAttribute, $newValue),
+                ])
+            );
+        }
 
         // Ralf, 2026-09-20: manuelles Ändern des Status (z.B. auf "Beendet", nur ohne aktuellen
         // Workflow-Schritt möglich) gehört in die Vorgänge. Der Erstellungsstatus wird bewusst NICHT protokolliert.
@@ -1491,6 +1514,29 @@ class ProjectController extends Controller
     /**
      * @param  Collection<int, Attribute>  $attributes
      */
+    /**
+     * Lesbarer Feldwert für den Vorgänge-Eintrag: Optionslabel statt Wert, Ja/Nein, Mehrfachauswahl kommagetrennt,
+     * leer als "leer".
+     */
+    private function attributeValueForLog(Attribute $attribute, mixed $value): string
+    {
+        if ($value === null || $value === '' || $value === []) {
+            return __('leer');
+        }
+
+        if ($attribute->data_type === Attribute::DATA_TYPE_BOOLEAN) {
+            return $value ? __('Ja') : __('Nein');
+        }
+
+        if ($attribute->data_type === Attribute::DATA_TYPE_SELECT) {
+            $labels = $attribute->options->pluck('label', 'value');
+
+            return collect((array) $value)->map(fn ($v) => $labels[$v] ?? $v)->implode(', ');
+        }
+
+        return (string) $value;
+    }
+
     private function attributeValidationRules($attributes): array
     {
         $rules = [];
@@ -1526,6 +1572,18 @@ class ProjectController extends Controller
 
             if ($attribute->data_type === Attribute::DATA_TYPE_SELECT && $attribute->multiple) {
                 $rules[$key.'.*'] = ['string', Rule::in($attribute->options->pluck('value'))];
+            }
+
+            // Pflichtfeld (Ralf, 2026-09-21): aus "darf leer sein" wird "muss ausgefüllt sein". Ja/Nein-Felder haben
+            // immer einen Wert (Checkbox), Mehrfachauswahl braucht mindestens eine Auswahl.
+            if ($attribute->required && $attribute->data_type !== Attribute::DATA_TYPE_BOOLEAN) {
+                $rules[$key] = array_map(fn ($rule) => $rule === 'nullable' ? 'required' : $rule, (array) $rules[$key]);
+                if (! in_array('required', $rules[$key], true)) {
+                    array_unshift($rules[$key], 'required');
+                }
+                if ($attribute->data_type === Attribute::DATA_TYPE_SELECT && $attribute->multiple) {
+                    $rules[$key][] = 'min:1';
+                }
             }
         }
 

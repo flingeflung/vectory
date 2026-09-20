@@ -8,7 +8,7 @@
     $value = old('attributes.'.$attribute->key, $project->attributes[$attribute->key] ?? null);
 @endphp
 <div>
-    <label class="block text-xs text-gray-500">{{ $attribute->label }}</label>
+    <label class="block text-xs text-gray-500">{{ $attribute->label }}@if ($attribute->required)<span class="text-red-500" title="{{ __('Pflichtfeld') }}"> *</span>@endif</label>
     @switch($attribute->data_type)
         @case('textarea')
             <textarea
@@ -26,6 +26,7 @@
             @php
                 $step = $attribute->number_decimals !== null ? (1 / (10 ** $attribute->number_decimals)) : 'any';
             @endphp
+            <div class="mt-0.5 flex items-center gap-1.5">
             <input
                 type="number"
                 name="attributes[{{ $attribute->key }}]"
@@ -33,8 +34,10 @@
                 @if ($attribute->number_min !== null) min="{{ $attribute->numberMinDisplay() }}" @endif
                 @if ($attribute->number_max !== null) max="{{ $attribute->numberMaxDisplay() }}" @endif
                 step="{{ $step }}"
-                class="mt-0.5 w-full rounded border-gray-300 py-1 text-sm"
+                class="min-w-0 flex-1 rounded border-gray-300 py-1 text-sm"
             >
+            @if ($attribute->unit)<span class="shrink-0 text-xs text-gray-500">{{ $attribute->unit }}</span>@endif
+            </div>
             @if ($attribute->number_min !== null || $attribute->number_max !== null)
                 <p class="mt-0.5 text-xs text-gray-400">
                     @if ($attribute->number_min !== null && $attribute->number_max !== null)
@@ -78,13 +81,16 @@
             @break
 
         @default
+            <div class="mt-0.5 flex items-center gap-1.5">
             <input
                 type="text"
                 name="attributes[{{ $attribute->key }}]"
                 value="{{ $value }}"
                 maxlength="{{ $attribute->max_length ?? 255 }}"
-                class="mt-0.5 w-full rounded border-gray-300 py-1 text-sm"
+                class="min-w-0 flex-1 rounded border-gray-300 py-1 text-sm"
             >
+            @if ($attribute->unit)<span class="shrink-0 text-xs text-gray-500">{{ $attribute->unit }}</span>@endif
+            </div>
             @if ($attribute->max_length)
                 <p class="mt-0.5 text-xs text-gray-400">{{ __('Max. :max Zeichen', ['max' => $attribute->max_length]) }}</p>
             @endif

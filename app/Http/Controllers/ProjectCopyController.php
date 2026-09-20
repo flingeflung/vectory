@@ -223,10 +223,16 @@ class ProjectCopyController extends Controller
                         } else {
                             $copiedAttributeValues[$versionAttribute->key] = $next;
                         }
-                    } elseif (! isset($copiedAttributeValues[$versionAttribute->key])) {
-                        // Neues Dokument, das die Kundenversion nicht aus dem Original übernimmt (Vorlage):
-                        // Ausgangsversion 1, wie früher bei jedem neuen Projekt (Ralf, 2026-09-20).
-                        $copiedAttributeValues[$versionAttribute->key] = '1';
+                    }
+                }
+                // Neues Dokument (Ralf, 2026-09-21, "Weitere Optionen"): Felder, die nicht aus dem Original kopiert
+                // wurden, bekommen ihre Vorbelegung (z.B. Kundenversion = 1), soweit sie für die Projektart der
+                // Kopie gelten.
+                if (! $asNewVersion) {
+                    foreach (Attribute::defaultsFor($tenantId, $attrs['project_type_sub_id'] ?? null) as $defaultKey => $defaultValue) {
+                        if (! array_key_exists($defaultKey, $copiedAttributeValues)) {
+                            $copiedAttributeValues[$defaultKey] = $defaultValue;
+                        }
                     }
                 }
                 if ($copiedAttributeValues !== []) {
