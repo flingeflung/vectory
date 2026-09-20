@@ -43,6 +43,8 @@ class ProjectColumnCatalog
             ['key' => 'product_group_name', 'label' => __('Produktgruppenbezeichnung'), 'long_text' => false],
             ['key' => 'version', 'label' => __('Kundenversion'), 'long_text' => false],
             ['key' => 'stamm_id', 'label' => __('Stamm-ID'), 'long_text' => false],
+            // Ralf, 2026-09-20: unsere Zählung (Position in der Versionskette), getrennt von der Kundenversion.
+            ['key' => 'stamm_version', 'label' => __('Stamm-Version'), 'long_text' => false],
             // Ralf, 2026-09-14: Start und Ende gehören als Paar zusammen (wie
             // schon Status/Erstellungsstatus im Projekt-Formular) - eine
             // Spalte statt zwei, beide Werte übereinander gestapelt.

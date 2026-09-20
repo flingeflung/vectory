@@ -261,6 +261,11 @@ class ProjectController extends Controller
             ? $this->graphicOrderSummaries($projects->pluck('id'))
             : collect();
 
+        // Stamm-Version (Kettenposition): eine Abfrage für die ganze Seite statt je Zeile.
+        if (array_any($visibleColumns, fn (array $column) => $column['key'] === 'stamm_version')) {
+            Project::preloadStammInfo($projects);
+        }
+
         return [
             'projects' => $projects,
             'favoriteProjectIds' => Favorite::where('user_id', $user->id)->pluck('project_id')->all(),

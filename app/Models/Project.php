@@ -59,6 +59,7 @@ class Project extends Model
             'creation_type' => $this->creation_type_label,
             'verbund_rolle' => $this->verbund_rolle_label,
             'stamm_id' => \App\Support\StammId::format($this->stamm_id),
+            'stamm_version' => __(':n von :total', ['n' => $this->stammPositionInfo()['position'], 'total' => $this->stammPositionInfo()['total']]),
             default => $this->getAttribute($key),
         };
     }
@@ -387,9 +388,43 @@ class Project extends Model
         return ((int) static::query()->where('stamm_id', $this->stamm_id)->max('stamm_position')) + 1;
     }
 
+    /** Vorberechnete Kettenposition (siehe preloadStammInfo) - spart in der Übersicht eine Abfrage je Zeile. */
+    public ?array $stammInfoCache = null;
+
+    /**
+     * Kettenposition für eine ganze Projektliste mit EINER Abfrage vorberechnen
+     * (Übersichtsspalte "Stamm-Version").
+     *
+     * @param  iterable<Project>  $projects
+     */
+    public static function preloadStammInfo(iterable $projects): void
+    {
+        $projects = collect($projects);
+        $stammIds = $projects->pluck('stamm_id')->filter()->unique()->values();
+        if ($stammIds->isEmpty()) {
+            return;
+        }
+
+        $chains = static::query()->whereIn('stamm_id', $stammIds)
+            ->orderBy('stamm_position')->orderBy('id')
+            ->get(['id', 'stamm_id'])
+            ->groupBy('stamm_id')
+            ->map(fn ($members) => $members->pluck('id')->values()->all());
+
+        foreach ($projects as $project) {
+            $ids = $chains[$project->stamm_id] ?? [];
+            $index = array_search($project->id, $ids, true);
+            $project->stammInfoCache = ['position' => $index === false ? 1 : $index + 1, 'total' => max(count($ids), 1)];
+        }
+    }
+
     /** Position dieses Projekts in der Kette (1-basiert) und Länge der Kette. */
     public function stammPositionInfo(): array
     {
+        if ($this->stammInfoCache !== null) {
+            return $this->stammInfoCache;
+        }
+
         $ids = $this->stammChain()->pluck('id')->all();
         $index = array_search($this->id, $ids, true);
 
