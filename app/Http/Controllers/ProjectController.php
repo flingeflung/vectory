@@ -147,6 +147,7 @@ class ProjectController extends Controller
             'columnWidths' => UserTablePreference::widthsFor($user->id, 'projekte'),
             ...$this->rowData($projects, $visibleColumns, $user),
             'columns' => $visibleColumns,
+            'sortableColumnKeys' => [...self::SORTABLE_COLUMNS, ...self::sortableAttributeColumns()],
             'allColumns' => $allColumns,
             'sets' => DisplayFilterSet::query()->where('user_id', $user->id)->orderBy('name')->get(),
             'sort' => $sort,
@@ -868,8 +869,9 @@ class ProjectController extends Controller
      */
     private function sortFromRequest(Request $request): array
     {
-        $sort = in_array($request->query('sort'), self::SORTABLE_COLUMNS, true)
-            ? $request->query('sort')
+        $requested = $request->query('sort');
+        $sort = (is_string($requested) && (in_array($requested, self::SORTABLE_COLUMNS, true) || in_array($requested, self::sortableAttributeColumns(), true)))
+            ? $requested
             : null;
         $direction = $request->query('direction') === 'desc' ? 'desc' : 'asc';
 
@@ -1354,12 +1356,46 @@ class ProjectController extends Controller
      * @return array{0: string, 1: string} [Sortier-Spalte, id-Spalte]
      */
     /**
-     * Kundenversion ist Freitext - sortiert wird nach dem Zahlenschlüssel
-     * version_sort (siehe VersionLabel::sortKey()), sonst stünde "10" vor "9".
+     * Spaltenschlüssel ("attribute:xyz") der Zusatzfelder, nach denen die Übersicht sortiert werden
+     * kann (Ralf, 2026-09-20): einzeilige Text-, Zahl- und Datumsfelder mit eigener Datenbankspalte.
+     * Mehrfachauswahl, Pulldown und Ja/Nein bleiben unsortierbar (Optionswert ist keine sinnvolle Reihenfolge).
+     *
+     * @return list<string>
+     */
+    public static function sortableAttributeColumns(): array
+    {
+        static $cache = [];
+        $tenantId = CurrentTenant::id();
+
+        return $cache[$tenantId] ??= Attribute::query()->where('tenant_id', $tenantId)
+            ->whereIn('data_type', [Attribute::DATA_TYPE_TEXT, Attribute::DATA_TYPE_TEXTAREA, Attribute::DATA_TYPE_NUMBER, Attribute::DATA_TYPE_DATE])
+            ->where(fn ($query) => $query->where('system', false)->orWhere('label_editable', true))
+            ->where('key', '!=', 'system_model')
+            ->pluck('key')
+            ->map(fn (string $key) => 'attribute:'.$key)
+            ->all();
+    }
+
+    /**
+     * Echter Datenbank-Spaltenname für eine Sortierung. Zusatzfelder liegen im JSON und haben eine
+     * generierte Spalte (siehe AttributeColumnManager); Zahlenfelder und hochzählende Textfelder
+     * ("Kundenversion") sortieren über ihre numerische Sortierspalte, damit "V10" nach "V9" kommt.
      */
     private static function sortDbColumn(string $column): string
     {
-        return $column === 'version' ? 'version_sort' : $column;
+        if (! str_starts_with($column, 'attribute:')) {
+            return $column;
+        }
+
+        $key = substr($column, strlen('attribute:'));
+        $manager = app(\App\Services\AttributeColumnManager::class);
+        $attribute = Attribute::query()->where('tenant_id', CurrentTenant::id())->where('key', $key)->first();
+
+        if ($attribute && $manager->needsSortColumn($attribute) && \Illuminate\Support\Facades\Schema::hasColumn('projects', $manager->sortColumnName($key))) {
+            return $manager->sortColumnName($key);
+        }
+
+        return $manager->columnName($key);
     }
 
     private function resolveSortColumns(Builder $query, string $column): array

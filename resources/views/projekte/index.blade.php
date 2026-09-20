@@ -222,7 +222,7 @@
                                 ></th>
                                 <x-sortable-th field="source_pn" :sort="$sort" :direction="$direction">{{ __('PN') }}</x-sortable-th>
                                 @foreach ($columns as $column)
-                                    @if (in_array($column['key'], ['title', 'version', 'status', 'workflow'], true))
+                                    @if (in_array($column['key'], $sortableColumnKeys, true))
                                         <x-sortable-th :field="$column['key']" :sort="$sort" :direction="$direction">{{ $column['label'] }}</x-sortable-th>
                                     @else
                                         <th data-col="{{ $column['key'] }}" class="sticky top-0 z-10 bg-gray-50 px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ $column['label'] }}</th>

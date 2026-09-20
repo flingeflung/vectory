@@ -155,6 +155,9 @@ class AttributeController extends Controller
             ...($attribute->data_type === Attribute::DATA_TYPE_TEXT ? ['increments_on_new_version' => $request->boolean('increments_on_new_version')] : []),
         ]);
 
+        // Die Markierung "hochzählen" entscheidet, ob die Spalte numerisch (V9 < V10) sortiert.
+        $this->columns->ensureSortColumn($attribute->refresh());
+
         return $this->redirectToSection($attribute->section);
     }
 

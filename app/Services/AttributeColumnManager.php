@@ -29,6 +29,46 @@ class AttributeColumnManager
         return "attributes_{$key}";
     }
 
+    /**
+     * Sortierspalte (Ralf, 2026-09-20: Zusatzfeld-Spalten in der Übersicht sortierbar): Zahlenfelder
+     * müssen numerisch sortieren ("10" nach "9"), hochzählende Textfelder wie die Kundenversion nach
+     * ihrer ersten Zahl ("V9" vor "V10"). Alle anderen Textfelder sortieren alphabetisch über die
+     * normale Spalte, brauchen also keine zweite.
+     */
+    public function sortColumnName(string $key): string
+    {
+        return "attributes_{$key}_sort";
+    }
+
+    public function needsSortColumn(Attribute $attribute): bool
+    {
+        return $this->isColumnBacked($attribute)
+            && ($attribute->data_type === Attribute::DATA_TYPE_NUMBER
+                || ($attribute->data_type === Attribute::DATA_TYPE_TEXT && $attribute->increments_on_new_version));
+    }
+
+    public function ensureSortColumn(Attribute $attribute): void
+    {
+        $column = $this->sortColumnName($attribute->key);
+        if (! $this->needsSortColumn($attribute) || Schema::hasColumn('projects', $column)) {
+            return;
+        }
+
+        $raw = "JSON_UNQUOTE(JSON_EXTRACT(attributes, '$.{$attribute->key}'))";
+
+        Schema::table('projects', function (Blueprint $table) use ($column, $attribute, $raw) {
+            if ($attribute->data_type === Attribute::DATA_TYPE_NUMBER) {
+                $table->decimal($column, 20, 4)
+                    ->storedAs("IF($raw REGEXP '^-?[0-9]{1,15}([.][0-9]+)?\$', CAST($raw AS DECIMAL(20,4)), NULL)")
+                    ->nullable()->index();
+            } else {
+                $table->unsignedBigInteger($column)
+                    ->storedAs("CAST(LEFT(NULLIF(REGEXP_SUBSTR($raw, '[0-9]+'), ''), 15) AS UNSIGNED)")
+                    ->nullable()->index();
+            }
+        });
+    }
+
     public function isColumnBacked(Attribute $attribute): bool
     {
         return ! ($attribute->data_type === Attribute::DATA_TYPE_SELECT && $attribute->multiple);
@@ -47,6 +87,8 @@ class AttributeColumnManager
         // mandantenübergreifende Tabelle) - dann existiert die Spalte schon
         // durch ein anderes Attribut, einfach weiterverwenden statt Fehler.
         if (Schema::hasColumn('projects', $column)) {
+            $this->ensureSortColumn($attribute);
+
             return;
         }
 
@@ -56,6 +98,8 @@ class AttributeColumnManager
                 ->nullable()
                 ->index();
         });
+
+        $this->ensureSortColumn($attribute);
     }
 
     /**
@@ -78,9 +122,10 @@ class AttributeColumnManager
             return;
         }
 
-        $column = $this->columnName($attribute->key);
-        if (Schema::hasColumn('projects', $column)) {
-            Schema::table('projects', fn (Blueprint $table) => $table->dropColumn($column));
+        foreach ([$this->columnName($attribute->key), $this->sortColumnName($attribute->key)] as $column) {
+            if (Schema::hasColumn('projects', $column)) {
+                Schema::table('projects', fn (Blueprint $table) => $table->dropColumn($column));
+            }
         }
     }
 }

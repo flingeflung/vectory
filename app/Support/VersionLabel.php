@@ -6,8 +6,9 @@ namespace App\Support;
  * "Kundenversion" (Ralf, 2026-09-20): die Version, wie der KUNDE sie nennt -
  * Freitext ("V3", "1.2", "Rev. 04", "2024-03", "B" ...), nicht mehr nur eine
  * ganze Zahl. Die Reihenfolge einer Versionskette hängt nicht daran (die
- * kommt aus der Stamm-Position), hier geht es nur um Hochzählen beim
- * Aufversionieren und um eine sinnvolle Sortierung der Spalte.
+ * kommt aus der Stamm-Position), hier geht es nur um das Hochzählen beim
+ * Aufversionieren. (Die Sortierung der Spalte übernimmt die generierte
+ * Sortierspalte, siehe AttributeColumnManager.)
  */
 class VersionLabel
 {
@@ -30,26 +31,5 @@ class VersionLabel
         $next = str_pad((string) ((int) $digits + 1), strlen($digits), '0', STR_PAD_LEFT);
 
         return substr($version, 0, $offset).$next.substr($version, $offset + strlen($digits));
-    }
-
-    /**
-     * Zahlenschlüssel fürs Sortieren (Spalte projects.version_sort): bis zu drei
-     * Zahlengruppen des Textes, jede auf 0..9999 begrenzt, als a*1e8 + b*1e4 + c.
-     * "V9" < "V10", "1.2" < "1.10", "2024-03" < "2024-04"; ohne Zahl null
-     * (bei aufsteigender Sortierung vorn, wie jedes leere Feld).
-     */
-    public static function sortKey(?string $version): ?int
-    {
-        if ($version === null || ! preg_match_all('/\d+/', $version, $matches)) {
-            return null;
-        }
-
-        $groups = array_slice($matches[0], 0, 3);
-        $key = 0;
-        foreach ([100_000_000, 10_000, 1] as $i => $weight) {
-            $key += min((int) ($groups[$i] ?? 0), 9999) * $weight;
-        }
-
-        return $key;
     }
 }
