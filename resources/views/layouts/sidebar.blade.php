@@ -8,10 +8,11 @@
     x-transition:leave-end="-translate-x-full"
     class="w-64 h-full shrink-0 bg-sidebar border-r border-gray-200 flex flex-col overflow-hidden"
 >
-    <div class="h-16 flex items-center px-4 border-b border-gray-100 shrink-0">
-        <a href="{{ route('dashboard') }}" class="flex items-center gap-2 min-w-0">
-            <x-application-logo class="h-8 w-auto shrink-0 fill-current text-topbar" />
-            <span class="font-semibold text-gray-800 truncate">{{ config('app.name') }}</span>
+    {{-- Ralf, 2026-09-21: Vectory-Logo statt des Laravel-Logos. Das Logo bringt seinen dunkelblauen Hintergrund selbst mit -
+         der Kopfbereich der Seitenleiste hat deshalb dieselbe Farbe, damit keine Kante sichtbar wird. --}}
+    <div class="h-16 shrink-0 bg-logo">
+        <a href="{{ route('dashboard') }}" class="block h-full" title="{{ config('app.name') }}">
+            <img src="{{ asset('images/vectory-logo.svg') }}" alt="{{ config('app.name') }}" class="h-full w-auto">
         </a>
     </div>
 
@@ -76,7 +77,7 @@
         }"
         @click.outside="close()"
     >
-        <label for="quicksearch" class="sr-only">{{ __('Schnellsuche') }}</label>
+        <label for="quicksearch" class="sr-only">{{ __('Projekt-Schnellsuche') }}</label>
         <form @submit.prevent="submit()" class="relative">
             <input
                 id="quicksearch"
@@ -88,7 +89,7 @@
                 @keydown.escape="close()"
                 @keydown.down.prevent="moveSelection(1)"
                 @keydown.up.prevent="moveSelection(-1)"
-                placeholder="{{ __('Schnellsuche') }}"
+                placeholder="{{ __('Projekt-Schnellsuche') }}"
                 class="w-full rounded-md border-gray-300 text-sm pr-8 focus:border-topbar focus:ring-topbar"
             />
             <button

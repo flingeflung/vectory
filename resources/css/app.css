@@ -18,6 +18,8 @@
  */
 :root {
     --color-topbar: #0b2e4e;
+    /* Hintergrundfarbe des Vectory-Logos (public/images/vectory-logo.svg) - der Kopfbereich der Seitenleiste bekommt sie, damit das Logo ohne Kante aufliegt. */
+    --color-logo: #152f4d;
     --color-topbar-content: #ffffff;
 
     --color-sidebar: #ffffff;

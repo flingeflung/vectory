@@ -21,6 +21,7 @@ export default {
             },
             colors: {
                 topbar: 'var(--color-topbar)',
+                logo: 'var(--color-logo)',
                 'topbar-content': 'var(--color-topbar-content)',
                 sidebar: 'var(--color-sidebar)',
                 'sidebar-content': 'var(--color-sidebar-content)',
