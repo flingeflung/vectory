@@ -8,11 +8,11 @@
     x-transition:leave-end="-translate-x-full"
     class="w-64 h-full shrink-0 bg-sidebar border-r border-gray-200 flex flex-col overflow-hidden"
 >
-    {{-- Ralf, 2026-09-21: Vectory-Logo statt des Laravel-Logos. Das Logo bringt seinen dunkelblauen Hintergrund selbst mit -
-         der Kopfbereich der Seitenleiste hat deshalb dieselbe Farbe, damit keine Kante sichtbar wird. --}}
-    <div class="h-16 shrink-0 bg-logo">
+    {{-- Ralf, 2026-09-21: Vectory-Logo statt des Laravel-Logos. Das Logo bringt seinen dunkelblauen Hintergrund selbst mit und liegt als Kachel
+         mit etwas Rand auf der Topbar-Farbe. --}}
+    <div class="h-16 shrink-0 bg-topbar px-2 py-1.5">
         <a href="{{ route('dashboard') }}" class="block h-full" title="{{ config('app.name') }}">
-            <img src="{{ asset('images/vectory-logo.svg') }}" alt="{{ config('app.name') }}" class="h-full w-auto">
+            <img src="{{ asset('images/vectory-logo.svg') }}" alt="{{ config('app.name') }}" class="h-full w-auto rounded">
         </a>
     </div>
 
