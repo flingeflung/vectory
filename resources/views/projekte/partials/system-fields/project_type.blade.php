@@ -33,7 +33,7 @@
             @endforeach
         </select>
         <template x-if="symbols[sub]">
-            <img :src="symbols[sub]" alt="" class="h-6 w-auto shrink-0">
+            <img :src="symbols[sub]" alt="" class="h-5 w-auto shrink-0">
         </template>
     </div>
 </div>
