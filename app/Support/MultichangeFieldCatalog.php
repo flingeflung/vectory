@@ -317,7 +317,7 @@ class MultichangeFieldCatalog
 
         return [[
             'key' => 'project_template_id',
-            'label' => __('Projektschablone'),
+            'label' => __('Aufwandsschablone'),
             'type' => 'select',
             'required' => true,
             'options' => $templates,

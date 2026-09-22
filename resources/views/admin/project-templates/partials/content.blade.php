@@ -3,7 +3,7 @@
     <div class="flex w-80 shrink-0 flex-col">
         <div class="flex flex-1 min-h-0 flex-col rounded-lg border border-gray-200 bg-white">
             <div class="shrink-0 space-y-1.5 border-b border-gray-100 p-2">
-                <span class="text-xs font-semibold text-gray-500">{{ __('Projektschablonen') }}</span>
+                <span class="text-xs font-semibold text-gray-500">{{ __('Aufwandsschablonen') }}</span>
                 <div class="flex items-center gap-1">
                     @if ($otherTenants->isNotEmpty())
                         <button
@@ -72,7 +72,7 @@
                         </a>
                     </div>
                 @empty
-                    <div class="px-2 py-1 text-gray-400">{{ __('Noch keine Projektschablonen angelegt.') }}</div>
+                    <div class="px-2 py-1 text-gray-400">{{ __('Noch keine Aufwandsschablonen angelegt.') }}</div>
                 @endforelse
             </div>
         </div>
@@ -86,7 +86,7 @@
     >
         @if ($creating)
             <div class="shrink-0 border-b border-gray-100 p-3">
-                <div class="text-sm font-medium text-gray-900">{{ __('Neue Projektschablone') }}</div>
+                <div class="text-sm font-medium text-gray-900">{{ __('Neue Aufwandsschablone') }}</div>
             </div>
             <form
                 method="POST"
@@ -133,7 +133,7 @@
                     </form>
                     <button
                         type="button"
-                        @click="window.deleteWithConfirm($refs.deleteForm, { message: {{ \Illuminate\Support\Js::from(__('Diese Projektschablone wirklich endgültig löschen?')) }} })"
+                        @click="window.deleteWithConfirm($refs.deleteForm, { message: {{ \Illuminate\Support\Js::from(__('Diese Aufwandsschablone wirklich endgültig löschen?')) }} })"
                         class="rounded-md border border-red-300 px-2 py-0.5 text-xs font-medium text-red-600 hover:bg-red-50"
                     >
                         {{ __('Löschen') }}
@@ -227,7 +227,7 @@
             </div>
         @else
             <div class="shrink-0 border-b border-gray-100 p-3">
-                <div class="text-sm font-medium text-gray-900">{{ __('Projektschablonen') }}</div>
+                <div class="text-sm font-medium text-gray-900">{{ __('Aufwandsschablonen') }}</div>
                 <p class="text-xs text-gray-400">{{ __('Wähle links eine Schablone aus, um sie zu bearbeiten, oder lege eine neue an.') }}</p>
             </div>
         @endif

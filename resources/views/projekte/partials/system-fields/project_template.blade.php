@@ -12,7 +12,7 @@
 --}}
 <div x-data="{ templateId: {{ \Illuminate\Support\Js::from((string) old('project_template_id', $project->project_template_id ?? '')) }} }">
     <div class="flex items-center gap-1.5">
-        <label class="block text-xs text-gray-500">{{ __('Projektschablone') }}</label>
+        <label class="block text-xs text-gray-500">{{ __('Aufwandsschablone') }}</label>
         <x-info-icon-button
             x-show="templateId"
             x-cloak
