@@ -1,6 +1,9 @@
 @if ($status['status'] === 'found')
     <div class="mb-2 flex items-center justify-between gap-2 text-xs text-gray-500">
-        <span class="truncate" title="{{ $status['path'] }}">{{ $status['path'] }}{{ $status['archived'] ? ' ('.__('Archiv').')' : '' }}</span>
+        {{-- Ralf, 2026-09-22: nur der Ordnername wird angezeigt, nicht der volle Server-Pfad
+             (der legt intern Hosting-Verzeichnisstruktur offen) - "Pfad kopieren" liefert den
+             vollen Pfad weiterhin in die Zwischenablage. --}}
+        <span class="truncate" title="{{ __('Vollständigen Pfad über „Pfad kopieren" sichern.') }}">{{ basename($status['path']) }}{{ $status['archived'] ? ' ('.__('Archiv').')' : '' }}</span>
         <button
             type="button"
             onclick="navigator.clipboard.writeText({{ \Illuminate\Support\Js::from($status['path']) }})"
