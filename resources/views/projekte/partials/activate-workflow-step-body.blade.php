@@ -46,24 +46,29 @@
             <div class="mt-0.5 text-xs text-amber-600">{{ $freigabeBlockReason ?? __('Für niemanden der Zuständigen ist eine E-Mail-Adresse hinterlegt - Versand nicht möglich.') }}</div>
         @endunless
         @if ($freigabe && $canSendEmail)
-            <div class="mt-0.5 text-xs text-gray-500">{{ __('Die Mail enthält die Links „Freigabe erteilen“ und „Korrekturen einarbeiten“; die Empfänger benötigen dafür keinen Login.') }}</div>
+            <div x-show="sendEmail" x-cloak class="mt-0.5 text-xs text-gray-500">{{ __('Die Mail enthält die Links „Freigabe erteilen“ und „Korrekturen einarbeiten“; die Empfänger benötigen dafür keinen Login.') }}</div>
         @endif
     </div>
 
     {{--
-        Empfänger-Liste bewusst IMMER sichtbar, nicht nur bei
-        angehaktem sendEmail - genau das Weglassen hier hätte den
-        Warnhinweis oben wieder unsichtbar gemacht, sobald das Häkchen
-        (automatisch oder manuell) aus ist.
+        Liste bewusst IMMER sichtbar, nicht nur bei angehaktem sendEmail -
+        genau das Weglassen hätte den Warnhinweis oben wieder unsichtbar
+        gemacht, sobald das Häkchen (automatisch oder manuell) aus ist.
+        Ralf, 2026-09-27: "wird die Mail nun doch gesendet?" - deshalb
+        wechselt die Überschrift (Empfänger der E-Mail / Zuständige, die
+        keine E-Mail erhalten), und Adressen erscheinen nur bei aktivem Versand.
     --}}
     <div class="space-y-3 rounded-md border border-gray-200 bg-gray-50 p-3">
         <div>
-            <div class="text-xs text-gray-500">{{ __('Empfänger') }}</div>
+            <div class="text-xs text-gray-500">
+                <span x-show="sendEmail" x-cloak>{{ __('Empfänger der E-Mail') }}</span>
+                <span x-show="!sendEmail">{{ __('Zuständige (erhalten keine E-Mail)') }}</span>
+            </div>
             @forelse ($recipients as $recipient)
                 <div class="{{ $recipient->active ? 'text-gray-700' : 'text-gray-400' }}">
                     {{ $recipient->fullName() }}{{ ! $recipient->active ? ' [i]' : '' }}
                     @if ($recipient->email)
-                        <span class="text-xs text-gray-400">{{ $recipient->email }}</span>
+                        <span x-show="sendEmail" x-cloak class="text-xs text-gray-400">{{ $recipient->email }}</span>
                     @else
                         <span class="font-medium text-amber-600">({{ __('keine E-Mail hinterlegt') }})</span>
                     @endif
