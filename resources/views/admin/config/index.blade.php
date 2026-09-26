@@ -73,14 +73,23 @@
                     <form method="POST" action="{{ route('admin.kunden.update', $currentTenant) }}" @input="dirty = window.formIsDirty($el, window.__configDirtyForms)" class="space-y-2">
                         @csrf
                         <input type="hidden" name="name" value="{{ $currentTenant->name }}">
-                        <label class="block text-sm font-medium text-gray-700">{{ __('Projektpfad') }}</label>
+                        <label class="block text-sm font-medium text-gray-700">{{ __('Projektpfad (gesperrt)') }}</label>
                         <input
                             type="text"
                             name="project_path"
                             value="{{ old('project_path', $currentTenant->project_path) }}"
                             class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                         >
-                        <p class="text-xs text-gray-400">{{ __('Basisverzeichnis für Vectory-Projektdateien.') }}</p>
+                        <p class="text-xs text-gray-400">{{ __('Basisverzeichnis für Vectory-Projektdateien. Nur über Vectory erreichbar.') }}</p>
+
+                        <label class="block text-sm font-medium text-gray-700">{{ __('Arbeitsverzeichnis-Pfad') }}</label>
+                        <input
+                            type="text"
+                            name="arbeitsverzeichnis_path"
+                            value="{{ old('arbeitsverzeichnis_path', $currentTenant->arbeitsverzeichnis_path) }}"
+                            class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        >
+                        <p class="text-xs text-gray-400">{{ __('Lokaler Netzwerkordner mit derselben Unterordner-Struktur, z. B. für externe Korrektur-Uploads.') }}</p>
 
                         <label class="block text-sm font-medium text-gray-700">{{ __('Info-E-Mail') }}</label>
                         <input

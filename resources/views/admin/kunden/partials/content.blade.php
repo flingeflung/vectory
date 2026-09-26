@@ -29,9 +29,14 @@
                         <input type="text" name="short_name" maxlength="10" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
                     </div>
                     <div>
-                        <label class="block text-xs text-gray-500">{{ __('Projektpfad') }}</label>
+                        <label class="block text-xs text-gray-500">{{ __('Projektpfad (gesperrt)') }}</label>
                         <input type="text" name="project_path" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
-                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Ordner, unter dem die Projektverzeichnisse dieses Kunden angelegt werden.') }}</p>
+                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Ordner, unter dem die Projektverzeichnisse dieses Kunden angelegt werden. Nur über Vectory erreichbar.') }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500">{{ __('Arbeitsverzeichnis-Pfad') }}</label>
+                        <input type="text" name="arbeitsverzeichnis_path" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
+                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Lokaler Netzwerkordner mit derselben Unterordner-Struktur, z. B. für externe Korrektur-Uploads.') }}</p>
                     </div>
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('Info-E-Mail') }}</label>
@@ -106,9 +111,14 @@
                         </div>
                     </div>
                     <div>
-                        <label class="block text-xs text-gray-500">{{ __('Projektpfad') }}</label>
+                        <label class="block text-xs text-gray-500">{{ __('Projektpfad (gesperrt)') }}</label>
                         <input type="text" name="project_path" value="{{ $selectedTenant->project_path }}" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
-                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Ordner, unter dem die Projektverzeichnisse dieses Kunden angelegt werden.') }}</p>
+                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Ordner, unter dem die Projektverzeichnisse dieses Kunden angelegt werden. Nur über Vectory erreichbar.') }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500">{{ __('Arbeitsverzeichnis-Pfad') }}</label>
+                        <input type="text" name="arbeitsverzeichnis_path" value="{{ $selectedTenant->arbeitsverzeichnis_path }}" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Lokaler Netzwerkordner mit derselben Unterordner-Struktur, z. B. für externe Korrektur-Uploads.') }}</p>
                     </div>
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('Info-E-Mail') }}</label>

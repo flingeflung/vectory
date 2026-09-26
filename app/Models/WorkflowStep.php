@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
     'sort', 'duration_days', 'is_active', 'is_start', 'is_end', 'is_market_launch',
     'has_due_date', 'send_email', 'show_in_translation',
     'js_function', 'js_function_param', 'description', 'email_text', 'msg_task_function_group_ids',
-    'lifecycle_status',
+    'lifecycle_status', 'after_freigabe_workflow_step_id',
 ])]
 class WorkflowStep extends Model
 {
@@ -91,5 +91,15 @@ class WorkflowStep extends Model
     public function functionGroups(): BelongsToMany
     {
         return $this->belongsToMany(FunctionGroup::class, 'workflow_step_function_group');
+    }
+
+    public function isFreigabeStep(): bool
+    {
+        return $this->js_function === 'wfs_freigabe';
+    }
+
+    public function afterFreigabeStep(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'after_freigabe_workflow_step_id');
     }
 }

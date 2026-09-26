@@ -232,7 +232,8 @@ class WorkflowController extends Controller
                 'sort' => $nextSort,
             ]);
 
-            $workflow->steps->each(function (WorkflowStep $step) use ($newWorkflow) {
+            $stepIdMap = [];
+            $workflow->steps->each(function (WorkflowStep $step) use ($newWorkflow, &$stepIdMap) {
                 $newStep = WorkflowStep::query()->create([
                     'tenant_id' => $newWorkflow->tenant_id,
                     'workflow_id' => $newWorkflow->id,
@@ -253,6 +254,7 @@ class WorkflowController extends Controller
                     'email_text' => $step->email_text,
                     'lifecycle_status' => $step->lifecycle_status,
                 ]);
+                $stepIdMap[$step->id] = $newStep->id;
 
                 $functionGroupIds = $step->functionGroups()->pluck('function_groups.id');
                 if ($functionGroupIds->isNotEmpty()) {
@@ -260,6 +262,15 @@ class WorkflowController extends Controller
                         $functionGroupIds->mapWithKeys(fn ($id) => [$id => ['tenant_id' => $newWorkflow->tenant_id]])
                     );
                 }
+            });
+
+            // after_freigabe_workflow_step_id zeigt auf einen ANDEREN Schritt
+            // desselben Workflows - erst nachträglich auf die neu erzeugten
+            // IDs ummappen, da beim Kopieren oben noch nicht alle Ziel-IDs
+            // bekannt sind.
+            $workflow->steps->whereNotNull('after_freigabe_workflow_step_id')->each(function (WorkflowStep $step) use ($stepIdMap) {
+                WorkflowStep::query()->whereKey($stepIdMap[$step->id])
+                    ->update(['after_freigabe_workflow_step_id' => $stepIdMap[$step->after_freigabe_workflow_step_id] ?? null]);
             });
 
             $workflow->update(['superseded_by_id' => $newWorkflow->id, 'active' => false]);
@@ -292,7 +303,8 @@ class WorkflowController extends Controller
                 'sort' => $nextSort,
             ]);
 
-            $workflow->steps->each(function (WorkflowStep $step) use ($newWorkflow) {
+            $stepIdMap = [];
+            $workflow->steps->each(function (WorkflowStep $step) use ($newWorkflow, &$stepIdMap) {
                 $newStep = WorkflowStep::query()->create([
                     'tenant_id' => $newWorkflow->tenant_id,
                     'workflow_id' => $newWorkflow->id,
@@ -313,6 +325,7 @@ class WorkflowController extends Controller
                     'email_text' => $step->email_text,
                     'lifecycle_status' => $step->lifecycle_status,
                 ]);
+                $stepIdMap[$step->id] = $newStep->id;
 
                 $functionGroupIds = $step->functionGroups()->pluck('function_groups.id');
                 if ($functionGroupIds->isNotEmpty()) {
@@ -320,6 +333,11 @@ class WorkflowController extends Controller
                         $functionGroupIds->mapWithKeys(fn ($id) => [$id => ['tenant_id' => $newWorkflow->tenant_id]])
                     );
                 }
+            });
+
+            $workflow->steps->whereNotNull('after_freigabe_workflow_step_id')->each(function (WorkflowStep $step) use ($stepIdMap) {
+                WorkflowStep::query()->whereKey($stepIdMap[$step->id])
+                    ->update(['after_freigabe_workflow_step_id' => $stepIdMap[$step->after_freigabe_workflow_step_id] ?? null]);
             });
 
             return $newWorkflow;
@@ -375,26 +393,35 @@ class WorkflowController extends Controller
                 'sort' => $nextSort,
             ]);
 
-            $workflow->steps->each(fn (WorkflowStep $step) => WorkflowStep::query()->create([
-                'tenant_id' => $targetTenant->id,
-                'workflow_id' => $newWorkflow->id,
-                'title' => $step->title,
-                'short_title' => $step->short_title,
-                'milestone_title' => $step->milestone_title,
-                'sort' => $step->sort,
-                'duration_days' => $step->duration_days,
-                'is_active' => $step->is_active,
-                'is_start' => $step->is_start,
-                'is_end' => $step->is_end,
-                'is_market_launch' => $step->is_market_launch,
-                'has_due_date' => $step->has_due_date,
-                'send_email' => $step->send_email,
-                'show_in_translation' => $step->show_in_translation,
-                'js_function' => $step->js_function,
-                'description' => $step->description,
-                'email_text' => $step->email_text,
-                'lifecycle_status' => $step->lifecycle_status,
-            ]));
+            $stepIdMap = [];
+            $workflow->steps->each(function (WorkflowStep $step) use ($targetTenant, $newWorkflow, &$stepIdMap) {
+                $newStep = WorkflowStep::query()->create([
+                    'tenant_id' => $targetTenant->id,
+                    'workflow_id' => $newWorkflow->id,
+                    'title' => $step->title,
+                    'short_title' => $step->short_title,
+                    'milestone_title' => $step->milestone_title,
+                    'sort' => $step->sort,
+                    'duration_days' => $step->duration_days,
+                    'is_active' => $step->is_active,
+                    'is_start' => $step->is_start,
+                    'is_end' => $step->is_end,
+                    'is_market_launch' => $step->is_market_launch,
+                    'has_due_date' => $step->has_due_date,
+                    'send_email' => $step->send_email,
+                    'show_in_translation' => $step->show_in_translation,
+                    'js_function' => $step->js_function,
+                    'description' => $step->description,
+                    'email_text' => $step->email_text,
+                    'lifecycle_status' => $step->lifecycle_status,
+                ]);
+                $stepIdMap[$step->id] = $newStep->id;
+            });
+
+            $workflow->steps->whereNotNull('after_freigabe_workflow_step_id')->each(function (WorkflowStep $step) use ($stepIdMap) {
+                WorkflowStep::query()->whereKey($stepIdMap[$step->id])
+                    ->update(['after_freigabe_workflow_step_id' => $stepIdMap[$step->after_freigabe_workflow_step_id] ?? null]);
+            });
         });
 
         return redirect()->route('admin.workflows', ['workflow' => $workflow->id])->with('status', 'workflow-copied-to-tenant');
@@ -468,6 +495,7 @@ class WorkflowController extends Controller
             'steps.*.milestone_title' => ['nullable', 'string', 'max:255'],
             'steps.*.duration_days' => ['nullable', 'integer', 'min:0'],
             'steps.*.js_function' => ['nullable', 'string', Rule::in(array_keys(WorkflowStep::SPECIAL_BUTTONS))],
+            'steps.*.after_freigabe_workflow_step_id' => ['nullable', 'integer', Rule::exists('workflow_steps', 'id')->where('workflow_id', $workflow->id)],
             'steps.*.lifecycle_status' => ['nullable', 'integer', 'between:1,4'],
             'steps.*.description' => ['nullable', 'string'],
             'steps.*.email_text' => ['nullable', 'string'],
@@ -493,6 +521,36 @@ class WorkflowController extends Controller
         }
 
         $validated = $validator->validated();
+
+        // Freigabe-Sonderfunktion (js_function=wfs_freigabe) braucht einen
+        // Folge-WFS, der wirklich SPÄTER in der Reihenfolge liegt - sonst
+        // könnte die externe Freigabe-Mail einen bereits durchlaufenen
+        // Schritt erneut auslösen. Eigene Prüfung statt Validator-Rule, da
+        // sie mehrere Felder (js_function + after_freigabe_workflow_step_id)
+        // gegen die sort-Reihenfolge ALLER Schritte des Workflows abgleicht.
+        $sortById = WorkflowStep::query()->where('workflow_id', $workflow->id)->pluck('sort', 'id');
+        $orderErrors = [];
+        foreach ($validated['steps'] as $stepId => $data) {
+            if (($data['js_function'] ?? null) !== 'wfs_freigabe') {
+                continue;
+            }
+            $afterId = $data['after_freigabe_workflow_step_id'] ?? null;
+            if ($afterId === null) {
+                $orderErrors["steps.$stepId.after_freigabe_workflow_step_id"] = [__('Bitte den WFS nach der Freigabe festlegen.')];
+            } elseif (($sortById[$afterId] ?? -1) <= ($sortById[$stepId] ?? PHP_INT_MAX)) {
+                $orderErrors["steps.$stepId.after_freigabe_workflow_step_id"] = [__('Der Folge-WFS muss später in der Reihenfolge liegen als dieser Schritt.')];
+            }
+        }
+
+        if ($orderErrors !== []) {
+            $request->flash();
+
+            return response()
+                ->view('admin.workflows.partials.content', $this->buildIndexData($request, $workflow->id) + [
+                    'errors' => (new \Illuminate\Support\ViewErrorBag())->put('default', new \Illuminate\Support\MessageBag($orderErrors)),
+                ])
+                ->setStatusCode(422);
+        }
 
         DB::transaction(function () use ($request, $validated, $tenantId) {
             foreach ($validated['steps'] as $stepId => $data) {
@@ -523,6 +581,7 @@ class WorkflowController extends Controller
                         'duration_days' => $data['duration_days'] ?? 0,
                         'lifecycle_status' => $data['lifecycle_status'] ?? $step->lifecycle_status,
                         'js_function' => ($data['js_function'] ?? '') ?: null,
+                        'after_freigabe_workflow_step_id' => ($data['js_function'] ?? '') === 'wfs_freigabe' ? ($data['after_freigabe_workflow_step_id'] ?? null) : null,
                         'description' => $data['description'] ?? null,
                         'email_text' => $data['email_text'] ?? null,
                         'is_start' => $request->boolean("steps.$stepId.is_start"),

@@ -61,6 +61,22 @@ class ProjectDirectoryLocator
     }
 
     /**
+     * Basispfad des lokalen Arbeitsverzeichnisses (Ralf, 2026-09-26) -
+     * eigener, unabhängiger Pfad je Mandant, gleiche Unterordner-Struktur
+     * wie das gesperrte Projektverzeichnis oben, aber für externen/
+     * Netzlaufwerk-Zugriff gedacht (z.B. Korrektur-Uploads externer
+     * Projektbeteiligter). Alle anderen Methoden dieser Klasse (buildIndex,
+     * listContents, create, ...) sind bereits basispfad-unabhängig und
+     * funktionieren hier genauso.
+     */
+    public function arbeitsverzeichnisBasePath(int $tenantId): ?string
+    {
+        $value = Tenant::query()->where('id', $tenantId)->value('arbeitsverzeichnis_path');
+
+        return $value !== null && trim($value) !== '' ? rtrim($value, '\\/') : null;
+    }
+
+    /**
      * Ein Scan des Basisverzeichnisses (+ _Archiv) reicht für eine ganze
      * Projektliste (25 Zeilen) - deutlich günstiger als Viettos Ansatz,
      * der pro Tabellenzeile einzeln scandir() aufruft.

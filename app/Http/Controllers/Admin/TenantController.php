@@ -51,7 +51,8 @@ class TenantController extends Controller
         $tenant = Tenant::query()->create([
             'name' => $name,
             'short_name' => $this->normalizedShortName($request, $name),
-            'project_path' => $this->normalizedProjectPath($request),
+            'project_path' => $this->normalizedPath($request, 'project_path'),
+            'arbeitsverzeichnis_path' => $this->normalizedPath($request, 'arbeitsverzeichnis_path'),
             'notification_email' => $this->normalizedNotificationEmail($request),
         ]);
 
@@ -113,7 +114,8 @@ class TenantController extends Controller
         $tenant->update([
             'name' => $name,
             'short_name' => $this->normalizedShortName($request, $name),
-            'project_path' => $this->normalizedProjectPath($request),
+            'project_path' => $this->normalizedPath($request, 'project_path'),
+            'arbeitsverzeichnis_path' => $this->normalizedPath($request, 'arbeitsverzeichnis_path'),
             'notification_email' => $this->normalizedNotificationEmail($request),
             'is_home_tenant' => $isHomeTenant,
             ...$settings,
@@ -138,9 +140,9 @@ class TenantController extends Controller
         return redirect()->route('admin.kunden');
     }
 
-    private function normalizedProjectPath(Request $request): ?string
+    private function normalizedPath(Request $request, string $field): ?string
     {
-        $path = trim((string) $request->string('project_path'));
+        $path = trim((string) $request->string($field));
 
         return $path === '' ? null : $path;
     }

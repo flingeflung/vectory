@@ -307,7 +307,7 @@
                                     @php $stepHasError = $errors->has("steps.{$step->id}.*"); @endphp
                                     <div
                                         x-sort:item="{{ $step->id }}"
-                                        x-data="{ expanded: {{ $stepHasError ? 'true' : 'false' }}, sendEmail: {{ \Illuminate\Support\Js::from($isResubmit ? old("steps.{$step->id}.send_email") !== null : $step->send_email) }} }"
+                                        x-data="{ expanded: {{ $stepHasError ? 'true' : 'false' }}, sendEmail: {{ \Illuminate\Support\Js::from($isResubmit ? old("steps.{$step->id}.send_email") !== null : $step->send_email) }}, jsFunction: {{ \Illuminate\Support\Js::from((string) old("steps.{$step->id}.js_function", (string) $step->js_function)) }} }"
                                         x-on:workflow-steps-expand-all.window="expanded = true"
                                         x-on:workflow-steps-collapse-all.window="expanded = false"
                                         class="rounded-md border p-2 {{ $stepHasError ? 'border-red-300' : 'border-gray-200' }}"
@@ -398,14 +398,26 @@
                                                 </div>
                                                 <div>
                                                     <label class="block text-gray-500">{{ __('Sonderbutton') }}</label>
-                                                    <select name="steps[{{ $step->id }}][js_function]" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
-                                                        @php $jsFunctionOld = (string) old("steps.{$step->id}.js_function", (string) $step->js_function); @endphp
-                                                        <option value="" @selected($jsFunctionOld === '')>{{ __('– keiner –') }}</option>
+                                                    <select name="steps[{{ $step->id }}][js_function]" x-model="jsFunction" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
+                                                        <option value="">{{ __('– keiner –') }}</option>
                                                         @foreach ($specialButtons as $key => $label)
-                                                            <option value="{{ $key }}" @selected($jsFunctionOld === $key)>{{ $label }}</option>
+                                                            <option value="{{ $key }}">{{ $label }}</option>
                                                         @endforeach
                                                     </select>
                                                     @error("steps.{$step->id}.js_function")
+                                                        <p class="mt-0.5 text-red-600">{{ $message }}</p>
+                                                    @enderror
+                                                </div>
+                                                <div x-show="jsFunction === 'wfs_freigabe'" x-cloak>
+                                                    <label class="block text-gray-500">{{ __('WFS nach Freigabe') }}</label>
+                                                    <select name="steps[{{ $step->id }}][after_freigabe_workflow_step_id]" class="mt-0.5 w-full rounded-md border-gray-300 text-xs {{ $errors->has("steps.{$step->id}.after_freigabe_workflow_step_id") ? 'border-red-400' : '' }}">
+                                                        @php $afterFreigabeOld = old("steps.{$step->id}.after_freigabe_workflow_step_id", (string) $step->after_freigabe_workflow_step_id); @endphp
+                                                        <option value="">{{ __('– bitte wählen –') }}</option>
+                                                        @foreach ($steps->where('id', '!=', $step->id) as $otherStep)
+                                                            <option value="{{ $otherStep->id }}" @selected((string) $afterFreigabeOld === (string) $otherStep->id)>{{ $otherStep->title }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    @error("steps.{$step->id}.after_freigabe_workflow_step_id")
                                                         <p class="mt-0.5 text-red-600">{{ $message }}</p>
                                                     @enderror
                                                 </div>
