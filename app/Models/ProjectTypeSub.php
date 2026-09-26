@@ -6,7 +6,6 @@ use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Str;
 
 #[Fillable(['tenant_id', 'project_type_main_id', 'legacy_id', 'name', 'active', 'color', 'symbol', 'sort', 'format_type'])]
 class ProjectTypeSub extends Model
@@ -48,8 +47,8 @@ class ProjectTypeSub extends Model
      * Symbolkatalog (Ralf, 2026-09-26): kein DB-Katalog, sondern einfach
      * alle Bilddateien im Icon-Verzeichnis - Ralf legt neue Symbole direkt
      * per Datei-Upload dort ab (FTP/Total Commander), kein Admin-Upload-UI
-     * nötig. "_kl"-Varianten (siehe smallSymbol()) sind nur Begleitdateien
-     * einer Hauptdatei und tauchen im Katalog nicht als eigene Wahl auf.
+     * nötig. "_kl"-Varianten sind nur Begleitdateien einer Hauptdatei und
+     * tauchen im Katalog nicht als eigene Wahl auf.
      *
      * @return list<string> Dateinamen, alphabetisch
      */
@@ -66,15 +65,5 @@ class ProjectTypeSub extends Model
             ->all();
 
         return $names;
-    }
-
-    /**
-     * Kleine Icon-Variante (Vietto: "_kl"-Suffix vorm Dateinamen) für
-     * kompakte Listen wie die Dashboard-Kacheln, statt der normalen Größe
-     * aus der Projektübersicht.
-     */
-    public function smallSymbol(): ?string
-    {
-        return $this->symbol ? Str::beforeLast($this->symbol, '.').'_kl.'.Str::afterLast($this->symbol, '.') : null;
     }
 }

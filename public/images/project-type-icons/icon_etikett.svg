@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Ebene_1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 124.92 87.43">
+  <!-- Generator: Adobe Illustrator 30.8.2, SVG Export Plug-In . SVG Version: 2.1.4 Build 7)  -->
+  <defs>
+    <style>
+      .st0 {
+        fill: #1d1d1b;
+      }
+
+      .st1 {
+        stroke-width: 3px;
+      }
+
+      .st1, .st2 {
+        fill: none;
+        stroke: #1d1d1b;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .st2 {
+        stroke-width: 2px;
+      }
+    </style>
+  </defs>
+  <polygon class="st1" points="33.19 14.45 30.67 38.81 73.82 81.95 100.69 55.08 57.55 11.93 33.19 14.45"/>
+  <line class="st1" x1="44.27" y1="25.53" x2="24.22" y2="5.48"/>
+  <circle class="st2" cx="44.27" cy="25.53" r="5.77"/>
+  <rect class="st0" x="65.04" y="54.93" width="3.54" height="20.33" transform="translate(-26.46 66.31) rotate(-45)"/>
+  <rect class="st0" x="72.21" y="47.76" width="3.54" height="20.33" transform="translate(-19.29 69.28) rotate(-45)"/>
+  <rect class="st0" x="78.05" y="41.92" width="3.54" height="20.33" transform="translate(-13.45 71.7) rotate(-45)"/>
+  <rect class="st0" x="68.61" y="52.67" width=".91" height="20.33" transform="translate(-24.2 67.24) rotate(-45)"/>
+  <rect class="st0" x="69.94" y="51.35" width=".91" height="20.33" transform="translate(-22.88 67.79) rotate(-45)"/>
+  <rect class="st0" x="71.27" y="50.02" width=".91" height="20.33" transform="translate(-21.55 68.34) rotate(-45)"/>
+  <rect class="st0" x="81.63" y="39.66" width=".91" height="20.33" transform="translate(-11.19 72.63) rotate(-45)"/>
+  <rect class="st0" x="82.95" y="38.33" width=".91" height="20.33" transform="translate(-9.86 73.18) rotate(-45)"/>
+  <rect class="st0" x="84.28" y="37" width=".91" height="20.33" transform="translate(-8.54 73.73) rotate(-45)"/>
+  <rect class="st0" x="75.78" y="45.5" width=".91" height="20.33" transform="translate(-17.03 70.21) rotate(-45)"/>
+  <rect class="st0" x="77.11" y="44.17" width=".91" height="20.33" transform="translate(-15.71 70.76) rotate(-45)"/>
+</svg>

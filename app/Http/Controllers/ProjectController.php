@@ -303,8 +303,6 @@ class ProjectController extends Controller
             'pn' => $project->source_pn,
             'title' => $project->title,
             'status' => $project->status,
-            // Kein smallSymbol() ("_kl"-Variante) - die Dateien wurden (noch)
-            // nicht aus Vietto importiert, nur die normalgroßen Icons.
             'type_symbol' => $project->project_type_sub_model?->symbol,
             'type_name' => $project->project_type_sub_model?->name,
         ])->all());

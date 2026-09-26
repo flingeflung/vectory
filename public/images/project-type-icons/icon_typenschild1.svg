@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Ebene_1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 85.37 62.53">
+  <!-- Generator: Adobe Illustrator 30.8.2, SVG Export Plug-In . SVG Version: 2.1.4 Build 7)  -->
+  <defs>
+    <style>
+      .st0 {
+        fill: #fff;
+      }
+
+      .st1 {
+        fill: #848484;
+        stroke: #1d1d1b;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 3px;
+      }
+
+      .st2 {
+        fill: #1d1d1b;
+      }
+
+      .st3 {
+        fill: #3c3c3b;
+      }
+    </style>
+  </defs>
+  <polygon class="st1" points="83.87 1.5 83.87 61.03 1.67 61.03 1.5 1.5 83.87 1.5"/>
+  <circle class="st2" cx="77.87" cy="8.3" r="2.33"/>
+  <circle class="st2" cx="77.87" cy="53.03" r="2.33"/>
+  <circle class="st2" cx="7.5" cy="8.3" r="2.33"/>
+  <circle class="st2" cx="7.5" cy="53.03" r="2.33"/>
+  <rect class="st3" x="10.64" y="12.19" width="15.44" height="3.22"/>
+  <rect class="st0" x="29.42" y="12.19" width="15.44" height="3.22"/>
+  <rect class="st3" x="10.64" y="18.08" width="9.89" height="3.22"/>
+  <rect class="st0" x="29.42" y="18.08" width="15.44" height="3.22"/>
+  <rect class="st3" x="10.64" y="23.97" width="16.67" height="3.22"/>
+  <rect class="st3" x="10.64" y="41.64" width="60.11" height="3.22"/>
+  <rect class="st3" x="10.64" y="47.47" width="44.57" height="3.22"/>
+  <rect class="st0" x="29.42" y="23.97" width="15.44" height="3.22"/>
+  <rect class="st3" x="10.64" y="29.86" width="12" height="3.22"/>
+  <rect class="st0" x="29.42" y="29.86" width="15.44" height="3.22"/>
+  <g>
+    <path class="st0" d="M60.88,33.08c-6.02,0-10.9-4.55-10.9-10.16s4.89-10.16,10.9-10.16c.29,0,.59,0,.88.03l-.22,3.07c-.22-.01-.44-.03-.65-.03-4.33,0-7.85,3.17-7.85,7.07s3.52,7.07,7.85,7.07c.22,0,.44,0,.65-.03l.22,3.07c-.29.01-.59.03-.88.03v.03Z"/>
+    <path class="st0" d="M78.68,29.98c-.22.01-.44.03-.65.03-3.74,0-6.88-2.38-7.66-5.55h6.13v-3.08h-6.13c.78-3.17,3.92-5.55,7.66-5.55.22,0,.44,0,.65.03l.22-3.07c-.29-.01-.59-.03-.88-.03-6.02,0-10.9,4.55-10.9,10.15s4.89,10.16,10.9,10.16c.29,0,.59,0,.88-.03,0,0-.22-3.07-.22-3.07Z"/>
+  </g>
+</svg>
