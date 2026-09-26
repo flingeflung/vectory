@@ -152,13 +152,19 @@ class TenantController extends Controller
      * Projektanfragen, siehe ProjectController::submitRequest()) - Ralf:
      * "Mail-Adresse für Infos von vectory", pro Kunde in der
      * Konfiguration hinterlegbar.
+     *
+     * PFLICHTFELD (Ralf, 2026-09-27): sie ist der letzte Fallback, damit
+     * Rückmeldungen (z.B. Freigabe-Mails ohne Zuständige mit Adresse) nie
+     * ins Leere gehen. Bei der Kundenanlage genügt irgendeine gültige
+     * Adresse (z.B. die des Admins), sie lässt sich jederzeit ändern.
      */
-    private function normalizedNotificationEmail(Request $request): ?string
+    private function normalizedNotificationEmail(Request $request): string
     {
         $email = trim((string) $request->string('notification_email'));
-        abort_if($email !== '' && ! filter_var($email, FILTER_VALIDATE_EMAIL), 422, __('Ungültige E-Mail-Adresse.'));
+        abort_if($email === '', 422, __('Bitte eine Info-E-Mail eintragen. Zunächst genügt irgendeine gültige Adresse, z. B. Ihre eigene; sie lässt sich später jederzeit ändern.'));
+        abort_if(! filter_var($email, FILTER_VALIDATE_EMAIL), 422, __('Ungültige E-Mail-Adresse.'));
 
-        return $email === '' ? null : $email;
+        return $email;
     }
 
     /**

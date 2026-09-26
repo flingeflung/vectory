@@ -39,9 +39,9 @@
                         <p class="mt-0.5 text-xs text-gray-400">{{ __('Lokaler Netzwerkordner mit derselben Unterordner-Struktur, z. B. für externe Korrektur-Uploads.') }}</p>
                     </div>
                     <div>
-                        <label class="block text-xs text-gray-500">{{ __('Info-E-Mail') }}</label>
-                        <input type="email" name="notification_email" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
-                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Empfänger für automatische Mitteilungen an diesen Kunden, z. B. Projektanfragen.') }}</p>
+                        <label class="block text-xs text-gray-500">{{ __('Info-E-Mail') }} <span class="text-red-500">*</span></label>
+                        <input type="email" name="notification_email" required class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
+                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Pflichtfeld. Empfänger für automatische Mitteilungen an diesen Kunden, z. B. Projektanfragen und Rückmeldungen zu Freigaben. Wenn noch keine Sammel-Adresse existiert, tragen Sie zunächst irgendeine gültige Adresse ein - sie lässt sich jederzeit ändern.') }}</p>
                     </div>
                     @if ($tenants->isNotEmpty())
                         <div>
@@ -121,9 +121,9 @@
                         <p class="mt-0.5 text-xs text-gray-400">{{ __('Lokaler Netzwerkordner mit derselben Unterordner-Struktur, z. B. für externe Korrektur-Uploads.') }}</p>
                     </div>
                     <div>
-                        <label class="block text-xs text-gray-500">{{ __('Info-E-Mail') }}</label>
-                        <input type="email" name="notification_email" value="{{ $selectedTenant->notification_email }}" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
-                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Empfänger für automatische Mitteilungen an diesen Kunden, z. B. Projektanfragen.') }}</p>
+                        <label class="block text-xs text-gray-500">{{ __('Info-E-Mail') }} <span class="text-red-500">*</span></label>
+                        <input type="email" name="notification_email" value="{{ $selectedTenant->notification_email }}" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Pflichtfeld. Empfänger für automatische Mitteilungen an diesen Kunden, z. B. Projektanfragen und Rückmeldungen zu Freigaben. Wenn noch keine Sammel-Adresse existiert, tragen Sie zunächst irgendeine gültige Adresse ein - sie lässt sich jederzeit ändern.') }}</p>
                     </div>
                     <div class="flex flex-wrap gap-4">
                         <label class="block text-xs text-gray-500">{{ __('Maximale Anzahl Projekte im Gantt') }}
