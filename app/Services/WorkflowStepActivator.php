@@ -76,9 +76,11 @@ class WorkflowStepActivator
 
             // Freigabe-Folge-WFS (Ralf, 2026-09-26): hat er selbst niemanden
             // mit Mailadresse, geht die Info an die Kunden-Info-Adresse.
+            $viaInfoAddress = false;
             if (empty($recipientEmails) && $fallbackToTenantEmail) {
                 $tenantEmail = Tenant::query()->where('id', $project->tenant_id)->value('notification_email');
                 $recipientEmails = $tenantEmail ? [$tenantEmail] : [];
+                $viaInfoAddress = ! empty($recipientEmails);
             }
 
             if (! empty($recipientEmails)) {
@@ -86,7 +88,7 @@ class WorkflowStepActivator
                 if ($ccEmail) {
                     $mail->cc($ccEmail);
                 }
-                $mail->send(new WorkflowStepActivatedMail($target, $triggeredBy, $message));
+                $mail->send(new WorkflowStepActivatedMail($target, $triggeredBy, $message, $viaInfoAddress));
             }
         }
 

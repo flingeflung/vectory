@@ -16,6 +16,7 @@ class WorkflowStepActivatedMail extends Mailable
         public readonly ProjectWorkflowStep $projectWorkflowStep,
         public readonly ?Person $triggeredBy,
         public readonly ?string $personalMessage = null,
+        public readonly bool $viaInfoAddress = false,
     ) {}
 
     public function build(): self
@@ -23,13 +24,16 @@ class WorkflowStepActivatedMail extends Mailable
         $project = $this->projectWorkflowStep->project;
 
         return $this
-            ->subject(__('Vectory: Workflow-Schritt zugewiesen – Projekt :pn', ['pn' => $project->source_pn]))
+            ->subject($this->viaInfoAddress
+                ? __('Vectory: Workflow-Schritt aktiviert – Projekt :pn', ['pn' => $project->source_pn])
+                : __('Vectory: Workflow-Schritt zugewiesen – Projekt :pn', ['pn' => $project->source_pn]))
             ->view('emails.workflow-step-activated')
             ->with([
                 'project' => $project,
                 'step' => $this->projectWorkflowStep->workflowStep,
                 'triggeredBy' => $this->triggeredBy,
                 'personalMessage' => $this->personalMessage,
+                'viaInfoAddress' => $this->viaInfoAddress,
             ]);
     }
 }
