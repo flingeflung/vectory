@@ -59,6 +59,10 @@ class WorkflowStepActivator
             'started_at' => now(),
             'completed_at' => null,
             'completed_by_person_id' => null,
+            // Jede Auslösung eines Freigabe-Schritts ist eine neue Runde: eine Freigabe aus einer
+            // früheren Runde darf nicht hängen bleiben, sonst wäre der Schritt sofort "erteilt" und
+            // der Mail-Link der neuen Runde tot (gefunden im Test 2026-09-27).
+            ...($target->workflowStep->isFreigabeStep() ? ['milestone_done_at' => null] : []),
         ]);
 
         // Status automatisch aus der Kastenfarbe des neuen Schritts ableiten
