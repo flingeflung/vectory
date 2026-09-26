@@ -22,6 +22,21 @@ return Application::configure(basePath: dirname(__DIR__))
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
 
+        // Freigabe-Mail-Links (ohne Login, siehe routes/web.php): ungültige/
+        // abgelaufene Signatur als verständliche Seite statt Weiterleitung
+        // zum Login, mit dem der externe Empfänger nichts anfangen kann.
+        // Muss VOR dem generischen HttpException-Handler stehen.
+        $exceptions->render(function (\Illuminate\Routing\Exceptions\InvalidSignatureException $e, Request $request) {
+            if (! $request->is('freigabe/*')) {
+                return null;
+            }
+
+            return response()->view('freigabe.done', [
+                'title' => __('Link ungültig'),
+                'message' => __('Dieser Link ist ungültig oder abgelaufen. Bitte fordern Sie beim Absender eine neue Freigabe-Mail an.'),
+            ], 403);
+        });
+
         // abort_if()/abort_unless() mit einer Nachricht (z.B. Lösch-Schutz
         // "wird bereits in Projekten verwendet") landen sonst als rohe
         // Debug-/Fehlerseite statt einer verständlichen Rückmeldung -

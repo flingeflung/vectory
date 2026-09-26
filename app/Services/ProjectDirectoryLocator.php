@@ -77,6 +77,76 @@ class ProjectDirectoryLocator
     }
 
     /**
+     * Projektordner im Arbeitsverzeichnis (per PN-Präfix, wie im gesperrten
+     * Projektverzeichnis) - null, wenn nicht konfiguriert, nicht
+     * erreichbar oder nicht (eindeutig) auffindbar.
+     */
+    public function arbeitsverzeichnisProjectPath(Project $project): ?string
+    {
+        $basePath = $this->arbeitsverzeichnisBasePath($project->tenant_id);
+
+        if ($basePath === null || ! is_dir($basePath)) {
+            return null;
+        }
+
+        return $this->statusFromIndex($this->buildIndex($basePath), $project->source_pn)['path'];
+    }
+
+    /**
+     * Löst einen im Freigabe-Request gespeicherten, zum Projektordner
+     * RELATIVEN Pfad (Schrägstriche) zu einem absoluten auf - null bei
+     * Pfaden, die aus dem Projektordner herausführen würden. Der Pfad
+     * kommt zwar aus unserer eigenen DB, das externe Upload-Ziel aber
+     * ohne Login angesprochen wird, deshalb hier sicherheitshalber
+     * doppelt geprüft.
+     */
+    public function resolveRelative(string $projectPath, string $relativePath): ?string
+    {
+        $segments = array_values(array_filter(preg_split('#[\\\\/]+#', $relativePath), fn ($s) => $s !== ''));
+
+        foreach ($segments as $segment) {
+            if ($segment === '.' || $segment === '..') {
+                return null;
+            }
+        }
+
+        return $projectPath.($segments ? DIRECTORY_SEPARATOR.implode(DIRECTORY_SEPARATOR, $segments) : '');
+    }
+
+    /**
+     * Flache, eingerückte Liste des Verzeichnisbaums für die Auswahlfelder
+     * im Auslösen-Dialog (bewusst zwei einfache Selects statt Baum-
+     * Widget, Ralf: PM-/TR-Seite minimal halten).
+     *
+     * @return list<array{path: string, label: string, type: string}> path = relativ zum Projektordner, Schrägstriche
+     */
+    public function flatOptions(string $projectPath, bool $dirsOnly = false): array
+    {
+        $options = [];
+        $walk = function (array $entries, string $prefix, int $depth) use (&$walk, &$options, $dirsOnly) {
+            foreach ($entries as $entry) {
+                if ($entry['type'] === 'file' && $dirsOnly) {
+                    continue;
+                }
+
+                $relative = $prefix === '' ? $entry['name'] : $prefix.'/'.$entry['name'];
+                $options[] = [
+                    'path' => $relative,
+                    'label' => str_repeat("\u{2003}", $depth).$entry['name'].($entry['type'] === 'dir' ? '/' : ''),
+                    'type' => $entry['type'],
+                ];
+
+                if ($entry['type'] === 'dir') {
+                    $walk($entry['children'] ?? [], $relative, $depth + 1);
+                }
+            }
+        };
+        $walk($this->listContents($projectPath), '', 0);
+
+        return $options;
+    }
+
+    /**
      * Ein Scan des Basisverzeichnisses (+ _Archiv) reicht für eine ganze
      * Projektliste (25 Zeilen) - deutlich günstiger als Viettos Ansatz,
      * der pro Tabellenzeile einzeln scandir() aufruft.

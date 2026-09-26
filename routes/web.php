@@ -54,6 +54,7 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TenantSwitchController;
 use App\Http\Controllers\UserTablePreferenceController;
 use App\Http\Controllers\VerbundController;
+use App\Http\Controllers\WorkflowStepFreigabeActionController;
 use App\Http\Middleware\RememberLastAdminPage;
 use Illuminate\Support\Facades\Route;
 
@@ -397,5 +398,20 @@ Route::middleware('auth')->group(function () {
     Route::get('/hilfe', [HelpController::class, 'results'])->name('hilfe');
     Route::get('/hilfe/artikel/{helpArticle:key}', [HelpController::class, 'show'])->name('hilfe.artikel');
 });
+
+// WFS-Freigabe per Mail-Link (Ralf, 2026-09-26): KEIN Login - Berechtigung
+// allein über die signierte, zeitlich begrenzte URL. CSRF-Schutz bewusst
+// aus: die Signatur ist der Nachweis, und ein Mail-Client-Browser ohne
+// Session-Cookie (In-App-Browser) würde sonst mit 419 scheitern.
+Route::middleware(['signed', 'throttle:30,1'])
+    ->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class)
+    ->prefix('freigabe/{freigabeRequest}')
+    ->name('freigabe.')
+    ->group(function () {
+        Route::get('/bestaetigen', [WorkflowStepFreigabeActionController::class, 'confirm'])->name('confirm');
+        Route::post('/bestaetigen', [WorkflowStepFreigabeActionController::class, 'grant'])->name('grant');
+        Route::get('/korrektur', [WorkflowStepFreigabeActionController::class, 'korrekturForm'])->name('korrektur');
+        Route::post('/korrektur', [WorkflowStepFreigabeActionController::class, 'korrekturUpload'])->name('korrektur.upload');
+    });
 
 require __DIR__.'/auth.php';

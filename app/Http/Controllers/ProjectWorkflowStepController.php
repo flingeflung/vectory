@@ -10,8 +10,13 @@ use App\Models\Project;
 use App\Models\ProjectPerson;
 use App\Models\ProjectWorkflowStep;
 use App\Models\ProjectWorkflowStepPerson;
+use App\Mail\WorkflowStepFreigabeMail;
 use App\Models\Task;
+use App\Models\WorkflowStepFreigabeRequest;
+use App\Services\ProjectDirectoryLocator;
 use App\Services\WorkflowStepActivator;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -20,7 +25,10 @@ use Illuminate\View\View;
 
 class ProjectWorkflowStepController extends Controller
 {
-    public function __construct(private readonly WorkflowStepActivator $activator) {}
+    public function __construct(
+        private readonly WorkflowStepActivator $activator,
+        private readonly ProjectDirectoryLocator $locator,
+    ) {}
 
     /**
      * Termin (due_date) einer einzelnen WFS-Instanz ändern - eigenständiges
@@ -55,35 +63,18 @@ class ProjectWorkflowStepController extends Controller
         abort_unless($projectWorkflowStep->is_current, 422);
 
         $granted = $projectWorkflowStep->milestone_done_at === null;
-        $projectWorkflowStep->update(['milestone_done_at' => $granted ? now() : null]);
-
-        Activity::log(
-            $project,
-            ActivityType::WorkflowStepActivated,
-            $granted
-                ? __('Freigabe für ":title" erteilt.', ['title' => $projectWorkflowStep->workflowStep->title])
-                : __('Freigabe für ":title" zurückgenommen.', ['title' => $projectWorkflowStep->workflowStep->title])
-        );
-
-        // Freigabe per Button und per externem Mail-Link müssen identisch
-        // wirken (Ralf, 2026-09-26) - beide lösen automatisch den
-        // konfigurierten Folge-WFS aus. Nur beim ERTEILEN, nicht beim
-        // Zurücknehmen (ein bereits ausgelöster Folge-WFS wird nicht
-        // rückgängig gemacht).
         $nextStepTitle = null;
-        $afterFreigabeStepId = $projectWorkflowStep->workflowStep->after_freigabe_workflow_step_id;
-        if ($granted && $afterFreigabeStepId) {
-            $nextProjectStep = $project->projectWorkflowSteps->firstWhere('workflow_step_id', $afterFreigabeStepId);
-            if ($nextProjectStep) {
-                $this->activator->activate(
-                    $project,
-                    $nextProjectStep,
-                    $request->user()->person,
-                    sendEmail: true,
-                    message: __('Automatisch ausgelöst durch Freigabe von ":title".', ['title' => $projectWorkflowStep->workflowStep->title]),
-                );
-                $nextStepTitle = $nextProjectStep->workflowStep->title;
-            }
+
+        if ($granted) {
+            // Freigabe per Button und per externem Mail-Link müssen
+            // identisch wirken (Ralf, 2026-09-26) - beide über denselben
+            // Service-Aufruf, inkl. automatischem Folge-WFS. Nur beim
+            // ERTEILEN, nicht beim Zurücknehmen (ein bereits ausgelöster
+            // Folge-WFS wird nicht rückgängig gemacht).
+            $nextStepTitle = $this->activator->grantFreigabe($project, $projectWorkflowStep, $request->user()->person);
+        } else {
+            $projectWorkflowStep->update(['milestone_done_at' => null]);
+            Activity::log($project, ActivityType::WorkflowStepActivated, __('Freigabe für ":title" zurückgenommen.', ['title' => $projectWorkflowStep->workflowStep->title]));
         }
 
         return response()->json([
@@ -104,10 +95,23 @@ class ProjectWorkflowStepController extends Controller
 
         $projectWorkflowStep->loadMissing('workflowStep.functionGroups');
 
+        // Freigabe-WFS: Quelle/Ziel werden aus dem lokalen Arbeitsverzeichnis
+        // des Projekts gewählt (siehe WorkflowStepFreigabeRequest).
+        $freigabe = null;
+        if ($projectWorkflowStep->workflowStep->isFreigabeStep()) {
+            $projectPath = $this->locator->arbeitsverzeichnisProjectPath($project);
+            $freigabe = [
+                'available' => $projectPath !== null,
+                'sourceOptions' => $projectPath ? $this->locator->flatOptions($projectPath) : [],
+                'targetOptions' => $projectPath ? $this->locator->flatOptions($projectPath, dirsOnly: true) : [],
+            ];
+        }
+
         return view('projekte.partials.activate-workflow-step-body', [
             'project' => $project,
             'projectWorkflowStep' => $projectWorkflowStep,
             'recipients' => Task::recipientsFor($projectWorkflowStep),
+            'freigabe' => $freigabe,
         ]);
     }
 
@@ -147,17 +151,84 @@ class ProjectWorkflowStepController extends Controller
             abort_unless($request->user()->can('project.complete'), 403);
         }
         $person = $request->user()->person;
+        $ccEmail = $request->boolean('send_copy_to_self') ? $request->user()->email : null;
+
+        // Freigabe-WFS mit "E-Mail senden": statt der normalen WFS-Mail geht
+        // die Freigabe-Mail mit den signierten Links raus. Alle Prüfungen
+        // VOR dem Aktivieren, damit bei einem Fehler nichts halb passiert.
+        $freigabeRequest = null;
+        if ($request->boolean('send_email') && $target->workflowStep->isFreigabeStep()) {
+            $freigabeRequest = $this->prepareFreigabeRequest($request, $project, $target, $person);
+        }
 
         $result = $this->activator->activate(
             $project,
             $target,
             $person,
-            sendEmail: $request->boolean('send_email'),
-            ccEmail: $request->boolean('send_copy_to_self') ? $request->user()->email : null,
+            sendEmail: $request->boolean('send_email') && ! $freigabeRequest,
+            ccEmail: $ccEmail,
             message: $validated['message'] ?? null,
         );
 
+        if ($freigabeRequest) {
+            $mail = Mail::to(Task::recipientsFor($target)->pluck('email')->filter()->all());
+            if ($ccEmail) {
+                $mail->cc($ccEmail);
+            }
+            $mail->send(new WorkflowStepFreigabeMail($freigabeRequest, $validated['message'] ?? null));
+        }
+
         return response()->json($result);
+    }
+
+    /**
+     * Prüft Quelle/Ziel gegen das Arbeitsverzeichnis des Projekts und legt
+     * den Freigabe-Request an (Ralf, 2026-09-26: Quelle optional, Ziel-
+     * Ordner Pflicht, jeweils aussagekräftige Fehlermeldung statt
+     * stillem Fehlschlag).
+     */
+    private function prepareFreigabeRequest(Request $request, Project $project, ProjectWorkflowStep $target, ?Person $person): WorkflowStepFreigabeRequest
+    {
+        $step = $target->workflowStep;
+
+        if (! $step->after_freigabe_workflow_step_id) {
+            throw ValidationException::withMessages(['send_email' => __('Für den Schritt „:title“ ist kein Folge-Schritt nach der Freigabe festgelegt - die Freigabe-Mail kann nicht verschickt werden. Bitte im Workflow ergänzen.', ['title' => $step->title])]);
+        }
+
+        if (! Task::recipientsFor($target)->contains(fn ($recipient) => ! empty($recipient->email))) {
+            throw ValidationException::withMessages(['send_email' => __('Für niemanden der Zuständigen ist eine E-Mail-Adresse hinterlegt - Versand nicht möglich.')]);
+        }
+
+        $projectPath = $this->locator->arbeitsverzeichnisProjectPath($project);
+        if ($projectPath === null) {
+            throw ValidationException::withMessages(['freigabe_target_path' => __('Das Projektverzeichnis für Projekt :pn wurde im Arbeitsverzeichnis nicht gefunden.', ['pn' => $project->source_pn])]);
+        }
+
+        $targetPath = trim((string) $request->input('freigabe_target_path'));
+        if ($targetPath === '') {
+            throw ValidationException::withMessages(['freigabe_target_path' => __('Bitte wählen Sie das Ziel-Verzeichnis für die Korrektur aus.')]);
+        }
+        $targetAbsolute = $this->locator->resolveRelative($projectPath, $targetPath);
+        if ($targetAbsolute === null || ! is_dir($targetAbsolute)) {
+            throw ValidationException::withMessages(['freigabe_target_path' => __('Erwartetes Verzeichnis: :dir nicht gefunden.', ['dir' => $targetPath])]);
+        }
+
+        $sourcePath = trim((string) $request->input('freigabe_source_path')) ?: null;
+        if ($sourcePath !== null) {
+            $sourceAbsolute = $this->locator->resolveRelative($projectPath, $sourcePath);
+            if ($sourceAbsolute === null || ! file_exists($sourceAbsolute)) {
+                throw ValidationException::withMessages(['freigabe_source_path' => __('Die gewählte Quelle „:path“ wurde nicht gefunden.', ['path' => $sourcePath])]);
+            }
+        }
+
+        return WorkflowStepFreigabeRequest::create([
+            'tenant_id' => $project->tenant_id,
+            'project_id' => $project->id,
+            'project_workflow_step_id' => $target->id,
+            'triggered_by_person_id' => $person?->id,
+            'source_path' => $sourcePath,
+            'korrektur_target_path' => $targetPath,
+        ]);
     }
 
     /**

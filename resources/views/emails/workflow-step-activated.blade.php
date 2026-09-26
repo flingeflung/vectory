@@ -1,4 +1,4 @@
-<p>{{ $triggeredBy?->fullName() ?? __('Jemand') }} {{ __('hat Ihnen in Vectory einen Workflow-Schritt zugewiesen:') }}</p>
+<p>{{ $triggeredBy ? $triggeredBy->fullName().' '.__('hat Ihnen in Vectory einen Workflow-Schritt zugewiesen:') : __('Ihnen wurde in Vectory ein Workflow-Schritt zugewiesen:') }}</p>
 
 <p>
     {{ __('Projekt') }} <strong>{{ $project->source_pn }}</strong> ({{ $project->title }})<br>
@@ -11,7 +11,7 @@
 
 @if ($personalMessage)
     <p>
-        {{ __('Persönliche Nachricht von :name:', ['name' => $triggeredBy?->fullName() ?? '']) }}<br>
+        {{ $triggeredBy ? __('Persönliche Nachricht von :name:', ['name' => $triggeredBy->fullName()]) : __('Persönliche Nachricht:') }}<br>
         <em>{{ $personalMessage }}</em>
     </p>
 @endif

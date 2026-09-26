@@ -10,6 +10,7 @@ use App\Models\Person;
 use App\Models\Project;
 use App\Models\ProjectWorkflowStep;
 use App\Models\Task;
+use App\Models\Tenant;
 use Illuminate\Support\Facades\Mail;
 
 /**
@@ -33,6 +34,7 @@ class WorkflowStepActivator
         bool $sendEmail = false,
         ?string $ccEmail = null,
         ?string $message = null,
+        bool $fallbackToTenantEmail = false,
     ): array {
         $target->loadMissing('workflowStep.functionGroups');
 
@@ -64,6 +66,13 @@ class WorkflowStepActivator
         if ($sendEmail) {
             $recipientEmails = Task::recipientsFor($target)->pluck('email')->filter()->all();
 
+            // Freigabe-Folge-WFS (Ralf, 2026-09-26): hat er selbst niemanden
+            // mit Mailadresse, geht die Info an die Kunden-Info-Adresse.
+            if (empty($recipientEmails) && $fallbackToTenantEmail) {
+                $tenantEmail = Tenant::query()->where('id', $project->tenant_id)->value('notification_email');
+                $recipientEmails = $tenantEmail ? [$tenantEmail] : [];
+            }
+
             if (! empty($recipientEmails)) {
                 $mail = Mail::to($recipientEmails);
                 if ($ccEmail) {
@@ -82,5 +91,50 @@ class WorkflowStepActivator
         }
 
         return ['open_graphic_orders_count' => $openGraphicOrdersCount];
+    }
+
+    /**
+     * "Freigabe erteilen" mit allen Folgen - für den internen Button
+     * (toggleFreigabe) UND den externen Mail-Link identisch (Ralf,
+     * 2026-09-26): milestone_done_at setzen, Vorgang loggen, konfigurierten
+     * Folge-WFS auslösen (inkl. WFS-Mail an dessen Zuständige).
+     *
+     * @param  string|null  $via  Zusatz fürs Vorgänge-Log, z.B. "per E-Mail-Link"
+     * @return ?string Titel des ausgelösten Folge-WFS (null: keiner konfiguriert)
+     */
+    public function grantFreigabe(Project $project, ProjectWorkflowStep $pws, ?Person $by, ?string $via = null): ?string
+    {
+        $title = $pws->workflowStep->title;
+        $pws->update(['milestone_done_at' => now()]);
+
+        Activity::log($project, ActivityType::WorkflowStepActivated, $via
+            ? __('Freigabe für ":title" erteilt (:via).', ['title' => $title, 'via' => $via])
+            : __('Freigabe für ":title" erteilt.', ['title' => $title]));
+
+        $afterStepId = $pws->workflowStep->after_freigabe_workflow_step_id;
+        $next = $afterStepId ? $project->projectWorkflowSteps->firstWhere('workflow_step_id', $afterStepId) : null;
+        if (! $next) {
+            return null;
+        }
+
+        $this->activate(
+            $project,
+            $next,
+            $by,
+            sendEmail: true,
+            message: __('Automatisch ausgelöst durch Freigabe von ":title".', ['title' => $title]),
+            fallbackToTenantEmail: true,
+        );
+
+        return $next->workflowStep->title;
+    }
+
+    /**
+     * Der WFS unmittelbar vor $pws in der Reihenfolge des Projekts - Ziel
+     * der "Korrekturen einarbeiten"-Schleife.
+     */
+    public function previousStep(Project $project, ProjectWorkflowStep $pws): ?ProjectWorkflowStep
+    {
+        return $project->projectWorkflowSteps->where('sort', '<', $pws->sort)->sortByDesc('sort')->first();
     }
 }

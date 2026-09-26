@@ -2640,11 +2640,16 @@
 
                     const response = await fetch(event.target.action, {
                         method: 'POST',
-                        headers: { 'X-CSRF-TOKEN': csrfToken },
+                        headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
                         body: new FormData(event.target),
                     });
 
                     if (!response.ok) {
+                        // Aussagekräftige Fehlermeldung (z.B. Freigabe-Mail: Zielordner
+                        // fehlt) statt stillem Nichts-Passiert.
+                        const error = await response.json().catch(() => null);
+                        const firstFieldError = error && error.errors ? Object.values(error.errors)[0][0] : null;
+                        await window.notifyDialog(firstFieldError || (error && error.message) || {{ \Illuminate\Support\Js::from(__('Der Schritt konnte nicht aktiviert werden.')) }});
                         return;
                     }
 

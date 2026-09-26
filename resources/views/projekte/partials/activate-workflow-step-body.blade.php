@@ -7,6 +7,19 @@
     // komplett wirkungslos - Häkchen dann automatisch aus und gesperrt,
     // statt eine funktionslose Option anzubieten.
     $canSendEmail = $recipients->contains(fn ($recipient) => ! empty($recipient->email));
+
+    // Freigabe-WFS (Ralf, 2026-09-26): die Mail trägt die zwei Freigabe-
+    // Links - ohne Folge-Schritt oder Arbeitsverzeichnis kann sie nicht
+    // sinnvoll verschickt werden, dann statt Versand ein klarer Hinweis.
+    $freigabeBlockReason = null;
+    if ($freigabe) {
+        if (! $step->after_freigabe_workflow_step_id) {
+            $freigabeBlockReason = __('Für diesen Freigabe-Schritt ist kein Folge-Schritt festgelegt - die Freigabe-Mail kann nicht verschickt werden. Bitte im Workflow ergänzen.');
+        } elseif (! $freigabe['available']) {
+            $freigabeBlockReason = __('Das Projektverzeichnis wurde im Arbeitsverzeichnis nicht gefunden - die Freigabe-Mail kann nicht verschickt werden.');
+        }
+        $canSendEmail = $canSendEmail && ! $freigabeBlockReason;
+    }
 @endphp
 
 <div class="mb-3 text-xs text-gray-500">{{ __('Projekt') }} {{ $project->source_pn }}</div>
@@ -30,8 +43,11 @@
             {{ __('E-Mail an Zuständige senden') }}
         </label>
         @unless ($canSendEmail)
-            <div class="mt-0.5 text-xs text-amber-600">{{ __('Für niemanden der Zuständigen ist eine E-Mail-Adresse hinterlegt - Versand nicht möglich.') }}</div>
+            <div class="mt-0.5 text-xs text-amber-600">{{ $freigabeBlockReason ?? __('Für niemanden der Zuständigen ist eine E-Mail-Adresse hinterlegt - Versand nicht möglich.') }}</div>
         @endunless
+        @if ($freigabe && $canSendEmail)
+            <div class="mt-0.5 text-xs text-gray-500">{{ __('Die Mail enthält die Links „Freigabe erteilen“ und „Korrekturen einarbeiten“; die Empfänger benötigen dafür keinen Login.') }}</div>
+        @endif
     </div>
 
     {{--
@@ -66,6 +82,29 @@
                     <span class="text-xs text-gray-400">{{ auth()->user()->email }}</span>
                 @endif
             </label>
+
+            @if ($freigabe && $canSendEmail)
+                <div>
+                    <label class="text-xs text-gray-500">{{ __('Zu prüfende Datei bzw. Ordner (optional)') }}</label>
+                    <select name="freigabe_source_path" class="mt-0.5 w-full rounded border-gray-300 text-sm">
+                        <option value="">{{ __('– keine Angabe –') }}</option>
+                        @foreach ($freigabe['sourceOptions'] as $option)
+                            <option value="{{ $option['path'] }}">{{ $option['label'] }}</option>
+                        @endforeach
+                    </select>
+                    <div class="mt-0.5 text-xs text-gray-400">{{ __('Eine einzelne PDF wird der Mail angehängt, alles andere nur als Pfad genannt.') }}</div>
+                </div>
+
+                <div>
+                    <label class="text-xs text-gray-500">{{ __('Ziel-Verzeichnis für die Korrektur') }}</label>
+                    <select name="freigabe_target_path" class="mt-0.5 w-full rounded border-gray-300 text-sm">
+                        <option value="">{{ __('– bitte wählen –') }}</option>
+                        @foreach ($freigabe['targetOptions'] as $option)
+                            <option value="{{ $option['path'] }}">{{ $option['label'] }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            @endif
 
             <div>
                 <label class="text-xs text-gray-500">{{ __('Persönliche Nachricht (optional)') }}</label>
