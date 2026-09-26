@@ -141,11 +141,80 @@
                             ])->values(),
                         ])->values();
                     @endphp
-                    <div x-sort:item="{{ $sub->id }}" x-data="{ rowDirty: false }" class="rounded-md border border-gray-200 p-2">
-                        <form method="POST" action="{{ route('admin.projektkategorien.arten.update', $sub) }}" data-row-form class="flex items-center gap-2" @input="rowDirty = window.formIsDirty($el, window.__projektkategorienDirtyForms)" @submit="rowDirty = false; window.__projektkategorienDirtyForms.delete($el)">
+                    <div
+                        x-sort:item="{{ $sub->id }}"
+                        x-data="{ rowDirty: false, symbolPickerOpen: false, currentSymbol: {{ \Illuminate\Support\Js::from($sub->symbol) }}, pickerX: 0, pickerY: 0,
+                            openPicker($el) {
+                                const r = $el.getBoundingClientRect();
+                                this.pickerX = r.left; this.pickerY = r.bottom + 4;
+                                this.symbolPickerOpen = true;
+                            },
+                            pickSymbol(file) {
+                                this.currentSymbol = file; this.symbolPickerOpen = false;
+                                const form = this.$refs.subForm;
+                                this.$nextTick(() => this.rowDirty = window.formIsDirty(form, window.__projektkategorienDirtyForms));
+                            },
+                        }"
+                        class="rounded-md border border-gray-200 p-2"
+                    >
+                        <form x-ref="subForm" method="POST" action="{{ route('admin.projektkategorien.arten.update', $sub) }}" data-row-form class="flex items-center gap-2" @input="rowDirty = window.formIsDirty($el, window.__projektkategorienDirtyForms)" @submit="rowDirty = false; window.__projektkategorienDirtyForms.delete($el)">
                             @csrf
                             <span x-sort:handle class="cursor-move px-1 text-gray-300 hover:text-gray-500" title="{{ __('Sortierung ändern') }}">⠿</span>
                             <input type="text" name="name" value="{{ $sub->name }}" required class="flex-1 rounded-md border-gray-300 text-sm">
+
+                            {{-- Symbol: aktuelles Icon + "Ändern" öffnet den Katalog
+                                 (alle Dateien aus public/images/project-type-icons/,
+                                 Ralf: "wo liegen die Symbole, damit ich dort weitere
+                                 ablegen kann" - genau dieses Verzeichnis). Katalog wird
+                                 per x-teleport nach <body> gerendert und per fixed-
+                                 Position an den Button gehängt - sonst würde ihn der
+                                 horizontale Scroll-Container dieser Zeile abschneiden. --}}
+                            <div class="shrink-0">
+                                <button
+                                    type="button"
+                                    @click="openPicker($el)"
+                                    title="{{ __('Symbol ändern') }}"
+                                    class="flex items-center gap-1 rounded-md border border-gray-300 bg-btn-secondary px-1.5 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                                >
+                                    <template x-if="currentSymbol">
+                                        <img :src="{{ \Illuminate\Support\Js::from(asset('images/project-type-icons')) }} + '/' + currentSymbol" class="h-5 w-5 object-contain">
+                                    </template>
+                                    <span x-show="!currentSymbol" class="text-gray-400">{{ __('– kein Symbol –') }}</span>
+                                    <span>{{ __('Ändern') }}</span>
+                                </button>
+                            </div>
+                            <template x-teleport="body">
+                                <div
+                                    x-show="symbolPickerOpen"
+                                    x-cloak
+                                    @click.outside="symbolPickerOpen = false"
+                                    :style="`position: fixed; left: ${pickerX}px; top: ${pickerY}px;`"
+                                    class="z-50 grid w-64 grid-cols-6 gap-1 rounded-md border border-gray-200 bg-white p-2 shadow-lg"
+                                >
+                                    @foreach ($symbolCatalog as $file)
+                                        <button
+                                            type="button"
+                                            title="{{ $file }}"
+                                            @click="pickSymbol({{ \Illuminate\Support\Js::from($file) }})"
+                                            :class="currentSymbol === {{ \Illuminate\Support\Js::from($file) }} ? 'ring-2 ring-btn-primary' : 'hover:bg-gray-100'"
+                                            class="flex items-center justify-center rounded p-1"
+                                        >
+                                            <img src="{{ asset('images/project-type-icons/'.$file) }}" class="h-6 w-6 object-contain">
+                                        </button>
+                                    @endforeach
+                                    @if (empty($symbolCatalog))
+                                        <p class="col-span-6 text-xs text-gray-400">{{ __('Noch keine Symbole im Katalog.') }}</p>
+                                    @endif
+                                    <button
+                                        type="button"
+                                        title="{{ __('Kein Symbol') }}"
+                                        @click="pickSymbol(null)"
+                                        :class="! currentSymbol ? 'ring-2 ring-btn-primary' : 'hover:bg-gray-100'"
+                                        class="col-span-6 mt-1 rounded border-t border-gray-100 pt-1 text-xs text-gray-500"
+                                    >{{ __('– kein Symbol –') }}</button>
+                                </div>
+                            </template>
+                            <input type="hidden" name="symbol" :value="currentSymbol">
                             <select name="project_type_main_id" title="{{ __('In andere Kategorie verschieben') }}" class="w-40 shrink-0 rounded-md border-gray-300 text-xs">
                                 @foreach ($categories as $target)
                                     <option value="{{ $target->id }}" @selected($target->id === $selectedCategory->id)>{{ $target->name }}</option>

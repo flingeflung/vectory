@@ -51,6 +51,7 @@ class ProjectTypeController extends Controller
             'usageBySub' => $usageBySub,
             'usageByMain' => $usageByMain,
             'selectedCategory' => $selectedCategory,
+            'symbolCatalog' => ProjectTypeSub::availableSymbols(),
         ];
 
         // Kategorie-Umbenennen und Art-Zeilen-Speichern laufen client-seitig
@@ -196,7 +197,7 @@ class ProjectTypeController extends Controller
     }
 
     /**
-     * @return array{project_type_main_id: int, name: string, format_type?: int}
+     * @return array{project_type_main_id: int, name: string, format_type?: int, symbol?: ?string}
      */
     private function validatedSub(Request $request, int $tenantId): array
     {
@@ -204,6 +205,9 @@ class ProjectTypeController extends Controller
             'project_type_main_id' => ['required', 'integer'],
             'name' => ['required', 'string', 'max:255'],
             'format_type' => ['sometimes', 'integer', Rule::in(array_keys(ProjectTypeSub::formatTypes()))],
+            // Ralf, 2026-09-26: nur Dateien aus dem echten Symbolkatalog
+            // wählbar, kein frei eingetragener Dateiname mehr.
+            'symbol' => ['sometimes', 'nullable', 'string', Rule::in(ProjectTypeSub::availableSymbols())],
         ]);
 
         $categoryBelongsToTenant = ProjectTypeMain::query()->where('id', $validated['project_type_main_id'])->where('tenant_id', $tenantId)->exists();

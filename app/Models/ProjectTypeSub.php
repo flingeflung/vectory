@@ -45,6 +45,30 @@ class ProjectTypeSub extends Model
     }
 
     /**
+     * Symbolkatalog (Ralf, 2026-09-26): kein DB-Katalog, sondern einfach
+     * alle Bilddateien im Icon-Verzeichnis - Ralf legt neue Symbole direkt
+     * per Datei-Upload dort ab (FTP/Total Commander), kein Admin-Upload-UI
+     * nötig. "_kl"-Varianten (siehe smallSymbol()) sind nur Begleitdateien
+     * einer Hauptdatei und tauchen im Katalog nicht als eigene Wahl auf.
+     *
+     * @return list<string> Dateinamen, alphabetisch
+     */
+    public static function availableSymbols(): array
+    {
+        $files = glob(public_path('images/project-type-icons/*.{png,svg,PNG,SVG,webp,WEBP}'), GLOB_BRACE) ?: [];
+
+        $names = collect($files)
+            ->map(fn (string $path) => basename($path))
+            ->reject(fn (string $name) => str_contains($name, '_kl.'))
+            ->values()
+            ->sort(SORT_STRING | SORT_FLAG_CASE)
+            ->values()
+            ->all();
+
+        return $names;
+    }
+
+    /**
      * Kleine Icon-Variante (Vietto: "_kl"-Suffix vorm Dateinamen) für
      * kompakte Listen wie die Dashboard-Kacheln, statt der normalen Größe
      * aus der Projektübersicht.
