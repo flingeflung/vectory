@@ -222,6 +222,7 @@ class TenantConfigCloner
                     'required' => $row->required,
                     'log_changes' => $row->log_changes,
                     'unit' => $row->unit,
+                    'help_text' => $row->help_text,
                     'max_length' => $row->max_length,
                     'sort' => $row->sort,
                 ]);

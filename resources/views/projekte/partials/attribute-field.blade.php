@@ -8,7 +8,15 @@
     $value = old('attributes.'.$attribute->key, $project->attributes[$attribute->key] ?? null);
 @endphp
 <div>
-    <label class="block text-xs text-gray-500">{{ $attribute->label }}@if ($attribute->required)<span class="text-red-500" title="{{ __('Pflichtfeld') }}"> *</span>@endif</label>
+    <div class="flex items-center gap-1">
+        <label class="block text-xs text-gray-500">{{ $attribute->label }}@if ($attribute->required)<span class="text-red-500" title="{{ __('Pflichtfeld') }}"> *</span>@endif</label>
+        @if ($attribute->help_text)
+            <x-info-icon-button
+                :title="__('Erklärung anzeigen')"
+                onclick="window.notifyDialog({{ \Illuminate\Support\Js::from($attribute->help_text) }})"
+            />
+        @endif
+    </div>
     @switch($attribute->data_type)
         @case('textarea')
             <textarea

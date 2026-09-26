@@ -351,7 +351,7 @@ class AttributeController extends Controller
      * Einheit. Vorbelegung wird gegen den Feldtyp geprüft (Zahl numerisch, Datum gültig, Ja/Nein 1/0); für Pulldowns
      * gibt es sie nur im Pulldown-Overlay (Auswahl unter den Optionen).
      *
-     * @return array{default_value: ?string, required: bool, log_changes: bool, unit: ?string}
+     * @return array{default_value: ?string, required: bool, log_changes: bool, unit: ?string, help_text: ?string}
      */
     private function moreOptions(Request $request, string $dataType, bool $multiple): array
     {
@@ -377,11 +377,16 @@ class AttributeController extends Controller
             ? trim((string) $request->input('unit', ''))
             : '';
 
+        // Ralf, 2026-09-26: kurzer Erklärtext, der in den Projektdetails als
+        // Info-Symbol neben dem Feld erscheint (siehe attribute-field.blade.php).
+        $helpText = trim((string) $request->input('help_text', ''));
+
         return [
             'default_value' => $dataType === Attribute::DATA_TYPE_SELECT ? null : $default,
             'required' => $dataType !== Attribute::DATA_TYPE_BOOLEAN && $request->boolean('required'),
             'log_changes' => $request->boolean('log_changes'),
             'unit' => $unit === '' ? null : mb_substr($unit, 0, 30),
+            'help_text' => $helpText === '' ? null : mb_substr($helpText, 0, 1000),
         ];
     }
 

@@ -84,6 +84,12 @@
             {{ __('Änderungen in den Vorgängen protokollieren') }}
         </label>
 
+        <div>
+            <label class="block text-gray-500">{{ __('Erklärung (Info-Symbol in den Projektdetails)') }}</label>
+            <textarea name="help_text" rows="2" maxlength="1000" class="{{ $inputClass }} w-full">{{ $isNew ? '' : $attribute->help_text }}</textarea>
+            <p class="mt-0.5 text-gray-400">{{ __('Optional - erscheint als kleines Info-Symbol neben dem Feld, anklickbar für eine kurze Erklärung.') }}</p>
+        </div>
+
         @if ($isNew)
             <label x-show="newType === 'text'" x-cloak class="flex items-center gap-1.5" title="{{ __('Beim Kopieren als neue Version wird die letzte Zahl im Text um 1 erhöht, z. B. V0015 wird zu V0016.') }}">
                 <input type="checkbox" name="increments_on_new_version" value="1" class="rounded border-gray-300">
