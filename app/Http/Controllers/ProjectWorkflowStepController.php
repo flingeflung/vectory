@@ -110,10 +110,12 @@ class ProjectWorkflowStepController extends Controller
         $freigabe = null;
         if ($projectWorkflowStep->workflowStep->isFreigabeStep()) {
             $projectPath = $this->locator->arbeitsverzeichnisProjectPath($project);
+            $targetOptions = $projectPath ? $this->locator->flatOptions($projectPath, dirsOnly: true) : [];
             $freigabe = [
                 'available' => $projectPath !== null,
                 'sourceOptions' => $projectPath ? $this->locator->flatOptions($projectPath) : [],
-                'targetOptions' => $projectPath ? $this->locator->flatOptions($projectPath, dirsOnly: true) : [],
+                'targetOptions' => $targetOptions,
+                'defaultTarget' => $this->lastKorrekturTarget($projectWorkflowStep, array_column($targetOptions, 'path')),
             ];
         }
 
@@ -198,6 +200,32 @@ class ProjectWorkflowStepController extends Controller
         }
 
         return response()->json($result);
+    }
+
+    /**
+     * Vorauswahl fürs Ziel-Verzeichnis (Ralf, 2026-09-26): zuletzt genommenes
+     * Ziel - erst für denselben Schritt im selben Projekt, dann für denselben
+     * Workflow-Schritt in irgendeinem Projekt des Kunden. Nur ein Ordner, den
+     * es im Arbeitsverzeichnis dieses Projekts auch gibt.
+     *
+     * @param  list<string>  $existingPaths
+     */
+    private function lastKorrekturTarget(ProjectWorkflowStep $pws, array $existingPaths): ?string
+    {
+        $tiers = [
+            WorkflowStepFreigabeRequest::query()->where('project_workflow_step_id', $pws->id),
+            WorkflowStepFreigabeRequest::query()->whereHas('projectWorkflowStep', fn ($query) => $query->where('workflow_step_id', $pws->workflow_step_id)),
+        ];
+
+        foreach ($tiers as $query) {
+            $paths = $query->latest('id')->limit(10)->pluck('korrektur_target_path');
+            $match = $paths->first(fn ($path) => in_array($path, $existingPaths, true));
+            if ($match !== null) {
+                return $match;
+            }
+        }
+
+        return null;
     }
 
     /**

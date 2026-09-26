@@ -97,10 +97,13 @@
 
                 <div>
                     <label class="text-xs text-gray-500">{{ __('Ziel-Verzeichnis für die Korrektur') }}</label>
+                    @if ($freigabe['defaultTarget'])
+                        <span class="text-xs text-gray-400">({{ __('zuletzt verwendet, vorausgewählt') }})</span>
+                    @endif
                     <select name="freigabe_target_path" class="mt-0.5 w-full rounded border-gray-300 text-sm">
                         <option value="">{{ __('– bitte wählen –') }}</option>
                         @foreach ($freigabe['targetOptions'] as $option)
-                            <option value="{{ $option['path'] }}">{{ $option['label'] }}</option>
+                            <option value="{{ $option['path'] }}" @selected($option['path'] === $freigabe['defaultTarget'])>{{ $option['label'] }}</option>
                         @endforeach
                     </select>
                 </div>
