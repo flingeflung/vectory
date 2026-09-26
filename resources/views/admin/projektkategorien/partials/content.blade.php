@@ -145,8 +145,14 @@
                         x-sort:item="{{ $sub->id }}"
                         x-data="{ rowDirty: false, symbolPickerOpen: false, currentSymbol: {{ \Illuminate\Support\Js::from($sub->symbol) }}, pickerX: 0, pickerY: 0,
                             openPicker($el) {
+                                // Ralf, 2026-09-26: darf nicht nach unten rausragen -
+                                // passt grob ab (~260px Panel-Hoehe), ob unter oder
+                                // ueber dem Button genug Platz ist.
                                 const r = $el.getBoundingClientRect();
-                                this.pickerX = r.left; this.pickerY = r.bottom + 4;
+                                const panelHeight = 260;
+                                const fitsBelow = window.innerHeight - r.bottom >= panelHeight;
+                                this.pickerX = r.left;
+                                this.pickerY = fitsBelow ? (r.bottom + 4) : Math.max(8, r.top - panelHeight - 4);
                                 this.symbolPickerOpen = true;
                             },
                             pickSymbol(file) {
@@ -189,7 +195,7 @@
                                     x-cloak
                                     @click.outside="symbolPickerOpen = false"
                                     :style="`position: fixed; left: ${pickerX}px; top: ${pickerY}px;`"
-                                    class="z-50 grid w-64 grid-cols-6 gap-1 rounded-md border border-gray-200 bg-white p-2 shadow-lg"
+                                    class="z-50 grid max-h-64 w-44 grid-cols-4 gap-1.5 overflow-y-auto rounded-md border border-gray-200 bg-white p-2 shadow-lg"
                                 >
                                     @foreach ($symbolCatalog as $file)
                                         <button
@@ -203,14 +209,14 @@
                                         </button>
                                     @endforeach
                                     @if (empty($symbolCatalog))
-                                        <p class="col-span-6 text-xs text-gray-400">{{ __('Noch keine Symbole im Katalog.') }}</p>
+                                        <p class="col-span-4 text-xs text-gray-400">{{ __('Noch keine Symbole im Katalog.') }}</p>
                                     @endif
                                     <button
                                         type="button"
                                         title="{{ __('Kein Symbol') }}"
                                         @click="pickSymbol(null)"
                                         :class="! currentSymbol ? 'ring-2 ring-btn-primary' : 'hover:bg-gray-100'"
-                                        class="col-span-6 mt-1 rounded border-t border-gray-100 pt-1 text-xs text-gray-500"
+                                        class="col-span-4 mt-1 rounded border-t border-gray-100 pt-1 text-xs text-gray-500"
                                     >{{ __('– kein Symbol –') }}</button>
                                 </div>
                             </template>
