@@ -30,6 +30,9 @@ class FileLogTransport extends AbstractTransport
      * HTML-Mail als lesbarer Text fürs Log (Ralf, 2026-09-21: die Zeilen erschienen wild eingerückt, weil nur die
      * Tags entfernt wurden und die Einrückung des Templates stehen blieb): <br> und Absätze werden zu Zeilenumbrüchen,
      * führende Leerzeichen jeder Zeile entfallen, mehr als eine Leerzeile hintereinander wird zu einer.
+     *
+     * Zeilenumbrüche stehen bewusst als Escape-Sequenzen im Code (nie als echte Zeichen in den Zeichenketten):
+     * sonst zerlegt jede Zeilenende-Umwandlung (LF/CRLF) die Zeichenketten und die Leerzeilen-Bereinigung greift nicht mehr.
      */
     private function htmlToText(string $html): string
     {
@@ -41,27 +44,15 @@ class FileLogTransport extends AbstractTransport
             $url = html_entity_decode($match[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
             $label = trim(html_entity_decode(strip_tags($match[2]), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
 
-            return "
-".($label === '' || $label === $url ? $url : $label.': '.$url)."
-";
+            return "\n".($label === '' || $label === $url ? $url : $label.': '.$url)."\n";
         }, $html);
 
-        $text = preg_replace('#<br\s*/?>\s*#i', "
-", $html);
-        $text = preg_replace('#</p>#i', "
-
-", $text);
+        $text = preg_replace('#<br\s*/?>\s*#i', "\n", $html);
+        $text = preg_replace('#</p>#i', "\n\n", $text);
         $text = html_entity_decode(strip_tags($text), ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        $lines = array_map(fn (string $line) => trim($line), explode("
-", str_replace(["
-", ""], "
-", $text)));
+        $lines = array_map(fn (string $line) => trim($line), explode("\n", str_replace(["\r\n", "\r"], "\n", $text)));
 
-        return trim(preg_replace("/
-{3,}/", "
-
-", implode("
-", $lines)));
+        return trim(preg_replace("/\n{3,}/", "\n\n", implode("\n", $lines)));
     }
 
     protected function doSend(SentMessage $message): void

@@ -142,6 +142,17 @@ class WorkflowStepActivator
      */
     public function previousStep(Project $project, ProjectWorkflowStep $pws): ?ProjectWorkflowStep
     {
-        return $project->projectWorkflowSteps->where('sort', '<', $pws->sort)->sortByDesc('sort')->first();
+        // Nur Schritte desselben (aktiven) Workflows: nach einem Workflow-Wechsel trägt das
+        // Projekt die Schritte des alten Workflows weiter mit (die Projektansicht blendet sie
+        // aus) - die dürfen hier nicht als "vorheriger Schritt" auftauchen.
+        $workflowId = $pws->workflowStep->workflow_id;
+
+        return $project->projectWorkflowSteps->loadMissing('workflowStep')
+            ->filter(fn (ProjectWorkflowStep $step) => $step->workflowStep
+                && $step->workflowStep->workflow_id === $workflowId
+                && $step->workflowStep->is_active
+                && $step->sort < $pws->sort)
+            ->sortByDesc('sort')
+            ->first();
     }
 }
