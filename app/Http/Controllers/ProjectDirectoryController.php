@@ -43,9 +43,12 @@ class ProjectDirectoryController extends Controller
 
         $validated = $request->validate([
             'folder_name' => ['required', 'string', 'max:200'],
-            'quelle' => ['nullable', 'in:'.ProjectDirectoryLocator::SOURCE_AV.','.ProjectDirectoryLocator::SOURCE_SV],
         ]);
-        $source = $validated['quelle'] ?? ProjectDirectoryLocator::SOURCE_SV;
+
+        // Anlegen gibt es NUR im gesperrten Verzeichnis (Ralf, 2026-09-26):
+        // Daten im Arbeitsverzeichnis entstehen ausschließlich durch
+        // Auschecken aus dem SV, nie von Hand oder automatisch.
+        $source = ProjectDirectoryLocator::SOURCE_SV;
 
         abort_unless(in_array($source, $this->locator->visibleSources($project->tenant_id, $request->user()), true), 403);
 

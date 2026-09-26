@@ -48,16 +48,21 @@
     @case ('not_found')
         <div class="space-y-2 text-sm text-gray-600">
             <div>{{ __('Im :verzeichnis gibt es keinen Ordner, der mit :pn beginnt.', ['verzeichnis' => $sourceLabels[$source], 'pn' => $project->source_pn]) }}</div>
-            <div class="text-xs text-gray-400">{{ __('Vorschlag für den Ordnernamen') }}: {{ $suggestedFolderName }}</div>
-            @can ('project.edit')
-                <button
-                    type="button"
-                    onclick="window.openProjectDirectoryCreate({{ $project->id }}, {{ \Illuminate\Support\Js::from($suggestedFolderName) }}, {{ \Illuminate\Support\Js::from($source) }})"
-                    class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
-                >
-                    {{ __('Projektordner anlegen') }}
-                </button>
-            @endcan
+            @if ($source === 'av')
+                {{-- Ralf, 2026-09-26: das AV wird nie von Hand befüllt - Daten kommen nur per Auschecken aus dem SV. --}}
+                <div class="text-xs text-gray-400">{{ __('Daten gelangen erst durch Auschecken aus dem gesperrten Verzeichnis ins Arbeitsverzeichnis.') }}</div>
+            @else
+                <div class="text-xs text-gray-400">{{ __('Vorschlag für den Ordnernamen') }}: {{ $suggestedFolderName }}</div>
+                @can ('project.edit')
+                    <button
+                        type="button"
+                        onclick="window.openProjectDirectoryCreate({{ $project->id }}, {{ \Illuminate\Support\Js::from($suggestedFolderName) }})"
+                        class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                    >
+                        {{ __('Projektordner anlegen') }}
+                    </button>
+                @endcan
+            @endif
         </div>
     @break
 

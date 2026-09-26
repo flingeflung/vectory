@@ -3114,11 +3114,9 @@
                 const errorBox = document.getElementById('project-directory-create-error');
                 const submitBtn = document.getElementById('project-directory-create-submit');
                 let currentProjectId = null;
-                let currentSource = 'sv';
 
-                window.openProjectDirectoryCreate = (projectId, suggestedName, source = 'sv') => {
+                window.openProjectDirectoryCreate = (projectId, suggestedName) => {
                     currentProjectId = projectId;
-                    currentSource = source;
                     nameInput.value = suggestedName;
                     errorBox.hidden = true;
                     window.dispatchEvent(new CustomEvent('open-modal', { detail: 'project-directory-create' }));
@@ -3131,7 +3129,7 @@
                     const response = await fetch(`/projekte/${currentProjectId}/verzeichnis`, {
                         method: 'POST',
                         headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: new URLSearchParams({ folder_name: nameInput.value, quelle: currentSource }),
+                        body: new URLSearchParams({ folder_name: nameInput.value }),
                     });
 
                     if (!response.ok) {

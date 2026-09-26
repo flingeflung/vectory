@@ -201,7 +201,7 @@ class ProjectWorkflowStepController extends Controller
 
         $projectPath = $this->locator->arbeitsverzeichnisProjectPath($project);
         if ($projectPath === null) {
-            throw ValidationException::withMessages(['freigabe_target_path' => __('Im Arbeitsverzeichnis gibt es keinen Ordner, der mit :pn beginnt. Den Projektordner können Sie über das Verzeichnis-Symbol neben der Projektnummer anlegen.', ['pn' => $project->source_pn])]);
+            throw ValidationException::withMessages(['freigabe_target_path' => __('Im Arbeitsverzeichnis gibt es keinen Ordner, der mit :pn beginnt. Die Daten gelangen erst durch Auschecken aus dem gesperrten Verzeichnis ins Arbeitsverzeichnis.', ['pn' => $project->source_pn])]);
         }
 
         $targetPath = trim((string) $request->input('freigabe_target_path'));
