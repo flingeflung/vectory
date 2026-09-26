@@ -250,6 +250,7 @@
             <div class="{{ $row > 0 ? 'border-t border-gray-100' : '' }}"></div>
         @endif
         </div>
+        <div class="pt-2 text-[10px] text-gray-400">* {{ __('Pflichtfeld') }}</div>
 
         </div>
         </div>
@@ -271,6 +272,7 @@
                     @endif
                 @endforeach
             </div>
+        <div class="pt-2 text-[10px] text-gray-400">* {{ __('Pflichtfeld') }}</div>
         </div>
         </div>
         </div>
@@ -310,6 +312,7 @@
             <div class="{{ $row > 0 ? 'border-t border-gray-100' : '' }}"></div>
         @endif
         </div>
+        <div class="pt-2 text-[10px] text-gray-400">* {{ __('Pflichtfeld') }}</div>
 
         </div>
         </div>

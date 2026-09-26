@@ -8,7 +8,7 @@
      dass sie durch Umsortieren auseinanderfallen). --}}
 <div class="flex gap-4">
     <div>
-        <label class="block text-xs text-gray-500">{{ __('Status') }}</label>
+        <label class="block text-xs text-gray-500">{{ __('Status') }}@unless ($hasCurrentWfsStep)<span class="text-red-500" title="{{ __('Pflichtfeld') }}"> *</span>@endunless</label>
         @if ($hasCurrentWfsStep)
             {{-- Wird automatisch aus dem aktuellen WFS-Schritt abgeleitet (siehe
                  ProjectWorkflowStepController::activate) - kein manuelles Feld mehr,
