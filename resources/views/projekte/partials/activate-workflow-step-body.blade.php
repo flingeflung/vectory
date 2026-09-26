@@ -45,10 +45,13 @@
             <div class="text-xs text-gray-500">{{ __('Empfänger') }}</div>
             @forelse ($recipients as $recipient)
                 <div class="{{ $recipient->active ? 'text-gray-700' : 'text-gray-400' }}">
-                    {{ $recipient->fullName() }}{{ ! $recipient->active ? ' [i]' : '' }} <x-absence-icon :person="$recipient" />
-                    @unless ($recipient->email)
+                    {{ $recipient->fullName() }}{{ ! $recipient->active ? ' [i]' : '' }}
+                    @if ($recipient->email)
+                        <span class="text-xs text-gray-400">{{ $recipient->email }}</span>
+                    @else
                         <span class="font-medium text-amber-600">({{ __('keine E-Mail hinterlegt') }})</span>
-                    @endunless
+                    @endif
+                    <x-absence-icon :person="$recipient" />
                 </div>
             @empty
                 <div class="text-amber-600">{{ __('Keine Person für diesen Schritt zugewiesen!') }}</div>
@@ -59,6 +62,9 @@
             <label class="flex items-center gap-1.5 text-gray-700">
                 <input type="checkbox" name="send_copy_to_self" value="1" class="rounded border-gray-300">
                 {{ __('Kopie an mich') }}
+                @if (auth()->user()->email)
+                    <span class="text-xs text-gray-400">{{ auth()->user()->email }}</span>
+                @endif
             </label>
 
             <div>

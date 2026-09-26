@@ -170,7 +170,7 @@
                     @forelse ($steps as $step)
                         <div class="flex items-center gap-3 rounded-md border border-gray-200 p-2 text-sm">
                             <span class="h-3 w-3 shrink-0 rounded-full border border-gray-300" style="background-color: {{ $lifecycleColors[$step->lifecycle_status] ?? $lifecycleColors[2] }}"></span>
-                            <span class="flex-1 {{ $step->is_active ? 'text-gray-700' : 'text-gray-400' }}">{{ $step->title }}{{ ! $step->is_active ? ' [i]' : '' }}</span>
+                            <span class="flex-1 {{ $step->is_active ? 'text-gray-700' : 'text-gray-400' }}"><span class="text-gray-400">S{{ $loop->iteration }}</span> {{ $step->title }}{{ ! $step->is_active ? ' [i]' : '' }}</span>
                             @if ($step->functionGroups->isNotEmpty())
                                 <span class="text-xs text-gray-400">{{ $step->functionGroups->pluck('name')->join(', ') }}</span>
                             @endif
@@ -314,6 +314,7 @@
                                     >
                                         <div class="flex items-center gap-2">
                                             <span x-sort:handle class="cursor-move px-1 text-gray-300 hover:text-gray-500" title="{{ __('Sortierung ändern') }}">⠿</span>
+                                            <span class="shrink-0 text-xs text-gray-400">S{{ $loop->iteration }}</span>
                                             <div class="min-w-0 flex-1">
                                                 <input
                                                     type="text"
@@ -414,7 +415,7 @@
                                                         @php $afterFreigabeOld = old("steps.{$step->id}.after_freigabe_workflow_step_id", (string) $step->after_freigabe_workflow_step_id); @endphp
                                                         <option value="">{{ __('– bitte wählen –') }}</option>
                                                         @foreach ($steps->where('id', '!=', $step->id) as $otherStep)
-                                                            <option value="{{ $otherStep->id }}" @selected((string) $afterFreigabeOld === (string) $otherStep->id)>{{ $otherStep->title }}</option>
+                                                            <option value="{{ $otherStep->id }}" @selected((string) $afterFreigabeOld === (string) $otherStep->id)>S{{ $steps->search($otherStep) + 1 }} - {{ $otherStep->title }}</option>
                                                         @endforeach
                                                     </select>
                                                     @error("steps.{$step->id}.after_freigabe_workflow_step_id")

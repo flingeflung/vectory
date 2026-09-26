@@ -187,4 +187,22 @@ class Task extends Model
             ->filter()
             ->values();
     }
+
+    /**
+     * Wer für diesen Schritt zuständig ist, über alle seine Funktionsgruppen
+     * hinweg (Override pro Schritt hat Vorrang, sonst projektweite
+     * Zuweisung) - reine Wiederverwendung von assignedPeopleFor(). Aus
+     * ProjectWorkflowStepController hierher verschoben (2026-09-26), damit
+     * auch die WFS-Freigabe-Mail (WorkflowStepFreigabeRequest) dieselbe
+     * Empfänger-Auflösung nutzen kann.
+     *
+     * @return Collection<int, Person>
+     */
+    public static function recipientsFor(ProjectWorkflowStep $step): Collection
+    {
+        return $step->workflowStep->functionGroups
+            ->flatMap(fn (FunctionGroup $group) => self::assignedPeopleFor($step, $group))
+            ->unique('id')
+            ->values();
+    }
 }

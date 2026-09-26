@@ -403,7 +403,7 @@
                             >
                                 <div class="flex items-start justify-between gap-4">
                                 <div class="flex min-w-0 flex-1 items-start gap-2">
-                                    <span class="shrink-0 text-lg font-semibold text-gray-400">{{ $loop->iteration }}</span>
+                                    <span class="shrink-0 text-lg font-semibold text-gray-400">S{{ $loop->iteration }}</span>
                                     <div class="min-w-0 flex-1">
                                         {{-- break-words: lange Titel ohne Leerzeichen (z.B.
                                              "Anleitung/Korrekturexemplar") liefen sonst optisch
@@ -547,7 +547,13 @@
                                                     fetch({{ \Illuminate\Support\Js::from(route('projekte.workflow-steps.freigabe', [$project, $pws])) }}, {
                                                         method: 'PATCH',
                                                         headers: { 'X-CSRF-TOKEN': {{ \Illuminate\Support\Js::from(csrf_token()) }} },
-                                                    }).then(r => r.json()).then(data => { granted = data.milestone_done_at !== null; }).finally(() => saving = false);
+                                                    }).then(r => r.json()).then(async (data) => {
+                                                        granted = data.milestone_done_at !== null;
+                                                        if (data.next_step_title) {
+                                                            await window.refreshUnderlyingProject({{ $project->id }});
+                                                            window.notifyDialog({{ \Illuminate\Support\Js::from(__('Freigabe erteilt - Folge-Schritt ":title" wurde automatisch ausgelöst.')) }}.replace(':title', data.next_step_title));
+                                                        }
+                                                    }).finally(() => saving = false);
                                                 "
                                                 class="rounded border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
                                                 x-text="granted ? {{ \Illuminate\Support\Js::from(__('Freigabe zurücknehmen')) }} : {{ \Illuminate\Support\Js::from(__('Freigabe erteilen')) }}"

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ActivityType;
-use App\Mail\WorkflowStepActivatedMail;
 use App\Models\Activity;
 use App\Models\FunctionGroup;
 use App\Models\Person;
@@ -12,15 +11,17 @@ use App\Models\ProjectPerson;
 use App\Models\ProjectWorkflowStep;
 use App\Models\ProjectWorkflowStepPerson;
 use App\Models\Task;
+use App\Services\WorkflowStepActivator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 
 class ProjectWorkflowStepController extends Controller
 {
+    public function __construct(private readonly WorkflowStepActivator $activator) {}
+
     /**
      * Termin (due_date) einer einzelnen WFS-Instanz ändern - eigenständiges
      * Inline-Feld im Workflow-Schritte-Tab, unabhängig vom großen
@@ -64,7 +65,31 @@ class ProjectWorkflowStepController extends Controller
                 : __('Freigabe für ":title" zurückgenommen.', ['title' => $projectWorkflowStep->workflowStep->title])
         );
 
-        return response()->json(['milestone_done_at' => $projectWorkflowStep->milestone_done_at?->toIso8601String()]);
+        // Freigabe per Button und per externem Mail-Link müssen identisch
+        // wirken (Ralf, 2026-09-26) - beide lösen automatisch den
+        // konfigurierten Folge-WFS aus. Nur beim ERTEILEN, nicht beim
+        // Zurücknehmen (ein bereits ausgelöster Folge-WFS wird nicht
+        // rückgängig gemacht).
+        $nextStepTitle = null;
+        $afterFreigabeStepId = $projectWorkflowStep->workflowStep->after_freigabe_workflow_step_id;
+        if ($granted && $afterFreigabeStepId) {
+            $nextProjectStep = $project->projectWorkflowSteps->firstWhere('workflow_step_id', $afterFreigabeStepId);
+            if ($nextProjectStep) {
+                $this->activator->activate(
+                    $project,
+                    $nextProjectStep,
+                    $request->user()->person,
+                    sendEmail: true,
+                    message: __('Automatisch ausgelöst durch Freigabe von ":title".', ['title' => $projectWorkflowStep->workflowStep->title]),
+                );
+                $nextStepTitle = $nextProjectStep->workflowStep->title;
+            }
+        }
+
+        return response()->json([
+            'milestone_done_at' => $projectWorkflowStep->milestone_done_at?->toIso8601String(),
+            'next_step_title' => $nextStepTitle,
+        ]);
     }
 
     /**
@@ -82,7 +107,7 @@ class ProjectWorkflowStepController extends Controller
         return view('projekte.partials.activate-workflow-step-body', [
             'project' => $project,
             'projectWorkflowStep' => $projectWorkflowStep,
-            'recipients' => $this->recipientsFor($projectWorkflowStep),
+            'recipients' => Task::recipientsFor($projectWorkflowStep),
         ]);
     }
 
@@ -121,53 +146,18 @@ class ProjectWorkflowStepController extends Controller
         if (in_array($target->workflowStep->lifecycle_status, [3, 4], true)) {
             abort_unless($request->user()->can('project.complete'), 403);
         }
-        $currentStep = $project->projectWorkflowSteps->firstWhere('is_current', true);
         $person = $request->user()->person;
 
-        if ($currentStep && $currentStep->id !== $target->id) {
-            $movingForward = $target->sort > $currentStep->sort;
+        $result = $this->activator->activate(
+            $project,
+            $target,
+            $person,
+            sendEmail: $request->boolean('send_email'),
+            ccEmail: $request->boolean('send_copy_to_self') ? $request->user()->email : null,
+            message: $validated['message'] ?? null,
+        );
 
-            $currentStep->update([
-                'is_current' => false,
-                'completed_at' => $movingForward ? now() : $currentStep->completed_at,
-                'completed_by_person_id' => $movingForward ? $person?->id : $currentStep->completed_by_person_id,
-            ]);
-        }
-
-        $target->update([
-            'is_current' => true,
-            'started_at' => now(),
-            'completed_at' => null,
-            'completed_by_person_id' => null,
-        ]);
-
-        // Status automatisch aus der Kastenfarbe des neuen Schritts ableiten
-        // (lifecycle_status 1=Geplant..4=Verworfen -> Status 0=Geplant..3=Verworfen).
-        $project->update(['status' => $target->workflowStep->lifecycle_status - 1]);
-
-        Activity::log($project, ActivityType::WorkflowStepActivated, __('Workflow-Schritt ":title" aktiviert.', ['title' => $target->workflowStep->title]));
-
-        if ($request->boolean('send_email')) {
-            $recipientEmails = $this->recipientsFor($target)->pluck('email')->filter()->all();
-
-            if (! empty($recipientEmails)) {
-                $mail = Mail::to($recipientEmails);
-                if ($request->boolean('send_copy_to_self') && $request->user()->email) {
-                    $mail->cc($request->user()->email);
-                }
-                $mail->send(new WorkflowStepActivatedMail($target, $person, $validated['message'] ?? null));
-            }
-        }
-
-        // Weiche Warnung: offene Illustrationsaufträge bei Beenden/Verwerfen (lifecycle_status 3/4).
-        $openGraphicOrdersCount = null;
-        if (in_array($target->workflowStep->lifecycle_status, [3, 4], true)) {
-            $openStatusValues = array_map(fn ($status) => $status->value, array_filter(\App\Enums\GraphicOrderStatus::cases(), fn ($status) => $status->isOpen()));
-            $count = $project->graphicOrders()->whereIn('graphic_order_status_id', $openStatusValues)->count();
-            $openGraphicOrdersCount = $count > 0 ? $count : null;
-        }
-
-        return response()->json(['open_graphic_orders_count' => $openGraphicOrdersCount]);
+        return response()->json($result);
     }
 
     /**
@@ -327,20 +317,5 @@ class ProjectWorkflowStepController extends Controller
         ])->render();
 
         return response($html);
-    }
-
-    /**
-     * Wer für diesen Schritt zuständig ist, über alle seine Funktionsgruppen
-     * hinweg (Override pro Schritt hat Vorrang, sonst projektweite
-     * Zuweisung) - reine Wiederverwendung von Task::assignedPeopleFor().
-     *
-     * @return Collection<int, \App\Models\Person>
-     */
-    private function recipientsFor(ProjectWorkflowStep $step): Collection
-    {
-        return $step->workflowStep->functionGroups
-            ->flatMap(fn (FunctionGroup $group) => Task::assignedPeopleFor($step, $group))
-            ->unique('id')
-            ->values();
     }
 }
