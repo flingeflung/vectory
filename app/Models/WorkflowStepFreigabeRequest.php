@@ -27,7 +27,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable([
     'tenant_id', 'project_id', 'project_workflow_step_id', 'triggered_by_person_id',
     'source_path', 'korrektur_target_path',
-    'status', 'korrektur_kommentar', 'decided_at',
+    'status', 'decided_at',
 ])]
 class WorkflowStepFreigabeRequest extends Model
 {

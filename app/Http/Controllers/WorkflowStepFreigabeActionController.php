@@ -129,17 +129,15 @@ class WorkflowStepFreigabeActionController extends Controller
 
             $locked->update([
                 'status' => WorkflowStepFreigabeRequest::STATUS_KORREKTUR_HOCHGELADEN,
-                'korrektur_kommentar' => $comment,
                 'decided_at' => now(),
             ]);
 
             $pws = $project->projectWorkflowSteps->firstWhere('id', $locked->project_workflow_step_id);
             $title = $pws->workflowStep->title;
 
-            Activity::log($project, ActivityType::WorkflowStepActivated, trim(
-                __('Korrektur zu ":title" per E-Mail-Link hochgeladen: :file.', ['title' => $title, 'file' => $fileName])
-                .($comment ? ' '.__('Kommentar: :comment', ['comment' => $comment]) : '')
-            ));
+            // Der Kommentar des Prüfers steht bewusst NUR in der Mail an den TR (Ralf,
+            // 2026-09-26): weder im Vorgänge-Log (zu detailliert) noch in der DB.
+            Activity::log($project, ActivityType::WorkflowStepActivated, __('Korrektur zu ":title" per E-Mail-Link hochgeladen: :file.', ['title' => $title, 'file' => $fileName]));
 
             $previous = $this->activator->previousStep($project, $pws);
             if ($previous) {
