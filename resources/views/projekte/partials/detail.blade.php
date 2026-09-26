@@ -530,17 +530,24 @@
                                     </div>
                                 @elseif ($step->js_function === 'wfs_freigabe')
                                     <div
-                                        {{-- Sicherheitsabfrage beim ZURÜCKNEHMEN (Ralf, 2026-09-26: bei kritischen Aktionen immer).
-                                             Der Text nennt die Folge: ein bereits ausgelöster Folge-Schritt bleibt aktiv.
+                                        {{-- Sicherheitsabfrage beim Erteilen UND Zurücknehmen (Ralf, 2026-09-26: bei kritischen Aktionen immer).
+                                             Der Text nennt jeweils die Folge (Folge-Schritt wird ausgelöst bzw. bleibt aktiv).
                                              Logik als Methode, weil Alpine ein mehrzeiliges if im Klick-Attribut nicht auswertet. --}}
                                         x-data="{
                                             granted: {{ \Illuminate\Support\Js::from($pws->milestone_done_at !== null) }},
                                             saving: false,
                                             async toggle() {
-                                                if (this.granted && !(await window.confirmDialog({
+                                                if (!(await window.confirmDialog(this.granted ? {
                                                     title: {{ \Illuminate\Support\Js::from(__('Freigabe zurücknehmen')) }},
                                                     message: {{ \Illuminate\Support\Js::from(__('Wenn Sie die Freigabe zurücknehmen, gilt der Schritt wieder als nicht freigegeben. Ein bereits ausgelöster Folge-Schritt bleibt dabei aktiv.')) }},
                                                     confirmLabel: {{ \Illuminate\Support\Js::from(__('Freigabe zurücknehmen')) }},
+                                                    cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
+                                                } : {
+                                                    title: {{ \Illuminate\Support\Js::from(__('Freigabe erteilen')) }},
+                                                    message: {{ \Illuminate\Support\Js::from($step->afterFreigabeStep
+                                                        ? __('Wenn Sie die Freigabe erteilen, wird der nächste Schritt „:title“ automatisch ausgelöst und dessen Zuständige werden per E-Mail informiert.', ['title' => $step->afterFreigabeStep->title])
+                                                        : __('Wenn Sie die Freigabe erteilen, gilt der Schritt als freigegeben.')) }},
+                                                    confirmLabel: {{ \Illuminate\Support\Js::from(__('Freigabe erteilen')) }},
                                                     cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
                                                 }))) {
                                                     return;
