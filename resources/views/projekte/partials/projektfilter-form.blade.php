@@ -1,5 +1,6 @@
 @php
     $fieldsByKey = collect($filterFields)->keyBy('key');
+    $activeProjectFilterSet = $projectFilterSets->firstWhere('is_active', true);
 @endphp
 
 <div
@@ -17,6 +18,8 @@
         removeField(key) {
             this.active = this.active.filter(k => k !== key);
         },
+        savingOpen: {{ $errors->has('name') ? 'true' : 'false' }},
+        savingAsNew: {{ $errors->has('name') ? 'true' : 'false' }},
     }"
 >
     <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
@@ -33,11 +36,57 @@
         </button>
     </div>
 
-    <form id="projektfilter-form" method="GET" action="{{ route('projekte') }}" class="max-h-[70vh] overflow-y-auto px-6 py-4 space-y-3 text-sm">
+    <div class="max-h-[70vh] overflow-y-auto px-6 py-4 space-y-3 text-sm">
+        @if ($errors->any())
+            <div class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+                <ul class="list-disc list-inside">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        <div>
+            <label class="block text-xs text-gray-500 mb-1">{{ __('Meine Projektfilter-Sets') }}</label>
+            <div class="flex gap-2">
+                <select
+                    class="flex-1 rounded-md border-gray-300 text-sm"
+                    onchange="document.getElementById('projektfilter-activate-form-' + this.value).submit()"
+                >
+                    @foreach ($projectFilterSets as $set)
+                        <option value="{{ $set->id }}" @selected($set->is_active)>{{ $set->name }}</option>
+                    @endforeach
+                </select>
+
+                @if ($projectFilterSets->count() > 1)
+                    <form
+                        method="POST"
+                        action="{{ route('projekte.projektfilter.sets.destroy', $activeProjectFilterSet) }}"
+                        x-data="{ async confirmAndSubmit(e) { if (await window.confirmDialog({ title: '{{ __('Filterset löschen') }}', message: '{{ __('Dieses Filterset wirklich löschen?') }}', confirmLabel: '{{ __('Löschen') }}' })) { e.target.submit(); } } }"
+                        @submit.prevent="confirmAndSubmit($event)"
+                    >
+                        @csrf
+                        @method('delete')
+                        <button type="submit" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-1.5 text-sm text-gray-500 hover:bg-btn-secondary-hover" title="{{ __('Aktuelles Set löschen') }}">
+                            🗑
+                        </button>
+                    </form>
+                @endif
+            </div>
+            @foreach ($projectFilterSets as $set)
+                <form id="projektfilter-activate-form-{{ $set->id }}" method="POST" action="{{ route('projekte.projektfilter.sets.activate', $set) }}" class="hidden">
+                    @csrf
+                </form>
+            @endforeach
+        </div>
+
+    <form id="projektfilter-form" method="GET" action="{{ route('projekte') }}">
         {{-- Immer vorhanden (auch ohne aktive Felder) - sonst kann der Server ein bewusst
              leer abgeschicktes Formular nicht von "nie abgeschickt" unterscheiden und fällt
              fälschlich auf die zuletzt gespeicherte Feldauswahl zurück. --}}
         <input type="hidden" name="projektfilter_submitted" value="1">
+        <input type="hidden" name="set_id" value="{{ $activeProjectFilterSet->id ?? '' }}">
         @if ($sort)
             <input type="hidden" name="sort" value="{{ $sort }}">
             <input type="hidden" name="direction" value="{{ $direction }}">
@@ -200,11 +249,66 @@
             @endforeach
         </div>
     </form>
+    </div>
 
     <div class="flex items-center justify-between border-t border-gray-200 px-6 py-4">
         <button type="button" @click="$dispatch('close-modal', 'projektfilter')" class="rounded border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
             {{ __('Abbrechen') }}
         </button>
+
+        <button
+            type="button"
+            x-show="!savingOpen"
+            @click="savingOpen = true"
+            class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+        >
+            {{ __('Filterset speichern') }}
+        </button>
+
+        <div x-show="savingOpen" x-cloak class="flex items-center gap-2">
+            <button
+                type="button"
+                x-show="!savingAsNew"
+                @click="savingAsNew = true"
+                class="inline-flex items-center rounded-md border border-btn-secondary-border bg-btn-secondary px-4 py-2 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
+            >
+                {{ __('Speichern unter') }}
+            </button>
+
+            <template x-if="savingAsNew">
+                <input
+                    type="text"
+                    form="projektfilter-form"
+                    name="name"
+                    x-init="$nextTick(() => $el.focus())"
+                    placeholder="{{ __('Name des neuen Filtersets') }}"
+                    class="rounded-md border-gray-300 text-sm"
+                >
+            </template>
+
+            <button
+                type="submit"
+                form="projektfilter-form"
+                formmethod="post"
+                formaction="{{ route('projekte.projektfilter.sets.store') }}"
+                x-show="savingAsNew"
+                class="inline-flex items-center rounded-md bg-btn-primary px-4 py-2 text-sm font-medium text-white hover:bg-btn-primary-hover"
+            >
+                {{ __('Speichern unter') }}
+            </button>
+
+            <button
+                type="submit"
+                form="projektfilter-form"
+                formmethod="post"
+                formaction="{{ route('projekte.projektfilter.update') }}"
+                x-show="!savingAsNew"
+                class="inline-flex items-center rounded-md bg-btn-primary px-4 py-2 text-sm font-medium text-white hover:bg-btn-primary-hover"
+            >
+                {{ __('Speichern') }}
+            </button>
+        </div>
+
         <div class="flex items-center gap-3">
             <a
                 href="{{ route('projekte', array_filter(['sort' => $sort, 'direction' => $direction, 'projektfilter_submitted' => 1, 'reopen_filter' => 1])) }}"

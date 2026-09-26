@@ -6,19 +6,25 @@ use App\Models\Attribute;
 use App\Models\Market;
 use App\Models\ProductGroup;
 use App\Models\Project;
+use App\Models\ProjectFilterSet;
 use App\Models\ProjectGroup;
 use App\Models\ProjectTypeMain;
 use App\Models\User;
 use App\Models\Workflow;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
  * Verfügbare Kriterien für den Projektfilter: feste Felder + variable
  * Attribute aus dem Katalog. Die *aktive Auswahl* (welche Kriterien der
- * Nutzer gerade eingeblendet hat) wird automatisch im selben Filterset
- * gespeichert wie der Anzeigefilter (config-Key "filter_fields") – kein
- * manuelles Speichern nötig, merkt sich einfach den letzten Stand.
+ * Nutzer gerade eingeblendet hat) wird automatisch im aktiven
+ * ProjectFilterSet gespeichert (config-Keys "filter_fields"/"filter_values")
+ * - kein manuelles Speichern für den laufenden Stand nötig, merkt sich
+ * einfach den letzten Stand. Zusätzlich kann der Nutzer den aktuellen Stand
+ * unter einem Namen als eigenes Set sichern (Ralf, 2026-09-26: "wie beim
+ * Anzeigefilter", aber bewusst eigene, unabhängige Sets statt geteilter -
+ * siehe ProjectFilterSet-Migration).
  */
 class ProjectFilterCatalog
 {
@@ -26,6 +32,11 @@ class ProjectFilterCatalog
      * @var list<string>
      */
     public const DEFAULT_ACTIVE = ['title', 'status', 'attribute:initiator'];
+
+    /**
+     * @var list<string>
+     */
+    private const DATE_RANGE_FIELDS = ['start_date', 'end_date', 'publication_date'];
 
     /**
      * @return list<array{key: string, label: string, type: string, options?: array}>
@@ -291,19 +302,101 @@ class ProjectFilterCatalog
     }
 
     /**
+     * Zerlegt die rohen Request-Filterwerte gegen den Katalog (whitelisted
+     * Felder, typgerechte Sonderfälle wie person_group/date_range/multi
+     * selects) - aus ProjectController::filtersFromRequest() hierher
+     * verschoben, da jetzt auch ProjectFilterSetController::store()/
+     * update() dieselbe Auflösung braucht (Speichern eines benannten Sets).
+     *
+     * @return array<string, mixed>
+     */
+    public static function filtersFromRequest(Request $request): array
+    {
+        // Schnellsuche (Sidebar, Enter/Lupe) ersetzt jeden anderen Filter,
+        // statt sich mit ihm zu kombinieren - wie in Vietto, und auf
+        // Rückfrage von Ralf bewusst so entschieden (sonst nie klar, warum
+        // ein erwarteter Treffer fehlt). Eigener Key statt Eintrag im
+        // regulären, whitelisted filter[]-Katalog, da sie kein normales
+        // Formularfeld ist.
+        $quickSearch = trim((string) $request->input('filter.schnellsuche', ''));
+        if ($quickSearch !== '') {
+            return ['schnellsuche' => $quickSearch];
+        }
+
+        $available = array_column(self::available(CurrentTenant::id()), null, 'key');
+        $raw = $request->input('filter', []);
+        $filters = [];
+
+        foreach ($raw as $key => $value) {
+            if (! isset($available[$key])) {
+                continue;
+            }
+
+            if ($key === 'project_person') {
+                if (! is_array($value)) {
+                    continue;
+                }
+                $personId = filter_var($value['person_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+                $person = collect($available[$key]['options'])->firstWhere('id', $personId);
+                if ($person) {
+                    $groupId = filter_var($value['function_group_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+                    $group = collect($person['groups'])->firstWhere('id', $groupId);
+                    $filters[$key] = [
+                        'person_id' => $personId,
+                        'function_group_id' => $group['id'] ?? null,
+                    ];
+                }
+
+                continue;
+            }
+
+            if (in_array($key, self::DATE_RANGE_FIELDS, true)) {
+                $from = trim((string) ($value['from'] ?? ''));
+                $to = trim((string) ($value['to'] ?? ''));
+                if ($from !== '' || $to !== '') {
+                    $filters[$key] = array_filter(['from' => $from ?: null, 'to' => $to ?: null]);
+                }
+
+                continue;
+            }
+
+            if ($key === 'project_type' || $key === 'project_year' || $key === 'markets' || $key === 'status') {
+                $ids = array_values(array_filter((array) $value, fn ($v) => $v !== null && $v !== ''));
+                if (! empty($ids)) {
+                    $filters[$key] = $ids;
+                }
+
+                continue;
+            }
+
+            if (is_string($value)) {
+                $value = trim($value);
+            }
+
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            $filters[$key] = $value;
+        }
+
+        return $filters;
+    }
+
+    /**
      * @return list<string>
      */
     public static function activeFieldsFor(User $user): array
     {
-        $set = ProjectColumnCatalog::ensureDefaultSetFor($user);
+        $set = ProjectFilterSet::ensureDefaultSetFor($user);
 
         return $set->config['filter_fields'] ?? self::DEFAULT_ACTIVE;
     }
 
     public static function persistActiveFields(User $user, array $fieldKeys): void
     {
-        $set = ProjectColumnCatalog::ensureDefaultSetFor($user);
-        $config = $set->config;
+        $set = ProjectFilterSet::ensureDefaultSetFor($user);
+        $config = $set->config ?? [];
         $config['filter_fields'] = array_values(array_unique($fieldKeys));
         $set->update(['config' => $config]);
     }
@@ -320,15 +413,15 @@ class ProjectFilterCatalog
      */
     public static function persistedFiltersFor(User $user): array
     {
-        $set = ProjectColumnCatalog::ensureDefaultSetFor($user);
+        $set = ProjectFilterSet::ensureDefaultSetFor($user);
 
         return $set->config['filter_values'] ?? [];
     }
 
     public static function persistFilterValues(User $user, array $filters): void
     {
-        $set = ProjectColumnCatalog::ensureDefaultSetFor($user);
-        $config = $set->config;
+        $set = ProjectFilterSet::ensureDefaultSetFor($user);
+        $config = $set->config ?? [];
         $config['filter_values'] = $filters;
         $set->update(['config' => $config]);
     }

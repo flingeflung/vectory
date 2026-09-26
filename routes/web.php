@@ -37,6 +37,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectChecklistController;
 use App\Http\Controllers\ProjectConnectionController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectFilterSetController;
 use App\Http\Controllers\StammIdController;
 use App\Http\Controllers\ProjectGanttPeopleController;
 use App\Http\Controllers\ProjectGanttPreferenceController;
@@ -372,6 +373,13 @@ Route::middleware(['auth', 'verified'])->prefix('projekte/anzeigefilter')->name(
     Route::post('/sets', [DisplayFilterController::class, 'store'])->name('sets.store');
     Route::post('/sets/{displayFilterSet}/activate', [DisplayFilterController::class, 'activate'])->name('sets.activate');
     Route::delete('/sets/{displayFilterSet}', [DisplayFilterController::class, 'destroy'])->name('sets.destroy');
+});
+
+Route::middleware(['auth', 'verified'])->prefix('projekte/projektfilter')->name('projekte.projektfilter.')->group(function () {
+    Route::post('/', [ProjectFilterSetController::class, 'update'])->name('update');
+    Route::post('/sets', [ProjectFilterSetController::class, 'store'])->name('sets.store');
+    Route::post('/sets/{projectFilterSet}/activate', [ProjectFilterSetController::class, 'activate'])->name('sets.activate');
+    Route::delete('/sets/{projectFilterSet}', [ProjectFilterSetController::class, 'destroy'])->name('sets.destroy');
 });
 
 Route::middleware('auth')->group(function () {

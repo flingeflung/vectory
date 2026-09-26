@@ -15,6 +15,7 @@ use App\Models\GraphicOrder;
 use App\Models\Market;
 use App\Models\MarketSet;
 use App\Models\Project;
+use App\Models\ProjectFilterSet;
 use App\Models\ProjectGroup;
 use App\Models\ProjectPerson;
 use App\Models\ProjectTemplate;
@@ -80,7 +81,7 @@ class ProjectController extends Controller
     public function index(Request $request): View
     {
         [$sort, $direction] = $this->sortFromRequest($request);
-        $filters = $this->filtersFromRequest($request);
+        $filters = ProjectFilterCatalog::filtersFromRequest($request);
         $user = $request->user();
 
         // Projektfilter wurde abgeschickt -> die gerade sichtbare Feldauswahl wird
@@ -150,6 +151,7 @@ class ProjectController extends Controller
             'sortableColumnKeys' => [...self::SORTABLE_COLUMNS, ...self::sortableAttributeColumns()],
             'allColumns' => $allColumns,
             'sets' => DisplayFilterSet::query()->where('user_id', $user->id)->orderBy('name')->get(),
+            'projectFilterSets' => ProjectFilterSet::query()->where('user_id', $user->id)->orderBy('name')->get(),
             'sort' => $sort,
             'direction' => $direction,
             'filters' => $filters,
@@ -181,7 +183,7 @@ class ProjectController extends Controller
     public function more(Request $request): Response
     {
         [$sort, $direction] = $this->sortFromRequest($request);
-        $filters = $this->filtersFromRequest($request);
+        $filters = ProjectFilterCatalog::filtersFromRequest($request);
         $user = $request->user();
         $offset = max(0, $request->integer('offset'));
         $take = min(500, max(1, $request->integer('take') ?: self::PAGE_SIZE));
@@ -205,7 +207,7 @@ class ProjectController extends Controller
     public function ganttProjects(Request $request): JsonResponse
     {
         [$sort, $direction] = $this->sortFromRequest($request);
-        $filters = $this->filtersFromRequest($request);
+        $filters = ProjectFilterCatalog::filtersFromRequest($request);
         $query = $this->orderedQuery($sort, $direction, $filters);
         $limit = Setting::ganttMaxProjects();
         $count = $query->count();
@@ -886,7 +888,7 @@ class ProjectController extends Controller
     private function detailData(Request $request, Project $project): array
     {
         [$sort, $direction] = $this->sortFromRequest($request);
-        $filters = $this->filtersFromRequest($request);
+        $filters = ProjectFilterCatalog::filtersFromRequest($request);
 
         return [
             'project' => $project->loadMissing(['hauptprojekt', 'unterprojekte' => fn ($query) => $query->orderBy('source_pn'), 'markets', 'projectPeople.person', 'projectPeople.functionGroup', 'workflow', 'activities.user', 'projectWorkflowSteps.workflowStep.functionGroups', 'projectWorkflowSteps.people.functionGroup', 'projectWorkflowSteps.people.person', 'graphicOrders.initiatedBy', 'graphicOrders.illustrator', 'projectChecklists.checklist.sections.points', 'projectChecklists.activatedBy', 'projectChecklistPoints.doneBy', 'products.productGroup', 'products.projects:id,source_pn,title']),
@@ -943,84 +945,6 @@ class ProjectController extends Controller
         $direction = $request->query('direction') === 'desc' ? 'desc' : 'asc';
 
         return [$sort, $direction];
-    }
-
-    /**
-     * Nur bekannte Filterfelder durchlassen, leere Werte verwerfen.
-     *
-     * @return array<string, mixed>
-     */
-    private function filtersFromRequest(Request $request): array
-    {
-        // Schnellsuche (Sidebar, Enter/Lupe) ersetzt jeden anderen Filter,
-        // statt sich mit ihm zu kombinieren - wie in Vietto, und auf
-        // Rückfrage von Ralf bewusst so entschieden (sonst nie klar, warum
-        // ein erwarteter Treffer fehlt). Eigener Key statt Eintrag im
-        // regulären, whitelisted filter[]-Katalog (ProjectFilterCatalog),
-        // da sie kein normales Formularfeld ist.
-        $quickSearch = trim((string) $request->input('filter.schnellsuche', ''));
-        if ($quickSearch !== '') {
-            return ['schnellsuche' => $quickSearch];
-        }
-
-        $available = array_column(ProjectFilterCatalog::available(CurrentTenant::id()), null, 'key');
-        $raw = $request->query('filter', []);
-        $filters = [];
-
-        foreach ($raw as $key => $value) {
-            if (! isset($available[$key])) {
-                continue;
-            }
-
-            if ($key === 'project_person') {
-                if (! is_array($value)) {
-                    continue;
-                }
-                $personId = filter_var($value['person_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-                $person = collect($available[$key]['options'])->firstWhere('id', $personId);
-                if ($person) {
-                    $groupId = filter_var($value['function_group_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-                    $group = collect($person['groups'])->firstWhere('id', $groupId);
-                    $filters[$key] = [
-                        'person_id' => $personId,
-                        'function_group_id' => $group['id'] ?? null,
-                    ];
-                }
-
-                continue;
-            }
-
-            if (in_array($key, self::DATE_RANGE_FIELDS, true)) {
-                $from = trim((string) ($value['from'] ?? ''));
-                $to = trim((string) ($value['to'] ?? ''));
-                if ($from !== '' || $to !== '') {
-                    $filters[$key] = array_filter(['from' => $from ?: null, 'to' => $to ?: null]);
-                }
-
-                continue;
-            }
-
-            if ($key === 'project_type' || $key === 'project_year' || $key === 'markets' || $key === 'status') {
-                $ids = array_values(array_filter((array) $value, fn ($v) => $v !== null && $v !== ''));
-                if (! empty($ids)) {
-                    $filters[$key] = $ids;
-                }
-
-                continue;
-            }
-
-            if (is_string($value)) {
-                $value = trim($value);
-            }
-
-            if ($value === null || $value === '') {
-                continue;
-            }
-
-            $filters[$key] = $value;
-        }
-
-        return $filters;
     }
 
     private function applyFilters(Builder $query, array $filters): void
