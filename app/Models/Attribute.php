@@ -48,7 +48,7 @@ class Attribute extends Model
      * CopyTemplate::fields()) hängt aber an genau dieser Attribute-Zeile
      * und soll laut Ralf bestehen bleiben, deshalb kein echtes Löschen.
      */
-    public const HIDDEN_SYSTEM_FIELDS = ['checklist'];
+    public const HIDDEN_SYSTEM_FIELDS = ['checklist', 'remarks_echo'];
 
     /**
      * Feste Felder, die es schon vor der Attribut-Verwaltung gab (Ralf,
