@@ -33,6 +33,19 @@ class FileLogTransport extends AbstractTransport
      */
     private function htmlToText(string $html): string
     {
+        // Links (Ralf, 2026-09-26): strip_tags() würde die Adresse hinter einem Button wie
+        // "Freigabe erteilen" verschlucken - im Testbetrieb aber müssen die Links aus dem Log
+        // kopierbar sein. Jeder Link bekommt eine eigene Zeile "Text: Adresse" (bzw. nur die
+        // Adresse, wenn der Linktext selbst die Adresse ist).
+        $html = preg_replace_callback('#<a\s[^>]*href="([^"]+)"[^>]*>(.*?)</a>#is', function (array $match) {
+            $url = html_entity_decode($match[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            $label = trim(html_entity_decode(strip_tags($match[2]), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+
+            return "
+".($label === '' || $label === $url ? $url : $label.': '.$url)."
+";
+        }, $html);
+
         $text = preg_replace('#<br\s*/?>\s*#i', "
 ", $html);
         $text = preg_replace('#</p>#i', "
