@@ -124,6 +124,7 @@
                         <button
                             type="button"
                             @click="window.deleteWithConfirm($refs.newVersionForm, {
+                                title: {{ \Illuminate\Support\Js::from(__('Neue Version erstellen')) }},
                                 message: {{ \Illuminate\Support\Js::from(__('Legt eine Kopie dieses Workflows (inkl. aller Schritte) als neue, frei bearbeitbare Version an. Die bestehende Version bleibt für schon zugewiesene Projekte unverändert erhalten, wird aber für neue Projekte nicht mehr angeboten.')) }},
                                 confirmLabel: {{ \Illuminate\Support\Js::from(__('Neue Version erstellen')) }},
                             })"
