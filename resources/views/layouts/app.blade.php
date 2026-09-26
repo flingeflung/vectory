@@ -2913,8 +2913,16 @@
                         </svg>
                     </button>
                 </div>
-                <div id="project-directory-content-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
-                    {{ __('Lädt…') }}
+                {{-- Wrapper + Overlay: beim Reiterwechsel bleibt der alte Inhalt sichtbar, darüber
+                     Spinner + Warte-Cursor ("Eieruhr", Ralf 2026-09-26) - gleiches Muster wie die
+                     anderen Lade-Overlays im Tool (loading-spinner-Komponente). --}}
+                <div class="relative flex min-h-0 flex-1 flex-col">
+                    <div id="project-directory-content-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
+                        {{ __('Lädt…') }}
+                    </div>
+                    <div id="project-directory-content-loading" class="absolute inset-0 hidden cursor-wait items-center justify-center bg-white/60" role="status" aria-live="polite">
+                        <x-loading-spinner class="h-8 w-8 text-gray-500" />
+                    </div>
                 </div>
             </div>
         </x-modal>
@@ -2925,10 +2933,13 @@
 
                 let current = { projectId: null, source: null };
 
+                const loading = () => document.getElementById('project-directory-content-loading');
+
+                const fetchHtml = (projectId, source) => fetch(`/projekte/${projectId}/verzeichnis${source ? `?quelle=${source}` : ''}`).then((r) => r.text());
+
                 const load = async (projectId, source) => {
                     current = { projectId, source };
-                    const query = source ? `?quelle=${source}` : '';
-                    body().innerHTML = await fetch(`/projekte/${projectId}/verzeichnis${query}`).then((r) => r.text());
+                    body().innerHTML = await fetchHtml(projectId, source);
                 };
 
                 // Ohne source: Standard (AV, sonst SV) - entscheidet der Server anhand der Rechte.
@@ -2938,7 +2949,21 @@
                     await load(projectId, source);
                 };
 
-                window.switchProjectDirectoryTab = (projectId, source) => load(projectId, source);
+                // Reiterwechsel: Lade-Overlay mindestens 0,5 s zeigen, auch wenn die Antwort sofort da
+                // ist - sonst passiert für den Nutzer optisch nichts (Inhalt identisch), bei einem
+                // Netzlaufwerk unter Last kann es dagegen länger dauern.
+                window.switchProjectDirectoryTab = async (projectId, source) => {
+                    loading().classList.remove('hidden');
+                    loading().classList.add('flex');
+                    try {
+                        const [html] = await Promise.all([fetchHtml(projectId, source), new Promise((resolve) => setTimeout(resolve, 500))]);
+                        current = { projectId, source };
+                        body().innerHTML = html;
+                    } finally {
+                        loading().classList.add('hidden');
+                        loading().classList.remove('flex');
+                    }
+                };
 
                 // Nach dem Anlegen eines Projektordners: offenes Overlay aktualisieren.
                 window.reloadProjectDirectoryContent = () => (current.projectId ? load(current.projectId, current.source) : null);
