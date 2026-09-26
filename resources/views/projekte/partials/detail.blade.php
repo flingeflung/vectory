@@ -572,8 +572,10 @@
                                                     }
                                                     const data = await response.json();
                                                     this.granted = data.milestone_done_at !== null;
+                                                    {{-- Immer neu laden (Ralf, 2026-09-27): sonst fehlt der neue Eintrag im Vorgänge-Tab,
+                                                         bisher nur bei ausgelöstem Folge-Schritt. Der gewählte Tab bleibt erhalten. --}}
+                                                    await window.refreshUnderlyingProject({{ $project->id }});
                                                     if (data.next_step_title) {
-                                                        await window.refreshUnderlyingProject({{ $project->id }});
                                                         window.notifyDialog({{ \Illuminate\Support\Js::from(__('Freigabe erteilt - Folge-Schritt ":title" wurde automatisch ausgelöst.')) }}.replace(':title', data.next_step_title));
                                                     }
                                                 } finally {
