@@ -892,7 +892,17 @@ class ProjectController extends Controller
     {
         [$sort, $direction] = $this->sortFromRequest($request);
         $filters = ProjectFilterCatalog::filtersFromRequest($request);
-        $directorySource = $this->directoryLocator->visibleSources($project->tenant_id, $request->user())[0] ?? null;
+        $directorySources = $this->directoryLocator->visibleSources($project->tenant_id, $request->user());
+        $directorySource = $directorySources[0] ?? null;
+        $directoryStatus = $directorySource ? $this->directoryLocator->statusForProject($project, $directorySource) : null;
+
+        // Zeigt das Symbol das AV und der Ordner fehlt dort, ist das normal (kommt erst per
+        // Auschecken). Fehlt er aber AUCH im SV und darf der Nutzer das SV sehen, bietet das
+        // Symbol an, den Ordner im SV anzulegen (Ralf, 2026-09-26).
+        $directoryCreateInSv = $directorySource === ProjectDirectoryLocator::SOURCE_AV
+            && $directoryStatus['status'] === 'not_found'
+            && in_array(ProjectDirectoryLocator::SOURCE_SV, $directorySources, true)
+            && $this->directoryLocator->statusForProject($project, ProjectDirectoryLocator::SOURCE_SV)['status'] === 'not_found';
 
         return [
             'project' => $project->loadMissing(['hauptprojekt', 'unterprojekte' => fn ($query) => $query->orderBy('source_pn'), 'markets', 'projectPeople.person', 'projectPeople.functionGroup', 'workflow', 'activities.user', 'projectWorkflowSteps.workflowStep.functionGroups', 'projectWorkflowSteps.people.functionGroup', 'projectWorkflowSteps.people.person', 'graphicOrders.initiatedBy', 'graphicOrders.illustrator', 'projectChecklists.checklist.sections.points', 'projectChecklists.activatedBy', 'projectChecklistPoints.doneBy', 'products.productGroup', 'products.projects:id,source_pn,title']),
@@ -933,7 +943,8 @@ class ProjectController extends Controller
             'previousProject' => $this->adjacentProject($sort, $direction, $filters, $project, 'previous'),
             'nextProject' => $this->adjacentProject($sort, $direction, $filters, $project, 'next'),
             'directorySource' => $directorySource,
-            'directoryStatus' => $directorySource ? $this->directoryLocator->statusForProject($project, $directorySource) : null,
+            'directoryStatus' => $directoryStatus,
+            'directoryCreateInSv' => $directoryCreateInSv,
             'directorySuggestedFolderName' => $this->directoryLocator->suggestedFolderName($project),
         ];
     }
