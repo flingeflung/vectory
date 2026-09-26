@@ -28,7 +28,7 @@ class ProjectColumnCatalog
         $fixed = [
             ['key' => 'title', 'label' => __('Bezeichnung'), 'long_text' => true],
             ['key' => 'status', 'label' => __('Status'), 'long_text' => false],
-            ['key' => 'project_type', 'label' => __('Projekttyp/-art'), 'long_text' => false, 'type_icon' => true],
+            ['key' => 'project_type', 'label' => __('Projektkategorie/-art'), 'long_text' => false, 'type_icon' => true],
             ['key' => 'workflow', 'label' => __('Workflow'), 'long_text' => false],
             // Ralf, 2026-09-13: label_editable-System-Feld, aber eine echte
             // n:m-Produktverknüpfung statt Freitext - deshalb wie "workflow"
