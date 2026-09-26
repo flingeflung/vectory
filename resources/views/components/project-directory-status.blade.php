@@ -1,4 +1,4 @@
-@props(['project', 'status', 'source' => 'sv', 'createInSv' => false, 'suggestedFolderName' => null])
+@props(['project', 'status', 'source' => 'sv', 'createInSv' => false, 'openSv' => false, 'suggestedFolderName' => null])
 
 <span
     x-data="{ copied: false }"
@@ -51,6 +51,16 @@
                     title="{{ __('Kein Projektverzeichnis vorhanden - im gesperrten Verzeichnis anlegen') }}"
                 >
                     <img src="{{ asset('images/directory-status/show_directory0.png') }}" alt="" class="h-4 w-4 shrink-0 object-contain">
+                </button>
+            @elseif ($source === 'av' && $openSv)
+                {{-- Noch nicht ausgecheckt, aber im SV vorhanden: Symbol öffnet das SV im Overlay. --}}
+                <button
+                    type="button"
+                    onclick="window.openProjectDirectoryContent({{ $project->id }}, 'sv')"
+                    class="shrink-0 hover:opacity-75"
+                    title="{{ __('Noch nicht im Arbeitsverzeichnis - Verzeichnis im gesperrten Verzeichnis anzeigen') }}"
+                >
+                    <img src="{{ asset('images/directory-status/show_dircontent.png') }}" alt="" class="h-4 w-4 shrink-0 object-contain">
                 </button>
             @elseif ($source === 'av')
                 {{-- Ralf, 2026-09-26: im Arbeitsverzeichnis wird nie von Hand angelegt, nur per Auschecken aus dem SV. --}}

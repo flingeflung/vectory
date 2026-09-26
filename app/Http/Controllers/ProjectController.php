@@ -271,13 +271,21 @@ class ProjectController extends Controller
 
         // Verzeichnis-Symbol zeigt das erste für diesen Nutzer sichtbare
         // Verzeichnis (AV, sonst SV nur mit Recht, sonst gar keins).
-        $directorySource = $this->directoryLocator->visibleSources(CurrentTenant::id(), $user)[0] ?? null;
+        $directorySources = $this->directoryLocator->visibleSources(CurrentTenant::id(), $user);
+        $directorySource = $directorySources[0] ?? null;
+
+        // Zeigt das Symbol das AV, aber der Ordner liegt (noch) nur im SV: Symbol soll dann das
+        // SV im Overlay öffnen können (nur mit Recht) - dafür der SV-Status je Zeile.
+        $directorySvStatuses = $directorySource === ProjectDirectoryLocator::SOURCE_AV && in_array(ProjectDirectoryLocator::SOURCE_SV, $directorySources, true)
+            ? $this->directoryLocator->statusesForProjects($projects, CurrentTenant::id(), ProjectDirectoryLocator::SOURCE_SV)
+            : [];
 
         return [
             'projects' => $projects,
             'favoriteProjectIds' => Favorite::where('user_id', $user->id)->pluck('project_id')->all(),
             'graphicOrderSummaries' => $graphicOrderSummaries,
             'directorySource' => $directorySource,
+            'directorySvStatuses' => $directorySvStatuses,
             'directoryStatuses' => $directorySource ? $this->directoryLocator->statusesForProjects($projects, CurrentTenant::id(), $directorySource) : [],
         ];
     }
@@ -899,10 +907,14 @@ class ProjectController extends Controller
         // Zeigt das Symbol das AV und der Ordner fehlt dort, ist das normal (kommt erst per
         // Auschecken). Fehlt er aber AUCH im SV und darf der Nutzer das SV sehen, bietet das
         // Symbol an, den Ordner im SV anzulegen (Ralf, 2026-09-26).
-        $directoryCreateInSv = $directorySource === ProjectDirectoryLocator::SOURCE_AV
+        // Liegt er dagegen schon im SV, öffnet das Symbol das SV im Overlay.
+        $svStatus = $directorySource === ProjectDirectoryLocator::SOURCE_AV
             && $directoryStatus['status'] === 'not_found'
             && in_array(ProjectDirectoryLocator::SOURCE_SV, $directorySources, true)
-            && $this->directoryLocator->statusForProject($project, ProjectDirectoryLocator::SOURCE_SV)['status'] === 'not_found';
+            ? $this->directoryLocator->statusForProject($project, ProjectDirectoryLocator::SOURCE_SV)['status']
+            : null;
+        $directoryCreateInSv = $svStatus === 'not_found';
+        $directoryOpenSv = $svStatus === 'found';
 
         return [
             'project' => $project->loadMissing(['hauptprojekt', 'unterprojekte' => fn ($query) => $query->orderBy('source_pn'), 'markets', 'projectPeople.person', 'projectPeople.functionGroup', 'workflow', 'activities.user', 'projectWorkflowSteps.workflowStep.functionGroups', 'projectWorkflowSteps.people.functionGroup', 'projectWorkflowSteps.people.person', 'graphicOrders.initiatedBy', 'graphicOrders.illustrator', 'projectChecklists.checklist.sections.points', 'projectChecklists.activatedBy', 'projectChecklistPoints.doneBy', 'products.productGroup', 'products.projects:id,source_pn,title']),
@@ -945,6 +957,7 @@ class ProjectController extends Controller
             'directorySource' => $directorySource,
             'directoryStatus' => $directoryStatus,
             'directoryCreateInSv' => $directoryCreateInSv,
+            'directoryOpenSv' => $directoryOpenSv,
             'directorySuggestedFolderName' => $this->directoryLocator->suggestedFolderName($project),
         ];
     }

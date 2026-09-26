@@ -44,7 +44,7 @@
             <x-favorite-star :project="$project" :is-favorite="$project->isFavoritedBy(auth()->user())" />
 
             @if ($directorySource)
-                <x-project-directory-status :project="$project" :status="$directoryStatus" :source="$directorySource" :create-in-sv="$directoryCreateInSv" :suggested-folder-name="$directorySuggestedFolderName" />
+                <x-project-directory-status :project="$project" :status="$directoryStatus" :source="$directorySource" :create-in-sv="$directoryCreateInSv" :open-sv="$directoryOpenSv" :suggested-folder-name="$directorySuggestedFolderName" />
             @endif
 
             <div class="flex items-center text-gray-500">
