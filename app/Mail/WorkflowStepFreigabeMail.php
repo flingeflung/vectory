@@ -19,8 +19,12 @@ class WorkflowStepFreigabeMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    /** Gültigkeit der Links in Tagen (Vorschlag 30, von Ralf noch nicht bestätigt). */
-    public const LINK_VALIDITY_DAYS = 30;
+    /**
+     * Gültigkeit der Links in KALENDERTAGEN (keine Arbeitstage) - Ralf,
+     * 2026-09-26: 14. Perspektivisch kundenspezifisch einstellbar, bisher
+     * bewusst nur diese eine Konstante.
+     */
+    public const LINK_VALIDITY_DAYS = 14;
 
     public function __construct(
         public readonly WorkflowStepFreigabeRequest $freigabeRequest,
