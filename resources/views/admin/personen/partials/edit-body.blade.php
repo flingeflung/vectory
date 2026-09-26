@@ -144,9 +144,15 @@
                 @input="dirty = window.formIsDirty($el)"
                 class="space-y-4 rounded-lg border border-gray-200 bg-white p-4"
             >
-                <div>
-                    <label class="block text-xs text-gray-500">{{ __('ID') }}</label>
-                    <input type="text" value="{{ $person->id }}" disabled class="mt-0.5 w-20 rounded-md border-gray-300 bg-gray-50 text-sm text-gray-500">
+                <div class="flex items-end gap-4">
+                    <div>
+                        <label class="block text-xs text-gray-500">{{ __('ID') }}</label>
+                        <input type="text" value="{{ $person->id }}" disabled class="mt-0.5 w-20 rounded-md border-gray-300 bg-gray-50 text-sm text-gray-500">
+                    </div>
+                    <label class="mb-1.5 flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-sm font-medium text-gray-700">
+                        <input type="checkbox" name="active" value="1" @checked($person->active) class="rounded border-gray-300">
+                        {{ __('Aktiv') }}
+                    </label>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
@@ -303,11 +309,6 @@
                     <label class="block text-xs text-gray-500">{{ __('Bemerkungen') }}</label>
                     <textarea name="remarks" rows="3" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">{{ old('remarks', $person->remarks) }}</textarea>
                 </div>
-
-                <label class="flex items-center gap-2 text-sm text-gray-700">
-                    <input type="checkbox" name="active" value="1" @checked($person->active) class="rounded border-gray-300">
-                    {{ __('Aktiv') }}
-                </label>
 
                 {{-- Abwesenheits-Markierung (Ralf, 2026-09-12): auch hier
                      statt nur in den eigenen Einstellungen pflegbar, damit
