@@ -39,6 +39,9 @@ class WorkflowStepFreigabeRequest extends Model
 
     public const STATUS_KORREKTUR_HOCHGELADEN = 'korrektur_hochgeladen';
 
+    /** Durch eine neuere Anfrage bzw. erneute Aktivierung des Schritts überholt - Links nicht mehr nutzbar. */
+    public const STATUS_ERSETZT = 'ersetzt';
+
     protected function casts(): array
     {
         return [
@@ -59,6 +62,21 @@ class WorkflowStepFreigabeRequest extends Model
     public function triggeredBy(): BelongsTo
     {
         return $this->belongsTo(Person::class, 'triggered_by_person_id')->withoutGlobalScope('tenant');
+    }
+
+    /**
+     * Beendet alle noch offenen Mail-Anfragen eines Schritts (Ralf,
+     * 2026-09-26): z.B. weil die Freigabe inzwischen per Button erteilt
+     * wurde oder der Schritt neu ausgelöst wird. Sonst könnte ein alter
+     * Mail-Link wieder gültig werden, sobald der Schritt erneut aktuell ist.
+     */
+    public static function closePendingFor(int $projectWorkflowStepId, string $status): void
+    {
+        self::query()
+            ->withoutGlobalScope('tenant')
+            ->where('project_workflow_step_id', $projectWorkflowStepId)
+            ->where('status', self::STATUS_PENDING)
+            ->update(['status' => $status, 'decided_at' => now()]);
     }
 
     public function isPending(): bool

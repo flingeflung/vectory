@@ -60,9 +60,19 @@ class ProjectWorkflowStepController extends Controller
     {
         abort_unless($projectWorkflowStep->project_id === $project->id, 404);
         abort_unless($request->user()->can('workflow_step.activate'), 403);
-        abort_unless($projectWorkflowStep->is_current, 422);
+
+        // Veraltete Ansicht (Ralf, 2026-09-26): z.B. wurde die Freigabe inzwischen per
+        // Mail-Link erteilt. Nicht still umschalten, sondern melden - besonders wichtig
+        // beim Umschalten, denn sonst würde ein "Erteilen" auf altem Stand zum Zurücknehmen.
+        $staleMessage = __('Der Stand hat sich inzwischen geändert (z. B. wurde die Freigabe bereits per E-Mail erteilt). Die Ansicht wird aktualisiert.');
+        if (! $projectWorkflowStep->is_current) {
+            return response()->json(['message' => $staleMessage], 409);
+        }
 
         $granted = $projectWorkflowStep->milestone_done_at === null;
+        if ($request->has('grant') && $request->boolean('grant') !== $granted) {
+            return response()->json(['message' => $staleMessage], 409);
+        }
         $nextStepTitle = null;
 
         if ($granted) {
@@ -156,21 +166,30 @@ class ProjectWorkflowStepController extends Controller
         // Freigabe-WFS mit "E-Mail senden": statt der normalen WFS-Mail geht
         // die Freigabe-Mail mit den signierten Links raus. Alle Prüfungen
         // VOR dem Aktivieren, damit bei einem Fehler nichts halb passiert.
-        $freigabeRequest = null;
+        $freigabeData = null;
         if ($request->boolean('send_email') && $target->workflowStep->isFreigabeStep()) {
-            $freigabeRequest = $this->prepareFreigabeRequest($request, $project, $target, $person);
+            $freigabeData = $this->validateFreigabeRequest($request, $project, $target);
         }
 
         $result = $this->activator->activate(
             $project,
             $target,
             $person,
-            sendEmail: $request->boolean('send_email') && ! $freigabeRequest,
+            sendEmail: $request->boolean('send_email') && ! $freigabeData,
             ccEmail: $ccEmail,
             message: $validated['message'] ?? null,
         );
 
-        if ($freigabeRequest) {
+        if ($freigabeData) {
+            // Erst NACH der Aktivierung anlegen: sie beendet alte offene Mail-Anfragen dieses
+            // Schritts und würde sonst auch die neue beenden.
+            $freigabeRequest = WorkflowStepFreigabeRequest::create($freigabeData + [
+                'tenant_id' => $project->tenant_id,
+                'project_id' => $project->id,
+                'project_workflow_step_id' => $target->id,
+                'triggered_by_person_id' => $person?->id,
+            ]);
+
             $mail = Mail::to(Task::recipientsFor($target)->pluck('email')->filter()->all());
             if ($ccEmail) {
                 $mail->cc($ccEmail);
@@ -183,11 +202,14 @@ class ProjectWorkflowStepController extends Controller
 
     /**
      * Prüft Quelle/Ziel gegen das Arbeitsverzeichnis des Projekts und legt
-     * den Freigabe-Request an (Ralf, 2026-09-26: Quelle optional, Ziel-
-     * Ordner Pflicht, jeweils aussagekräftige Fehlermeldung statt
-     * stillem Fehlschlag).
+     * die Angaben für den Freigabe-Request (Ralf, 2026-09-26: Quelle
+     * optional, Ziel-Ordner Pflicht, jeweils aussagekräftige Fehlermeldung
+     * statt stillem Fehlschlag). Angelegt wird der Request erst nach der
+     * Aktivierung, siehe activate().
+     *
+     * @return array{source_path: ?string, korrektur_target_path: string}
      */
-    private function prepareFreigabeRequest(Request $request, Project $project, ProjectWorkflowStep $target, ?Person $person): WorkflowStepFreigabeRequest
+    private function validateFreigabeRequest(Request $request, Project $project, ProjectWorkflowStep $target): array
     {
         $step = $target->workflowStep;
 
@@ -221,14 +243,7 @@ class ProjectWorkflowStepController extends Controller
             }
         }
 
-        return WorkflowStepFreigabeRequest::create([
-            'tenant_id' => $project->tenant_id,
-            'project_id' => $project->id,
-            'project_workflow_step_id' => $target->id,
-            'triggered_by_person_id' => $person?->id,
-            'source_path' => $sourcePath,
-            'korrektur_target_path' => $targetPath,
-        ]);
+        return ['source_path' => $sourcePath, 'korrektur_target_path' => $targetPath];
     }
 
     /**

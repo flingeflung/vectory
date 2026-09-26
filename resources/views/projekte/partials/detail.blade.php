@@ -556,8 +556,20 @@
                                                 try {
                                                     const response = await fetch({{ \Illuminate\Support\Js::from(route('projekte.workflow-steps.freigabe', [$project, $pws])) }}, {
                                                         method: 'PATCH',
-                                                        headers: { 'X-CSRF-TOKEN': {{ \Illuminate\Support\Js::from(csrf_token()) }} },
+                                                        headers: {
+                                                            'X-CSRF-TOKEN': {{ \Illuminate\Support\Js::from(csrf_token()) }},
+                                                            'Accept': 'application/json',
+                                                            'Content-Type': 'application/x-www-form-urlencoded',
+                                                        },
+                                                        body: new URLSearchParams({ grant: this.granted ? '0' : '1' }),
                                                     });
+                                                    if (!response.ok) {
+                                                        // Veralteter Stand (z.B. Freigabe kam inzwischen per Mail): Hinweis + neu laden.
+                                                        const error = await response.json().catch(() => null);
+                                                        await window.notifyDialog((error && error.message) || {{ \Illuminate\Support\Js::from(__('Die Aktion konnte nicht ausgeführt werden.')) }});
+                                                        await window.refreshUnderlyingProject({{ $project->id }});
+                                                        return;
+                                                    }
                                                     const data = await response.json();
                                                     this.granted = data.milestone_done_at !== null;
                                                     if (data.next_step_title) {

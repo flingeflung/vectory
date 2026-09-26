@@ -11,6 +11,7 @@ use App\Models\Project;
 use App\Models\ProjectWorkflowStep;
 use App\Models\Task;
 use App\Models\Tenant;
+use App\Models\WorkflowStepFreigabeRequest;
 use Illuminate\Support\Facades\Mail;
 
 /**
@@ -37,6 +38,9 @@ class WorkflowStepActivator
         bool $fallbackToTenantEmail = false,
     ): array {
         $target->loadMissing('workflowStep.functionGroups');
+
+        // Jede (Neu-)Aktivierung überholt noch offene Freigabe-Mails dieses Schritts.
+        WorkflowStepFreigabeRequest::closePendingFor($target->id, WorkflowStepFreigabeRequest::STATUS_ERSETZT);
 
         $currentStep = $project->projectWorkflowSteps->firstWhere('is_current', true);
 
@@ -106,6 +110,9 @@ class WorkflowStepActivator
     {
         $title = $pws->workflowStep->title;
         $pws->update(['milestone_done_at' => now()]);
+
+        // Per Button erteilt: eine noch offene Mail-Anfrage ist damit erledigt.
+        WorkflowStepFreigabeRequest::closePendingFor($pws->id, WorkflowStepFreigabeRequest::STATUS_FREIGEGEBEN);
 
         Activity::log($project, ActivityType::WorkflowStepActivated, $via
             ? __('Freigabe für ":title" erteilt (:via).', ['title' => $title, 'via' => $via])

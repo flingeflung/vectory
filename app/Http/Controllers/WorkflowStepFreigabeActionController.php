@@ -174,11 +174,21 @@ class WorkflowStepFreigabeActionController extends Controller
      */
     private function unavailableReason(WorkflowStepFreigabeRequest $freigabeRequest): ?string
     {
+        // Je nach Grund eine verständliche Meldung statt eines Fehlers (Ralf, 2026-09-26).
         if (! $freigabeRequest->isPending()) {
-            return __('Diese Anfrage wurde bereits bearbeitet. Die Links in der Mail funktionieren nur einmal.');
+            return match ($freigabeRequest->status) {
+                WorkflowStepFreigabeRequest::STATUS_FREIGEGEBEN => __('Die Freigabe wurde bereits erteilt. Vielen Dank.'),
+                WorkflowStepFreigabeRequest::STATUS_KORREKTUR_HOCHGELADEN => __('Die Korrektur wurde bereits hochgeladen. Vielen Dank.'),
+                WorkflowStepFreigabeRequest::STATUS_ERSETZT => __('Zu diesem Schritt gibt es eine neuere Anfrage. Bitte verwenden Sie den Link in der neueren E-Mail.'),
+                default => __('Diese Anfrage wurde bereits bearbeitet. Die Links in der Mail funktionieren nur einmal.'),
+            };
         }
 
         $pws = $freigabeRequest->projectWorkflowStep;
+        if ($pws && $pws->milestone_done_at !== null) {
+            return __('Die Freigabe wurde bereits erteilt. Vielen Dank.');
+        }
+
         if (! $pws || ! $pws->is_current) {
             return __('Dieser Schritt ist nicht mehr aktuell, die Anfrage ist daher nicht mehr gültig.');
         }
