@@ -94,14 +94,16 @@
                                         >
                                     </td>
                                     <td class="px-4 py-2 whitespace-nowrap">
-                                        @if ($typeSub?->symbol)
-                                            <img
-                                                src="{{ asset('images/project-type-icons/'.$typeSub->symbol) }}"
-                                                alt="{{ $typeSub->name }}"
-                                                title="{{ $typeSub->main ? $typeSub->main->name.': '.$typeSub->name : $typeSub->name }}"
-                                                class="h-3 w-auto shrink-0"
-                                            >
-                                        @endif
+                                        <div class="flex h-3 w-4 shrink-0 items-center justify-center">
+                                            @if ($typeSub?->symbol)
+                                                <img
+                                                    src="{{ asset('images/project-type-icons/'.$typeSub->symbol) }}"
+                                                    alt="{{ $typeSub->name }}"
+                                                    title="{{ $typeSub->main ? $typeSub->main->name.': '.$typeSub->name : $typeSub->name }}"
+                                                    class="h-3 w-auto max-w-full"
+                                                >
+                                            @endif
+                                        </div>
                                     </td>
                                     <td class="px-4 py-2 whitespace-nowrap text-gray-500">
                                         @if ($project)
