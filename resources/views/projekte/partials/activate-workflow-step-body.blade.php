@@ -16,7 +16,7 @@
         if (! $step->after_freigabe_workflow_step_id) {
             $freigabeBlockReason = __('Für diesen Freigabe-Schritt ist kein Folge-Schritt festgelegt - die Freigabe-Mail kann nicht verschickt werden. Bitte im Workflow ergänzen.');
         } elseif (! $freigabe['available']) {
-            $freigabeBlockReason = __('Das Projektverzeichnis wurde im Arbeitsverzeichnis nicht gefunden - die Freigabe-Mail kann nicht verschickt werden.');
+            $freigabeBlockReason = __('Im Arbeitsverzeichnis gibt es keinen Ordner, der mit :pn beginnt - die Freigabe-Mail kann nicht verschickt werden. Den Projektordner können Sie über das Verzeichnis-Symbol neben der Projektnummer anlegen.', ['pn' => $project->source_pn]);
         }
         $canSendEmail = $canSendEmail && ! $freigabeBlockReason;
     }

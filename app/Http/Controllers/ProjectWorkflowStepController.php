@@ -201,7 +201,7 @@ class ProjectWorkflowStepController extends Controller
 
         $projectPath = $this->locator->arbeitsverzeichnisProjectPath($project);
         if ($projectPath === null) {
-            throw ValidationException::withMessages(['freigabe_target_path' => __('Das Projektverzeichnis für Projekt :pn wurde im Arbeitsverzeichnis nicht gefunden.', ['pn' => $project->source_pn])]);
+            throw ValidationException::withMessages(['freigabe_target_path' => __('Im Arbeitsverzeichnis gibt es keinen Ordner, der mit :pn beginnt. Den Projektordner können Sie über das Verzeichnis-Symbol neben der Projektnummer anlegen.', ['pn' => $project->source_pn])]);
         }
 
         $targetPath = trim((string) $request->input('freigabe_target_path'));

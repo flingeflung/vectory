@@ -2,7 +2,7 @@
     Zeilen der Projektübersicht - eigenes Partial, von index() (erster
     Batch) UND more() (Nachladen beim Scrollen) genutzt. Erwartet dieselben
     Variablen wie bisher inline in index.blade.php: $projects, $columns,
-    $sort, $direction, $filters, $favoriteProjectIds, $directoryStatuses,
+    $sort, $direction, $filters, $favoriteProjectIds, $directoryStatuses, $directorySource,
     $graphicOrderSummaries.
 --}}
 @forelse ($projects as $project)
@@ -57,7 +57,9 @@
                 @if (in_array($project->id, $favoriteProjectIds, true))
                     <x-favorite-star :project="$project" :is-favorite="true" size="h-3.5 w-3.5" class="shrink-0" />
                 @endif
-                <x-project-directory-status :project="$project" :status="$directoryStatuses[$project->id]" />
+                @if ($directorySource)
+                    <x-project-directory-status :project="$project" :status="$directoryStatuses[$project->id]" :source="$directorySource" />
+                @endif
             </span>
         </td>
         @foreach ($columns as $column)

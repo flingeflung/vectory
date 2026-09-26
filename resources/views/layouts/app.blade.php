@@ -2923,11 +2923,25 @@
             (function () {
                 const body = () => document.getElementById('project-directory-content-body');
 
-                window.openProjectDirectoryContent = async (projectId) => {
+                let current = { projectId: null, source: null };
+
+                const load = async (projectId, source) => {
+                    current = { projectId, source };
+                    const query = source ? `?quelle=${source}` : '';
+                    body().innerHTML = await fetch(`/projekte/${projectId}/verzeichnis${query}`).then((r) => r.text());
+                };
+
+                // Ohne source: Standard (AV, sonst SV) - entscheidet der Server anhand der Rechte.
+                window.openProjectDirectoryContent = async (projectId, source = null) => {
                     body().innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
                     window.dispatchEvent(new CustomEvent('open-modal', { detail: 'project-directory-content' }));
-                    body().innerHTML = await fetch(`/projekte/${projectId}/verzeichnis`).then((r) => r.text());
+                    await load(projectId, source);
                 };
+
+                window.switchProjectDirectoryTab = (projectId, source) => load(projectId, source);
+
+                // Nach dem Anlegen eines Projektordners: offenes Overlay aktualisieren.
+                window.reloadProjectDirectoryContent = () => (current.projectId ? load(current.projectId, current.source) : null);
             })();
         </script>
 
@@ -3100,9 +3114,11 @@
                 const errorBox = document.getElementById('project-directory-create-error');
                 const submitBtn = document.getElementById('project-directory-create-submit');
                 let currentProjectId = null;
+                let currentSource = 'sv';
 
-                window.openProjectDirectoryCreate = (projectId, suggestedName) => {
+                window.openProjectDirectoryCreate = (projectId, suggestedName, source = 'sv') => {
                     currentProjectId = projectId;
+                    currentSource = source;
                     nameInput.value = suggestedName;
                     errorBox.hidden = true;
                     window.dispatchEvent(new CustomEvent('open-modal', { detail: 'project-directory-create' }));
@@ -3115,7 +3131,7 @@
                     const response = await fetch(`/projekte/${currentProjectId}/verzeichnis`, {
                         method: 'POST',
                         headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: new URLSearchParams({ folder_name: nameInput.value }),
+                        body: new URLSearchParams({ folder_name: nameInput.value, quelle: currentSource }),
                     });
 
                     if (!response.ok) {
@@ -3134,6 +3150,7 @@
 
                     window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-directory-create' }));
                     await window.refreshUnderlyingProject(currentProjectId);
+                    await window.reloadProjectDirectoryContent();
                 });
             })();
         </script>

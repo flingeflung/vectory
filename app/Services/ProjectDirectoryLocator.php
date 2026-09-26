@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Project;
 use App\Models\Tenant;
+use App\Models\User;
 
 /**
  * Findet/erstellt/listet das Dateisystem-Verzeichnis eines Projekts, analog
@@ -53,11 +54,46 @@ class ProjectDirectoryLocator
 
     private const ARCHIVE_DIRNAME = '_Archiv';
 
+    /** Arbeitsverzeichnis (lokal, für alle sichtbar). */
+    public const SOURCE_AV = 'av';
+
+    /** Gesperrtes Projektverzeichnis (Vectory-seitig, nur mit Recht project.directory.locked). */
+    public const SOURCE_SV = 'sv';
+
     public function basePath(int $tenantId): ?string
     {
         $value = Tenant::query()->where('id', $tenantId)->value('project_path');
 
         return $value !== null && trim($value) !== '' ? rtrim($value, '\\/') : null;
+    }
+
+    public function basePathFor(int $tenantId, string $source): ?string
+    {
+        return $source === self::SOURCE_AV ? $this->arbeitsverzeichnisBasePath($tenantId) : $this->basePath($tenantId);
+    }
+
+    /**
+     * Welche Verzeichnisse dieser Nutzer bei diesem Kunden sehen darf, in
+     * Anzeigereihenfolge (Ralf, 2026-09-26: AV ist Standard, das SV nur
+     * mit Recht project.directory.locked und ohne gar nicht erst
+     * angezeigt). Das AV erscheint nur, wenn der Kunde eins konfiguriert
+     * hat.
+     *
+     * @return list<string> Teilmenge von [SOURCE_AV, SOURCE_SV]
+     */
+    public function visibleSources(int $tenantId, ?User $user): array
+    {
+        $sources = [];
+
+        if ($this->arbeitsverzeichnisBasePath($tenantId) !== null) {
+            $sources[] = self::SOURCE_AV;
+        }
+
+        if ($user?->can('project.directory.locked')) {
+            $sources[] = self::SOURCE_SV;
+        }
+
+        return $sources;
     }
 
     /**
@@ -193,9 +229,9 @@ class ProjectDirectoryLocator
      * @param  iterable<Project>  $projects
      * @return array<int, array{status: string, path: ?string, archived: bool}> Projekt-ID => Status
      */
-    public function statusesForProjects(iterable $projects, int $tenantId): array
+    public function statusesForProjects(iterable $projects, int $tenantId, string $source = self::SOURCE_SV): array
     {
-        $basePath = $this->basePath($tenantId);
+        $basePath = $this->basePathFor($tenantId, $source);
 
         if ($basePath === null) {
             return collect($projects)->mapWithKeys(fn (Project $p) => [$p->id => ['status' => 'not_configured', 'path' => null, 'archived' => false]])->all();
@@ -213,9 +249,9 @@ class ProjectDirectoryLocator
     /**
      * @return array{status: string, path: ?string, archived: bool}
      */
-    public function statusForProject(Project $project): array
+    public function statusForProject(Project $project, string $source = self::SOURCE_SV): array
     {
-        $basePath = $this->basePath($project->tenant_id);
+        $basePath = $this->basePathFor($project->tenant_id, $source);
 
         if ($basePath === null) {
             return ['status' => 'not_configured', 'path' => null, 'archived' => false];

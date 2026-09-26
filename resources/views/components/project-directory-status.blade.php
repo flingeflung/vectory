@@ -1,4 +1,4 @@
-@props(['project', 'status', 'suggestedFolderName' => null])
+@props(['project', 'status', 'source' => 'sv', 'suggestedFolderName' => null])
 
 <span
     x-data="{ copied: false }"
@@ -45,7 +45,7 @@
             @if ($suggestedFolderName)
                 <button
                     type="button"
-                    onclick="window.openProjectDirectoryCreate({{ $project->id }}, {{ \Illuminate\Support\Js::from($suggestedFolderName) }})"
+                    onclick="window.openProjectDirectoryCreate({{ $project->id }}, {{ \Illuminate\Support\Js::from($suggestedFolderName) }}, {{ \Illuminate\Support\Js::from($source) }})"
                     class="shrink-0 hover:opacity-75"
                     title="{{ __('Kein Projektverzeichnis vorhanden - anlegen') }}"
                 >

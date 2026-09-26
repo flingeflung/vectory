@@ -269,11 +269,16 @@ class ProjectController extends Controller
             Project::preloadStammInfo($projects);
         }
 
+        // Verzeichnis-Symbol zeigt das erste für diesen Nutzer sichtbare
+        // Verzeichnis (AV, sonst SV nur mit Recht, sonst gar keins).
+        $directorySource = $this->directoryLocator->visibleSources(CurrentTenant::id(), $user)[0] ?? null;
+
         return [
             'projects' => $projects,
             'favoriteProjectIds' => Favorite::where('user_id', $user->id)->pluck('project_id')->all(),
             'graphicOrderSummaries' => $graphicOrderSummaries,
-            'directoryStatuses' => $this->directoryLocator->statusesForProjects($projects, CurrentTenant::id()),
+            'directorySource' => $directorySource,
+            'directoryStatuses' => $directorySource ? $this->directoryLocator->statusesForProjects($projects, CurrentTenant::id(), $directorySource) : [],
         ];
     }
 
@@ -887,6 +892,7 @@ class ProjectController extends Controller
     {
         [$sort, $direction] = $this->sortFromRequest($request);
         $filters = ProjectFilterCatalog::filtersFromRequest($request);
+        $directorySource = $this->directoryLocator->visibleSources($project->tenant_id, $request->user())[0] ?? null;
 
         return [
             'project' => $project->loadMissing(['hauptprojekt', 'unterprojekte' => fn ($query) => $query->orderBy('source_pn'), 'markets', 'projectPeople.person', 'projectPeople.functionGroup', 'workflow', 'activities.user', 'projectWorkflowSteps.workflowStep.functionGroups', 'projectWorkflowSteps.people.functionGroup', 'projectWorkflowSteps.people.person', 'graphicOrders.initiatedBy', 'graphicOrders.illustrator', 'projectChecklists.checklist.sections.points', 'projectChecklists.activatedBy', 'projectChecklistPoints.doneBy', 'products.productGroup', 'products.projects:id,source_pn,title']),
@@ -926,7 +932,8 @@ class ProjectController extends Controller
             'filters' => $filters,
             'previousProject' => $this->adjacentProject($sort, $direction, $filters, $project, 'previous'),
             'nextProject' => $this->adjacentProject($sort, $direction, $filters, $project, 'next'),
-            'directoryStatus' => $this->directoryLocator->statusForProject($project),
+            'directorySource' => $directorySource,
+            'directoryStatus' => $directorySource ? $this->directoryLocator->statusForProject($project, $directorySource) : null,
             'directorySuggestedFolderName' => $this->directoryLocator->suggestedFolderName($project),
         ];
     }

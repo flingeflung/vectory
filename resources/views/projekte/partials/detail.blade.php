@@ -43,7 +43,9 @@
 
             <x-favorite-star :project="$project" :is-favorite="$project->isFavoritedBy(auth()->user())" />
 
-            <x-project-directory-status :project="$project" :status="$directoryStatus" :suggested-folder-name="$directorySuggestedFolderName" />
+            @if ($directorySource)
+                <x-project-directory-status :project="$project" :status="$directoryStatus" :source="$directorySource" :suggested-folder-name="$directorySuggestedFolderName" />
+            @endif
 
             <div class="flex items-center text-gray-500">
                 @php
