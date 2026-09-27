@@ -20,10 +20,21 @@
     das nächste Speichern dabei die eigenen Planstunden verwirft (siehe
     ProjectController::update(), Feld "relink_template") - das Aufschließen
     selbst ändert noch nichts, erst das bestätigte Speichern danach.
+
+    Ralf-Bug-Report, 2026-09-28: "wenn ich bei Zeiten gelöst habe, wird
+    Details nicht aktualisiert" - das Schloss hier wird nur beim initialen
+    Laden serverseitig gerendert (Blade @if), das Lösen im Zeiten-Tab tauscht
+    aber nur seinen eigenen Block (#project-zeiten-body) aus, ohne dass
+    Details davon erfährt. Fix: Schloss-Block immer im DOM (Alpine
+    <template x-if>, nicht mehr Blade @if), reagiert per globalem Event
+    "planstunden-linked-state-changed" (ausgelöst von zeiten-body.blade.php
+    nach erfolgreichem Lösen) - gleiches Live-Sync-Prinzip wie bei den
+    anderen geteilten Fallback-Werten im Projekt-Overlay.
 --}}
 <div
     x-data="{
         templateId: {{ \Illuminate\Support\Js::from((string) old('project_template_id', $project->project_template_id ?? '')) }},
+        hasOwnHours: {{ \Illuminate\Support\Js::from($project->functionGroupHours->isNotEmpty()) }},
         locked: {{ \Illuminate\Support\Js::from($project->functionGroupHours->isNotEmpty()) }},
         async toggleLock() {
             if (! this.locked) {
@@ -39,6 +50,7 @@
             this.locked = false;
         },
     }"
+    x-on:planstunden-linked-state-changed.window="hasOwnHours = true; locked = true;"
 >
     <div class="flex items-center gap-1.5">
         <label class="block text-xs text-gray-500">{{ __('Aufwandsschablone') }}</label>
@@ -48,8 +60,9 @@
             @click="window.openProjectTemplateInfo(templateId)"
             :title="__('Merkmale der gewählten Schablone ansehen')"
         />
-        {{-- Schloss-Icon nur relevant, wenn es überhaupt eigene (gelöste) Planstunden gibt. --}}
-        @if ($project->functionGroupHours->isNotEmpty())
+        {{-- Schloss-Icon nur relevant, wenn es überhaupt eigene (gelöste) Planstunden gibt -
+             als <template x-if>, damit es auch ohne Neuladen erscheinen kann (siehe oben). --}}
+        <template x-if="hasOwnHours">
             <button
                 type="button"
                 @click="toggleLock()"
@@ -64,8 +77,10 @@
                     <path d="M10 2a4 4 0 00-4 4v2H5a1 1 0 00-1 1v8a1 1 0 001 1h10a1 1 0 001-1V9a1 1 0 00-1-1H8V6a2 2 0 114 0 1 1 0 102 0 4 4 0 00-4-4z" />
                 </svg>
             </button>
+        </template>
+        <template x-if="hasOwnHours">
             <input type="hidden" name="relink_template" :value="locked ? '0' : '1'">
-        @endif
+        </template>
     </div>
     <select
         name="project_template_id"
@@ -86,10 +101,10 @@
             >{{ $template->name }}{{ ! $template->active ? ' [i]' : '' }}</option>
         @endforeach
     </select>
-    @if ($project->functionGroupHours->isNotEmpty())
+    <template x-if="hasOwnHours">
         <p class="mt-0.5 flex items-center gap-1 text-[11px] text-gray-400" x-show="locked">
             <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
             {{ __('Verbindung gelöst - Planstunden sind unabhängig (siehe Reiter „Zeiten").') }}
         </p>
-    @endif
+    </template>
 </div>

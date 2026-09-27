@@ -42,6 +42,10 @@
                         return;
                     }
                     document.getElementById('project-zeiten-body').outerHTML = await response.text();
+                    // Ralf-Bug-Report, 2026-09-28: Details-Tab (Schloss am Schablonen-Feld)
+                    // bekam das Lösen sonst nicht mit, da nur dieser Block hier getauscht wird -
+                    // siehe project_template.blade.php.
+                    window.dispatchEvent(new CustomEvent('planstunden-linked-state-changed'));
                 },
             }"
             class="mb-4 rounded-md border border-gray-200 bg-gray-50 px-3 py-2"
