@@ -3058,7 +3058,7 @@
                     const wouldLose = boxes.some((box) => box.checked && ! hauptprojektIds.includes(box.value));
                     if (wouldLose && ! await window.confirmDialog({
                         title: {{ \Illuminate\Support\Js::from(__('Vom Hauptprojekt kopieren?')) }},
-                        message: {{ \Illuminate\Support\Js::from(__('Ihre eigene Auswahl weicht von der des Hauptprojekts ab. Beim Übernehmen gehen die abweichenden Häkchen verloren.')) }},
+                        message: {{ \Illuminate\Support\Js::from(__('Ihre eigene Auswahl weicht von der des Hauptprojekts ab. Beim Übernehmen gehen die abweichenden Einstellungen verloren.')) }},
                         confirmLabel: {{ \Illuminate\Support\Js::from(__('Übernehmen')) }},
                         cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
                     })) {
