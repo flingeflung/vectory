@@ -56,7 +56,7 @@
                 const fd = new FormData();
                 fd.append('name', this.newGroupName.trim());
                 const response = await fetch({{ \Illuminate\Support\Js::from(route('projektgruppen.store')) }}, {
-                    method: 'POST', body: fd, headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                    method: 'POST', body: fd, headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'application/json' },
                 });
                 const html = await response.text();
                 // Neue Gruppe direkt auswählen (Ralf, 2026-09-13) - Store VOR
@@ -75,7 +75,7 @@
                 fd.append('name', this.renameValue.trim());
                 fd.append('_method', 'PATCH');
                 await fetch('/projektgruppen/' + $store.projectGrouping.groupId, {
-                    method: 'POST', body: fd, headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                    method: 'POST', body: fd, headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'application/json' },
                 });
                 await this.refresh();
             },
@@ -90,7 +90,7 @@
                         : {{ \Illuminate\Support\Js::from(__('Diese Gruppe wirklich endgültig löschen?')) }};
                 if (! await window.confirmDialog({ title: {{ \Illuminate\Support\Js::from(__('Gruppe löschen?')) }}, message, confirmLabel: {{ \Illuminate\Support\Js::from(__('Löschen')) }}, cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }} })) return;
                 const response = await fetch('/projektgruppen/' + $store.projectGrouping.groupId, {
-                    method: 'DELETE', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                    method: 'DELETE', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'application/json' },
                 });
                 if (! response.ok) {
                     await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Diese Gruppe ist Teil eines Verbunds - bitte erst den Verbund auflösen.')) }});
@@ -108,7 +108,7 @@
                     cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
                 })) return;
                 const response = await fetch('/projektgruppen/' + $store.projectGrouping.groupId + '/verlassen', {
-                    method: 'DELETE', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                    method: 'DELETE', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'application/json' },
                 });
                 if (! response.ok) {
                     await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Diese Gruppe ist Teil eines Verbunds - bitte erst den Verbund auflösen.')) }});
@@ -126,7 +126,7 @@
                     cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
                 })) return;
                 const response = await fetch('/projektgruppen/' + $store.projectGrouping.groupId + '/leeren', {
-                    method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                    method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'application/json' },
                 });
                 if (! response.ok) {
                     await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Diese Gruppe ist Teil eines Verbunds - bitte erst den Verbund auflösen.')) }});
@@ -147,7 +147,7 @@
             --}}
             async addThisProject() {
                 const response = await fetch('/projektgruppen/' + $store.projectGrouping.groupId + '/projekte/{{ $project->id }}', {
-                    method: 'PUT', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                    method: 'PUT', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'application/json' },
                 });
                 if (! response.ok || response.redirected) {
                     await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Dieses Projekt ist bereits Teil eines anderen Verbunds.')) }});
@@ -159,7 +159,7 @@
             },
             async removeThisProject() {
                 const response = await fetch('/projektgruppen/' + $store.projectGrouping.groupId + '/projekte/{{ $project->id }}', {
-                    method: 'DELETE', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                    method: 'DELETE', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'application/json' },
                 });
                 if (! response.ok) {
                     await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Diese Gruppe ist Teil eines Verbunds - bitte erst den Verbund auflösen.')) }});
@@ -185,7 +185,7 @@
             async addAllFiltered() {
                 const before = $store.projectGrouping.memberIds.length;
                 const response = await fetch('/projektgruppen/' + $store.projectGrouping.groupId + '/alle' + window.location.search, {
-                    method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                    method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'application/json' },
                 });
                 if (! response.ok) {
                     await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Fehler beim Hinzufügen. Bitte erneut versuchen.')) }});
@@ -202,7 +202,7 @@
                 const before = $store.projectGrouping.memberIds.length;
                 const url = '/projektgruppen/' + $store.projectGrouping.groupId + '/alle' + window.location.search;
                 const csrfToken = document.querySelector('meta[name=csrf-token]').content;
-                let response = await fetch(url, { method: 'DELETE', headers: { 'X-CSRF-TOKEN': csrfToken } });
+                let response = await fetch(url, { method: 'DELETE', headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' } });
                 {{--
                     "Projektverbund" (Ralf, 2026-09-14): steckt das
                     Hauptprojekt mit in der Auswahl, löst Massenentfernen
@@ -222,7 +222,7 @@
                         });
                         if (! confirmed) return;
                         const separator = window.location.search ? '&' : '?';
-                        response = await fetch(url + separator + 'confirm_dissolve=1', { method: 'DELETE', headers: { 'X-CSRF-TOKEN': csrfToken } });
+                        response = await fetch(url + separator + 'confirm_dissolve=1', { method: 'DELETE', headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' } });
                     }
                 }
                 if (! response.ok) {
@@ -249,7 +249,7 @@
             async toggleShare(userId, checked) {
                 const url = '/projektgruppen/' + $store.projectGrouping.groupId + '/personen/' + userId;
                 const html = await fetch(url, {
-                    method: checked ? 'POST' : 'DELETE', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                    method: checked ? 'POST' : 'DELETE', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'application/json' },
                 }).then((r) => r.text());
                 document.getElementById('project-group-panel-body-{{ $project?->id ?? 'uebersicht' }}').innerHTML = html;
             },
