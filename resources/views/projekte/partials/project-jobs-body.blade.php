@@ -6,12 +6,19 @@
     globale Modal "project-time-tracking" (siehe layouts/app.blade.php).
 
     Reiter-Leiste analog zur Verzeichnis-Vorschau (Arbeitsverzeichnis/
-    Gesperrtes Verzeichnis, 2026-09-26) - bisher nur EIN Reiter, bewusst
-    schon als Reiter angelegt, weil "Buchungen" (Slice 2) als zweiter
-    dazukommt.
+    Gesperrtes Verzeichnis, 2026-09-26). "Buchungen" (Slice 2, 2026-09-27)
+    ist für jeden da (Buchen ist keine Projekt-Bearbeitung) - dieser Reiter
+    hier nur, solange man project.edit hat (siehe Controller).
 --}}
 <div class="flex gap-1 border-b border-gray-200 px-4 pt-2">
     <span class="-mb-px border-b-2 border-indigo-500 px-3 py-1.5 text-xs font-medium text-gray-900">{{ __('Verknüpfte Jobs') }}</span>
+    <button
+        type="button"
+        onclick="window.switchProjectTimeTrackingTab({{ $project->id }}, 'buchungen')"
+        class="-mb-px border-b-2 border-transparent px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700"
+    >
+        {{ __('Buchungen') }}
+    </button>
 </div>
 
 <form id="project-jobs-form" x-data="{ dirty: false }" @input="dirty = window.formIsDirty($el)" method="POST" action="{{ route('projekte.jobs.update', $project) }}" class="flex max-h-[75vh] flex-col">

@@ -3098,6 +3098,47 @@
                     window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-time-tracking' }));
                     await window.refreshUnderlyingProject(currentProjectId);
                 });
+
+                // Reiterwechsel im Zeiterfassung-Overlay (Slice 2, 2026-09-27) - analog
+                // switchProjectDirectoryTab bei der Verzeichnis-Vorschau, nur zwei getrennte
+                // Endpunkte statt einer gemeinsamen ?quelle=-URL, weil "Verknüpfte Jobs" und
+                // "Buchungen" inhaltlich verschiedene Dinge sind.
+                window.switchProjectTimeTrackingTab = async (projectId, tab) => {
+                    const url = tab === 'jobs' ? `/projekte/${projectId}/jobs?tab=jobs` : `/projekte/${projectId}/stunden`;
+                    body().innerHTML = await fetch(url).then((r) => r.text());
+                };
+
+                // Buchungsformular (Slice 2): Speichern lädt nur den Reiter-Inhalt neu (Overlay
+                // bleibt offen - man bucht meist mehrere Einträge nacheinander), kein Schließen.
+                document.addEventListener('submit', async (event) => {
+                    if (event.target.id !== 'project-hours-form') {
+                        return;
+                    }
+
+                    event.preventDefault();
+
+                    const response = await fetch(event.target.action, {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
+                        body: new FormData(event.target),
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json().catch(() => null);
+                        const firstFieldError = error && error.errors ? Object.values(error.errors)[0][0] : null;
+                        await window.notifyDialog(firstFieldError || (error && error.message) || {{ \Illuminate\Support\Js::from(__('Buchen fehlgeschlagen. Bitte erneut versuchen.')) }});
+                        return;
+                    }
+
+                    body().innerHTML = await response.text();
+                });
+
+                window.deleteProjectHourEntry = async (projectId, entryId) => {
+                    body().innerHTML = await fetch(`/projekte/${projectId}/stunden/${entryId}`, {
+                        method: 'DELETE',
+                        headers: { 'X-CSRF-TOKEN': csrfToken },
+                    }).then((r) => r.text());
+                };
             })();
         </script>
 

@@ -40,8 +40,12 @@ class JobloadController extends Controller
             })
             ->where('job_types.active', true)->orderBy('job_groups.sort')->orderBy('job_groups.name')->orderBy('job_types.code')->orderBy('job_types.name')
             ->get(['job_types.id', 'job_types.code', 'job_types.name', 'job_groups.name as group_name']);
+        // whereNull('project_id'): das klassische Wochenraster zeigt (Slice 2, 2026-09-27) bewusst
+        // nur die manuell gebuchten Stunden - projektbezogene Buchungen bekommen ihre eigene, davon
+        // getrennte Anzeige (Kombination beider erst in Slice 3, siehe Roadmap-Backlog).
         $hours = DB::table('job_hours')->where('tenant_id', $tenantId)
-            ->where('person_id', $personId)->whereBetween('work_date', [$week->toDateString(), $week->addDays(6)->toDateString()])
+            ->where('person_id', $personId)->whereNull('project_id')
+            ->whereBetween('work_date', [$week->toDateString(), $week->addDays(6)->toDateString()])
             ->get()->groupBy('job_type_id')->map(fn ($entries) => $entries->pluck('hours', 'work_date'));
 
         return view('jobload.index', compact('week', 'days', 'jobs', 'availableJobs', 'hours', 'showWeekends', 'hourDecimals', 'timeGrid', 'stepHundredths'));
@@ -103,8 +107,10 @@ class JobloadController extends Controller
             }
         }
         DB::transaction(function () use ($tenantId, $personId, $week, $entries, $jobIds) {
+            // whereNull('project_id'): trifft NUR die klassische Buchung (Slice 2, 2026-09-27) -
+            // projektbezogene Buchungen desselben Jobs/Tages bleiben unangetastet.
             DB::table('job_hours')->where('tenant_id', $tenantId)->where('person_id', $personId)
-                ->whereIn('job_type_id', $jobIds)
+                ->whereIn('job_type_id', $jobIds)->whereNull('project_id')
                 ->whereBetween('work_date', [$week->toDateString(), $week->addDays(6)->toDateString()])->delete();
             if ($entries) {
                 DB::table('job_hours')->insert($entries);

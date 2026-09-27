@@ -20,11 +20,23 @@ use Illuminate\View\View;
  */
 class ProjectJobTypeController extends Controller
 {
+    public function __construct(private readonly ProjectHourController $hourController) {}
+
     public function form(Request $request, Project $project): View
     {
-        abort_unless($request->user()->can('project.edit'), 403);
-
         $tenantId = CurrentTenant::id();
+        $canEditJobs = $request->user()->can('project.edit');
+
+        // Standard-Reiter beim Öffnen (Ralf, 2026-09-27): "Verknüpfte Jobs" nur für Bearbeitende,
+        // solange das Projekt noch KEINE verknüpften Jobs hat - sonst (oder ohne Bearbeitungsrecht,
+        // das Buchen selbst ist KEIN project.edit) direkt der Buchungs-Reiter, spart einen Klick.
+        // "?tab=jobs" (expliziter Reiterwechsel-Klick) erzwingt den Jobs-Reiter, sofern erlaubt.
+        $hasJobs = DB::table('project_job_types')->where('project_id', $project->id)->exists();
+        if ((! $canEditJobs || $hasJobs) && $request->query('tab') !== 'jobs') {
+            return $this->hourController->tab($request, $project);
+        }
+
+        abort_unless($canEditJobs, 403);
 
         $availableJobs = DB::table('job_types')
             ->where('job_types.tenant_id', $tenantId)
@@ -52,6 +64,7 @@ class ProjectJobTypeController extends Controller
             'selectedIds' => $selectedIds,
             'hauptprojektJobIds' => $hauptprojektJobIds,
             'hauptprojektTitle' => $project->hauptprojekt?->source_pn,
+            'canEditJobs' => $canEditJobs,
         ]);
     }
 

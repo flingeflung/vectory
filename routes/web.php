@@ -45,6 +45,7 @@ use App\Http\Controllers\ProjectCopyController;
 use App\Http\Controllers\ProjectDirectoryController;
 use App\Http\Controllers\ProjectFormatController;
 use App\Http\Controllers\ProjectGroupController;
+use App\Http\Controllers\ProjectHourController;
 use App\Http\Controllers\ProjectJobTypeController;
 use App\Http\Controllers\ProjectNoteController;
 use App\Http\Controllers\ProjectProductController;
@@ -156,6 +157,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/projekte/{project}/jobs', [ProjectJobTypeController::class, 'form'])->name('projekte.jobs.form');
     Route::post('/projekte/{project}/jobs', [ProjectJobTypeController::class, 'update'])->name('projekte.jobs.update');
+
+    Route::get('/projekte/{project}/stunden', [ProjectHourController::class, 'tab'])->name('projekte.stunden.tab');
+    Route::post('/projekte/{project}/stunden', [ProjectHourController::class, 'store'])->name('projekte.stunden.store');
+    Route::delete('/projekte/{project}/stunden/{jobHour}', [ProjectHourController::class, 'destroy'])->name('projekte.stunden.destroy');
 
     Route::get('/projekte/{project}/kopieren', [ProjectCopyController::class, 'form'])->name('projekte.kopieren.form');
     Route::post('/projekte/{project}/kopieren', [ProjectCopyController::class, 'store'])->name('projekte.kopieren.store');

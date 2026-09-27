@@ -202,17 +202,20 @@
                     >
                         {{ __('Gruppieren') }}
                     </button>
-                    @can('project.edit')
-                        {{-- Slice 1 der Zeiterfassung/Ressourcenplanung-Idee (Ralf, 2026-09-27) - welche Jobs für
-                             dieses Projekt direkt buchbar sind. Noch keine Stundenbuchung selbst. --}}
-                        <button
-                            type="button"
-                            @click="window.openProjectTimeTracking({{ $project->id }})"
-                            class="{{ $secondaryBtn }}"
-                        >
-                            {{ __('Zeiterfassung') }}
-                        </button>
-                    @endcan
+                    {{--
+                        Zeiterfassung/Ressourcenplanung-Idee (Ralf, 2026-09-27) - Reiter "Verknüpfte
+                        Jobs" (welche Jobs für dieses Projekt direkt buchbar sind) nur mit
+                        project.edit, "Buchungen" (eigene Stunden) dagegen für jeden - Buchen ist
+                        keine Projekt-Bearbeitung. Button deshalb ungegatet, wie Illustrationsauftrag/
+                        Gruppieren; die Rechteprüfung sitzt pro Reiter im Controller.
+                    --}}
+                    <button
+                        type="button"
+                        @click="window.openProjectTimeTracking({{ $project->id }})"
+                        class="{{ $secondaryBtn }}"
+                    >
+                        {{ __('Zeiterfassung') }}
+                    </button>
                     {{-- weitere Aktions-Buttons (Aufgabe zuweisen, -> Projekt-Pool, Fehlercheck, Sichtbarkeit, Sperrmail, ...) folgen später. --}}
                 </div>
             </div>
