@@ -14,11 +14,11 @@
     <span class="-mb-px border-b-2 border-indigo-500 px-3 py-1.5 text-xs font-medium text-gray-900">{{ __('Verknüpfte Jobs') }}</span>
 </div>
 
-<form id="project-jobs-form" method="POST" action="{{ route('projekte.jobs.update', $project) }}" class="flex max-h-[75vh] flex-col">
+<form id="project-jobs-form" x-data="{ dirty: false }" @input="dirty = window.formIsDirty($el)" method="POST" action="{{ route('projekte.jobs.update', $project) }}" class="flex max-h-[75vh] flex-col">
     @csrf
     <div class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
         <div class="mb-3 flex items-start justify-between gap-3">
-            <p class="text-xs text-gray-500">{{ __('Diese Jobs können für Projekt :pn direkt gebucht werden.', ['pn' => $project->source_pn]) }}</p>
+            <p class="text-xs text-gray-500">{{ __('Auf diese Jobs kann von Projekt :pn direkt gebucht werden.', ['pn' => $project->source_pn]) }}</p>
 
             @if ($project->verbund_rolle === 2)
                 {{--
@@ -61,7 +61,7 @@
             {{ __('Abbrechen') }}
         </button>
         @if ($availableJobs->isNotEmpty())
-            <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
+            <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
                 {{ __('Speichern') }}
             </button>
         @endif

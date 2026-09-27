@@ -3032,6 +3032,14 @@
                     body().innerHTML = {{ \Illuminate\Support\Js::from('<div class="px-4 py-3">'.__('Lädt…').'</div>') }};
                     window.dispatchEvent(new CustomEvent('open-modal', { detail: 'project-time-tracking' }));
                     body().innerHTML = await fetch(`/projekte/${projectId}/jobs`).then((r) => r.text());
+                    // Ausgangszustand SOFORT sichern, nicht dem globalen focusin-Fallback
+                    // überlassen: Bei einer Checkbox als allererster Interaktion fallen
+                    // Fokus und Änderung in denselben Klick, der Fallback würde dann schon
+                    // den geänderten Stand als "Ausgangszustand" festhalten.
+                    const form = document.getElementById('project-jobs-form');
+                    if (form) {
+                        form.dataset.dirtyBaseline = window.formSnapshot(form);
+                    }
                 };
 
                 // "Vom Hauptprojekt kopieren" (Ralf, 2026-09-27): Skripte innerhalb per fetch()
@@ -3044,6 +3052,13 @@
                     document.querySelectorAll('#project-jobs-form input[name="jobs[]"]').forEach((box) => {
                         box.checked = hauptprojektIds.includes(box.value);
                     });
+                    // Checked-Zuweisung per Skript löst kein 'input'-Event aus (anders als ein
+                    // echter Klick) - der Speichern-Button (x-show="dirty") bliebe sonst
+                    // unsichtbar, obwohl sich die Auswahl sichtbar geändert hat.
+                    const form = document.getElementById('project-jobs-form');
+                    if (form) {
+                        Alpine.$data(form).dirty = window.formIsDirty(form);
+                    }
                 };
 
                 document.addEventListener('submit', async (event) => {
