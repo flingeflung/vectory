@@ -1,0 +1,79 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Project;
+use App\Support\CurrentTenant;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
+
+/**
+ * Slice 1 der Zeiterfassung/Ressourcenplanung-Idee (Ralf, 2026-09-27, siehe
+ * Roadmap-Backlog): welche Jobs (job_types) für dieses Projekt relevant
+ * sind - reine Zuordnung, noch KEINE Stundenbuchung (kommt als eigener,
+ * separat testbarer Schritt). Gleiches Auswahl-Muster wie
+ * JobloadController::saveJobs() (dort: Person wählt ihre eigenen Jobs),
+ * hier: Projekt statt Person.
+ */
+class ProjectJobTypeController extends Controller
+{
+    public function form(Request $request, Project $project): View
+    {
+        abort_unless($request->user()->can('project.edit'), 403);
+
+        $tenantId = CurrentTenant::id();
+
+        $availableJobs = DB::table('job_types')
+            ->where('job_types.tenant_id', $tenantId)
+            ->where('job_types.active', true)
+            ->leftJoin('job_groups', function ($join) use ($tenantId) {
+                $join->on('job_groups.id', '=', 'job_types.job_group_id')->where('job_groups.tenant_id', '=', $tenantId);
+            })
+            ->orderBy('job_groups.sort')->orderBy('job_groups.name')->orderBy('job_types.code')->orderBy('job_types.name')
+            ->select('job_types.id', 'job_types.code', 'job_types.name', 'job_groups.name as group_name')
+            ->get();
+
+        $selectedIds = DB::table('project_job_types')->where('project_id', $project->id)->pluck('job_type_id')->all();
+
+        return view('projekte.partials.project-jobs-body', [
+            'project' => $project,
+            'availableJobs' => $availableJobs,
+            'selectedIds' => $selectedIds,
+        ]);
+    }
+
+    public function update(Request $request, Project $project): Response
+    {
+        abort_unless($request->user()->can('project.edit'), 403);
+
+        $tenantId = CurrentTenant::id();
+
+        $data = $request->validate([
+            'jobs' => ['array'],
+            'jobs.*' => ['integer', 'distinct'],
+        ]);
+        $selected = array_map('intval', $data['jobs'] ?? []);
+
+        $valid = DB::table('job_types')->where('tenant_id', $tenantId)->where('active', true)
+            ->whereIn('id', $selected)->count();
+        if ($valid !== count($selected)) {
+            throw ValidationException::withMessages(['jobs' => __('Ungültiger Job.')]);
+        }
+
+        DB::transaction(function () use ($tenantId, $project, $selected) {
+            DB::table('project_job_types')->where('project_id', $project->id)
+                ->whereNotIn('job_type_id', $selected)->delete();
+            foreach ($selected as $jobId) {
+                DB::table('project_job_types')->updateOrInsert(
+                    ['project_id' => $project->id, 'job_type_id' => $jobId],
+                    ['tenant_id' => $tenantId]
+                );
+            }
+        });
+
+        return response()->noContent();
+    }
+}

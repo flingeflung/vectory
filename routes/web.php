@@ -45,6 +45,7 @@ use App\Http\Controllers\ProjectCopyController;
 use App\Http\Controllers\ProjectDirectoryController;
 use App\Http\Controllers\ProjectFormatController;
 use App\Http\Controllers\ProjectGroupController;
+use App\Http\Controllers\ProjectJobTypeController;
 use App\Http\Controllers\ProjectNoteController;
 use App\Http\Controllers\ProjectProductController;
 use App\Http\Controllers\ProjectScheduleController;
@@ -152,6 +153,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/projekte/{project}/verzeichnis', [ProjectDirectoryController::class, 'show'])->name('projekte.verzeichnis');
     Route::post('/projekte/{project}/verzeichnis', [ProjectDirectoryController::class, 'store'])->name('projekte.verzeichnis.store');
+
+    Route::get('/projekte/{project}/jobs', [ProjectJobTypeController::class, 'form'])->name('projekte.jobs.form');
+    Route::post('/projekte/{project}/jobs', [ProjectJobTypeController::class, 'update'])->name('projekte.jobs.update');
 
     Route::get('/projekte/{project}/kopieren', [ProjectCopyController::class, 'form'])->name('projekte.kopieren.form');
     Route::post('/projekte/{project}/kopieren', [ProjectCopyController::class, 'store'])->name('projekte.kopieren.store');

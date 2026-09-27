@@ -202,6 +202,17 @@
                     >
                         {{ __('Gruppieren') }}
                     </button>
+                    @can('project.edit')
+                        {{-- Slice 1 der Zeiterfassung/Ressourcenplanung-Idee (Ralf, 2026-09-27) - welche Jobs für
+                             dieses Projekt direkt buchbar sind. Noch keine Stundenbuchung selbst. --}}
+                        <button
+                            type="button"
+                            @click="window.openProjectJobs({{ $project->id }})"
+                            class="{{ $secondaryBtn }}"
+                        >
+                            {{ __('Jobs verknüpfen') }}
+                        </button>
+                    @endcan
                     {{-- weitere Aktions-Buttons (Aufgabe zuweisen, -> Projekt-Pool, Fehlercheck, Sichtbarkeit, Sperrmail, ...) folgen später. --}}
                 </div>
             </div>

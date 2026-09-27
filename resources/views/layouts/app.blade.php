@@ -2971,6 +2971,72 @@
         </script>
 
         {{--
+            Job-Projekt-Verknüpfung (Ralf, 2026-09-27, Slice 1 der Zeit-
+            erfassung/Ressourcenplanung-Idee, siehe Roadmap-Backlog) - welche
+            Jobs für dieses Projekt direkt buchbar sind. Gleiches Fetch-
+            Overlay-Prinzip wie project-directory-content oben, Speichern
+            läuft über den zentralen Submit-Handler unten (analog
+            activate-workflow-step).
+        --}}
+        <x-modal name="project-jobs" max-width="md">
+            <div class="flex max-h-[85vh] flex-col">
+                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Verknüpfte Jobs') }}</h3>
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-jobs' }))"
+                        class="text-gray-400 hover:text-gray-600"
+                        aria-label="{{ __('Schließen') }}"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="project-jobs-body" class="min-h-0 flex-1 overflow-y-auto text-sm">
+                    <div class="px-4 py-3">{{ __('Lädt…') }}</div>
+                </div>
+            </div>
+        </x-modal>
+
+        <script>
+            (function () {
+                const body = () => document.getElementById('project-jobs-body');
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                let currentProjectId = null;
+
+                window.openProjectJobs = async (projectId) => {
+                    currentProjectId = projectId;
+                    body().innerHTML = {{ \Illuminate\Support\Js::from('<div class="px-4 py-3">'.__('Lädt…').'</div>') }};
+                    window.dispatchEvent(new CustomEvent('open-modal', { detail: 'project-jobs' }));
+                    body().innerHTML = await fetch(`/projekte/${projectId}/jobs`).then((r) => r.text());
+                };
+
+                document.addEventListener('submit', async (event) => {
+                    if (event.target.id !== 'project-jobs-form') {
+                        return;
+                    }
+
+                    event.preventDefault();
+
+                    const response = await fetch(event.target.action, {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
+                        body: new FormData(event.target),
+                    });
+
+                    if (!response.ok) {
+                        await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Speichern fehlgeschlagen. Bitte erneut versuchen.')) }});
+                        return;
+                    }
+
+                    window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-jobs' }));
+                    await window.refreshUnderlyingProject(currentProjectId);
+                });
+            })();
+        </script>
+
+        {{--
             Ralf, 2026-09-19: Info-Button neben dem Projektschablone-Pulldown
             in den Projektdetails - reine Anzeige, gleiches Fetch-Overlay-
             Prinzip wie project-directory-content oben. Statischer Titel
