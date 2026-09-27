@@ -984,21 +984,35 @@ class ProjectController extends Controller
             ->groupBy('project_id')
             ->pluck('total', 'project_id');
 
-        $upRows = collect();
-        if (count($participantIds) > 1) {
-            $upRows = DB::table('projects')->where('hauptprojekt_id', $project->id)->where('verbund_rolle', 2)
-                ->orderBy('source_pn')->get(['id', 'source_pn', 'title'])
-                ->map(fn ($p) => [
-                    'id' => $p->id, 'label' => $p->source_pn, 'title' => $p->title,
-                    'isHauptprojekt' => false, 'hours' => (float) ($hoursByProject[$p->id] ?? 0),
-                ]);
-        }
-        $perProject = collect([[
-            'id' => $project->id, 'label' => $project->source_pn, 'title' => $project->title,
-            'isHauptprojekt' => $project->verbund_rolle === 1, 'hours' => (float) ($hoursByProject[$project->id] ?? 0),
-        ]])->concat($upRows);
+        // Planstunden (Ralf, 2026-09-27, siehe Roadmap-Backlog): jedes Projekt trägt seine
+        // eigenen (Project::effectivePlannedHours()) - im Verbund also NUR dann eigene, wenn
+        // dem Unterprojekt selbst eine Schablone/ein eigener Wert zugewiesen wurde. Ohne das
+        // bleibt es implizit beim gemeinsamen Plan des Hauptprojekts, das sich hier einfach
+        // daraus ergibt, dass nur die HP-Zeile einen Plan zeigt.
+        $participants = Project::withoutGlobalScope('tenant')
+            ->whereIn('id', $participantIds)
+            ->with('projectTemplate.functionGroups')
+            ->get()
+            ->keyBy('id');
+
+        $orderedIds = $project->verbund_rolle === 1
+            ? collect([$project->id])->concat($participants->except($project->id)->sortBy('source_pn')->pluck('id'))
+            : collect([$project->id]);
+
+        $perProject = $orderedIds->map(function ($id) use ($participants, $project, $hoursByProject) {
+            $p = $participants[$id];
+
+            return [
+                'id' => $p->id, 'label' => $p->source_pn, 'title' => $p->title,
+                'isHauptprojekt' => $p->id === $project->id && $project->verbund_rolle === 1,
+                'hours' => (float) ($hoursByProject[$p->id] ?? 0),
+                'plan' => $p->effectivePlannedHours(),
+            ];
+        });
 
         $total = (float) $perProject->sum('hours');
+        $planRows = $perProject->filter(fn ($row) => $row['plan'] !== null);
+        $planTotal = $planRows->isNotEmpty() ? (float) $planRows->sum('plan') : null;
 
         $byJob = DB::table('job_hours')
             ->join('job_types', 'job_types.id', '=', 'job_hours.job_type_id')
@@ -1018,7 +1032,51 @@ class ProjectController extends Controller
             'byJob' => $byJob,
             'total' => $total,
             'isHauptprojekt' => $project->verbund_rolle === 1,
+            'planTotal' => $planTotal,
+            'ownPlan' => $project->effectivePlannedHours(),
+            'ownPlanLinked' => $project->plannedHoursLinkedToTemplate(),
+            'ownTemplateName' => $project->projectTemplate?->name,
         ];
+    }
+
+    /**
+     * Planstunden setzen (Ralf, 2026-09-27, siehe Roadmap-Backlog): solange noch mit der
+     * Schablone verknüpft, bricht dieser Aufruf die Verknüpfung endgültig auf ("Vererbung
+     * aufbrechen") und setzt den mitgeschickten Wert als eigenen, ab jetzt frei änderbaren
+     * Wert. Ändert NIE die Schablone selbst und NIE project_template_id - nur den Override.
+     */
+    public function updatePlannedHours(Request $request, Project $project): Response
+    {
+        abort_unless($request->user()->can('project.edit'), 403);
+
+        $data = $request->validate([
+            'hours' => ['required', 'numeric', 'min:0', 'max:9999.99'],
+        ]);
+
+        $wasLinked = $project->plannedHoursLinkedToTemplate();
+        $previous = $project->effectivePlannedHours();
+        $hours = round((float) $data['hours'], 2);
+
+        $project->update(['planned_hours_override' => $hours]);
+
+        $message = $wasLinked
+            ? __('Planstunden von der Schablone „:template" gelöst und auf :hours h gesetzt (vorher :previous h laut Schablone).', [
+                'template' => $project->projectTemplate?->name ?? '',
+                'hours' => number_format($hours, 2, ',', '.'),
+                'previous' => number_format($previous ?? 0, 2, ',', '.'),
+            ])
+            : __('Planstunden von :previous h auf :hours h geändert.', [
+                'previous' => number_format($previous ?? 0, 2, ',', '.'),
+                'hours' => number_format($hours, 2, ',', '.'),
+            ]);
+        Activity::log($project, ActivityType::PlannedHoursChanged, $message);
+
+        $project = $project->fresh();
+
+        return response(view('projekte.partials.zeiten-body', [
+            'project' => $project,
+            'zeiten' => $this->zeitenData($project),
+        ])->render());
     }
 
     /**

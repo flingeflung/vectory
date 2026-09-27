@@ -33,6 +33,7 @@ enum ActivityType: string
     case StammIdDetached = 'stamm_id_detached';
     case StatusChanged = 'status_changed';
     case AttributeChanged = 'attribute_changed';
+    case PlannedHoursChanged = 'planned_hours_changed';
 
     public function label(): string
     {
@@ -50,6 +51,7 @@ enum ActivityType: string
             self::StammIdDetached => __('Aus Versionskette gelöst'),
             self::StatusChanged => __('Status geändert'),
             self::AttributeChanged => __('Feld geändert'),
+            self::PlannedHoursChanged => __('Planstunden geändert'),
         };
     }
 
@@ -59,7 +61,8 @@ enum ActivityType: string
             self::WorkflowAssigned, self::WorkflowUnassigned, self::WorkflowStepActivated => ActivityCategory::Workflow,
             self::GraphicOrderStatusChanged => ActivityCategory::Illustration,
             self::ProjectCreated, self::ProjectCopied, self::PublicationDateChanged, self::ProjectMultichanged,
-            self::VerbundRoleChanged, self::VerbundDissolved, self::StammIdDetached, self::StatusChanged, self::AttributeChanged => ActivityCategory::General,
+            self::VerbundRoleChanged, self::VerbundDissolved, self::StammIdDetached, self::StatusChanged, self::AttributeChanged,
+            self::PlannedHoursChanged => ActivityCategory::General,
         };
     }
 }

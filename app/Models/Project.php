@@ -16,6 +16,7 @@ use Illuminate\Support\Collection;
 #[Fillable([
     'tenant_id', 'source_pn', 'title', 'codename', 'initiator', 'system_model',
     'construction_year', 'project_type_main_id', 'project_type_sub_id', 'project_template_id',
+    'planned_hours_override',
     'status', 'creation_type', 'archived', 'localization', 'publication_date', 'start_date', 'end_date', 'remarks',
     'attributes', 'workflow_id', 'verbund_rolle', 'hauptprojekt_id',
     'paper_format_combination_id', 'input_format_free_text', 'output_format_free_text',
@@ -35,6 +36,7 @@ class Project extends Model
             'start_date' => 'date',
             'end_date' => 'date',
             'attributes' => 'array',
+            'planned_hours_override' => 'decimal:2',
         ];
     }
 
@@ -115,6 +117,39 @@ class Project extends Model
     public function projectTemplate(): BelongsTo
     {
         return $this->belongsTo(ProjectTemplate::class);
+    }
+
+    /**
+     * Planstunden für den "Zeiten"-Reiter (Ralf, 2026-09-27, siehe Roadmap-
+     * Backlog): solange planned_hours_override leer ist, gilt LIVE die Summe
+     * der geplanten Stunden je Funktionsgruppe aus der verknüpften
+     * Aufwandsschablone - ändert sich die Schablone, ändert sich hier sofort
+     * mit. Erst wenn ein PL die Vererbung explizit aufbricht (eigener Wert
+     * gesetzt), zählt nur noch der. Kein Wert, wenn weder Override noch
+     * Schablone vorhanden ist - "wer keine Planstunden aktiviert, kann sie
+     * auch nicht auswerten" (Ralf).
+     */
+    public function effectivePlannedHours(): ?float
+    {
+        if ($this->planned_hours_override !== null) {
+            return (float) $this->planned_hours_override;
+        }
+
+        if (! $this->project_template_id) {
+            return null;
+        }
+
+        return (float) $this->projectTemplate->functionGroups->sum('pivot.planned_hours');
+    }
+
+    /**
+     * true = die Planstunden hängen noch live an der Schablone (die
+     * Vererbung wurde noch nicht aufgebrochen). false sowohl bei bereits
+     * aufgebrochener Vererbung als auch, wenn es gar keine Schablone gibt.
+     */
+    public function plannedHoursLinkedToTemplate(): bool
+    {
+        return $this->planned_hours_override === null && $this->project_template_id !== null;
     }
 
     public function paperFormatCombination(): BelongsTo

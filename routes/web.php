@@ -126,6 +126,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/projekte/{project}', [ProjectController::class, 'show'])->name('projekte.show');
     Route::get('/projekte/{project}/projektbeteiligte', [ProjectController::class, 'peopleField'])->name('projekte.projektbeteiligte.show');
     Route::patch('/projekte/{project}', [ProjectController::class, 'update'])->name('projekte.update');
+    Route::post('/projekte/{project}/planstunden', [ProjectController::class, 'updatePlannedHours'])->name('projekte.planstunden');
     // Versionskette / "Stamm-ID" (Ralf, 2026-09-20)
     Route::get('/projekte/{project}/stamm-id/kette', [StammIdController::class, 'chain'])->name('projekte.stamm-id.chain');
     Route::post('/projekte/{project}/stamm-id/loesen', [StammIdController::class, 'detach'])->name('projekte.stamm-id.detach');
