@@ -52,3 +52,42 @@ Umsetzungsidee: Rolle 4 als eigene `person`-Entität modellieren, `user` referen
 
 ## Kommunikationsstil
 - Ralf möchte kurze, prägnante Antworten ohne ausschweifende Erklärungen ("keine Romane").
+
+## Subagent-Richtlinie
+
+Subagenten nur sparsam einsetzen.
+
+Keine Subagenten verwenden für:
+- einfache Fragen
+- kleine Änderungen oder Änderungen an einzelnen Dateien
+- einfache Suchaufgaben
+- sequenzielle Aufgaben
+- Aufgaben, die direkt im aktuellen Kontext bearbeitet werden können
+
+Direkte Bearbeitung durch den Hauptagenten bevorzugen.
+
+Subagenten nur einsetzen, wenn:
+- unabhängige Arbeitspakete tatsächlich parallel bearbeitet werden können
+- ein separater Kontext das Ergebnis deutlich verbessert
+- die Aufgabe groß genug ist, um den zusätzlichen Nutzungsverbrauch zu rechtfertigen
+
+Die Anzahl der Subagenten auf das notwendige Minimum beschränken.
+
+Standardmäßig keine Subagenten verwenden, sofern sie nicht eindeutig erforderlich sind.
+
+
+## Modellwahl
+
+Standardmäßig mit Sonnet arbeiten.
+
+Wenn eine Aufgabe voraussichtlich deutlich von Opus profitieren würde, vor der Bearbeitung kurz darauf hinweisen und den Grund nennen.
+
+Typische Gründe für eine Empfehlung zu Opus:
+- komplexe Architekturentscheidungen
+- schwer nachvollziehbare Fehler über viele Dateien oder Komponenten hinweg
+- große Refactorings mit vielen Abhängigkeiten
+- widersprüchliche oder unvollständige Anforderungen, die umfangreiche Abwägung erfordern
+- lange autonome Aufgabenketten mit vielen Zwischenschritten
+- mehrfach gescheiterte Lösungsversuche mit Sonnet
+
+Nicht allein wegen der Größe einer Aufgabe zu Opus wechseln, wenn sie sich mit Sonnet zuverlässig und schrittweise bearbeiten lässt.

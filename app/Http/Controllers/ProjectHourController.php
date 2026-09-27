@@ -47,10 +47,11 @@ class ProjectHourController extends Controller
             'entries' => $entries,
             'projectHasJobs' => DB::table('project_job_types')->where('project_id', $project->id)->exists(),
             'canEditJobs' => $request->user()->can('project.edit'),
+            'showAufteilungTab' => ProjectPercentageSplitController::showAufteilungTab($project),
         ]);
     }
 
-    public function store(Request $request, Project $project): Response
+    public function store(Request $request, Project $project): \Illuminate\Http\JsonResponse
     {
         $personId = $request->user()->person_id;
         abort_unless($personId, 403);
@@ -75,6 +76,25 @@ class ProjectHourController extends Controller
             ])]);
         }
 
+        // Prozentuale Aufteilung (Ralf, 2026-09-27, siehe Roadmap-Backlog): wird am
+        // Hauptprojekt gebucht UND ist eine Aufteilung konfiguriert, landet die Buchung
+        // NICHT als eine Zeile am Hauptprojekt, sondern wird sofort verbindlich nach den
+        // JETZT gültigen Prozenten auf die Unterprojekte verteilt - spätere Änderungen der
+        // Prozente wirken nur auf künftige Buchungen. Ohne konfigurierte Aufteilung: wie
+        // bisher, eine Zeile am Projekt selbst.
+        if ($project->verbund_rolle === 1 && (float) $data['hours'] > 0) {
+            $splits = DB::table('project_percentage_splits')
+                ->where('hauptprojekt_id', $project->id)
+                ->orderBy('project_id')
+                ->pluck('percentage', 'project_id');
+
+            if ($splits->isNotEmpty()) {
+                $notice = $this->splitAndBook($splits, $personId, $tenantId, (int) $data['job_type_id'], $data['work_date'], (int) round($data['hours'] * 100));
+
+                return response()->json(['html' => $this->tab($request, $project)->render(), 'notice' => $notice]);
+            }
+        }
+
         $match = [
             'tenant_id' => $tenantId, 'person_id' => $personId, 'job_type_id' => $data['job_type_id'],
             'work_date' => $data['work_date'], 'project_id' => $project->id,
@@ -91,7 +111,58 @@ class ProjectHourController extends Controller
             }
         }
 
-        return response($this->tab($request, $project)->render());
+        return response()->json(['html' => $this->tab($request, $project)->render(), 'notice' => null]);
+    }
+
+    /**
+     * Verteilt die eingegebenen Stunden (in Hundertsteln, wegen job_hours.hours
+     * decimal(5,2)) auf die Empfänger der Prozent-Aufteilung. "Größter-Rest"-
+     * Verfahren: erst abrunden, dann den verbleibenden Hundertstel-Rest den
+     * Empfängern mit dem größten Rest zuschlagen - so ergibt die Summe der
+     * Anteile IMMER wieder exakt die eingegebene Gesamtstundenzahl (Ralf,
+     * 2026-09-27: "krumme Zahlen sind ok, Hauptsache die Summe passt").
+     */
+    private function splitAndBook($splits, int $personId, int $tenantId, int $jobTypeId, string $workDate, int $totalHundredths): string
+    {
+        $shareHundredths = [];
+        $remainders = [];
+        $assigned = 0;
+        foreach ($splits as $projectId => $percentage) {
+            $exact = $totalHundredths * ((float) $percentage) / 100;
+            $floor = (int) floor($exact + 1e-9);
+            $shareHundredths[$projectId] = $floor;
+            $remainders[$projectId] = $exact - $floor;
+            $assigned += $floor;
+        }
+        $leftover = $totalHundredths - $assigned;
+        if ($leftover > 0) {
+            arsort($remainders);
+            foreach (array_slice(array_keys($remainders), 0, $leftover) as $projectId) {
+                $shareHundredths[$projectId]++;
+            }
+        }
+
+        $labels = DB::table('projects')->whereIn('id', array_keys($shareHundredths))->pluck('source_pn', 'id');
+        $breakdown = [];
+
+        foreach ($shareHundredths as $projectId => $hundredths) {
+            $match = ['tenant_id' => $tenantId, 'person_id' => $personId, 'job_type_id' => $jobTypeId, 'work_date' => $workDate, 'project_id' => $projectId];
+            if ($hundredths <= 0) {
+                DB::table('job_hours')->where($match)->delete();
+
+                continue;
+            }
+            $hours = round($hundredths / 100, 2);
+            $existing = DB::table('job_hours')->where($match)->first();
+            if ($existing) {
+                DB::table('job_hours')->where('id', $existing->id)->update(['hours' => $hours, 'updated_at' => now()]);
+            } else {
+                DB::table('job_hours')->insert($match + ['hours' => $hours, 'created_at' => now(), 'updated_at' => now()]);
+            }
+            $breakdown[] = ($labels[$projectId] ?? $projectId).': '.number_format($hours, 2, ',', '.').' h';
+        }
+
+        return __('Nach der prozentualen Aufteilung auf die Unterprojekte gebucht: :breakdown', ['breakdown' => implode(', ', $breakdown)]);
     }
 
     public function destroy(Request $request, Project $project, int $jobHour): Response

@@ -3104,14 +3104,48 @@
                 // Endpunkte statt einer gemeinsamen ?quelle=-URL, weil "Verknüpfte Jobs" und
                 // "Buchungen" inhaltlich verschiedene Dinge sind.
                 window.switchProjectTimeTrackingTab = async (projectId, tab) => {
-                    const url = tab === 'jobs' ? `/projekte/${projectId}/jobs?tab=jobs` : `/projekte/${projectId}/stunden`;
+                    const url = tab === 'jobs' ? `/projekte/${projectId}/jobs?tab=jobs`
+                        : tab === 'aufteilung' ? `/projekte/${projectId}/aufteilung`
+                        : `/projekte/${projectId}/stunden`;
                     body().innerHTML = await fetch(url).then((r) => r.text());
                 };
 
                 // Buchungsformular (Slice 2): Speichern lädt nur den Reiter-Inhalt neu (Overlay
                 // bleibt offen - man bucht meist mehrere Einträge nacheinander), kein Schließen.
+                // Antwort ist JSON ({html, notice}), nicht mehr reiner Text (Ralf, 2026-09-27):
+                // wird am Hauptprojekt mit konfigurierter Aufteilung gebucht, verteilt der
+                // Server die Stunden auf die Unterprojekte und "notice" trägt die Aufschlüsselung.
                 document.addEventListener('submit', async (event) => {
                     if (event.target.id !== 'project-hours-form') {
+                        return;
+                    }
+
+                    event.preventDefault();
+
+                    const response = await fetch(event.target.action, {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
+                        body: new FormData(event.target),
+                    });
+
+                    const data = await response.json().catch(() => null);
+
+                    if (!response.ok) {
+                        const firstFieldError = data && data.errors ? Object.values(data.errors)[0][0] : null;
+                        await window.notifyDialog(firstFieldError || (data && data.message) || {{ \Illuminate\Support\Js::from(__('Buchen fehlgeschlagen. Bitte erneut versuchen.')) }});
+                        return;
+                    }
+
+                    if (data && data.notice) {
+                        await window.notifyDialog(data.notice);
+                    }
+                    body().innerHTML = data.html;
+                });
+
+                // Prozentuale Aufteilung (Reiter 2, Slice 2b): Speichern lädt nur den Reiter neu,
+                // kein Schließen (analog Buchungsformular) - man passt die Werte ggf. mehrfach an.
+                document.addEventListener('submit', async (event) => {
+                    if (event.target.id !== 'project-percentage-form') {
                         return;
                     }
 
@@ -3126,7 +3160,7 @@
                     if (!response.ok) {
                         const error = await response.json().catch(() => null);
                         const firstFieldError = error && error.errors ? Object.values(error.errors)[0][0] : null;
-                        await window.notifyDialog(firstFieldError || (error && error.message) || {{ \Illuminate\Support\Js::from(__('Buchen fehlgeschlagen. Bitte erneut versuchen.')) }});
+                        await window.notifyDialog(firstFieldError || (error && error.message) || {{ \Illuminate\Support\Js::from(__('Speichern fehlgeschlagen. Bitte erneut versuchen.')) }});
                         return;
                     }
 

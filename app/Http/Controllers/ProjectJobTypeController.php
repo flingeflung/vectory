@@ -20,12 +20,19 @@ use Illuminate\View\View;
  */
 class ProjectJobTypeController extends Controller
 {
-    public function __construct(private readonly ProjectHourController $hourController) {}
+    public function __construct(
+        private readonly ProjectHourController $hourController,
+        private readonly ProjectPercentageSplitController $splitController,
+    ) {}
 
     public function form(Request $request, Project $project): View
     {
         $tenantId = CurrentTenant::id();
         $canEditJobs = $request->user()->can('project.edit');
+
+        if ($request->query('tab') === 'aufteilung') {
+            return $this->splitController->tab($request, $project);
+        }
 
         // Standard-Reiter beim Öffnen (Ralf, 2026-09-27): "Verknüpfte Jobs" nur für Bearbeitende,
         // solange das Projekt noch KEINE verknüpften Jobs hat - sonst (oder ohne Bearbeitungsrecht,
@@ -65,6 +72,7 @@ class ProjectJobTypeController extends Controller
             'hauptprojektJobIds' => $hauptprojektJobIds,
             'hauptprojektTitle' => $project->hauptprojekt?->source_pn,
             'canEditJobs' => $canEditJobs,
+            'showAufteilungTab' => ProjectPercentageSplitController::showAufteilungTab($project),
         ]);
     }
 
