@@ -91,11 +91,32 @@
             die GANZE Seite dorthin wechseln (nicht nur neu laden - so
             bleibt ein evtl. "zurück zu"-Parameter erhalten), statt die
             Login-Seite an den ursprünglichen Aufrufer durchzureichen.
+
+            Zweiter Ralf-Bug-Report, 2026-09-27 ("Gruppe leeren" tat scheinbar
+            nichts): fetch()-Aufrufe ohne "Accept: application/json" liefern
+            bei einer abgelehnten Aktion (abort_if/abort_unless mit Meldung,
+            siehe bootstrap/app.php) keine Fehlerantwort, sondern eine stille
+            Weiterleitung zurück zur normalen Seite - der Browser folgt ihr
+            automatisch, response.ok wird fälschlich true, jede
+            if(!response.ok)-Prüfung im Aufrufer greift nie. Betraf beim
+            Fund nicht nur eine Stelle, sondern viele fetch()-Aufrufe im
+            ganzen Tool. Statt jede einzeln nachzuziehen: hier zentral einen
+            fehlenden Accept-Header ergänzen (nie einen von Hand gesetzten
+            überschreiben) - ändert nichts am Erfolgsfall (der Server
+            entscheidet dort ohnehin bewusst selbst, was er zurückgibt),
+            macht nur den Fehlerfall überall ehrlich.
         --}}
         <script>
             (function () {
                 const originalFetch = window.fetch;
                 window.fetch = async function (...args) {
+                    const init = args[1] || {};
+                    const headers = new Headers(init.headers || {});
+                    if (! headers.has('Accept')) {
+                        headers.set('Accept', 'application/json');
+                    }
+                    args[1] = { ...init, headers };
+
                     const response = await originalFetch.apply(this, args);
                     if (response.redirected && new URL(response.url).pathname === '/login') {
                         window.location.href = response.url;
