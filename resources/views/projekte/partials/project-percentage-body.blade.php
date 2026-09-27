@@ -180,7 +180,16 @@
                         name="shares[{{ $p->id }}]"
                         :value="values[{{ $p->id }}].toFixed(2)"
                         @change="setValue({{ $p->id }}, parseFloat($event.target.value))"
-                        @focus="$event.target.select()"
+                        {{--
+                            Ralf, 2026-09-27: einfaches select() reichte nicht - der
+                            Tab-Sprung löst über setValue() im vorherigen Feld eine
+                            reaktive Neuberechnung ALLER Werte aus (Ausgleichs-Logik),
+                            deren DOM-Schreibvorgang bei Alpine asynchron (Microtask)
+                            läuft und danach noch eine bereits gesetzte Markierung
+                            wieder aufhebt. $nextTick wartet, bis Alpine diese
+                            Aktualisierung fertig geschrieben hat, erst dann markieren.
+                        --}}
+                        @focus="$nextTick(() => $event.target.select())"
                         step="0.01"
                         min="0"
                         max="100"
