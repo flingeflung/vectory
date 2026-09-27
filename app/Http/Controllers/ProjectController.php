@@ -721,6 +721,25 @@ class ProjectController extends Controller
 
         $project->update($validated);
 
+        // Ralf, 2026-09-28: bewusste Rückkehr zur Schablonen-Verknüpfung nach "Lösen" (siehe
+        // project_template.blade.php, Schloss-UI). Das Aufschließen dort löst noch nichts aus -
+        // erst dieses Speichern verwirft die eigenen Planstunden, unabhängig davon, ob die
+        // Auswahl sich dabei tatsächlich geändert hat (der bestätigte Hinweis beim Aufschließen
+        // ist die eigentliche Freigabe, nicht der gewählte Wert).
+        if ($request->boolean('relink_template') && $project->functionGroupHours()->exists()) {
+            $discarded = $project->effectivePlannedHours();
+            $project->functionGroupHours()->sync([]);
+
+            Activity::log($project, ActivityType::PlannedHoursChanged, $project->project_template_id
+                ? __('Planstunden wieder mit der Schablone „:template" verknüpft (eigene Werte, :hours h, verworfen).', [
+                    'template' => $project->projectTemplate->name,
+                    'hours' => number_format($discarded ?? 0, 2, ',', '.'),
+                ])
+                : __('Eigene Planstunden (:hours h) verworfen, keine Schablone mehr zugewiesen.', [
+                    'hours' => number_format($discarded ?? 0, 2, ',', '.'),
+                ]));
+        }
+
         // "Weitere Optionen" am Zusatzfeld (Ralf, 2026-09-21): Felder mit Protokollierung schreiben jede Änderung
         // (alt -> neu) in die Vorgänge.
         foreach ($changedAttributes as [$changedAttribute, $oldValue, $newValue]) {
