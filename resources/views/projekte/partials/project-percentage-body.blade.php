@@ -237,7 +237,14 @@
                         name="shares[{{ $p->id }}]"
                         :value="values[{{ $p->id }}].toFixed(2)"
                         @change="setValue({{ $p->id }}, parseFloat($event.target.value))"
-                        :disabled="isFixed({{ $p->id }})"
+                        {{--
+                            Ralf-Fund, 2026-09-27: mit `disabled` (statt `readonly`) fehlten
+                            fixierte Felder beim Abschicken komplett aus dem FormData - der
+                            Server sah dann nur die Summe der UNfixierten Felder ("Summe
+                            müssen 100 ergeben, aktuell 60" bei zwei fixierten von vieren).
+                            `readonly` sperrt die Eingabe genauso, wird aber mitgesendet.
+                        --}}
+                        :readonly="isFixed({{ $p->id }})"
                         :class="isFixed({{ $p->id }}) ? 'bg-gray-100 text-gray-400' : ''"
                         {{--
                             Ralf, 2026-09-27: einfaches select() reichte nicht - der
