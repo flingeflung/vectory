@@ -31,7 +31,16 @@
     </button>
 </div>
 
-<form id="project-jobs-form" x-data="{ dirty: false }" @input="dirty = window.formIsDirty($el)" method="POST" action="{{ route('projekte.jobs.update', $project) }}" class="flex max-h-[75vh] flex-col">
+{{--
+    h-full statt max-h-[75vh] (Ralf-Fund, 2026-09-27: "Speichern-Button ist nur per
+    Scroll vollständig sichtbar"): dieses Formular sitzt bereits in einer eigenen
+    scrollenden Box (#project-jobs-body in layouts/app.blade.php) - eine zweite,
+    unabhängig geschätzte Höhe (75vh) darin führte dazu, dass bei vielen Jobs die
+    ÄUSSERE Box gescrollt hat statt der inneren, wodurch der per shrink-0 fixierte
+    Speichern-Footer nicht mehr am sichtbaren unteren Rand klebte. h-full übernimmt
+    stattdessen exakt die vom Elternelement tatsächlich zugeteilte Höhe.
+--}}
+<form id="project-jobs-form" x-data="{ dirty: false }" @input="dirty = window.formIsDirty($el)" method="POST" action="{{ route('projekte.jobs.update', $project) }}" class="flex h-full min-h-0 flex-col">
     @csrf
     <div class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
         <div class="mb-3 flex items-start justify-between gap-3">

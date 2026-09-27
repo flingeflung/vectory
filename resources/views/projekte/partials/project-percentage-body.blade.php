@@ -33,6 +33,7 @@
     </button>
 </div>
 
+{{-- h-full statt max-h-[75vh] (Ralf-Fund, 2026-09-27, siehe project-jobs-body.blade.php) --}}
 <form
     id="project-percentage-form"
     x-data="{
@@ -113,7 +114,7 @@
     @pointerup.window="stopDrag()"
     method="POST"
     action="{{ route('projekte.aufteilung.update', $project) }}"
-    class="flex max-h-[75vh] flex-col"
+    class="flex h-full min-h-0 flex-col"
 >
     @csrf
     <div class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
@@ -179,6 +180,7 @@
                         name="shares[{{ $p->id }}]"
                         :value="values[{{ $p->id }}].toFixed(2)"
                         @change="setValue({{ $p->id }}, parseFloat($event.target.value))"
+                        @focus="$event.target.select()"
                         step="0.01"
                         min="0"
                         max="100"

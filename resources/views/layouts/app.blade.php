@@ -3132,7 +3132,7 @@
 
                     if (!response.ok) {
                         const firstFieldError = data && data.errors ? Object.values(data.errors)[0][0] : null;
-                        await window.notifyDialog(firstFieldError || (data && data.message) || {{ \Illuminate\Support\Js::from(__('Buchen fehlgeschlagen. Bitte erneut versuchen.')) }});
+                        await window.notifyDialog(firstFieldError || (data && data.message) || {{ \Illuminate\Support\Js::from(__('Speichern fehlgeschlagen. Bitte erneut versuchen.')) }});
                         return;
                     }
 
