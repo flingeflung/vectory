@@ -176,6 +176,9 @@
                     <button type="button" @click="activeTab = 'workflow_steps'" :class="activeTab === 'workflow_steps' ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700'" class="pb-2">{{ __('Workflow') }}</button>
                     @endif
                     <button type="button" @click="activeTab = 'checklisten'" :class="activeTab === 'checklisten' ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700'" class="pb-2">{{ __('Checklisten') }}</button>
+                    {{-- Ralf, 2026-09-27, siehe Roadmap-Backlog: Überblick über die gebuchten
+                         Stunden - am Hauptprojekt inkl. Aufschlüsselung je Unterprojekt. --}}
+                    <button type="button" @click="activeTab = 'zeiten'" :class="activeTab === 'zeiten' ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700'" class="pb-2">{{ __('Zeiten') }}</button>
                 </div>
 
                 <div class="mb-2 flex flex-wrap items-center gap-2">
@@ -640,6 +643,77 @@
 
         <div x-show="activeTab === 'checklisten'" x-cloak class="text-sm">
             @include('projekte.partials.checklisten')
+        </div>
+
+        {{-- Reiter "Zeiten" (Ralf, 2026-09-27, siehe Roadmap-Backlog): Überblick über die
+             gebuchten Stunden, gleiche Tabellen-Optik wie "Nach Jobgruppen" in der
+             Zeiterfassungs-Übersicht (resources/views/jobload/overview.blade.php), damit sich
+             das vertraut anfühlt. Aggregiert über ALLE Personen (Projektleiter-Sicht), nicht
+             nur die eigenen Buchungen wie im Zeiterfassung-Overlay. --}}
+        <div x-show="activeTab === 'zeiten'" x-cloak class="text-sm">
+            @php($fmt = fn ($hours) => number_format($hours, 2, ',', '.'))
+            @if ($zeiten['total'] <= 0)
+                <p class="text-gray-500">{{ __('Für dieses Projekt sind noch keine Stunden gebucht.') }}</p>
+            @else
+                @if ($zeiten['isHauptprojekt'])
+                    <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('Je Projekt') }}</h3>
+                    <table class="mb-6 w-full max-w-md">
+                        <thead>
+                            <tr class="border-b border-gray-200 text-xs text-gray-500">
+                                <th class="py-1 pr-3 text-left font-medium">{{ __('Projekt') }}</th>
+                                <th class="py-1 pl-3 text-right font-medium">{{ __('Stunden') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($zeiten['perProject'] as $row)
+                                <tr class="border-b border-gray-100">
+                                    <td class="py-1 pr-3">
+                                        <span class="{{ $row['isHauptprojekt'] ? 'font-semibold text-indigo-700' : '' }}">{{ $row['label'] }}</span>
+                                        <span class="text-gray-400">– {{ $row['title'] }}</span>
+                                        @if ($row['isHauptprojekt'])
+                                            <span class="ml-1 rounded-full bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700">{{ __('HP') }}</span>
+                                        @endif
+                                    </td>
+                                    <td class="py-1 pl-3 whitespace-nowrap text-right tabular-nums">{{ $fmt($row['hours']) }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot>
+                            <tr class="font-semibold text-gray-800">
+                                <td class="py-1 pr-3">{{ __('Summe') }}</td>
+                                <td class="py-1 pl-3 whitespace-nowrap text-right tabular-nums">{{ $fmt($zeiten['total']) }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                @endif
+
+                <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('Nach Job') }}</h3>
+                <table class="w-full max-w-md">
+                    <thead>
+                        <tr class="border-b border-gray-200 text-xs text-gray-500">
+                            <th class="py-1 pr-3 text-left font-medium">{{ __('Job') }}</th>
+                            <th class="px-3 py-1 text-right font-medium">{{ __('Stunden') }}</th>
+                            <th class="py-1 pl-3 text-right font-medium">{{ __('Anteil') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($zeiten['byJob'] as $item)
+                            <tr class="border-b border-gray-100">
+                                <td class="py-1 pr-3">{{ $item['label'] }}</td>
+                                <td class="px-3 py-1 whitespace-nowrap text-right tabular-nums">{{ $fmt($item['hours']) }}</td>
+                                <td class="py-1 pl-3 whitespace-nowrap text-right tabular-nums">{{ number_format($item['percent'], 1, ',', '.') }} %</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot>
+                        <tr class="font-semibold text-gray-800">
+                            <td class="py-1 pr-3">{{ __('Summe') }}</td>
+                            <td class="px-3 py-1 whitespace-nowrap text-right tabular-nums">{{ $fmt($zeiten['total']) }}</td>
+                            <td class="py-1 pl-3 whitespace-nowrap text-right tabular-nums">100,0 %</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            @endif
         </div>
         </div>
     </div>

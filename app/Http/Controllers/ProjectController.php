@@ -959,6 +959,65 @@ class ProjectController extends Controller
             'directoryCreateInSv' => $directoryCreateInSv,
             'directoryOpenSv' => $directoryOpenSv,
             'directorySuggestedFolderName' => $this->directoryLocator->suggestedFolderName($project),
+            'zeiten' => $this->zeitenData($project),
+        ];
+    }
+
+    /**
+     * Reiter "Zeiten" (Ralf, 2026-09-27, siehe Roadmap-Backlog): Überblick über die am
+     * Projekt gebuchten Stunden - am Hauptprojekt zusätzlich je Unterprojekt aufgeschlüsselt,
+     * damit man nicht durch jedes Unterprojekt einzeln klicken muss, um zu sehen, wo die per
+     * prozentualer Aufteilung verteilten Stunden gelandet sind. Aggregiert über ALLE Personen
+     * (Projektleiter-Sicht), nicht nur die eigenen Buchungen wie im Zeiterfassung-Overlay.
+     */
+    private function zeitenData(Project $project): array
+    {
+        $participantIds = [$project->id];
+        if ($project->verbund_rolle === 1) {
+            $participantIds = array_merge($participantIds, DB::table('projects')
+                ->where('hauptprojekt_id', $project->id)->where('verbund_rolle', 2)->pluck('id')->all());
+        }
+
+        $hoursByProject = DB::table('job_hours')
+            ->whereIn('project_id', $participantIds)
+            ->select('project_id', DB::raw('SUM(hours) as total'))
+            ->groupBy('project_id')
+            ->pluck('total', 'project_id');
+
+        $upRows = collect();
+        if (count($participantIds) > 1) {
+            $upRows = DB::table('projects')->where('hauptprojekt_id', $project->id)->where('verbund_rolle', 2)
+                ->orderBy('source_pn')->get(['id', 'source_pn', 'title'])
+                ->map(fn ($p) => [
+                    'id' => $p->id, 'label' => $p->source_pn, 'title' => $p->title,
+                    'isHauptprojekt' => false, 'hours' => (float) ($hoursByProject[$p->id] ?? 0),
+                ]);
+        }
+        $perProject = collect([[
+            'id' => $project->id, 'label' => $project->source_pn, 'title' => $project->title,
+            'isHauptprojekt' => $project->verbund_rolle === 1, 'hours' => (float) ($hoursByProject[$project->id] ?? 0),
+        ]])->concat($upRows);
+
+        $total = (float) $perProject->sum('hours');
+
+        $byJob = DB::table('job_hours')
+            ->join('job_types', 'job_types.id', '=', 'job_hours.job_type_id')
+            ->whereIn('job_hours.project_id', $participantIds)
+            ->select('job_types.id', 'job_types.code', 'job_types.name', DB::raw('SUM(job_hours.hours) as total'))
+            ->groupBy('job_types.id', 'job_types.code', 'job_types.name')
+            ->orderByDesc('total')
+            ->get()
+            ->map(fn ($row) => [
+                'label' => ($row->code ? $row->code.' – ' : '').$row->name,
+                'hours' => (float) $row->total,
+                'percent' => $total > 0 ? (float) $row->total / $total * 100 : 0,
+            ]);
+
+        return [
+            'perProject' => $perProject,
+            'byJob' => $byJob,
+            'total' => $total,
+            'isHauptprojekt' => $project->verbund_rolle === 1,
         ];
     }
 
