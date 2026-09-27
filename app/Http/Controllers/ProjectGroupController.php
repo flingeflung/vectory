@@ -119,10 +119,24 @@ class ProjectGroupController extends Controller
      * "Diese Gruppe verlassen" - entfernt nur mich. Bin ich die letzte
      * Person mit Zugriff, wird die Gruppe komplett gelöscht (kein
      * herrenloses Datenfragment).
+     *
+     * Bug (Ralf, 2026-09-27): dieser Löschzweig hatte bisher KEINE
+     * Verbund-Sperre, anders als destroy()/clear() - eine Gruppe mit
+     * aktivem Verbund konnte so verschwinden, ohne dass die Verbund-Felder
+     * (verbund_rolle/hauptprojekt_id) an den Mitgliedsprojekten
+     * zurückgesetzt wurden. Die Anzeige "ist Hauptprojekt mit folgenden
+     * Unterprojekten" liest diese Felder direkt am Projekt, unabhängig von
+     * der Gruppe (siehe VerbundController-Docblock) - sie blieb dadurch als
+     * Karteileiche bestehen. Sperre nur relevant, wenn ich WIRKLICH die
+     * letzte Person bin (sonst bleibt die Gruppe ja ohnehin erhalten).
      */
     public function leave(Request $request, ProjectGroup $group): Response
     {
         $this->authorizeViewer($group);
+
+        if ($group->viewers()->count() === 1) {
+            $this->abortIfActiveVerbund($group);
+        }
 
         $group->viewers()->detach(Auth::id());
         if ($group->viewers()->count() === 0) {

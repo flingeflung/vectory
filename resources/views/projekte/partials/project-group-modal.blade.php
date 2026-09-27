@@ -107,9 +107,13 @@
                     confirmLabel: {{ \Illuminate\Support\Js::from(__('Verlassen')) }},
                     cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
                 })) return;
-                await fetch('/projektgruppen/' + $store.projectGrouping.groupId + '/verlassen', {
+                const response = await fetch('/projektgruppen/' + $store.projectGrouping.groupId + '/verlassen', {
                     method: 'DELETE', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
                 });
+                if (! response.ok) {
+                    await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Diese Gruppe ist Teil eines Verbunds - bitte erst den Verbund auflösen.')) }});
+                    return;
+                }
                 $store.projectGrouping.groupId = '';
                 @if (! $project) await $store.projectGrouping.loadMembers(); @endif
                 await this.refresh();

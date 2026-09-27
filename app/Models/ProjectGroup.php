@@ -60,6 +60,14 @@ class ProjectGroup extends Model
             return;
         }
 
+        // Ralf, 2026-09-27: diese Prüfung ist eine eigene, handgeschriebene Regel (kein
+        // Gate::before-Eintrag) - ohne diese Zeile darf ein Super-Admin hier trotz
+        // "immer alles dürfen" nicht mitmachen, wenn er nicht selbst eingetragener
+        // Betrachter ist. Inkonsequent zum Rest des Tools, deshalb hier nachgezogen.
+        if (Auth::user()?->role === 'super_admin') {
+            return;
+        }
+
         abort_unless($this->viewers()->where('users.id', Auth::id())->exists(), 403);
     }
 
