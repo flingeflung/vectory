@@ -101,7 +101,10 @@
             @endunless
         </p>
 
-        <div class="flex items-end gap-4 overflow-x-auto pb-1 pt-6">
+        {{-- flex-wrap statt einer einzelnen, horizontal scrollenden Zeile (Ralf, 2026-09-27:
+             "was, wenn wir 25 Unterprojekte haben? Das geht nicht nebeneinander") - bricht
+             bei Bedarf in mehrere Zeilen um, das Overlay scrollt ohnehin schon vertikal. --}}
+        <div class="flex flex-wrap items-end gap-x-4 gap-y-5 pb-1 pt-6">
             @foreach ($participants as $p)
                 <div class="flex w-14 shrink-0 flex-col items-center gap-2">
                     <span class="font-mono text-xs font-semibold tabular-nums text-gray-700" x-text="values[{{ $p->id }}].toFixed(2).replace('.', ',') + ' %'"></span>
