@@ -39,7 +39,7 @@
     x-data="{
         values: {{ Illuminate\Support\Js::from($shares->mapWithKeys(fn ($v, $k) => [(string) $k => round((float) $v, 2)])) }},
         hpId: {{ $project->id }},
-        hpFixed: false,
+        fixed: {},
         dragging: null,
         dragRect: null,
         dirty: false,
@@ -48,34 +48,49 @@
             return Object.values(this.values).reduce((a, b) => a + b, 0);
         },
 
-        // Ralf, 2026-09-27: 'fixieren' - solange aktiv, bleibt der Hauptprojekt-
-        // Anteil von Regler/Zahlenfeld-Änderungen an ANDEREN Teilnehmern
-        // unberührt; nur die übrigen (Unterprojekte) gleichen sich untereinander
-        // aus. Das Hauptprojekt selbst lässt sich währenddessen auch nicht
-        // ziehen/eintippen (siehe isFixed() unten, an Regler+Feld gebunden).
+        // Ralf, 2026-09-27: 'fixieren' je Teilnehmer (zunaechst nur fuers
+        // Hauptprojekt gebaut, dann auf Ralfs Wunsch auf alle ausgeweitet -
+        // 'ich schaffe es nicht, 10/30/50/10 einzutragen, sobald ich die 50
+        // eintrage, springt die 30 wieder auf einen anderen Wert'): solange
+        // fixiert, bleibt der Anteil von Regler/Zahlenfeld-AEnderungen an
+        // ANDEREN Teilnehmern unberuehrt und laesst sich selbst auch nicht
+        // mehr ziehen/eintippen (siehe setValue()/startDrag() unten).
         isFixed(id) {
-            return this.hpFixed && String(id) === String(this.hpId);
+            return !! this.fixed[String(id)];
+        },
+        toggleFixed(id) {
+            const key = String(id);
+            this.fixed[key] = ! this.fixed[key];
+        },
+        fixedKeys(excludeId) {
+            const exclude = excludeId === undefined ? null : String(excludeId);
+            return Object.keys(this.fixed).filter((k) => this.fixed[k] && k !== exclude);
         },
 
         // Verteilt die Differenz proportional zum aktuellen Anteil auf alle
-        // anderen Regler (bzw. bei fixiertem Hauptprojekt: auf alle anderen
-        // AUSSER dem Hauptprojekt) - Ziel-Summe der anderen ist immer 100
-        // minus dem neuen Wert (minus dem reservierten Hauptprojekt-Anteil),
+        // anderen, NICHT fixierten Regler - Ziel-Summe der anderen ist immer
+        // 100 minus dem neuen Wert minus der Summe aller fixierten Anteile,
         // also landet die Gesamtsumme rechnerisch zwingend bei 100 (keine
         // Sonderfälle für 'am Anschlag', da proportionale Skalierung auf eine
-        // Summe <= 100 keinen Einzelwert über 100 heben kann). Rundungsrest
-        // (2 Nachkommastellen) schlägt sich der gezogene Regler selbst zu,
-        // analog zur Rundungsregel beim Buchen.
+        // Summe <= 100 keinen Einzelwert über 100 heben kann). Ist selbst
+        // gerade nichts fixiert, verhaelt sich das genauso wie vorher (alle
+        // gelten als 'andere'). Rundungsrest (2 Nachkommastellen) schlägt
+        // sich der gezogene Regler selbst zu, analog zur Rundungsregel beim
+        // Buchen. Reicht der freie Platz nicht (fixierte Anteile + neuer
+        // Wert > 100), wird der neue Wert selbst auf den verbleibenden Platz
+        // gekappt - fixierte Anteile bleiben immer unantastbar.
         setValue(id, raw) {
             if (this.isFixed(id)) { return; }
 
-            const newValue = Math.max(0, Math.min(100, isNaN(raw) ? 0 : raw));
             const key = String(id);
-            const hpKey = String(this.hpId);
-            const hpReserved = this.hpFixed ? this.values[hpKey] : 0;
-            const others = Object.keys(this.values).filter((k) => k !== key && ! (this.hpFixed && k === hpKey));
+            const fixedOthers = this.fixedKeys(key);
+            const reserved = fixedOthers.reduce((s, k) => s + (this.values[k] || 0), 0);
+            const maxAllowed = Math.max(0, 100 - reserved);
+            const newValue = Math.max(0, Math.min(maxAllowed, isNaN(raw) ? 0 : raw));
+
+            const others = Object.keys(this.values).filter((k) => k !== key && ! fixedOthers.includes(k));
             const otherSum = others.reduce((s, k) => s + this.values[k], 0);
-            const targetOtherSum = 100 - hpReserved - newValue;
+            const targetOtherSum = 100 - reserved - newValue;
 
             if (otherSum > 0.001) {
                 const factor = targetOtherSum / otherSum;
@@ -86,7 +101,7 @@
             }
 
             const roundedOtherSum = others.reduce((s, k) => s + this.values[k], 0);
-            this.values[key] = Math.round((100 - hpReserved - roundedOtherSum) * 100) / 100;
+            this.values[key] = Math.round((100 - reserved - roundedOtherSum) * 100) / 100;
             this.dirty = true;
         },
 
@@ -119,12 +134,12 @@
             this.dirty = true;
         },
         levelAll() {
-            if (this.hpFixed) {
-                // Hauptprojekt ist fixiert - 'alle' kann es nicht mit einschließen.
-                this.levelOthers(this.hpId);
-                return;
-            }
-            this.levelEvenly(Object.keys(this.values), 10000);
+            // Fixierte Anteile bleiben auch hier unantastbar - 'alle' meint dann
+            // 'alle nicht fixierten'.
+            const fixedNow = this.fixedKeys();
+            const reserved = fixedNow.reduce((s, k) => s + Math.round((this.values[k] || 0) * 100), 0);
+            const others = Object.keys(this.values).filter((k) => ! fixedNow.includes(k));
+            this.levelEvenly(others, 10000 - reserved);
         },
         levelOthers(hauptprojektId) {
             const hpKey = String(hauptprojektId);
@@ -185,21 +200,22 @@
                         >
                             {{ $isHauptprojekt ? __('HP') : '' }}
                         </span>
-                        @if ($isHauptprojekt)
-                            {{-- Ralf, 2026-09-27: "fixieren" - Hauptprojekt-Anteil bleibt beim
-                                 Ausgleich über Regler/Zahlenfeld an ANDEREN Teilnehmern unberührt. --}}
-                            <button
-                                type="button"
-                                @click="hpFixed = ! hpFixed"
-                                :class="hpFixed ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'"
-                                class="flex h-4 w-4 shrink-0 items-center justify-center rounded"
-                                :title="hpFixed ? {{ Illuminate\Support\Js::from(__('Fixiert - bleibt beim Ausgleich unverändert. Klicken zum Lösen.')) }} : {{ Illuminate\Support\Js::from(__('Hauptprojekt-Anteil fixieren')) }}"
-                            >
-                                <svg class="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M10 2a4 4 0 00-4 4v2H5a1 1 0 00-1 1v8a1 1 0 001 1h10a1 1 0 001-1V9a1 1 0 00-1-1h-1V6a4 4 0 00-4-4zm2 6V6a2 2 0 10-4 0v2h4z" clip-rule="evenodd" />
-                                </svg>
-                            </button>
-                        @endif
+                        {{-- Ralf, 2026-09-27: 'fixieren' zunächst nur am Hauptprojekt gebaut, auf
+                             Ralfs Wunsch dann auf alle Teilnehmer ausgeweitet (siehe x-data oben,
+                             isFixed()/toggleFixed()) - sonst springt beim Eintippen mehrerer
+                             fester Werte hintereinander immer wieder einer davon auf einen
+                             anderen Wert, weil der Ausgleich ihn für 'noch frei' hält. --}}
+                        <button
+                            type="button"
+                            @click="toggleFixed({{ $p->id }})"
+                            :class="isFixed({{ $p->id }}) ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'"
+                            class="ml-auto flex h-4 w-4 shrink-0 items-center justify-center rounded"
+                            :title="isFixed({{ $p->id }}) ? {{ Illuminate\Support\Js::from(__('Fixiert - bleibt beim Ausgleich unverändert. Klicken zum Lösen.')) }} : {{ Illuminate\Support\Js::from(__('Diesen Anteil fixieren')) }}"
+                        >
+                            <svg class="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 2a4 4 0 00-4 4v2H5a1 1 0 00-1 1v8a1 1 0 001 1h10a1 1 0 001-1V9a1 1 0 00-1-1h-1V6a4 4 0 00-4-4zm2 6V6a2 2 0 10-4 0v2h4z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
                     </div>
                     <span class="font-mono text-xs font-semibold tabular-nums text-gray-700" x-text="values[{{ $p->id }}].toFixed(2).replace('.', ',') + ' %'"></span>
 
