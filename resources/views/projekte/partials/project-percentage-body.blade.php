@@ -85,6 +85,28 @@
             this.dragFromY(this.dragging, event.clientY);
         },
         stopDrag() { this.dragging = null; },
+
+        // Gleichmäßig auf Hundertstel-Prozent verteilen, Rest deterministisch den
+        // ersten Teilnehmern zuschlagen - dieselbe Regel wie evenSplit() serverseitig
+        // (ProjectPercentageSplitController), nur hier auf eine gewählte Teilmenge
+        // angewendet statt immer auf alle.
+        levelEvenly(keys, totalHundredths) {
+            const n = keys.length;
+            if (n === 0) { return; }
+            const base = Math.floor(totalHundredths / n);
+            const remainder = totalHundredths - base * n;
+            keys.forEach((k, i) => { this.values[k] = (base + (i < remainder ? 1 : 0)) / 100; });
+            this.dirty = true;
+        },
+        levelAll() {
+            this.levelEvenly(Object.keys(this.values), 10000);
+        },
+        levelOthers(hauptprojektId) {
+            const hpKey = String(hauptprojektId);
+            const others = Object.keys(this.values).filter((k) => k !== hpKey);
+            const remaining = 10000 - Math.round(this.values[hpKey] * 100);
+            this.levelEvenly(others, remaining);
+        },
     }"
     @pointermove.window="onWindowPointerMove($event)"
     @pointerup.window="stopDrag()"
@@ -94,29 +116,59 @@
 >
     @csrf
     <div class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
-        <p class="mb-4 text-xs text-gray-500">
+        <p class="mb-3 text-xs text-gray-500">
             {{ __('Wenn jemand am Hauptprojekt :pn Stunden bucht, werden sie sofort nach diesen Prozenten auf die Unterprojekte verteilt - dort entstehen dann die eigentlichen Buchungen. Eine spätere Änderung der Prozente wirkt nur auf künftige Buchungen.', ['pn' => $project->source_pn]) }}
             @unless ($configured)
                 {{ __('Noch nichts gespeichert - die Werte unten sind gleichmäßig verteilt.') }}
             @endunless
         </p>
 
+        <div class="mb-3 flex gap-2">
+            <button
+                type="button"
+                onclick="Alpine.$data(this.closest('form')).levelAll()"
+                class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                title="{{ __('Verteilt 100 % gleichmäßig auf Hauptprojekt und alle Unterprojekte.') }}"
+            >
+                {{ __('Alle nivellieren') }}
+            </button>
+            <button
+                type="button"
+                onclick="Alpine.$data(this.closest('form')).levelOthers({{ $project->id }})"
+                class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                title="{{ __('Lässt den Anteil des Hauptprojekts unverändert und verteilt den Rest gleichmäßig auf die Unterprojekte.') }}"
+            >
+                {{ __('Nur Unterprojekte nivellieren') }}
+            </button>
+        </div>
+
         {{-- flex-wrap statt einer einzelnen, horizontal scrollenden Zeile (Ralf, 2026-09-27:
              "was, wenn wir 25 Unterprojekte haben? Das geht nicht nebeneinander") - bricht
              bei Bedarf in mehrere Zeilen um, das Overlay scrollt ohnehin schon vertikal. --}}
         <div class="flex flex-wrap items-end gap-x-4 gap-y-5 pb-1 pt-6">
             @foreach ($participants as $p)
-                <div class="flex w-14 shrink-0 flex-col items-center gap-2">
+                @php($isHauptprojekt = $p->id === $project->id)
+                <div class="flex w-14 shrink-0 flex-col items-center gap-1">
+                    {{-- Hauptprojekt ist immer der erste Teilnehmer (unabhängig von seiner PN),
+                         die Unterprojekte danach nach PN sortiert (Ralf-Nachfrage, 2026-09-27) -
+                         eigenes Badge statt nur des kleinen "(H)"-Suffix, damit es auf einen
+                         Blick auffällt, auch wenn die Spalte nur 56px breit ist. --}}
+                    <span
+                        class="h-4 rounded-full px-1.5 text-[10px] font-semibold leading-4 {{ $isHauptprojekt ? 'bg-indigo-100 text-indigo-700' : '' }}"
+                        title="{{ $isHauptprojekt ? __('Hauptprojekt') : '' }}"
+                    >
+                        {{ $isHauptprojekt ? __('HP') : '' }}
+                    </span>
                     <span class="font-mono text-xs font-semibold tabular-nums text-gray-700" x-text="values[{{ $p->id }}].toFixed(2).replace('.', ',') + ' %'"></span>
 
                     <div
-                        class="relative h-36 w-7 shrink-0 touch-none select-none rounded-full bg-gray-200"
+                        class="relative h-36 w-7 shrink-0 touch-none select-none rounded-full {{ $isHauptprojekt ? 'bg-indigo-100' : 'bg-gray-200' }}"
                         @pointerdown="startDrag({{ $p->id }}, $event)"
                         style="cursor: grab;"
                     >
-                        <div class="absolute inset-x-0 bottom-0 rounded-full bg-indigo-500" :style="`height: ${values[{{ $p->id }}]}%`"></div>
+                        <div class="absolute inset-x-0 bottom-0 rounded-full {{ $isHauptprojekt ? 'bg-indigo-700' : 'bg-indigo-500' }}" :style="`height: ${values[{{ $p->id }}]}%`"></div>
                         <div
-                            class="absolute left-1/2 h-4 w-4 -translate-x-1/2 rounded-full border-2 border-indigo-600 bg-white shadow"
+                            class="absolute left-1/2 h-4 w-4 -translate-x-1/2 rounded-full border-2 bg-white shadow {{ $isHauptprojekt ? 'border-indigo-700' : 'border-indigo-600' }}"
                             :style="`bottom: calc(${values[{{ $p->id }}]}% - 8px)`"
                         ></div>
                     </div>
@@ -133,8 +185,11 @@
                         class="w-14 rounded border-gray-300 px-1 py-0.5 text-center text-xs tabular-nums"
                     >
 
-                    <span class="max-w-14 truncate text-center text-[11px] text-gray-500" title="{{ $p->source_pn }}{{ $p->title ? ' – '.$p->title : '' }}">
-                        {{ $p->source_pn }}{{ $p->id === $project->id ? ' (H)' : '' }}
+                    <span
+                        class="max-w-14 truncate text-center text-[11px] {{ $isHauptprojekt ? 'font-semibold text-indigo-700' : 'text-gray-500' }}"
+                        title="{{ $p->source_pn }}{{ $p->title ? ' – '.$p->title : '' }}"
+                    >
+                        {{ $p->source_pn }}
                     </span>
                 </div>
             @endforeach
