@@ -1007,6 +1007,10 @@ class ProjectController extends Controller
                 'isHauptprojekt' => $p->id === $project->id && $project->verbund_rolle === 1,
                 'hours' => (float) ($hoursByProject[$p->id] ?? 0),
                 'plan' => $p->effectivePlannedHours(),
+                // Ralf, 2026-09-27: "da ist farblich wenig Unterschied zu erkennen zwischen den
+                // Stunden, die noch nach Schablone sind und denen, die schon gelöst sind" -
+                // je Zeile mitgeben, damit die "Je Projekt"-Tabelle das kennzeichnen kann.
+                'planLinked' => $p->plannedHoursLinkedToTemplate(),
             ];
         });
 

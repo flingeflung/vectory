@@ -108,7 +108,19 @@
                 @foreach ($zeiten['ownRelevantFunctionGroups'] as $fg)
                     <label class="flex items-center justify-between gap-1 rounded-md border border-gray-200 bg-white px-1.5 py-1 text-xs text-gray-600">
                         <span class="min-w-0 truncate" title="{{ $fg->name }}">{{ $fg->short_name }}</span>
-                        <input type="number" name="hours[{{ $fg->id }}]" x-model="hours['{{ $fg->id }}']" min="0" max="999" step="0.5" placeholder="–" class="w-16 shrink-0 rounded-md border-gray-300 py-0.5 text-xs">
+                        {{-- Ralf, 2026-09-27: rechte Nachkommastelle wurde vom nativen Zahlen-
+                             Spinner abgeschnitten (gleicher Fund wie bei der Prozentualen
+                             Aufteilung) - Spinner-Pfeile ausgeblendet, Feld verbreitert. --}}
+                        <input
+                            type="number"
+                            name="hours[{{ $fg->id }}]"
+                            x-model="hours['{{ $fg->id }}']"
+                            min="0"
+                            max="999"
+                            step="0.5"
+                            placeholder="–"
+                            class="w-20 shrink-0 rounded-md border-gray-300 py-0.5 text-xs tabular-nums [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                        >
                     </label>
                 @endforeach
             </div>
@@ -157,7 +169,16 @@
                                     <span class="ml-1 rounded-full bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700">{{ __('HP') }}</span>
                                 @endif
                             </td>
-                            <td class="px-3 py-1 whitespace-nowrap text-right tabular-nums text-gray-500">{{ $row['plan'] !== null ? $fmt($row['plan']) : '–' }}</td>
+                            {{-- Ralf, 2026-09-27: "da ist farblich wenig Unterschied zu erkennen
+                                 zwischen den Stunden, die noch nach Schablone sind und denen, die
+                                 schon gelöst sind" - eigener (gelöster) Wert jetzt amber + eigenes
+                                 Symbol, Schablonen-Wert bleibt neutral grau. --}}
+                            <td class="px-3 py-1 whitespace-nowrap text-right tabular-nums {{ $row['plan'] === null ? 'text-gray-400' : ($row['planLinked'] ? 'text-gray-500' : 'text-amber-700') }}">
+                                @if ($row['plan'] !== null && ! $row['planLinked'])
+                                    <span title="{{ __('Eigener Wert - nicht mehr mit der Schablone verbunden') }}" class="mr-0.5 inline-block h-1.5 w-1.5 rounded-full bg-amber-500 align-middle"></span>
+                                @endif
+                                {{ $row['plan'] !== null ? $fmt($row['plan']) : '–' }}
+                            </td>
                             <td class="py-1 pl-3 whitespace-nowrap text-right tabular-nums">{{ $fmt($row['hours']) }}</td>
                         </tr>
                     @endforeach
@@ -170,6 +191,12 @@
                     </tr>
                 </tfoot>
             </table>
+            @if ($zeiten['perProject']->contains(fn ($row) => $row['plan'] !== null && ! $row['planLinked']))
+                <p class="mb-4 -mt-4 flex items-center gap-1 text-[11px] text-gray-400">
+                    <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                    {{ __('Eigener Wert, nicht mehr mit der Schablone verbunden') }}
+                </p>
+            @endif
         @endif
 
         <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('Nach Job') }}</h3>
