@@ -5,6 +5,14 @@
     werden, auf Hauptprojekt + Unterprojekte verteilt werden (siehe
     ProjectHourController::splitAndBook()) - Änderungen wirken erst auf
     künftige Buchungen, bereits gebuchte Stunden bleiben unangetastet.
+
+    Equalizer-artige Zug-Regler (Ralf, 2026-09-27, Vorbild: Grafik-EQ einer
+    Stereoanlage-App): Ziehen an einem Regler verteilt die Differenz
+    PROPORTIONAL zum aktuellen Anteil auf alle anderen - die Summe bleibt
+    dadurch mathematisch garantiert immer 100 (kein iteratives Clamping
+    nötig: Ziel-Summe der anderen ist 100-neuerWert, alle anderen werden
+    exakt auf diese Ziel-Summe hochskaliert). Zahlenfeld darunter bedient
+    dieselbe Funktion - Ziehen und Tippen sind gleichwertig.
 --}}
 <div class="flex gap-1 border-b border-gray-200 px-4 pt-2">
     <button
@@ -26,50 +34,112 @@
 
 <form
     id="project-percentage-form"
-    x-data="{ dirty: false, sum: {{ number_format((float) $shares->sum(), 2, '.', '') }} }"
-    @input="dirty = window.formIsDirty($el); sum = Array.from($el.querySelectorAll('input[type=number]')).reduce((s, i) => s + (parseFloat(i.value) || 0), 0)"
+    x-data="{
+        values: {{ Illuminate\Support\Js::from($shares->mapWithKeys(fn ($v, $k) => [(string) $k => round((float) $v, 2)])) }},
+        dragging: null,
+        dragRect: null,
+        dirty: false,
+
+        sum() {
+            return Object.values(this.values).reduce((a, b) => a + b, 0);
+        },
+
+        // Verteilt die Differenz proportional zum aktuellen Anteil auf alle
+        // anderen Regler - Ziel-Summe der anderen ist immer 100 minus dem
+        // neuen Wert, also landet die Gesamtsumme rechnerisch zwingend bei
+        // 100 (keine Sonderfälle für 'am Anschlag', da proportionale
+        // Skalierung auf eine Summe <= 100 keinen Einzelwert über 100 heben
+        // kann). Rundungsrest (2 Nachkommastellen) schlägt sich der
+        // gezogene Regler selbst zu, analog zur Rundungsregel beim Buchen.
+        setValue(id, raw) {
+            const newValue = Math.max(0, Math.min(100, isNaN(raw) ? 0 : raw));
+            const key = String(id);
+            const others = Object.keys(this.values).filter((k) => k !== key);
+            const otherSum = others.reduce((s, k) => s + this.values[k], 0);
+            const targetOtherSum = 100 - newValue;
+
+            if (otherSum > 0.001) {
+                const factor = targetOtherSum / otherSum;
+                others.forEach((k) => { this.values[k] = Math.round(this.values[k] * factor * 100) / 100; });
+            } else {
+                const even = Math.round((targetOtherSum / (others.length || 1)) * 100) / 100;
+                others.forEach((k) => { this.values[k] = even; });
+            }
+
+            const roundedOtherSum = others.reduce((s, k) => s + this.values[k], 0);
+            this.values[key] = Math.round((100 - roundedOtherSum) * 100) / 100;
+            this.dirty = true;
+        },
+
+        startDrag(id, event) {
+            this.dragging = id;
+            this.dragRect = event.currentTarget.getBoundingClientRect();
+            this.dragFromY(id, event.clientY);
+        },
+        dragFromY(id, clientY) {
+            const ratio = 1 - Math.max(0, Math.min(1, (clientY - this.dragRect.top) / this.dragRect.height));
+            this.setValue(id, ratio * 100);
+        },
+        onWindowPointerMove(event) {
+            if (this.dragging === null) { return; }
+            this.dragFromY(this.dragging, event.clientY);
+        },
+        stopDrag() { this.dragging = null; },
+    }"
+    @pointermove.window="onWindowPointerMove($event)"
+    @pointerup.window="stopDrag()"
     method="POST"
     action="{{ route('projekte.aufteilung.update', $project) }}"
     class="flex max-h-[75vh] flex-col"
 >
     @csrf
     <div class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
-        <p class="mb-3 text-xs text-gray-500">
+        <p class="mb-4 text-xs text-gray-500">
             {{ __('Wenn jemand am Hauptprojekt :pn Stunden bucht, werden sie sofort nach diesen Prozenten auf die Unterprojekte verteilt - dort entstehen dann die eigentlichen Buchungen. Eine spätere Änderung der Prozente wirkt nur auf künftige Buchungen.', ['pn' => $project->source_pn]) }}
             @unless ($configured)
                 {{ __('Noch nichts gespeichert - die Werte unten sind gleichmäßig verteilt.') }}
             @endunless
         </p>
 
-        <div class="space-y-1">
+        <div class="flex items-end gap-4 overflow-x-auto pb-1 pt-6">
             @foreach ($participants as $p)
-                <div class="flex items-center justify-between gap-3 rounded px-2 py-1.5 hover:bg-gray-50">
-                    <span class="min-w-0 flex-1 truncate">
-                        {{ $p->source_pn }}{{ $p->id === $project->id ? ' ('.__('Hauptprojekt').')' : '' }}
-                        @if ($p->title)
-                            – {{ $p->title }}
-                        @endif
-                    </span>
-                    <div class="flex shrink-0 items-center gap-1">
-                        <input
-                            type="number"
-                            name="shares[{{ $p->id }}]"
-                            value="{{ number_format($shares[$p->id] ?? 0, 2, '.', '') }}"
-                            step="0.01"
-                            min="0"
-                            max="100"
-                            required
-                            class="w-20 rounded border-gray-300 text-right text-sm tabular-nums"
-                        >
-                        <span class="text-gray-400">%</span>
+                <div class="flex w-14 shrink-0 flex-col items-center gap-2">
+                    <span class="font-mono text-xs font-semibold tabular-nums text-gray-700" x-text="values[{{ $p->id }}].toFixed(2).replace('.', ',') + ' %'"></span>
+
+                    <div
+                        class="relative h-36 w-7 shrink-0 touch-none select-none rounded-full bg-gray-200"
+                        @pointerdown="startDrag({{ $p->id }}, $event)"
+                        style="cursor: grab;"
+                    >
+                        <div class="absolute inset-x-0 bottom-0 rounded-full bg-indigo-500" :style="`height: ${values[{{ $p->id }}]}%`"></div>
+                        <div
+                            class="absolute left-1/2 h-4 w-4 -translate-x-1/2 rounded-full border-2 border-indigo-600 bg-white shadow"
+                            :style="`bottom: calc(${values[{{ $p->id }}]}% - 8px)`"
+                        ></div>
                     </div>
+
+                    <input
+                        type="number"
+                        name="shares[{{ $p->id }}]"
+                        :value="values[{{ $p->id }}].toFixed(2)"
+                        @change="setValue({{ $p->id }}, parseFloat($event.target.value))"
+                        step="0.01"
+                        min="0"
+                        max="100"
+                        required
+                        class="w-14 rounded border-gray-300 px-1 py-0.5 text-center text-xs tabular-nums"
+                    >
+
+                    <span class="max-w-14 truncate text-center text-[11px] text-gray-500" title="{{ $p->source_pn }}{{ $p->title ? ' – '.$p->title : '' }}">
+                        {{ $p->source_pn }}{{ $p->id === $project->id ? ' (H)' : '' }}
+                    </span>
                 </div>
             @endforeach
         </div>
 
-        <div class="mt-3 flex items-center justify-between border-t border-gray-100 pt-2 text-xs font-medium" :class="Math.abs(sum - 100) < 0.005 ? 'text-gray-500' : 'text-red-600'">
+        <div class="mt-4 flex items-center justify-between border-t border-gray-100 pt-2 text-xs font-medium" :class="Math.abs(sum() - 100) < 0.005 ? 'text-gray-400' : 'text-red-600'">
             <span>{{ __('Summe') }}</span>
-            <span x-text="sum.toFixed(2).replace('.', ',') + ' %'"></span>
+            <span x-text="sum().toFixed(2).replace('.', ',') + ' %'"></span>
         </div>
     </div>
     <div class="flex shrink-0 justify-end gap-2 border-t border-gray-200 px-4 py-3">
@@ -84,8 +154,6 @@
             type="submit"
             x-show="dirty"
             x-cloak
-            :disabled="Math.abs(sum - 100) > 0.005"
-            :class="Math.abs(sum - 100) > 0.005 ? 'cursor-not-allowed opacity-40' : ''"
             class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover"
         >
             {{ __('Speichern') }}
