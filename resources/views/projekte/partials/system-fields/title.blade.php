@@ -30,6 +30,11 @@
             </div>
         </details>
     @endif
+    {{-- Ralf, 2026-09-27: Hauptprojekt-/Unterprojekt-Hinweis ist eine eigene Sinneinheit, deshalb
+         mit Trennlinie von der Bezeichnung darunter abgesetzt statt direkt anzuschließen. --}}
+    @if ($project->verbund_rolle === 1 || $project->verbund_rolle === 2)
+        <div class="mb-1.5 border-t border-gray-200 pt-1.5"></div>
+    @endif
     <label class="block text-xs text-gray-500">{{ __('Bezeichnung') }}<span class="text-red-500" title="{{ __('Pflichtfeld') }}"> *</span></label>
     <input type="text" name="title" value="{{ old('title', $project->title) }}" class="mt-0.5 w-full rounded border-gray-300 py-1 text-sm" required>
 </div>
