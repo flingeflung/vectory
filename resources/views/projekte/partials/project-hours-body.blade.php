@@ -32,20 +32,18 @@
 </div>
 
 <div class="px-4 py-3 text-sm">
-    @if (! $projectHasJobs)
-        <p class="text-gray-500">
-            {{ __('Für dieses Projekt sind noch keine Jobs verknüpft.') }}
-            @if ($canEditJobs)
-                {{ __('Über den Reiter „Verknüpfte Jobs" lässt sich das festlegen.') }}
-            @else
-                {{ __('Bitte jemanden mit Bearbeitungsrecht am Projekt bitten, das nachzutragen.') }}
-            @endif
-        </p>
-    @elseif ($bookableJobs->isEmpty())
-        <p class="text-gray-500">{{ __('Keiner der für dieses Projekt verknüpften Jobs ist Ihnen selbst zugewiesen - buchen können Sie deshalb hier nicht. Die eigenen Jobs lassen sich in der Zeiterfassung anpassen.') }}</p>
-    @else
+    {{--
+        Bestehende Buchungen IMMER zeigen, unabhängig von projectHasJobs/bookableJobs
+        unten (Ralf-Fund, 2026-09-27): eine am Hauptprojekt ausgelöste Aufteilung
+        schreibt Zeilen in die Unterprojekte, auch wenn dort selbst gar keine (für
+        diese Person buchbaren) Jobs verknüpft sind - genau dieser Fall blendete die
+        Liste vorher komplett aus und liess eine echt gespeicherte Buchung wie
+        verloren wirken ("die Buchung wird als gespeichert angezeigt, ist sie aber
+        nicht sichtbar").
+    --}}
+    @if ($entries->isNotEmpty())
         <div class="mb-3 space-y-1">
-            @forelse ($entries as $entry)
+            @foreach ($entries as $entry)
                 <div class="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-gray-50">
                     <span class="min-w-0 flex-1 truncate">
                         <span class="text-gray-400">{{ \Illuminate\Support\Carbon::parse($entry->work_date)->format('d.m.Y') }}</span>
@@ -64,17 +62,35 @@
                         </svg>
                     </button>
                 </div>
-            @empty
-                <p class="text-gray-400">{{ __('Noch keine eigenen Buchungen an diesem Projekt.') }}</p>
-            @endforelse
+            @endforeach
         </div>
+    @endif
+
+    @if (! $projectHasJobs)
+        <p class="text-gray-500">
+            {{ __('Für dieses Projekt sind noch keine Jobs verknüpft.') }}
+            @if ($canEditJobs)
+                {{ __('Über den Reiter „Verknüpfte Jobs" lässt sich das festlegen.') }}
+            @else
+                {{ __('Bitte jemanden mit Bearbeitungsrecht am Projekt bitten, das nachzutragen.') }}
+            @endif
+        </p>
+    @elseif ($bookableJobs->isEmpty())
+        <p class="text-gray-500">{{ __('Keiner der für dieses Projekt verknüpften Jobs ist Ihnen selbst zugewiesen - buchen können Sie deshalb hier nicht. Die eigenen Jobs lassen sich in der Zeiterfassung anpassen.') }}</p>
+    @else
+        @if ($entries->isEmpty())
+            <p class="mb-2 text-gray-400">{{ __('Noch keine eigenen Buchungen an diesem Projekt.') }}</p>
+        @endif
 
         {{-- Neu-Formular hinter Trigger versteckt (Konvention), Auswahlfeld bekommt beim Aufdecken den Fokus. --}}
         <div
             x-data="{
                 adding: false,
                 splits: {{ Illuminate\Support\Js::from($splits ?? []) }},
+                existingBookings: {{ Illuminate\Support\Js::from($existingBookings ?? []) }},
                 previewHours: 0,
+                selectedJobTypeId: null,
+                selectedDate: null,
 
                 // Dieselbe Größter-Rest-Logik wie splitAndBook() serverseitig (Ralf, 2026-09-27:
                 // 'die genaue Verteilung der Zeit auf die UP anhand der %-Aufteilung, bevor ich
@@ -102,7 +118,16 @@
                         .map((s) => ({ label: s.label, hours: shares[s.id] / 100 }))
                         .filter((s) => s.hours > 0);
                 },
+
+                // Ralf, 2026-09-27: 'sollte man den Nutzer drauf hinweisen, dass es schon
+                // eine Buchung für diesen Tag gibt' - eine zweite Buchung auf denselben
+                // Job/Tag ERSETZT die erste (wie in der klassischen Zeiterfassung), statt
+                // sich draufzuaddieren. Nicht blockierend, nur ein Hinweis.
+                alreadyBooked() {
+                    return this.existingBookings.some((b) => b.job_type_id == this.selectedJobTypeId && b.work_date === this.selectedDate);
+                },
             }"
+            x-init="selectedJobTypeId = $refs.projectHourJobSelect.value; selectedDate = $refs.projectHourDateInput.value"
         >
             <button
                 type="button"
@@ -126,7 +151,7 @@
                 <div class="flex flex-wrap items-end gap-2">
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('Job') }}</label>
-                        <select x-ref="projectHourJobSelect" name="job_type_id" required class="mt-0.5 rounded border-gray-300 text-sm">
+                        <select x-ref="projectHourJobSelect" name="job_type_id" required @change="selectedJobTypeId = $event.target.value" class="mt-0.5 rounded border-gray-300 text-sm">
                             @foreach ($bookableJobs->groupBy(fn ($job) => $job->group_name ?? __('Ohne Gruppe')) as $groupName => $groupJobs)
                                 <optgroup label="{{ $groupName }}">
                                     @foreach ($groupJobs as $job)
@@ -138,7 +163,15 @@
                     </div>
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('Datum') }}</label>
-                        <input type="date" name="work_date" value="{{ now()->toDateString() }}" required class="mt-0.5 rounded border-gray-300 text-sm">
+                        <input
+                            type="date"
+                            name="work_date"
+                            x-ref="projectHourDateInput"
+                            value="{{ now()->toDateString() }}"
+                            required
+                            @change="selectedDate = $event.target.value"
+                            class="mt-0.5 rounded border-gray-300 text-sm"
+                        >
                     </div>
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('Stunden') }}</label>
@@ -159,6 +192,10 @@
                     <button type="button" @click="adding = false" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                         {{ __('Abbrechen') }}
                     </button>
+                </div>
+
+                <div x-show="alreadyBooked()" x-cloak class="rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-700">
+                    {{ __('Für diesen Job gibt es an diesem Tag bereits eine Buchung - Speichern ersetzt sie, statt die Stunden zu addieren.') }}
                 </div>
 
                 {{-- Nur am Hauptprojekt mit konfigurierter Aufteilung relevant - sonst bleibt splits leer. --}}

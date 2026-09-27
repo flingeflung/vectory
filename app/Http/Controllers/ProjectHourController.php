@@ -32,6 +32,7 @@ class ProjectHourController extends Controller
         $tenantId = CurrentTenant::id();
 
         $bookableJobs = $this->bookableJobs($project->id, $personId, $tenantId);
+        $splits = $this->splitsForPreview($project);
 
         $entries = DB::table('job_hours')
             ->join('job_types', 'job_types.id', '=', 'job_hours.job_type_id')
@@ -41,6 +42,22 @@ class ProjectHourController extends Controller
             ->orderByDesc('job_hours.work_date')
             ->get(['job_hours.id', 'job_hours.job_type_id', 'job_hours.work_date', 'job_hours.hours', 'job_types.code', 'job_types.name']);
 
+        // Für den Hinweis "es gibt für diesen Tag/Job schon eine Buchung, Speichern
+        // ersetzt sie" (Ralf, 2026-09-27) - bei konfigurierter Aufteilung zählt eine
+        // Buchung in JEDEM Empfänger (Hauptprojekt + Unterprojekte), nicht nur hier,
+        // weil genau die vom nächsten Speichern überschrieben würden.
+        $relevantProjectIds = $splits ? array_column($splits, 'id') : [$project->id];
+        $existingBookings = $personId
+            ? DB::table('job_hours')
+                ->where('tenant_id', $tenantId)
+                ->where('person_id', $personId)
+                ->whereIn('project_id', $relevantProjectIds)
+                ->get(['job_type_id', 'work_date'])
+                ->map(fn ($row) => ['job_type_id' => (int) $row->job_type_id, 'work_date' => (string) $row->work_date])
+                ->unique(fn ($row) => $row['job_type_id'].'|'.$row['work_date'])
+                ->values()
+            : collect();
+
         return view('projekte.partials.project-hours-body', [
             'project' => $project,
             'bookableJobs' => $bookableJobs,
@@ -48,7 +65,8 @@ class ProjectHourController extends Controller
             'projectHasJobs' => DB::table('project_job_types')->where('project_id', $project->id)->exists(),
             'canEditJobs' => $request->user()->can('project.edit'),
             'showAufteilungTab' => ProjectPercentageSplitController::showAufteilungTab($project),
-            'splits' => $this->splitsForPreview($project),
+            'splits' => $splits,
+            'existingBookings' => $existingBookings,
         ]);
     }
 
