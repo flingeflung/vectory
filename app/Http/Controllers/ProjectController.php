@@ -991,7 +991,7 @@ class ProjectController extends Controller
         // daraus ergibt, dass nur die HP-Zeile einen Plan zeigt.
         $participants = Project::withoutGlobalScope('tenant')
             ->whereIn('id', $participantIds)
-            ->with('projectTemplate.functionGroups')
+            ->with(['projectTemplate.functionGroups', 'functionGroupHours'])
             ->get()
             ->keyBy('id');
 
@@ -1027,6 +1027,20 @@ class ProjectController extends Controller
                 'percent' => $total > 0 ? (float) $row->total / $total * 100 : 0,
             ]);
 
+        // Für den "Lösen"-Editor (Ralf, 2026-09-27: "dadurch habe ich keine Möglichkeit mehr,
+        // zu erkennen, aus welchen Stundenpaketen es sich rekrutiert") - der aktuell geltende
+        // Stand je Funktionsgruppe, egal ob (noch) aus der Schablone oder schon eigene Zeilen,
+        // UND alle über den Workflow relevanten Fktgrp, damit sich auch eine bislang auf 0
+        // stehende noch eintragen lässt (gleiches Prinzip wie bei der Schablone selbst).
+        $ownBreakdown = $project->functionGroupHours->isNotEmpty()
+            ? $project->functionGroupHours->mapWithKeys(fn ($fg) => [(string) $fg->id => (string) $fg->pivot->planned_hours])
+            : ($project->projectTemplate?->functionGroups ?? collect())->mapWithKeys(fn ($fg) => [(string) $fg->id => (string) $fg->pivot->planned_hours]);
+        $ownRelevantFunctionGroups = $project->relevantFunctionGroups()
+            ->concat($project->functionGroupHours)
+            ->unique('id')
+            ->sortBy('name')
+            ->values();
+
         return [
             'perProject' => $perProject,
             'byJob' => $byJob,
@@ -1036,43 +1050,78 @@ class ProjectController extends Controller
             'ownPlan' => $project->effectivePlannedHours(),
             'ownPlanLinked' => $project->plannedHoursLinkedToTemplate(),
             'ownTemplateName' => $project->projectTemplate?->name,
+            'ownBreakdown' => $ownBreakdown,
+            'ownRelevantFunctionGroups' => $ownRelevantFunctionGroups,
         ];
     }
 
     /**
-     * Planstunden setzen (Ralf, 2026-09-27, siehe Roadmap-Backlog): solange noch mit der
-     * Schablone verknüpft, bricht dieser Aufruf die Verknüpfung endgültig auf ("Vererbung
-     * aufbrechen") und setzt den mitgeschickten Wert als eigenen, ab jetzt frei änderbaren
-     * Wert. Ändert NIE die Schablone selbst und NIE project_template_id - nur den Override.
+     * "Lösen" (Ralf, 2026-09-27, siehe Roadmap-Backlog): kopiert den JETZT gültigen
+     * Schablonen-Stand je Funktionsgruppe in eigene, projektgebundene Zeilen - ab da
+     * unabhängig von der Schablone (die selbst NIE geändert wird), aber mit derselben
+     * Aufschlüsselung als Startpunkt, damit man weiterhin sieht/anpasst, woraus sich die
+     * Planstunden zusammensetzen, statt nur einen einzelnen Gesamt-Wert zu bekommen.
      */
-    public function updatePlannedHours(Request $request, Project $project): Response
+    public function breakPlannedHoursLink(Request $request, Project $project): Response
     {
         abort_unless($request->user()->can('project.edit'), 403);
+        abort_unless($project->plannedHoursLinkedToTemplate(), 409);
 
-        $data = $request->validate([
-            'hours' => ['required', 'numeric', 'min:0', 'max:9999.99'],
-        ]);
-
-        $wasLinked = $project->plannedHoursLinkedToTemplate();
+        $templateName = $project->projectTemplate->name;
         $previous = $project->effectivePlannedHours();
-        $hours = round((float) $data['hours'], 2);
 
-        $project->update(['planned_hours_override' => $hours]);
+        $syncData = $project->projectTemplate->functionGroups->mapWithKeys(fn ($fg) => [
+            $fg->id => ['tenant_id' => $project->tenant_id, 'planned_hours' => $fg->pivot->planned_hours],
+        ]);
+        $project->functionGroupHours()->sync($syncData);
 
-        $message = $wasLinked
-            ? __('Planstunden von der Schablone „:template" gelöst und auf :hours h gesetzt (vorher :previous h laut Schablone).', [
-                'template' => $project->projectTemplate?->name ?? '',
-                'hours' => number_format($hours, 2, ',', '.'),
-                'previous' => number_format($previous ?? 0, 2, ',', '.'),
-            ])
-            : __('Planstunden von :previous h auf :hours h geändert.', [
-                'previous' => number_format($previous ?? 0, 2, ',', '.'),
-                'hours' => number_format($hours, 2, ',', '.'),
-            ]);
-        Activity::log($project, ActivityType::PlannedHoursChanged, $message);
+        Activity::log($project, ActivityType::PlannedHoursChanged, __(
+            'Planstunden von der Schablone „:template" gelöst (:hours h übernommen) - ab jetzt unabhängig je Funktionsgruppe änderbar.',
+            ['template' => $templateName, 'hours' => number_format($previous ?? 0, 2, ',', '.')]
+        ));
 
-        $project = $project->fresh();
+        return $this->zeitenBodyResponse($project->fresh());
+    }
 
+    /**
+     * Planstunden je Funktionsgruppe speichern (Ralf, 2026-09-27) - nur möglich, wenn die
+     * Schablonen-Verbindung bereits gelöst ist (siehe breakPlannedHoursLink() oben). Gleiches
+     * Muster wie ProjectTemplateController::updateFunctionGroups(): eine leere/0-Eingabe
+     * entfernt die Fktgrp aus dem Plan, statt sie als "0 h" stehen zu lassen.
+     */
+    public function updatePlannedFunctionGroupHours(Request $request, Project $project): Response
+    {
+        abort_unless($request->user()->can('project.edit'), 403);
+        abort_if($project->plannedHoursLinkedToTemplate(), 409);
+
+        $request->validate(['hours' => ['nullable', 'array'], 'hours.*' => ['nullable', 'numeric', 'min:0', 'max:999']]);
+
+        $previous = $project->effectivePlannedHours();
+
+        $hours = collect($request->array('hours'))
+            ->mapWithKeys(fn ($value, $functionGroupId) => [(int) $functionGroupId => $value])
+            ->filter(fn ($value) => $value !== null && $value !== '' && (float) $value > 0);
+
+        $validIds = $project->relevantFunctionGroups()
+            ->concat($project->functionGroupHours)
+            ->pluck('id')->unique()->intersect($hours->keys());
+
+        $syncData = $validIds->mapWithKeys(fn ($id) => [
+            $id => ['tenant_id' => $project->tenant_id, 'planned_hours' => (float) $hours[$id]],
+        ]);
+        $project->functionGroupHours()->sync($syncData);
+
+        $new = $project->fresh()->effectivePlannedHours();
+        Activity::log($project, ActivityType::PlannedHoursChanged, __(
+            'Planstunden von :previous h auf :new h geändert.',
+            ['previous' => number_format($previous ?? 0, 2, ',', '.'), 'new' => number_format($new ?? 0, 2, ',', '.')]
+        ));
+
+        return $this->zeitenBodyResponse($project->fresh());
+    }
+
+    private function zeitenBodyResponse(Project $project): Response
+    {
         return response(view('projekte.partials.zeiten-body', [
             'project' => $project,
             'zeiten' => $this->zeitenData($project),

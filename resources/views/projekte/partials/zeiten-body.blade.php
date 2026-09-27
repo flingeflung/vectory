@@ -10,70 +10,102 @@
     Projekt-Reiter-Systems bleibt inline/x-show, nur dieser eine Block tauscht sich per JS aus.
 
     Planstunden (Ralf, 2026-09-27): solange mit der Aufwandsschablone verknüpft, gilt live
-    deren Summe - "Lösen" trennt die Verbindung EINWEG (keine Rückkehr) und macht den Wert
-    frei editierbar, ändert aber nie die Schablone selbst. Jedes Projekt (auch ein
-    Unterprojekt) trägt seinen Plan unabhängig - im Verbund gilt implizit der Plan des
+    deren Summe - "Lösen" trennt die Verbindung EINWEG (keine Rückkehr) und kopiert den
+    aktuellen Schablonen-Stand JE FUNKTIONSGRUPPE hierher, ändert aber nie die Schablone
+    selbst. Korrektur (Ralf, 2026-09-27, nachdem die erste Fassung nur einen einzigen
+    Gesamt-Wert anbot): "dadurch habe ich keine Möglichkeit mehr, zu erkennen, aus welchen
+    Stundenpaketen es sich rekrutiert" - ab "Lösen" bleibt die Aufschlüsselung nach
+    Funktionsgruppe erhalten und unabhängig änderbar, gleiches Bearbeitungsmuster wie bei der
+    Schablone selbst (admin/project-templates/partials/content.blade.php). Jedes Projekt (auch
+    ein Unterprojekt) trägt seinen Plan unabhängig - im Verbund gilt implizit der Plan des
     Hauptprojekts für alle, solange kein Unterprojekt einen eigenen hat.
 --}}
 <div id="project-zeiten-body" class="text-sm">
     @php($fmt = fn ($hours) => number_format($hours, 2, ',', '.'))
 
-    <div
-        x-data="{
-            editing: false,
-            value: {{ $zeiten['ownPlan'] !== null ? number_format($zeiten['ownPlan'], 2, '.', '') : '0' }},
-            async breakLink() {
-                if (! await window.confirmDialog({
-                    title: {{ Illuminate\Support\Js::from(__('Verbindung zur Schablone lösen?')) }},
-                    message: {{ Illuminate\Support\Js::from(__('Die Verbindung zur Schablone wird für dieses Projekt endgültig gelöst - eine spätere Rückkehr zur Schablonen-Verknüpfung ist nicht mehr möglich. Die Schablone selbst bleibt unverändert.')) }},
-                    confirmLabel: {{ Illuminate\Support\Js::from(__('Lösen')) }},
-                    cancelLabel: {{ Illuminate\Support\Js::from(__('Abbrechen')) }},
-                })) { return; }
-                this.editing = true;
-            },
-            async save() {
-                const response = await fetch({{ Illuminate\Support\Js::from(route('projekte.planstunden', $project)) }}, {
-                    method: 'POST',
-                    headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'text/html' },
-                    body: new URLSearchParams({ hours: this.value }),
-                });
-                if (! response.ok) {
-                    await window.notifyDialog({{ Illuminate\Support\Js::from(__('Speichern fehlgeschlagen. Bitte erneut versuchen.')) }});
-                    return;
-                }
-                document.getElementById('project-zeiten-body').outerHTML = await response.text();
-            },
-        }"
-        class="mb-4 rounded-md border border-gray-200 bg-gray-50 px-3 py-2"
-    >
-        <div class="flex flex-wrap items-center gap-2" x-show="! editing">
+    @if ($zeiten['ownPlanLinked'])
+        <div
+            x-data="{
+                async loesen() {
+                    if (! await window.confirmDialog({
+                        title: {{ Illuminate\Support\Js::from(__('Verbindung zur Schablone lösen?')) }},
+                        message: {{ Illuminate\Support\Js::from(__('Die Verbindung zur Schablone wird für dieses Projekt endgültig gelöst - eine spätere Rückkehr zur Schablonen-Verknüpfung ist nicht mehr möglich. Die Schablone selbst bleibt unverändert. Die aktuelle Aufschlüsselung je Funktionsgruppe wird als Startpunkt übernommen und bleibt danach unabhängig änderbar.')) }},
+                        confirmLabel: {{ Illuminate\Support\Js::from(__('Lösen')) }},
+                        cancelLabel: {{ Illuminate\Support\Js::from(__('Abbrechen')) }},
+                    })) { return; }
+                    const response = await fetch({{ Illuminate\Support\Js::from(route('projekte.planstunden.loesen', $project)) }}, {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'text/html' },
+                    });
+                    if (! response.ok) {
+                        await window.notifyDialog({{ Illuminate\Support\Js::from(__('Lösen fehlgeschlagen. Bitte erneut versuchen.')) }});
+                        return;
+                    }
+                    document.getElementById('project-zeiten-body').outerHTML = await response.text();
+                },
+            }"
+            class="mb-4 flex flex-wrap items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2"
+        >
             <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('Planstunden dieses Projekts') }}</span>
-            @if ($zeiten['ownPlan'] !== null)
-                <span class="font-semibold tabular-nums">{{ $fmt($zeiten['ownPlan']) }} h</span>
-                @if ($zeiten['ownPlanLinked'])
-                    <span class="text-gray-400">{{ __('(aus Schablone „:name")', ['name' => $zeiten['ownTemplateName']]) }}</span>
-                    <button type="button" @click="breakLink()" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
-                        {{ __('Lösen') }}
-                    </button>
-                @else
-                    <span class="text-gray-400">{{ __('(eigener Wert)') }}</span>
-                    <button type="button" @click="editing = true" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
-                        {{ __('Ändern') }}
-                    </button>
-                @endif
-            @else
-                <span class="text-gray-500">{{ __('Kein Plan hinterlegt') }}</span>
-            @endif
+            <span class="font-semibold tabular-nums">{{ $fmt($zeiten['ownPlan']) }} h</span>
+            <span class="text-gray-400">{{ __('(aus Schablone „:name")', ['name' => $zeiten['ownTemplateName']]) }}</span>
+            <button
+                type="button"
+                @click="loesen()"
+                class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+            >
+                {{ __('Lösen') }}
+            </button>
         </div>
-
-        <div class="flex flex-wrap items-center gap-2" x-show="editing" x-cloak>
-            <label class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('Planstunden dieses Projekts') }}</label>
-            <input type="number" step="0.25" min="0" max="9999.99" x-model.number="value" class="w-24 rounded border-gray-300 text-sm tabular-nums">
-            <span class="text-xs text-gray-500">h</span>
-            <button type="button" @click="save()" class="rounded-md bg-btn-primary px-2 py-0.5 text-xs font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
-            <button type="button" @click="editing = false" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Abbrechen') }}</button>
+    @elseif ($zeiten['ownRelevantFunctionGroups']->isNotEmpty() || $zeiten['ownBreakdown']->isNotEmpty())
+        <form
+            x-data="{
+                dirty: false,
+                hours: {{ Illuminate\Support\Js::from($zeiten['ownBreakdown']) }},
+                async save() {
+                    const params = new URLSearchParams();
+                    Object.entries(this.hours).forEach(([id, val]) => params.append('hours[' + id + ']', val ?? ''));
+                    const response = await fetch({{ Illuminate\Support\Js::from(route('projekte.planstunden', $project)) }}, {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'text/html' },
+                        body: params,
+                    });
+                    if (! response.ok) {
+                        await window.notifyDialog({{ Illuminate\Support\Js::from(__('Speichern fehlgeschlagen. Bitte erneut versuchen.')) }});
+                        return;
+                    }
+                    document.getElementById('project-zeiten-body').outerHTML = await response.text();
+                },
+            }"
+            @input="dirty = window.formIsDirty($el)"
+            @submit.prevent="save()"
+            class="mb-4 rounded-md border border-gray-200 bg-gray-50 px-3 py-2"
+        >
+            <div class="flex items-center justify-between">
+                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('Planstunden je Funktionsgruppe') }}</p>
+                <p class="text-xs text-gray-400">
+                    {{ __('Summe') }}: <span x-text="Object.values(hours).reduce((sum, v) => sum + (parseFloat(v) || 0), 0).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })"></span> h
+                </p>
+            </div>
+            <div class="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                @foreach ($zeiten['ownRelevantFunctionGroups'] as $fg)
+                    <label class="flex items-center justify-between gap-1 rounded-md border border-gray-200 bg-white px-1.5 py-1 text-xs text-gray-600">
+                        <span class="min-w-0 truncate" title="{{ $fg->name }}">{{ $fg->short_name }}</span>
+                        <input type="number" name="hours[{{ $fg->id }}]" x-model="hours['{{ $fg->id }}']" min="0" max="999" step="0.5" placeholder="–" class="w-16 shrink-0 rounded-md border-gray-300 py-0.5 text-xs">
+                    </label>
+                @endforeach
+            </div>
+            <div class="mt-1 flex justify-end">
+                <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
+                    {{ __('Speichern') }}
+                </button>
+            </div>
+        </form>
+    @else
+        <div class="mb-4 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500">
+            {{ __('Kein Plan hinterlegt') }}
         </div>
-    </div>
+    @endif
 
     @if ($zeiten['planTotal'] !== null)
         <p class="mb-4 text-xs text-gray-500">
