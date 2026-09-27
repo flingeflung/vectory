@@ -28,7 +28,12 @@ class VerbundController extends Controller
 
         $members = $group->projects()->with('hauptprojekt')->orderBy('source_pn')->get();
         $conflicts = $this->conflictChecker->conflictsFor($group, $members);
-        $currentHauptprojekt = $members->firstWhere('verbund_rolle', 1);
+        // Nur relevant, wenn DIESE Gruppe selbst der Verbund ist (Ralf,
+        // 2026-09-27) - sonst würde ein Mitglied, das nur zufällig auch in
+        // einer ANDEREN, echten Verbund-Gruppe Hauptprojekt ist, hier fälschlich
+        // als "aktueller Verbund dieser Gruppe" auftauchen (gleicher Fehler wie
+        // bei ProjectGroupController::abortIfActiveVerbund() zuvor).
+        $currentHauptprojekt = $group->is_verbund ? $members->firstWhere('verbund_rolle', 1) : null;
 
         return response()->view('projekte.partials.verbund-panel', [
             'group' => $group,
@@ -54,8 +59,8 @@ class VerbundController extends Controller
                 'group' => $group,
                 'members' => $members,
                 'conflicts' => $conflicts,
-                'currentHauptprojektId' => $members->firstWhere('verbund_rolle', 1)?->id,
-                'hasActiveVerbund' => $members->contains('verbund_rolle', 1),
+                'currentHauptprojektId' => $group->is_verbund ? $members->firstWhere('verbund_rolle', 1)?->id : null,
+                'hasActiveVerbund' => $group->is_verbund && $members->contains('verbund_rolle', 1),
                 'formError' => ! $selected && $conflicts->isEmpty() ? __('Bitte ein Hauptprojekt auswählen.') : null,
             ])->setStatusCode(422);
         }
@@ -84,6 +89,11 @@ class VerbundController extends Controller
     public function destroy(ProjectGroup $group): Response
     {
         $group->authorizeViewer();
+        // Verteidigung gegen einen direkten Aufruf ohne den (jetzt korrekt
+        // ausgeblendeten) Button: ohne diese Sperre würde dissolve() unten
+        // ALLE Mitglieder mit gesetzter Verbund-Rolle zurücksetzen, auch
+        // wenn die eigentlich zu einem ganz anderen Verbund gehören.
+        abort_unless($group->is_verbund, 404);
 
         $this->dissolve($group);
 

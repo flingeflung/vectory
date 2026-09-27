@@ -51,6 +51,28 @@
 >
     <div class="text-xs text-gray-400">{{ __('Gruppe: :name', ['name' => $group->name]) }}</div>
 
+    {{--
+        Ralf, 2026-09-27: "ich klicke n mal auf Verbund und sehe jedesmal
+        dasselbe" - die Rolle stand zwar pro Zeile dran, aber ohne
+        auffällige Kopfzeile war der aktuelle Stand (aktiver Verbund oder
+        nicht) auf den ersten Blick nicht erkennbar.
+    --}}
+    {{--
+        WICHTIG: auf $currentHauptprojektId (vom Controller, per is_verbund
+        korrekt eingeschränkt) verlassen, NICHT hier neu aus $members
+        herleiten - ein Mitglied kann rein zufällig auch in einer ANDEREN,
+        echten Verbund-Gruppe Hauptprojekt sein, ohne dass DIESE Gruppe
+        damit etwas zu tun hat.
+    --}}
+    @php($currentHauptprojekt = $currentHauptprojektId ? $members->firstWhere('id', $currentHauptprojektId) : null)
+    <div class="rounded-md border px-3 py-2 text-xs {{ $currentHauptprojekt ? 'border-indigo-200 bg-indigo-50 text-indigo-700' : 'border-gray-200 bg-gray-50 text-gray-500' }}">
+        @if ($currentHauptprojekt)
+            {{ __('Aktueller Verbund: :pn – :title ist Hauptprojekt.', ['pn' => $currentHauptprojekt->source_pn, 'title' => $currentHauptprojekt->title]) }}
+        @else
+            {{ __('Kein aktiver Verbund.') }}
+        @endif
+    </div>
+
     @if (! empty($formError))
         <div class="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{{ $formError }}</div>
     @endif
