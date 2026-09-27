@@ -388,17 +388,27 @@ class ProjectGroupController extends Controller
     }
 
     /**
-     * "Projektverbund" (Ralf, 2026-09-14): solange die Gruppe eine aktive
-     * Haupt-/Unterprojekt-Zuordnung trägt, darf sie weder geleert noch
-     * gelöscht werden - beides würde den Verbund-Container ohne "Verbund
-     * auflösen" verschwinden lassen. Einzelnes Hinzufügen/Entfernen von
-     * Mitgliedern ist dagegen erlaubt (siehe addProject()/removeProject()/
-     * addAllFiltered()/removeAllFiltered() - die synchronisieren die
-     * Verbund-Rolle live mit, statt die Aktion zu blockieren).
+     * "Projektverbund" (Ralf, 2026-09-14): solange die Gruppe SELBST eine
+     * aktive Haupt-/Unterprojekt-Zuordnung trägt (is_verbund), darf sie
+     * weder geleert noch gelöscht werden - beides würde den Verbund-
+     * Container ohne "Verbund auflösen" verschwinden lassen. Einzelnes
+     * Hinzufügen/Entfernen von Mitgliedern ist dagegen erlaubt (siehe
+     * addProject()/removeProject()/addAllFiltered()/removeAllFiltered() -
+     * die synchronisieren die Verbund-Rolle live mit, statt die Aktion zu
+     * blockieren).
+     *
+     * Bug (Ralf, 2026-09-27): die Prüfung fragte bisher nur "hat IRGENDEIN
+     * Mitglied irgendwo eine Verbund-Rolle", nicht "ist DIESE Gruppe der
+     * Verbund" - is_verbund war komplett unbeachtet. Eine normale,
+     * NICHT-Verbund-Gruppe blockierte damit "Leeren"/"Löschen" schon, wenn
+     * per Zufall ein Mitglied (z.B. über "alle angezeigten hinzufügen")
+     * anderswo Hauptprojekt/Unterprojekt eines VÖLLIG ANDEREN Verbunds war
+     * - obwohl das Entfernen aus DIESER Gruppe an jenem anderen Verbund gar
+     * nichts geändert hätte.
      */
     private function abortIfActiveVerbund(ProjectGroup $group): void
     {
-        abort_if($group->projects()->whereNotNull('verbund_rolle')->exists(), 422, __('Diese Gruppe ist Teil eines Verbunds - bitte erst den Verbund auflösen.'));
+        abort_if($group->is_verbund && $group->projects()->whereNotNull('verbund_rolle')->exists(), 422, __('Diese Gruppe ist Teil eines Verbunds - bitte erst den Verbund auflösen.'));
     }
 
     /**
