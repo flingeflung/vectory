@@ -44,18 +44,35 @@
                     document.getElementById('project-zeiten-body').outerHTML = await response.text();
                 },
             }"
-            class="mb-4 flex flex-wrap items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2"
+            class="mb-4 rounded-md border border-gray-200 bg-gray-50 px-3 py-2"
         >
-            <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('Planstunden dieses Projekts') }}</span>
-            <span class="font-semibold tabular-nums">{{ $fmt($zeiten['ownPlan']) }} h</span>
-            <span class="text-gray-400">{{ __('(aus Schablone „:name")', ['name' => $zeiten['ownTemplateName']]) }}</span>
-            <button
-                type="button"
-                @click="loesen()"
-                class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
-            >
-                {{ __('Lösen') }}
-            </button>
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('Planstunden dieses Projekts') }}</span>
+                <span class="font-semibold tabular-nums">{{ $fmt($zeiten['ownPlan']) }} h</span>
+                <span class="text-gray-400">{{ __('(aus Schablone „:name")', ['name' => $zeiten['ownTemplateName']]) }}</span>
+                <button
+                    type="button"
+                    @click="loesen()"
+                    class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                >
+                    {{ __('Lösen') }}
+                </button>
+            </div>
+
+            {{-- Ralf, 2026-09-27: die Aufschlüsselung je Funktionsgruppe auch schon SEHEN,
+                 solange die Verbindung zur Schablone noch besteht (nicht erst nach "Lösen") -
+                 rein lesend, gleiche Optik wie die bestehende Schablonen-Info-Anzeige
+                 (project-template-info.blade.php). --}}
+            @if ($project->projectTemplate->functionGroups->isNotEmpty())
+                <div class="mt-2 grid grid-cols-2 gap-2 border-t border-gray-200 pt-2 sm:grid-cols-3 lg:grid-cols-4">
+                    @foreach ($project->projectTemplate->functionGroups->sortBy('name') as $fg)
+                        <div class="flex items-center justify-between gap-1 rounded-md border border-gray-200 bg-white px-1.5 py-1 text-xs text-gray-600">
+                            <span class="min-w-0 truncate" title="{{ $fg->name }}">{{ $fg->short_name }}</span>
+                            <span class="shrink-0 font-medium text-gray-900">{{ rtrim(rtrim((string) $fg->pivot->planned_hours, '0'), '.') }} h</span>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
         </div>
     @elseif ($zeiten['ownRelevantFunctionGroups']->isNotEmpty() || $zeiten['ownBreakdown']->isNotEmpty())
         <form
