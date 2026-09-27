@@ -8,6 +8,7 @@
     in layouts/app.blade.php), Speichern/Löschen läuft über den globalen
     Submit-/Klick-Handler dort.
 --}}
+@include('projekte.partials.project-time-tracking-header')
 <div class="flex gap-1 border-b border-gray-200 px-4 pt-2">
     @if ($canEditJobs)
         <button
@@ -69,7 +70,40 @@
         </div>
 
         {{-- Neu-Formular hinter Trigger versteckt (Konvention), Auswahlfeld bekommt beim Aufdecken den Fokus. --}}
-        <div x-data="{ adding: false }">
+        <div
+            x-data="{
+                adding: false,
+                splits: {{ Illuminate\Support\Js::from($splits ?? []) }},
+                previewHours: 0,
+
+                // Dieselbe Größter-Rest-Logik wie splitAndBook() serverseitig (Ralf, 2026-09-27:
+                // 'die genaue Verteilung der Zeit auf die UP anhand der %-Aufteilung, bevor ich
+                // speichere') - rein clientseitige Vorschau, das eigentliche Buchen rechnet
+                // serverseitig nochmal exakt genauso.
+                breakdown() {
+                    if (! this.splits.length || ! this.previewHours) { return []; }
+                    const total = Math.round(this.previewHours * 100);
+                    const shares = {};
+                    const remainders = {};
+                    let assigned = 0;
+                    this.splits.forEach((s) => {
+                        const exact = total * s.percentage / 100;
+                        const floor = Math.floor(exact + 1e-9);
+                        shares[s.id] = floor;
+                        remainders[s.id] = exact - floor;
+                        assigned += floor;
+                    });
+                    let leftover = total - assigned;
+                    if (leftover > 0) {
+                        const order = Object.keys(remainders).sort((a, b) => remainders[b] - remainders[a]);
+                        for (let i = 0; i < leftover; i++) { shares[order[i]]++; }
+                    }
+                    return this.splits
+                        .map((s) => ({ label: s.label, hours: shares[s.id] / 100 }))
+                        .filter((s) => s.hours > 0);
+                },
+            }"
+        >
             <button
                 type="button"
                 x-show="! adding"
@@ -86,35 +120,54 @@
                 x-cloak
                 method="POST"
                 action="{{ route('projekte.stunden.store', $project) }}"
-                class="flex flex-wrap items-end gap-2 rounded-md border border-gray-200 bg-gray-50 p-2"
+                class="flex flex-col gap-2 rounded-md border border-gray-200 bg-gray-50 p-2"
             >
                 @csrf
-                <div>
-                    <label class="block text-xs text-gray-500">{{ __('Job') }}</label>
-                    <select x-ref="projectHourJobSelect" name="job_type_id" required class="mt-0.5 rounded border-gray-300 text-sm">
-                        @foreach ($bookableJobs->groupBy(fn ($job) => $job->group_name ?? __('Ohne Gruppe')) as $groupName => $groupJobs)
-                            <optgroup label="{{ $groupName }}">
-                                @foreach ($groupJobs as $job)
-                                    <option value="{{ $job->id }}">{{ $job->code ? $job->code.' – ' : '' }}{{ $job->name }}</option>
-                                @endforeach
-                            </optgroup>
-                        @endforeach
-                    </select>
+                <div class="flex flex-wrap items-end gap-2">
+                    <div>
+                        <label class="block text-xs text-gray-500">{{ __('Job') }}</label>
+                        <select x-ref="projectHourJobSelect" name="job_type_id" required class="mt-0.5 rounded border-gray-300 text-sm">
+                            @foreach ($bookableJobs->groupBy(fn ($job) => $job->group_name ?? __('Ohne Gruppe')) as $groupName => $groupJobs)
+                                <optgroup label="{{ $groupName }}">
+                                    @foreach ($groupJobs as $job)
+                                        <option value="{{ $job->id }}">{{ $job->code ? $job->code.' – ' : '' }}{{ $job->name }}</option>
+                                    @endforeach
+                                </optgroup>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500">{{ __('Datum') }}</label>
+                        <input type="date" name="work_date" value="{{ now()->toDateString() }}" required class="mt-0.5 rounded border-gray-300 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500">{{ __('Stunden') }}</label>
+                        <input
+                            type="number"
+                            name="hours"
+                            step="0.25"
+                            min="0.25"
+                            max="24"
+                            required
+                            @input="previewHours = parseFloat($event.target.value) || 0"
+                            class="mt-0.5 w-20 rounded border-gray-300 text-sm"
+                        >
+                    </div>
+                    <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
+                        {{ __('Buchen') }}
+                    </button>
+                    <button type="button" @click="adding = false" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
+                        {{ __('Abbrechen') }}
+                    </button>
                 </div>
-                <div>
-                    <label class="block text-xs text-gray-500">{{ __('Datum') }}</label>
-                    <input type="date" name="work_date" value="{{ now()->toDateString() }}" required class="mt-0.5 rounded border-gray-300 text-sm">
+
+                {{-- Nur am Hauptprojekt mit konfigurierter Aufteilung relevant - sonst bleibt splits leer. --}}
+                <div x-show="breakdown().length" x-cloak class="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-gray-200 pt-2 text-xs text-gray-500">
+                    <span class="font-medium text-gray-600">{{ __('Wird verteilt auf:') }}</span>
+                    <template x-for="b in breakdown()" :key="b.label">
+                        <span x-text="b.label + ': ' + b.hours.toFixed(2).replace('.', ',') + ' h'"></span>
+                    </template>
                 </div>
-                <div>
-                    <label class="block text-xs text-gray-500">{{ __('Stunden') }}</label>
-                    <input type="number" name="hours" step="0.25" min="0.25" max="24" required class="mt-0.5 w-20 rounded border-gray-300 text-sm">
-                </div>
-                <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
-                    {{ __('Buchen') }}
-                </button>
-                <button type="button" @click="adding = false" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
-                    {{ __('Abbrechen') }}
-                </button>
             </form>
         </div>
     @endif

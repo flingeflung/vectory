@@ -3168,6 +3168,18 @@
                 });
 
                 window.deleteProjectHourEntry = async (projectId, entryId) => {
+                    // Ralf, 2026-09-27: "kann ich Buchungen einfach so per Klick auf das X
+                    // löschen, ohne Sicherheitsabfrage?" - fehlte, analog zu anderen
+                    // Einzeleintrags-Löschungen (siehe project-notes.blade.php) nachgezogen.
+                    if (! await window.confirmDialog({
+                        title: {{ \Illuminate\Support\Js::from(__('Buchung löschen?')) }},
+                        message: {{ \Illuminate\Support\Js::from(__('Diese Buchung wirklich löschen?')) }},
+                        confirmLabel: {{ \Illuminate\Support\Js::from(__('Löschen')) }},
+                        cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
+                    })) {
+                        return;
+                    }
+
                     body().innerHTML = await fetch(`/projekte/${projectId}/stunden/${entryId}`, {
                         method: 'DELETE',
                         headers: { 'X-CSRF-TOKEN': csrfToken },

@@ -10,6 +10,7 @@
     ist für jeden da (Buchen ist keine Projekt-Bearbeitung) - dieser Reiter
     hier nur, solange man project.edit hat (siehe Controller).
 --}}
+@include('projekte.partials.project-time-tracking-header')
 <div class="flex gap-1 border-b border-gray-200 px-4 pt-2">
     <span class="-mb-px border-b-2 border-indigo-500 px-3 py-1.5 text-xs font-medium text-gray-900">{{ __('Verknüpfte Jobs') }}</span>
     @if ($showAufteilungTab)

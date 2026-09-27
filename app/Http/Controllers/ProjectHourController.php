@@ -48,7 +48,36 @@ class ProjectHourController extends Controller
             'projectHasJobs' => DB::table('project_job_types')->where('project_id', $project->id)->exists(),
             'canEditJobs' => $request->user()->can('project.edit'),
             'showAufteilungTab' => ProjectPercentageSplitController::showAufteilungTab($project),
+            'splits' => $this->splitsForPreview($project),
         ]);
+    }
+
+    /**
+     * Für die Live-Vorschau im Buchungsformular (Ralf, 2026-09-27: "die genaue
+     * Verteilung der Zeit auf die UP anhand der %-Aufteilung, bevor ich
+     * speichere") - dieselben Empfänger/Prozente, die splitAndBook() beim
+     * echten Speichern verwendet, nur hier lesend fürs Frontend aufbereitet.
+     * Leer (null), wenn kein Hauptprojekt oder keine Aufteilung konfiguriert -
+     * dann bucht store() wie bisher direkt am Projekt selbst, keine Vorschau nötig.
+     */
+    private function splitsForPreview(Project $project): ?array
+    {
+        if ($project->verbund_rolle !== 1) {
+            return null;
+        }
+
+        $rows = DB::table('project_percentage_splits')->where('hauptprojekt_id', $project->id)->orderBy('project_id')->pluck('percentage', 'project_id');
+        if ($rows->isEmpty()) {
+            return null;
+        }
+
+        $labels = DB::table('projects')->whereIn('id', $rows->keys())->pluck('source_pn', 'id');
+
+        return $rows->map(fn ($percentage, $projectId) => [
+            'id' => (int) $projectId,
+            'label' => $labels[$projectId] ?? (string) $projectId,
+            'percentage' => (float) $percentage,
+        ])->values()->all();
     }
 
     public function store(Request $request, Project $project): \Illuminate\Http\JsonResponse
