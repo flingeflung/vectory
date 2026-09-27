@@ -40,16 +40,39 @@
     >
         <div class="flex items-center gap-2">
             <span class="text-base font-semibold text-gray-900">{{ $project->source_pn }}</span>
-            <x-hauptprojekt-icon :project="$project" />
-            <x-unterprojekt-icon :project="$project" />
+            {{--
+                Ralf, 2026-09-27: "durch die vielen Symbole hüpfen die Blätterpfeile nun hin und
+                her, ich habe mich schon verklickt" - Fahne/Hakenpfeil rendern je nach Projekt
+                nur EINES von beidem oder gar keins, wodurch sich die Breite dieser Zeile beim
+                Blättern zwischen Projekten unterschiedlicher Verbund-Rolle ändert und alles
+                Nachfolgende (inkl. der Pfeile) mitverschiebt. Fester Platzhalter-Slot (breit
+                genug für eines der beiden Icons) hält die Breite konstant, unabhängig davon,
+                ob/welches der beiden rendert.
+            --}}
+            <span class="inline-flex w-5 shrink-0 justify-center">
+                <x-hauptprojekt-icon :project="$project" />
+                <x-unterprojekt-icon :project="$project" />
+            </span>
 
             <x-favorite-star :project="$project" :is-favorite="$project->isFavoritedBy(auth()->user())" />
 
+            {{--
+                Ralf, 2026-09-27 (der eigentliche Grund für den Fehlklick auf "Verzeichnisinhalt
+                auflisten" statt den Blätterpfeil): project-directory-status zeigt bei Status
+                "gefunden" ZWEI Icons (Kopieren + Verzeichnisinhalt), bei jedem anderen Status
+                nur EINS - dieselbe Sorte Breitenschwankung wie bei Fahne/Hakenpfeil, nur pro
+                Projekt-Status statt Verbund-Rolle. Fester Platzhalter-Slot (breit genug für
+                zwei Icons) hält die Breite konstant.
+            --}}
             @if ($directorySource)
-                <x-project-directory-status :project="$project" :status="$directoryStatus" :source="$directorySource" :create-in-sv="$directoryCreateInSv" :open-sv="$directoryOpenSv" :suggested-folder-name="$directorySuggestedFolderName" />
+                <span class="inline-flex w-9 shrink-0 items-center">
+                    <x-project-directory-status :project="$project" :status="$directoryStatus" :source="$directorySource" :create-in-sv="$directoryCreateInSv" :open-sv="$directoryOpenSv" :suggested-folder-name="$directorySuggestedFolderName" />
+                </span>
             @endif
 
-            <div class="flex items-center text-gray-500">
+            {{-- Etwas mehr Abstand zu den Symbolen davor (Ralf), damit ein leichtes
+                 Daneben-Klicken nicht gleich eine ganz andere Aktion auslöst. --}}
+            <div class="ml-3 flex items-center text-gray-500">
                 @php
                     $navBtn = 'p-1.5 rounded hover:bg-gray-100 hover:text-gray-800 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-gray-500';
                     $chevronLeft = '<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>';

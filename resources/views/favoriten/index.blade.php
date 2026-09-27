@@ -7,9 +7,9 @@
                     <img src="{{ asset('images/project-type-icons/'.$typeSub->symbol) }}" alt="{{ $typeSub->name }}" title="{{ $typeSub->main ? $typeSub->main->name.': '.$typeSub->name : $typeSub->name }}" class="h-3 w-auto max-w-full">
                 @endif
             </div>
+            <x-pn-link :project="$project" class="font-semibold shrink-0" />
             <x-hauptprojekt-icon :project="$project" />
             <x-unterprojekt-icon :project="$project" />
-            <x-pn-link :project="$project" class="font-semibold shrink-0" />
             <span class="truncate text-gray-600">{{ $project->title }}</span>
         </div>
     @empty

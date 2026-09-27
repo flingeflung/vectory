@@ -98,8 +98,14 @@
             @submit.prevent="save()"
             class="mb-4 rounded-md border border-gray-200 bg-gray-50 px-3 py-2"
         >
+            {{-- Ralf, 2026-09-27: dieselbe amber/grau-Unterscheidung wie in der "Je Projekt"-
+                 Tabelle auch hier auf der Kopfzeile selbst - "gelöst" (dieser Block) amber,
+                 noch verknüpft (Block oben) bleibt neutral grau. --}}
             <div class="flex items-center justify-between">
-                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('Planstunden je Funktionsgruppe') }}</p>
+                <p class="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-amber-700" title="{{ __('Eigener Wert - nicht mehr mit der Schablone verbunden') }}">
+                    <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                    {{ __('Planstunden je Funktionsgruppe') }}
+                </p>
                 <p class="text-xs text-gray-400">
                     {{ __('Summe') }}: <span x-text="Object.values(hours).reduce((sum, v) => sum + (parseFloat(v) || 0), 0).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })"></span> h
                 </p>

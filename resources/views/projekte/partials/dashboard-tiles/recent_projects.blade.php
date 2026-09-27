@@ -14,9 +14,9 @@
                         >
                     @endif
                 </div>
+                <x-pn-link :project="$project" />
                 <x-hauptprojekt-icon :project="$project" />
                 <x-unterprojekt-icon :project="$project" />
-                <x-pn-link :project="$project" />
                 <span class="min-w-0 flex-1 truncate text-gray-700">{{ $project->title }}</span>
                 <form method="POST" action="{{ route('dashboard.recent.destroy', $entry) }}">
                     @csrf

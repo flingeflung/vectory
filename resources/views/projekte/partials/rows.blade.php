@@ -51,9 +51,11 @@
                         </svg>
                     </button>
                 @endif
+                <x-pn-link :project="$project" :sort="$sort" :direction="$direction" :filters="$filters" />
+                {{-- Ralf, 2026-09-27: Symbol hinter statt vor die PN (war uneinheitlich mit den
+                     Projektdetails) - so stehen die PN in beiden Ansichten in einer Flucht. --}}
                 <x-hauptprojekt-icon :project="$project" />
                 <x-unterprojekt-icon :project="$project" />
-                <x-pn-link :project="$project" :sort="$sort" :direction="$direction" :filters="$filters" />
                 @if (in_array($project->id, $favoriteProjectIds, true))
                     <x-favorite-star :project="$project" :is-favorite="true" size="h-3.5 w-3.5" class="shrink-0" />
                 @endif
