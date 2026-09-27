@@ -38,10 +38,20 @@ class ProjectJobTypeController extends Controller
 
         $selectedIds = DB::table('project_job_types')->where('project_id', $project->id)->pluck('job_type_id')->all();
 
+        // "Vom Hauptprojekt kopieren" (Ralf, 2026-09-27): nur für Unterprojekte,
+        // und nur anbietbar, wenn das Hauptprojekt selbst schon Jobs hat -
+        // sonst gäbe es nichts zu kopieren.
+        $hauptprojektJobIds = [];
+        if ($project->verbund_rolle === 2 && $project->hauptprojekt_id) {
+            $hauptprojektJobIds = DB::table('project_job_types')->where('project_id', $project->hauptprojekt_id)->pluck('job_type_id')->all();
+        }
+
         return view('projekte.partials.project-jobs-body', [
             'project' => $project,
             'availableJobs' => $availableJobs,
             'selectedIds' => $selectedIds,
+            'hauptprojektJobIds' => $hauptprojektJobIds,
+            'hauptprojektTitle' => $project->hauptprojekt?->source_pn,
         ]);
     }
 

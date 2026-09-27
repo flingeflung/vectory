@@ -2971,20 +2971,21 @@
         </script>
 
         {{--
-            Job-Projekt-Verknüpfung (Ralf, 2026-09-27, Slice 1 der Zeit-
-            erfassung/Ressourcenplanung-Idee, siehe Roadmap-Backlog) - welche
-            Jobs für dieses Projekt direkt buchbar sind. Gleiches Fetch-
-            Overlay-Prinzip wie project-directory-content oben, Speichern
-            läuft über den zentralen Submit-Handler unten (analog
-            activate-workflow-step).
+            Zeiterfassung am Projekt (Ralf, 2026-09-27) - Reiter-Overlay,
+            gleiches Muster wie die Verzeichnis-Vorschau AV/SV (2026-09-26).
+            Bisher ein Reiter ("Verknüpfte Jobs", Slice 1 der Zeiterfassung/
+            Ressourcenplanung-Idee, siehe Roadmap-Backlog), "Buchungen"
+            (Slice 2) kommt als zweiter dazu. Gleiches Fetch-Overlay-Prinzip
+            wie project-directory-content oben, Speichern läuft über den
+            zentralen Submit-Handler unten (analog activate-workflow-step).
         --}}
-        <x-modal name="project-jobs" max-width="md">
+        <x-modal name="project-time-tracking" max-width="md">
             <div class="flex max-h-[85vh] flex-col">
                 <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
-                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Verknüpfte Jobs') }}</h3>
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Zeiterfassung') }}</h3>
                     <button
                         type="button"
-                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-jobs' }))"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-time-tracking' }))"
                         class="text-gray-400 hover:text-gray-600"
                         aria-label="{{ __('Schließen') }}"
                     >
@@ -3005,11 +3006,23 @@
                 const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
                 let currentProjectId = null;
 
-                window.openProjectJobs = async (projectId) => {
+                window.openProjectTimeTracking = async (projectId) => {
                     currentProjectId = projectId;
                     body().innerHTML = {{ \Illuminate\Support\Js::from('<div class="px-4 py-3">'.__('Lädt…').'</div>') }};
-                    window.dispatchEvent(new CustomEvent('open-modal', { detail: 'project-jobs' }));
+                    window.dispatchEvent(new CustomEvent('open-modal', { detail: 'project-time-tracking' }));
                     body().innerHTML = await fetch(`/projekte/${projectId}/jobs`).then((r) => r.text());
+                };
+
+                // "Vom Hauptprojekt kopieren" (Ralf, 2026-09-27): Skripte innerhalb per fetch()
+                // nachgeladener Fragmente führt der Browser NICHT aus (innerHTML), deshalb steht
+                // diese Funktion hier global statt im Fragment selbst - die Job-IDs des
+                // Hauptprojekts kommen als data-Attribut am Button mit. Ersetzt die aktuelle
+                // Auswahl nur clientseitig, "Speichern" übernimmt es erst wirklich.
+                window.copyProjectJobsFromHauptprojekt = (button) => {
+                    const hauptprojektIds = (button.dataset.hauptprojektJobIds || '').split(',').filter(Boolean);
+                    document.querySelectorAll('#project-jobs-form input[name="jobs[]"]').forEach((box) => {
+                        box.checked = hauptprojektIds.includes(box.value);
+                    });
                 };
 
                 document.addEventListener('submit', async (event) => {
@@ -3030,7 +3043,7 @@
                         return;
                     }
 
-                    window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-jobs' }));
+                    window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-time-tracking' }));
                     await window.refreshUnderlyingProject(currentProjectId);
                 });
             })();

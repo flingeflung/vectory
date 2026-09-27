@@ -3,12 +3,42 @@
     welche Jobs für dieses Projekt relevant sind. Gleiches Auswahl-Muster
     wie "Jobs anpassen" in der Zeiterfassung (jobload/index.blade.php,
     dort für die eigene Person) - hier für das Projekt, geladen ins
-    globale Modal "project-jobs" (siehe layouts/app.blade.php).
+    globale Modal "project-time-tracking" (siehe layouts/app.blade.php).
+
+    Reiter-Leiste analog zur Verzeichnis-Vorschau (Arbeitsverzeichnis/
+    Gesperrtes Verzeichnis, 2026-09-26) - bisher nur EIN Reiter, bewusst
+    schon als Reiter angelegt, weil "Buchungen" (Slice 2) als zweiter
+    dazukommt.
 --}}
+<div class="flex gap-1 border-b border-gray-200 px-4 pt-2">
+    <span class="-mb-px border-b-2 border-indigo-500 px-3 py-1.5 text-xs font-medium text-gray-900">{{ __('Verknüpfte Jobs') }}</span>
+</div>
+
 <form id="project-jobs-form" method="POST" action="{{ route('projekte.jobs.update', $project) }}" class="flex max-h-[75vh] flex-col">
     @csrf
     <div class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
-        <p class="mb-3 text-xs text-gray-500">{{ __('Diese Jobs können für Projekt :pn direkt gebucht werden.', ['pn' => $project->source_pn]) }}</p>
+        <div class="mb-3 flex items-start justify-between gap-3">
+            <p class="text-xs text-gray-500">{{ __('Diese Jobs können für Projekt :pn direkt gebucht werden.', ['pn' => $project->source_pn]) }}</p>
+
+            @if ($project->verbund_rolle === 2)
+                {{--
+                    Ralf, 2026-09-27: für Unterprojekte, die lieber eigenständig statt über die
+                    prozentuale Umlage des Hauptprojekts buchen wollen - übernimmt die KOMPLETTE
+                    Auswahl des Hauptprojekts (ersetzt die eigene, noch nicht gespeichert - erst
+                    "Speichern" übernimmt es wirklich, siehe Override/Fallback-Konvention).
+                --}}
+                <button
+                    type="button"
+                    {{ empty($hauptprojektJobIds) ? 'disabled' : '' }}
+                    data-hauptprojekt-job-ids="{{ implode(',', $hauptprojektJobIds) }}"
+                    onclick="window.copyProjectJobsFromHauptprojekt(this)"
+                    title="{{ empty($hauptprojektJobIds) ? __('Das Hauptprojekt :pn hat noch keine Jobs verknüpft.', ['pn' => $hauptprojektTitle]) : __('Übernimmt die Job-Auswahl von :pn.', ['pn' => $hauptprojektTitle]) }}"
+                    class="shrink-0 rounded-md border border-btn-secondary-border bg-btn-secondary px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                    {{ __('Vom Hauptprojekt kopieren') }}
+                </button>
+            @endif
+        </div>
 
         @forelse ($availableJobs->groupBy(fn ($job) => $job->group_name ?? __('Ohne Gruppe')) as $groupName => $groupJobs)
             <div class="pt-2 text-sm font-semibold text-gray-700">{{ $groupName }}</div>
@@ -25,7 +55,7 @@
     <div class="flex shrink-0 justify-end gap-2 border-t border-gray-200 px-4 py-3">
         <button
             type="button"
-            onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-jobs' }))"
+            onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-time-tracking' }))"
             class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
         >
             {{ __('Abbrechen') }}

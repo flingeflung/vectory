@@ -207,10 +207,10 @@
                              dieses Projekt direkt buchbar sind. Noch keine Stundenbuchung selbst. --}}
                         <button
                             type="button"
-                            @click="window.openProjectJobs({{ $project->id }})"
+                            @click="window.openProjectTimeTracking({{ $project->id }})"
                             class="{{ $secondaryBtn }}"
                         >
-                            {{ __('Jobs verknüpfen') }}
+                            {{ __('Zeiterfassung') }}
                         </button>
                     @endcan
                     {{-- weitere Aktions-Buttons (Aufgabe zuweisen, -> Projekt-Pool, Fehlercheck, Sichtbarkeit, Sperrmail, ...) folgen später. --}}
