@@ -40,6 +40,8 @@
     >
         <div class="flex items-center gap-2">
             <span class="text-base font-semibold text-gray-900">{{ $project->source_pn }}</span>
+            <x-hauptprojekt-icon :project="$project" />
+            <x-unterprojekt-icon :project="$project" />
 
             <x-favorite-star :project="$project" :is-favorite="$project->isFavoritedBy(auth()->user())" />
 
