@@ -3047,9 +3047,25 @@
                 // diese Funktion hier global statt im Fragment selbst - die Job-IDs des
                 // Hauptprojekts kommen als data-Attribut am Button mit. Ersetzt die aktuelle
                 // Auswahl nur clientseitig, "Speichern" übernimmt es erst wirklich.
-                window.copyProjectJobsFromHauptprojekt = (button) => {
+                window.copyProjectJobsFromHauptprojekt = async (button) => {
                     const hauptprojektIds = (button.dataset.hauptprojektJobIds || '').split(',').filter(Boolean);
-                    document.querySelectorAll('#project-jobs-form input[name="jobs[]"]').forEach((box) => {
+                    const boxes = [...document.querySelectorAll('#project-jobs-form input[name="jobs[]"]')];
+
+                    // Ralf-Bug-Report, 2026-09-27: eine eigene Ergänzung (angehakt, aber nicht Teil
+                    // der Hauptprojekt-Auswahl) ging bei einem zweiten Klick kommentarlos verloren.
+                    // Nur nachfragen, wenn dadurch wirklich etwas Angehaktes abgewählt würde - beim
+                    // ersten, normalen Übernehmen (nichts geht verloren) soll das nicht stören.
+                    const wouldLose = boxes.some((box) => box.checked && ! hauptprojektIds.includes(box.value));
+                    if (wouldLose && ! await window.confirmDialog({
+                        title: {{ \Illuminate\Support\Js::from(__('Vom Hauptprojekt kopieren?')) }},
+                        message: {{ \Illuminate\Support\Js::from(__('Ihre eigene Auswahl weicht von der des Hauptprojekts ab. Beim Übernehmen gehen die abweichenden Häkchen verloren.')) }},
+                        confirmLabel: {{ \Illuminate\Support\Js::from(__('Übernehmen')) }},
+                        cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
+                    })) {
+                        return;
+                    }
+
+                    boxes.forEach((box) => {
                         box.checked = hauptprojektIds.includes(box.value);
                     });
                     // Checked-Zuweisung per Skript löst kein 'input'-Event aus (anders als ein
