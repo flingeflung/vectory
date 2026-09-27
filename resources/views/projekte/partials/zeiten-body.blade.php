@@ -95,7 +95,7 @@
                 },
             }"
             @input="dirty = window.formIsDirty($el)"
-            @submit.prevent="save()"
+            @submit.prevent.stop="save()"
             class="mb-4 rounded-md border border-gray-200 bg-gray-50 px-3 py-2"
         >
             {{-- Ralf, 2026-09-27: dieselbe amber/grau-Unterscheidung wie in der "Je Projekt"-
@@ -114,9 +114,11 @@
                 @foreach ($zeiten['ownRelevantFunctionGroups'] as $fg)
                     <label class="flex items-center justify-between gap-1 rounded-md border border-gray-200 bg-white px-1.5 py-1 text-xs text-gray-600">
                         <span class="min-w-0 truncate" title="{{ $fg->name }}">{{ $fg->short_name }}</span>
-                        {{-- Ralf, 2026-09-27: rechte Nachkommastelle wurde vom nativen Zahlen-
-                             Spinner abgeschnitten (gleicher Fund wie bei der Prozentualen
-                             Aufteilung) - Spinner-Pfeile ausgeblendet, Feld verbreitert. --}}
+                        {{-- Ralf, 2026-09-27: "keine Slider mehr vorhanden" - die zuvor hier
+                             ausgeblendeten nativen Spinner-Pfeile werden gebraucht. Gleiches
+                             Feld-Pattern wie in der Schablonen-Verwaltung
+                             (admin/project-templates/partials/content.blade.php): w-20, kein
+                             Ausblenden der Spinner. --}}
                         <input
                             type="number"
                             name="hours[{{ $fg->id }}]"
@@ -125,7 +127,7 @@
                             max="999"
                             step="0.5"
                             placeholder="–"
-                            class="w-20 shrink-0 rounded-md border-gray-300 py-0.5 text-xs tabular-nums [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            class="w-20 shrink-0 rounded-md border-gray-300 py-0.5 text-xs tabular-nums"
                         >
                     </label>
                 @endforeach
