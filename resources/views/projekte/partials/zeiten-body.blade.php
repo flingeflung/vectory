@@ -176,10 +176,16 @@
                         <tr class="border-b border-gray-100">
                             <td class="py-1 pr-3">
                                 <span class="{{ $row['isHauptprojekt'] ? 'font-semibold text-indigo-700' : '' }}">{{ $row['label'] }}</span>
-                                <span class="text-gray-400">– {{ $row['title'] }}</span>
                                 @if ($row['isHauptprojekt'])
-                                    <span class="ml-1 rounded-full bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700">{{ __('HP') }}</span>
+                                    {{-- Ralf, 2026-09-28: "dieselbe Fahne wie in der Übersicht, mit
+                                         derselben Caption" - statt eigener "HP"-Pille dieselbe Fahne
+                                         wie x-hauptprojekt-icon (rows.blade.php/detail.blade.php).
+                                         $row ist hier ein Array, kein Project-Model, deshalb direkt
+                                         markiert statt über die Komponente (die $project->verbund_rolle
+                                         prüft). --}}
+                                    <span class="ml-1 inline-block align-middle text-indigo-600" title="{{ __('Hauptprojekt eines Verbunds') }}">⚑</span>
                                 @endif
+                                <span class="text-gray-400">– {{ $row['title'] }}</span>
                             </td>
                             {{-- Ralf, 2026-09-27: "da ist farblich wenig Unterschied zu erkennen
                                  zwischen den Stunden, die noch nach Schablone sind und denen, die
