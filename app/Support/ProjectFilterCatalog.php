@@ -29,9 +29,14 @@ use Illuminate\Support\Facades\DB;
 class ProjectFilterCatalog
 {
     /**
+     * Ralf, 2026-09-28: ohne eigene Auswahl soll außer Status kein Feld
+     * vorbelegt sein - "title" und "attribute:initiator" waren von Anfang an
+     * (seit Einführung des Projektfilters) Teil dieses Standards, nie bewusst
+     * so entschieden.
+     *
      * @var list<string>
      */
-    public const DEFAULT_ACTIVE = ['title', 'status', 'attribute:initiator'];
+    public const DEFAULT_ACTIVE = ['status'];
 
     /**
      * @var list<string>
