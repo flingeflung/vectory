@@ -180,16 +180,16 @@
                 <h2 class="text-sm font-semibold text-gray-900">{{ __('Angezeigte Jobs') }}</h2>
                 <button type="button" @click="$dispatch('close-modal', 'jobload-jobs')" class="text-gray-500 hover:text-gray-700" aria-label="{{ __('Schließen') }}">×</button>
             </div>
-            <div class="min-h-0 space-y-2 overflow-y-auto p-4 text-sm">
+            <div class="min-h-0 overflow-y-auto p-3 text-sm">
                 {{-- Ralf, 2026-09-28: "Anpassen" klang nach "darf/darf nicht" - ist aber nur
                      eine Anzeige-Auswahl fürs eigene Wochenraster. Wer Zugriff auf einen
                      Kunden hat, kann trotzdem auf jeden dort verknüpften Job buchen (siehe
                      ProjectHourController), unabhängig von dieser Auswahl. --}}
-                <p class="mb-2 text-xs text-gray-500">{{ __('Hier legen Sie fest, welche Jobs in Ihrer eigenen Übersicht erscheinen sollen.') }}</p>
+                <p class="mb-1.5 text-xs text-gray-500">{{ __('Hier legen Sie fest, welche Jobs in Ihrer eigenen Übersicht erscheinen sollen.') }}</p>
                 @forelse ($availableJobs->groupBy(fn ($job) => $job->group_name ?? __('Ohne Gruppe')) as $groupName => $groupJobs)
-                    <div class="pt-2 text-sm font-semibold text-gray-700">{{ $groupName }}</div>
+                    <div class="pt-1.5 text-xs font-semibold text-gray-700">{{ $groupName }}</div>
                     @foreach ($groupJobs as $job)
-                        <label class="flex items-center gap-3 rounded px-2 py-1 hover:bg-gray-50">
+                        <label class="flex items-center gap-2 rounded px-1.5 py-0.5 text-xs hover:bg-gray-50">
                             <input type="checkbox" name="jobs[]" value="{{ $job->id }}" @checked(in_array($job->id, $selectedIds)) class="rounded border-gray-300">
                             <span>{{ $job->code ? $job->code.' – ' : '' }}{{ $job->name }}</span>
                         </label>
