@@ -135,7 +135,9 @@ class PersonController extends Controller
             'companies' => Company::query()->withoutGlobalScope('tenant')->whereIn('tenant_id', $catalogTenantIds)->orderBy('name')->get(),
             'departments' => Department::query()->withoutGlobalScope('tenant')->whereIn('tenant_id', $catalogTenantIds)->where('active', true)->orderBy('name')->get(),
             'businessUnits' => BusinessUnit::query()->withoutGlobalScope('tenant')->whereIn('tenant_id', $catalogTenantIds)->where('active', true)->orderBy('name')->get(),
-            'permissionTemplates' => PermissionTemplate::query()->withoutGlobalScope('tenant')->whereIn('tenant_id', $catalogTenantIds)->orderBy('sort')->get(),
+            // is_baustein=false: ein Baustein ist nie einer Person direkt zuweisbar,
+            // nur einem Rechte-Set eingebunden (siehe PermissionTemplate-Model-Docblock).
+            'permissionTemplates' => PermissionTemplate::query()->withoutGlobalScope('tenant')->whereIn('tenant_id', $catalogTenantIds)->where('is_baustein', false)->orderBy('sort')->get(),
             'legacyRoles' => LegacyRole::query()->withoutGlobalScope('tenant')->whereIn('tenant_id', $catalogTenantIds)->orderBy('name')->get(),
             'multiTenantEnabled' => SystemSetting::multiTenantEnabled(),
             'canSearchAllTenants' => $canSearchAllTenants,
@@ -249,7 +251,10 @@ class PersonController extends Controller
             'department_id' => ['nullable', 'integer', Rule::exists('departments', 'id')->where('tenant_id', $person->tenant_id)],
             'business_unit_id' => ['nullable', 'integer', Rule::exists('business_units', 'id')->where('tenant_id', $person->tenant_id)],
             'legacy_role_id' => ['nullable', 'integer', Rule::exists('legacy_roles', 'id')->where('tenant_id', $person->tenant_id)],
-            'permission_template_id' => ['nullable', 'integer', Rule::exists('permission_templates', 'id')->where('tenant_id', $person->tenant_id)],
+            // is_baustein=false: ein Baustein ist nie einer Person direkt zuweisbar
+            // (siehe PermissionTemplate-Model-Docblock) - auch serverseitig geprueft,
+            // nicht nur durch die gefilterte Auswahlliste im Formular.
+            'permission_template_id' => ['nullable', 'integer', Rule::exists('permission_templates', 'id')->where('tenant_id', $person->tenant_id)->where('is_baustein', false)],
             'function_group_ids' => ['array'],
             'function_group_ids.*' => ['integer', Rule::exists('function_groups', 'id')->where('tenant_id', $person->tenant_id)],
             'start_date' => ['nullable', 'date'],
@@ -293,8 +298,17 @@ class PersonController extends Controller
         // dadurch null (Scope filterte das Set des eigenen Mandanten weg),
         // die Rolle fiel fälschlich auf "user" zurück - Heimat-Admin
         // stillschweigend zum einfachen User degradiert.
-        if ($person->user && $person->permission_template_id) {
-            $person->user->update(['role' => PermissionTemplate::query()->withoutGlobalScope('tenant')->find($person->permission_template_id)?->role ?? 'user']);
+        if ($person->user) {
+            // effectiveRole() statt role: ein Set kann die grobe Rolle jetzt
+            // ueber eine Basis (siehe PermissionTemplate::basis()) live
+            // erben statt sie selbst zu tragen. "– nicht zugewiesen –" (kein
+            // Set) faellt bewusst auch hier auf 'user' zurueck, sonst
+            // bliebe ein frueherer access-admin-Zugriff trotz entzogenem
+            // Set bestehen (gleiche Ueberlegung wie in
+            // PermissionController::assignTemplate()).
+            $person->user->update(['role' => $person->permission_template_id
+                ? (PermissionTemplate::query()->withoutGlobalScope('tenant')->find($person->permission_template_id)?->effectiveRole() ?? 'user')
+                : 'user']);
         }
 
         // function_group_member.tenant_id ist NOT NULL ohne Default - sync()
@@ -485,7 +499,7 @@ class PersonController extends Controller
 
         // withoutGlobalScope('tenant'): siehe update() oben - dieselbe
         // Scope-Falle gilt auch hier.
-        $fallbackRole = PermissionTemplate::query()->withoutGlobalScope('tenant')->find($person->permission_template_id)?->role ?? 'user';
+        $fallbackRole = PermissionTemplate::query()->withoutGlobalScope('tenant')->find($person->permission_template_id)?->effectiveRole() ?? 'user';
         $person->user->update(['role' => $makeSuperAdmin ? 'super_admin' : $fallbackRole]);
 
         $isOverlay = $this->isOverlayRequest($request);
@@ -561,7 +575,9 @@ class PersonController extends Controller
             'departments' => Department::query()->withoutGlobalScope('tenant')->where('tenant_id', $personTenantId)->where('active', true)->orderBy('name')->get(),
             'businessUnits' => BusinessUnit::query()->withoutGlobalScope('tenant')->where('tenant_id', $personTenantId)->where('active', true)->orderBy('name')->get(),
             'legacyRoles' => LegacyRole::query()->withoutGlobalScope('tenant')->where('tenant_id', $personTenantId)->orderBy('name')->get(),
-            'permissionTemplates' => PermissionTemplate::query()->withoutGlobalScope('tenant')->where('tenant_id', $personTenantId)->orderBy('sort')->get(),
+            // is_baustein=false: ein Baustein ist nie einer Person direkt zuweisbar,
+            // nur einem Rechte-Set eingebunden (siehe PermissionTemplate-Model-Docblock).
+            'permissionTemplates' => PermissionTemplate::query()->withoutGlobalScope('tenant')->where('tenant_id', $personTenantId)->where('is_baustein', false)->orderBy('sort')->get(),
             // Inaktive Gruppen bleiben in der Liste, wenn die Person schon
             // Mitglied ist (gleiches Prinzip wie Abteilung/Geschäftsbereich
             // bei den vier "klitzekleinen" Verwalten-Overlays) - sonst würde
