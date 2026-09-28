@@ -28,22 +28,23 @@ class ProjectJobTypeController extends Controller
     public function form(Request $request, Project $project): View
     {
         $tenantId = CurrentTenant::id();
-        $canEditJobs = $request->user()->can('project.edit');
+        // Ralf, 2026-09-28: eigenes Recht statt project.edit (siehe Migration) -
+        // ohne das Recht bleibt der Reiter SICHTBAR (nur lesend), kein 403 mehr.
+        $canManageJobload = $request->user()->can('project.jobload.manage');
 
         if ($request->query('tab') === 'aufteilung') {
             return $this->splitController->tab($request, $project);
         }
 
-        // Standard-Reiter beim Öffnen (Ralf, 2026-09-27): "Verknüpfte Jobs" nur für Bearbeitende,
-        // solange das Projekt noch KEINE verknüpften Jobs hat - sonst (oder ohne Bearbeitungsrecht,
-        // das Buchen selbst ist KEIN project.edit) direkt der Buchungs-Reiter, spart einen Klick.
-        // "?tab=jobs" (expliziter Reiterwechsel-Klick) erzwingt den Jobs-Reiter, sofern erlaubt.
+        // Standard-Reiter beim Öffnen (Ralf, 2026-09-27): "Verknüpfte Jobs" nur für
+        // Verwaltende, solange das Projekt noch KEINE verknüpften Jobs hat - sonst
+        // (oder ohne Verwaltungsrecht, das Buchen selbst ist davon unabhängig)
+        // direkt der Buchungs-Reiter, spart einen Klick. "?tab=jobs" (expliziter
+        // Reiterwechsel-Klick) erzwingt den Jobs-Reiter, jetzt auch lesend erlaubt.
         $hasJobs = DB::table('project_job_types')->where('project_id', $project->id)->exists();
-        if ((! $canEditJobs || $hasJobs) && $request->query('tab') !== 'jobs') {
+        if ((! $canManageJobload || $hasJobs) && $request->query('tab') !== 'jobs') {
             return $this->hourController->tab($request, $project);
         }
-
-        abort_unless($canEditJobs, 403);
 
         $availableJobs = DB::table('job_types')
             ->where('job_types.tenant_id', $tenantId)
@@ -71,14 +72,14 @@ class ProjectJobTypeController extends Controller
             'selectedIds' => $selectedIds,
             'hauptprojektJobIds' => $hauptprojektJobIds,
             'hauptprojektTitle' => $project->hauptprojekt?->source_pn,
-            'canEditJobs' => $canEditJobs,
+            'canManageJobload' => $canManageJobload,
             'showAufteilungTab' => ProjectPercentageSplitController::showAufteilungTab($project),
         ]);
     }
 
     public function update(Request $request, Project $project): Response
     {
-        abort_unless($request->user()->can('project.edit'), 403);
+        abort_unless($request->user()->can('project.jobload.manage'), 403);
 
         $tenantId = CurrentTenant::id();
 

@@ -10,15 +10,16 @@
 --}}
 @include('projekte.partials.project-time-tracking-header')
 <div class="flex gap-1 border-b border-gray-200 px-4 pt-2">
-    @if ($canEditJobs)
-        <button
-            type="button"
-            onclick="window.switchProjectTimeTrackingTab({{ $project->id }}, 'jobs')"
-            class="-mb-px border-b-2 border-transparent px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700"
-        >
-            {{ __('Verknüpfte Jobs') }}
-        </button>
-    @endif
+    {{-- Ralf, 2026-09-28: "Verknüpfte Jobs" jetzt IMMER sichtbar (auch nur lesend
+         ohne project.jobload.manage, siehe project-jobs-body.blade.php) - bisher
+         war der Reiter ohne project.edit komplett verborgen. --}}
+    <button
+        type="button"
+        onclick="window.switchProjectTimeTrackingTab({{ $project->id }}, 'jobs')"
+        class="-mb-px border-b-2 border-transparent px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700"
+    >
+        {{ __('Verknüpfte Jobs') }}
+    </button>
     @if ($showAufteilungTab)
         <button
             type="button"
@@ -69,10 +70,10 @@
     @if (! $projectHasJobs)
         <p class="text-gray-500">
             {{ __('Für dieses Projekt sind noch keine Jobs verknüpft.') }}
-            @if ($canEditJobs)
+            @if ($canManageJobload)
                 {{ __('Über den Reiter „Verknüpfte Jobs" lässt sich das festlegen.') }}
             @else
-                {{ __('Bitte jemanden mit Bearbeitungsrecht am Projekt bitten, das nachzutragen.') }}
+                {{ __('Bitte jemanden mit der entsprechenden Berechtigung bitten, das nachzutragen.') }}
             @endif
         </p>
     @elseif ($bookableJobs->isEmpty())

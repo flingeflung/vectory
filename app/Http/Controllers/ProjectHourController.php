@@ -71,7 +71,7 @@ class ProjectHourController extends Controller
             'bookableJobs' => $bookableJobs,
             'entries' => $entries,
             'projectHasJobs' => DB::table('project_job_types')->where('project_id', $project->id)->exists(),
-            'canEditJobs' => $request->user()->can('project.edit'),
+            'canManageJobload' => $request->user()->can('project.jobload.manage'),
             'showAufteilungTab' => ProjectPercentageSplitController::showAufteilungTab($project),
             'splits' => $splits,
             'existingBookings' => $existingBookings,

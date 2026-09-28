@@ -44,9 +44,14 @@
     @csrf
     <div class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
         <div class="mb-3 flex items-start justify-between gap-3">
-            <p class="text-xs text-gray-500">{{ __('Auf diese Jobs kann von Projekt :pn direkt gebucht werden.', ['pn' => $project->source_pn]) }}</p>
+            <p class="text-xs text-gray-500">
+                {{ __('Auf diese Jobs kann von Projekt :pn direkt gebucht werden.', ['pn' => $project->source_pn]) }}
+                @unless ($canManageJobload)
+                    {{ __('Nur lesend - Ändern erfordert eine eigene Berechtigung.') }}
+                @endunless
+            </p>
 
-            @if ($project->verbund_rolle === 2)
+            @if ($canManageJobload && $project->verbund_rolle === 2)
                 {{--
                     Ralf, 2026-09-27: für Unterprojekte, die lieber eigenständig statt über die
                     prozentuale Umlage des Hauptprojekts buchen wollen - übernimmt die KOMPLETTE
@@ -70,7 +75,7 @@
             <div class="pt-2 text-sm font-semibold text-gray-700">{{ $groupName }}</div>
             @foreach ($groupJobs as $job)
                 <label class="flex items-center gap-3 rounded px-2 py-1 hover:bg-gray-50">
-                    <input type="checkbox" name="jobs[]" value="{{ $job->id }}" @checked(in_array($job->id, $selectedIds)) class="rounded border-gray-300">
+                    <input type="checkbox" name="jobs[]" value="{{ $job->id }}" @checked(in_array($job->id, $selectedIds)) @disabled(! $canManageJobload) class="rounded border-gray-300">
                     <span>{{ $job->code ? $job->code.' – ' : '' }}{{ $job->name }}</span>
                 </label>
             @endforeach
@@ -86,7 +91,7 @@
         >
             {{ __('Abbrechen') }}
         </button>
-        @if ($availableJobs->isNotEmpty())
+        @if ($canManageJobload && $availableJobs->isNotEmpty())
             <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
                 {{ __('Speichern') }}
             </button>

@@ -21,7 +21,10 @@ class ProjectPercentageSplitController extends Controller
 {
     public function tab(Request $request, Project $project): View
     {
-        abort_unless($request->user()->can('project.edit'), 403);
+        // Ralf, 2026-09-28: eigenes Recht project.jobload.manage statt project.edit
+        // (siehe Migration) - ohne das Recht bleibt der Reiter sichtbar, nur lesend
+        // (siehe canManageJobload im View).
+        abort_unless($request->user()->can('project.view'), 403);
 
         $unterprojekte = $this->unterprojekte($project);
         abort_unless($project->verbund_rolle === 1 && $unterprojekte->isNotEmpty(), 404);
@@ -41,12 +44,13 @@ class ProjectPercentageSplitController extends Controller
             'participants' => $participants,
             'shares' => $shares,
             'configured' => $configured,
+            'canManageJobload' => $request->user()->can('project.jobload.manage'),
         ]);
     }
 
     public function update(Request $request, Project $project): Response
     {
-        abort_unless($request->user()->can('project.edit'), 403);
+        abort_unless($request->user()->can('project.jobload.manage'), 403);
 
         $unterprojekte = $this->unterprojekte($project);
         abort_unless($project->verbund_rolle === 1 && $unterprojekte->isNotEmpty(), 404);

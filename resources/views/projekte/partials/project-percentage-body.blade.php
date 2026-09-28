@@ -33,6 +33,40 @@
     </button>
 </div>
 
+@unless ($canManageJobload)
+    {{-- Ralf, 2026-09-28: ohne project.jobload.manage nur lesend - eigene, einfache
+         Ansicht statt den ganzen interaktiven Equalizer (Drag/Fixieren/Nivellieren)
+         stückweise zu sperren. --}}
+    <div class="flex h-full min-h-0 flex-col">
+        <div class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
+            <p class="mb-3 text-xs text-gray-500">
+                {{ __('Legt fest, wie Stunden, die am Hauptprojekt :pn gebucht werden, auf Hauptprojekt und Unterprojekte verteilt werden.', ['pn' => $project->source_pn]) }}
+                {{ __('Nur lesend - Ändern erfordert eine eigene Berechtigung.') }}
+            </p>
+            <div class="space-y-1">
+                @foreach ($participants as $p)
+                    @php($isHauptprojekt = $p->id === $project->id)
+                    <div class="flex items-center justify-between gap-2 rounded px-2 py-1.5 {{ $isHauptprojekt ? 'bg-indigo-50' : '' }}">
+                        <span class="flex min-w-0 items-center gap-1.5">
+                            @if ($isHauptprojekt)
+                                <span class="shrink-0 rounded-full bg-indigo-100 px-1.5 text-[10px] font-semibold text-indigo-700">{{ __('HP') }}</span>
+                            @endif
+                            <span class="shrink-0 font-medium {{ $isHauptprojekt ? 'text-indigo-700' : 'text-gray-700' }}">{{ $p->source_pn }}</span>
+                            <span class="truncate text-gray-400">– {{ $p->title }}</span>
+                        </span>
+                        <span class="shrink-0 font-mono text-xs font-semibold tabular-nums text-gray-700">{{ number_format($shares[$p->id] ?? 0, 2, ',', '.') }} %</span>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+        <div class="flex shrink-0 justify-end gap-2 border-t border-gray-200 px-4 py-3">
+            <button type="button" onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-time-tracking' }))" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
+                {{ __('Schließen') }}
+            </button>
+        </div>
+    </div>
+    @endunless
+@if ($canManageJobload)
 {{-- h-full statt max-h-[75vh] (Ralf-Fund, 2026-09-27, siehe project-jobs-body.blade.php) --}}
 <form
     id="project-percentage-form"
@@ -302,3 +336,4 @@
         </button>
     </div>
 </form>
+@endif
