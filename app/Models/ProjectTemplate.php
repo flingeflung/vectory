@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * je Stufe, analog zu Viettos get_anteilXX()-Funktionen.
  */
 #[Fillable([
-    'tenant_id', 'name', 'sort', 'format', 'workflow_id', 'reusable_content_share', 'languages_count', 'product_maturity',
+    'tenant_id', 'name', 'sort', 'format', 'workflow_id', 'unrestricted_function_groups', 'reusable_content_share', 'languages_count', 'product_maturity',
     'product_change_delays', 'contact_availability', 'localizer_availability', 'software_share',
     'product_complexity', 'print_variants_count', 'images_count', 'duration_value', 'duration_unit',
     'remarks', 'active', 'created_by_user_id', 'updated_by_user_id',
@@ -27,7 +27,7 @@ class ProjectTemplate extends Model
 
     protected function casts(): array
     {
-        return ['active' => 'boolean', 'duration_value' => 'decimal:1'];
+        return ['active' => 'boolean', 'unrestricted_function_groups' => 'boolean', 'duration_value' => 'decimal:1'];
     }
 
     /**
@@ -82,10 +82,21 @@ class ProjectTemplate extends Model
      * ein WF gekoppelt werden, erst dadurch ergeben sich die Fktgrps").
      * Erwartet workflow.steps.functionGroups vorgeladen (siehe Controller).
      *
+     * Ausnahme (Ralf, 2026-09-28): eine Sammelprojekt-Schablone (Plan fürs
+     * Hauptprojekt eines Verbunds mit Unterprojekten unterschiedlicher
+     * Workflows) lässt sich nicht sinnvoll an EINEN Workflow koppeln, ohne
+     * sich dadurch Fktgrp anderer im Verbund vorkommender Workflows zu
+     * verbauen - mit unrestricted_function_groups steht hier der volle
+     * Mandanten-Katalog offen, unabhängig von einer etwaigen Workflow-Wahl.
+     *
      * @return \Illuminate\Support\Collection<int, FunctionGroup>
      */
     public function relevantFunctionGroups(): \Illuminate\Support\Collection
     {
+        if ($this->unrestricted_function_groups) {
+            return FunctionGroup::query()->where('tenant_id', $this->tenant_id)->orderBy('name')->get();
+        }
+
         if (! $this->workflow) {
             return collect();
         }

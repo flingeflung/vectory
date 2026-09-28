@@ -446,6 +446,7 @@ class TenantConfigCloner
                     'name' => $row->name,
                     'format' => $row->format,
                     'workflow_id' => $workflowMap[$row->workflow_id] ?? null,
+                    'unrestricted_function_groups' => $row->unrestricted_function_groups,
                     'reusable_content_share' => $row->reusable_content_share,
                     'languages_count' => $row->languages_count,
                     'product_maturity' => $row->product_maturity,

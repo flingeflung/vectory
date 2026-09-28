@@ -115,6 +115,7 @@ class ProjectTemplateController extends Controller
         $template = ProjectTemplate::query()->create([
             ...$validated,
             'tenant_id' => $tenantId,
+            'unrestricted_function_groups' => $request->boolean('unrestricted_function_groups'),
             'created_by_user_id' => Auth::id(),
         ]);
 
@@ -161,6 +162,7 @@ class ProjectTemplateController extends Controller
         $template->update([
             ...$validated,
             'active' => $request->boolean('active'),
+            'unrestricted_function_groups' => $request->boolean('unrestricted_function_groups'),
             'updated_by_user_id' => Auth::id(),
         ]);
 
@@ -322,7 +324,7 @@ class ProjectTemplateController extends Controller
      */
     private function characteristicsData(ProjectTemplate $source): array
     {
-        $data = ['format' => $source->format, 'duration_value' => $source->duration_value, 'duration_unit' => $source->duration_unit, 'remarks' => $source->remarks];
+        $data = ['format' => $source->format, 'duration_value' => $source->duration_value, 'duration_unit' => $source->duration_unit, 'remarks' => $source->remarks, 'unrestricted_function_groups' => $source->unrestricted_function_groups];
 
         foreach (array_keys(ProjectTemplate::characteristicFields()) as $field) {
             $data[$field] = $source->$field;

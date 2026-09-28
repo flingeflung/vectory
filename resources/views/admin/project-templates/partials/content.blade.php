@@ -173,11 +173,15 @@
                     (Workflow-Kopplung) - Ralf-Korrektur 2026-09-18: "Zuerst
                     muss ein WF gekoppelt werden, erst dadurch ergeben sich
                     die Fktgrps", siehe ProjectTemplate::relevantFunctionGroups().
+                    Ausnahme (Ralf, 2026-09-28): eine Sammelprojekt-Schablone
+                    (unrestricted_function_groups) braucht KEINE Workflow-
+                    Kopplung - relevantFunctionGroups() liefert dann direkt
+                    den vollen Katalog, siehe Model.
                 --}}
                 @php($relevantFunctionGroups = $template->relevantFunctionGroups())
                 <div class="border-t border-gray-100 pt-3">
-                    @if (! $template->workflow_id)
-                        <p class="text-xs text-gray-400">{{ __('Erst einen Workflow koppeln, um Stunden je Funktionsgruppe zu planen.') }}</p>
+                    @if (! $template->workflow_id && ! $template->unrestricted_function_groups)
+                        <p class="text-xs text-gray-400">{{ __('Erst einen Workflow koppeln, um Stunden je Funktionsgruppe zu planen (oder als Sammelprojekt-Schablone markieren).') }}</p>
                     @elseif ($relevantFunctionGroups->isEmpty())
                         <p class="text-xs text-gray-400">{{ __('Der gekoppelte Workflow hat noch keinen Schritten Funktionsgruppen zugeordnet.') }}</p>
                     @else

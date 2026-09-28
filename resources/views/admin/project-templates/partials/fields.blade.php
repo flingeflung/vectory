@@ -25,7 +25,7 @@
     <div>
         <span class="flex items-center gap-1">
             <label class="block text-xs text-gray-500">{{ __('Workflow') }}</label>
-            <span class="shrink-0 text-gray-400" title="{{ __('Bestimmt die für diese Schablone verfügbaren Funktionsgruppen: Sie ergeben sich aus den Schritten des gewählten Workflows. Ohne Workflow sind keine Funktionsgruppen zuweisbar.') }}">
+            <span class="shrink-0 text-gray-400" title="{{ __('Bestimmt die für diese Schablone verfügbaren Funktionsgruppen: Sie ergeben sich aus den Schritten des gewählten Workflows. Ohne Workflow sind keine Funktionsgruppen zuweisbar. Ausnahme: Bei einer Sammelprojekt-Schablone (siehe Häkchen rechts) ist dieses Feld rein informativ.') }}">
                 <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             </span>
         </span>
@@ -49,6 +49,15 @@
             </select>
         </div>
     </div>
+    <span class="flex shrink-0 items-center gap-1 pb-1.5">
+        <label class="flex items-center gap-1 text-xs text-gray-600">
+            <input type="checkbox" name="unrestricted_function_groups" value="1" @checked($template->unrestricted_function_groups ?? false) class="rounded border-gray-300">
+            {{ __('Sammelprojekt') }}
+        </label>
+        <span class="text-gray-400" title="{{ __('Für Schablonen, die ein Hauptprojekt mit Unterprojekten unterschiedlicher Workflows abdecken: Funktionsgruppen sind dann frei aus dem ganzen Katalog wählbar, unabhängig von einer Workflow-Kopplung.') }}">
+            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        </span>
+    </span>
     @if ($template)
         <label class="flex shrink-0 items-center gap-1 pb-1.5 text-xs text-gray-600">
             <input type="checkbox" name="active" value="1" @checked($template->active) class="rounded border-gray-300">
@@ -72,7 +81,18 @@
                 colors: {{ \Illuminate\Support\Js::from(collect($meta['options'])->mapWithKeys(fn ($option, $value) => [(string) $value => $option['color']])) }},
             }"
         >
-            <label class="block text-xs text-gray-500">{{ $meta['label'] }}</label>
+            {{--
+                Ralf, 2026-09-28: "die Dropdowns hüpfen bei 1- oder
+                2-zeiligen Captions" - ohne feste Mindesthöhe richtet sich
+                die Select-Position nach der Zeilenzahl des EIGENEN Labels,
+                nicht nach der längsten Caption in derselben Grid-Zeile (die
+                wechselt je nach Spaltenzahl/Breakpoint ohnehin). min-h-12
+                (3 Zeilen bei text-xs) deckt die längste Caption ("Anteil
+                wiederverwendbarer Inhalt", bricht in der schmalsten Spalte
+                auf 3 Zeilen) ab und macht die Starthöhe unabhängig von der
+                tatsächlichen Zeilenzahl der übrigen Captions.
+            --}}
+            <label class="block min-h-12 text-xs text-gray-500">{{ $meta['label'] }}</label>
             <select
                 name="{{ $field }}"
                 required
