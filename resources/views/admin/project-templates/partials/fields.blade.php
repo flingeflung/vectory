@@ -49,21 +49,26 @@
             </select>
         </div>
     </div>
-    <span class="flex shrink-0 items-center gap-1 pb-1.5">
-        <label class="flex items-center gap-1 text-xs text-gray-600">
-            <input type="checkbox" name="unrestricted_function_groups" value="1" @checked($template->unrestricted_function_groups ?? false) class="rounded border-gray-300">
-            {{ __('Sammelprojekt') }}
-        </label>
-        <span class="text-gray-400" title="{{ __('Für Schablonen, die ein Hauptprojekt mit Unterprojekten unterschiedlicher Workflows abdecken: Funktionsgruppen sind dann frei aus dem ganzen Katalog wählbar, unabhängig von einer Workflow-Kopplung.') }}">
-            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+    {{-- Ralf, 2026-09-28: "brich die beiden Checkboxen immer um, unter die Dropdowns" -
+         w-full in der flex-wrap-Zeile erzwingt den Umbruch unabhängig von der
+         verfügbaren Breite, statt nur bei zu schmalem Fenster. --}}
+    <div class="flex w-full items-center gap-4">
+        <span class="flex shrink-0 items-center gap-1">
+            <label class="flex items-center gap-1 text-xs text-gray-600">
+                <input type="checkbox" name="unrestricted_function_groups" value="1" @checked($template->unrestricted_function_groups ?? false) class="rounded border-gray-300">
+                {{ __('Sammelprojekt') }}
+            </label>
+            <span class="text-gray-400" title="{{ __('Für Schablonen, die ein Hauptprojekt mit Unterprojekten unterschiedlicher Workflows abdecken: Funktionsgruppen sind dann frei aus dem ganzen Katalog wählbar, unabhängig von einer Workflow-Kopplung.') }}">
+                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </span>
         </span>
-    </span>
-    @if ($template)
-        <label class="flex shrink-0 items-center gap-1 pb-1.5 text-xs text-gray-600">
-            <input type="checkbox" name="active" value="1" @checked($template->active) class="rounded border-gray-300">
-            {{ __('Aktiv') }}
-        </label>
-    @endif
+        @if ($template)
+            <label class="flex shrink-0 items-center gap-1 text-xs text-gray-600">
+                <input type="checkbox" name="active" value="1" @checked($template->active) class="rounded border-gray-300">
+                {{ __('Aktiv') }}
+            </label>
+        @endif
+    </div>
 </div>
 
 <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
