@@ -1514,6 +1514,30 @@
                     liveSelect.value = currentValue;
                 };
 
+                // Wochenstunden-Historie (Ralf, 2026-09-28): gleiches Prinzip wie
+                // refreshPersonOverlaySelect oben, aber für den reinen Anzeige-DIV
+                // statt eines <select> - nach dem Schließen des eigenen kleinen
+                // Overlays (siehe person-weekly-hours-Modal unten) den aktuellen
+                // Wert nachziehen, ohne das restliche, evtl. ungespeicherte
+                // Formular im Personen-Overlay anzufassen.
+                window.refreshPersonWeeklyHoursDisplay = async function refreshPersonWeeklyHoursDisplay() {
+                    if (currentPersonId === null) {
+                        return;
+                    }
+                    const liveDisplay = body()?.querySelector('#person-weekly-hours-display');
+                    if (!liveDisplay) {
+                        return;
+                    }
+
+                    const html = await fetch('/admin/personen/' + currentPersonId, {
+                        headers: { 'X-Overlay': '1' },
+                    }).then((r) => r.text());
+                    const freshDisplay = new DOMParser().parseFromString(html, 'text/html').getElementById('person-weekly-hours-display');
+                    if (freshDisplay) {
+                        liveDisplay.innerHTML = freshDisplay.innerHTML;
+                    }
+                };
+
                 // Event-Delegation: die Formulare werden erst nach dem Öffnen per fetch eingefügt.
                 document.addEventListener('submit', async (event) => {
                     if (!body() || !body().contains(event.target)) {
@@ -1703,6 +1727,90 @@
                     await load();
                     if (isRowForm) {
                         window.showManageSavedToast('company-manager-toast');
+                    }
+                });
+            })();
+        </script>
+
+        {{--
+            Wochenstunden-Historie (Ralf, 2026-09-28): gleiches Muster wie
+            company-manager oben, aus dem Personen-Overlay heraus per "verwalten"
+            neben "Wochenstunden" öffenbar. Rein anhängbar (siehe
+            PersonController::storeWeeklyHours()) - kein Bearbeiten/Löschen
+            bestehender Zeilen, nur Anlegen eines neuen Datensatzes.
+        --}}
+        <x-modal name="person-weekly-hours" max-width="md" :dirty-check="'personWeeklyHoursIsDirty'">
+            <div class="flex max-h-[80vh] flex-col">
+                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Wochenstunden') }}</h3>
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'person-weekly-hours' }))"
+                        class="text-gray-400 hover:text-gray-600"
+                        aria-label="{{ __('Schließen') }}"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="person-weekly-hours-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
+                    {{ __('Lädt…') }}
+                </div>
+            </div>
+        </x-modal>
+
+        <script>
+            (function () {
+                const body = () => document.getElementById('person-weekly-hours-body');
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                let currentPersonId = null;
+                let savedSnapshot = null;
+
+                const serializeAllForms = () => [...body().querySelectorAll('form')]
+                    .map((form) => new URLSearchParams(new FormData(form)).toString())
+                    .join('|');
+
+                const snapshot = () => {
+                    savedSnapshot = serializeAllForms();
+                };
+
+                window.personWeeklyHoursIsDirty = () => savedSnapshot !== null && serializeAllForms() !== savedSnapshot;
+
+                const load = async () => {
+                    body().innerHTML = await fetch('/admin/personen/' + currentPersonId + '/wochenstunden').then((r) => r.text());
+                    snapshot();
+                };
+
+                window.openPersonWeeklyHours = function (personId) {
+                    currentPersonId = personId;
+                    body().innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
+                    window.dispatchEvent(new CustomEvent('open-modal', { detail: 'person-weekly-hours' }));
+                    load();
+                };
+
+                window.addEventListener('close-modal', (event) => {
+                    if (event.detail !== 'person-weekly-hours' || currentPersonId === null) {
+                        return;
+                    }
+                    window.refreshPersonWeeklyHoursDisplay?.();
+                });
+
+                document.addEventListener('submit', async (event) => {
+                    if (!body() || !body().contains(event.target)) {
+                        return;
+                    }
+                    event.preventDefault();
+
+                    const formData = new FormData(event.target);
+                    const response = await fetch(event.target.action, {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': csrfToken },
+                        body: formData,
+                    });
+                    body().innerHTML = await response.text();
+                    if (response.ok) {
+                        snapshot();
                     }
                 });
             })();

@@ -43,6 +43,7 @@
         <div class="mb-3 flex gap-1 border-b border-gray-100">
             <button type="button" @click="subTab = 'uebersicht'" :class="subTab === 'uebersicht' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700'" class="border-b-2 px-2 pb-1.5 text-xs font-medium">{{ __('Übersicht') }}</button>
             <button type="button" @click="subTab = 'personen'" :class="subTab === 'personen' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700'" class="border-b-2 px-2 pb-1.5 text-xs font-medium">{{ __('Nach Person & Tag') }}</button>
+            <button type="button" @click="subTab = 'gesamt'" :class="subTab === 'gesamt' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700'" class="border-b-2 px-2 pb-1.5 text-xs font-medium">{{ __('Gesamtansicht') }}</button>
         </div>
     @endcan
 
@@ -273,6 +274,9 @@
     @can('project.hours.person_breakdown')
         <div x-show="subTab === 'personen'" x-cloak>
             @include('projekte.partials.zeiten-personen-body', ['week' => $zeiten['personBreakdownWeek'], 'sortBy' => $zeiten['personBreakdownSort'], 'breakdown' => $zeiten['personBreakdown']])
+        </div>
+        <div x-show="subTab === 'gesamt'" x-cloak>
+            @include('projekte.partials.zeiten-gesamt-body', ['gesamt' => $zeiten['gesamtansicht']])
         </div>
     @endcan
 </div>

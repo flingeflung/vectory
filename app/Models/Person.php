@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
     'tenant_id', 'legacy_id', 'first_name', 'last_name', 'short_name', 'email',
     'company_id', 'department_id', 'business_unit_id', 'legacy_role_id', 'permission_template_id',
     'last_login_at', 'start_date', 'end_date', 'remarks', 'language', 'sort', 'active',
-    'is_absent', 'absent_until', 'weekly_hours',
+    'is_absent', 'absent_until',
 ])]
 class Person extends Model
 {
@@ -30,7 +30,6 @@ class Person extends Model
             'last_login_at' => 'datetime',
             'start_date' => 'date',
             'end_date' => 'date',
-            'weekly_hours' => 'decimal:1',
         ];
     }
 
@@ -53,6 +52,31 @@ class Person extends Model
     public function user(): HasOne
     {
         return $this->hasOne(User::class);
+    }
+
+    /**
+     * Wochenstunden-Historie (Ralf, 2026-09-28) - löst das frühere, statische
+     * Feld people.weekly_hours ab. withoutGlobalScope('tenant') aus demselben
+     * Grund wie company()/permissionTemplate() unten: gehört immer dem
+     * Heimat-Mandanten der Person, nicht zwingend dem gerade aktiven.
+     */
+    public function weeklyHours(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PersonWeeklyHours::class)->withoutGlobalScope('tenant')->orderBy('valid_from');
+    }
+
+    /**
+     * Aktuell gültiger WoSt-Wert (Datensatz, dessen Zeitraum "heute" enthält).
+     * null nur möglich bei einer Person ohne jede Historie (z.B. ohne Login -
+     * siehe PersonController/Migration: nur Login-Personen bekommen eine).
+     */
+    public function currentWeeklyHours(): ?float
+    {
+        $today = now()->toDateString();
+        $entry = $this->weeklyHours->first(fn (PersonWeeklyHours $row) => ($row->valid_from === null || $row->valid_from->toDateString() <= $today)
+            && ($row->valid_to === null || $row->valid_to->toDateString() >= $today));
+
+        return $entry?->hours !== null ? (float) $entry->hours : null;
     }
 
     /**

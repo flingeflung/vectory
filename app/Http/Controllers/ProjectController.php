@@ -990,13 +990,29 @@ class ProjectController extends Controller
      * prozentualer Aufteilung verteilten Stunden gelandet sind. Aggregiert über ALLE Personen
      * (Projektleiter-Sicht), nicht nur die eigenen Buchungen wie im Zeiterfassung-Overlay.
      */
-    private function zeitenData(Project $project): array
+    /**
+     * Beteiligte Projekt-IDs für die Zeiten-Auswertungen: das Projekt selbst, am
+     * Hauptprojekt zusätzlich alle Unterprojekte. Ein "Sammelprojekt" ist dabei
+     * nur ein Hauptprojekt mit besonderer Schablonen-Eigenschaft (siehe
+     * ProjectTemplate) - keine eigene Verbund-Rolle, braucht also keine
+     * Sonderbehandlung hier.
+     *
+     * @return array<int, int>
+     */
+    private function projectFamilyIds(Project $project): array
     {
-        $participantIds = [$project->id];
+        $ids = [$project->id];
         if ($project->verbund_rolle === 1) {
-            $participantIds = array_merge($participantIds, DB::table('projects')
+            $ids = array_merge($ids, DB::table('projects')
                 ->where('hauptprojekt_id', $project->id)->where('verbund_rolle', 2)->pluck('id')->all());
         }
+
+        return $ids;
+    }
+
+    private function zeitenData(Project $project): array
+    {
+        $participantIds = $this->projectFamilyIds($project);
 
         $hoursByProject = DB::table('job_hours')
             ->whereIn('project_id', $participantIds)
@@ -1085,6 +1101,11 @@ class ProjectController extends Controller
             'personBreakdownSort' => 'person',
             'personBreakdown' => auth()->user()?->can('project.hours.person_breakdown')
                 ? $this->zeitenPersonBreakdownData($project, CarbonImmutable::today()->startOfWeek())
+                : null,
+            // Unterreiter "Gesamtansicht" (Ralf, 2026-09-28) - gleiches Recht wie oben,
+            // Standard-Modus "Personen" mit der eigenen Person (siehe zeitenGesamtansichtData()).
+            'gesamtansicht' => auth()->user()?->can('project.hours.person_breakdown')
+                ? $this->zeitenGesamtansichtData($project, 'project', null, null, false, defaultToOwnPerson: true)
                 : null,
         ];
     }
@@ -1198,6 +1219,221 @@ class ProjectController extends Controller
             'rows' => $rows,
             'dayTotals' => $dayTotals,
             'total' => array_sum($dayTotals),
+        ];
+    }
+
+    /**
+     * Zeiten-Tab, Unterreiter "Gesamtansicht" (Ralf, 2026-09-28) - Nachbau der
+     * Zeiterfassungs-Übersicht (JobloadOverviewController::index(), Modi "Nach
+     * Personen"/"Nach Jobs"), aber auf die Jobs der beteiligten Projekte (HP+UP)
+     * eingeschränkt und über deren Laufzeit statt über ein Kalenderjahr, plus ein
+     * dritter, hier eigener Modus "Nach Projekten" (ergibt nur im Projekt-Kontext
+     * Sinn, deshalb nicht im Hauptmenü). Gleiches Recht wie "Nach Person & Tag"
+     * (project.hours.person_breakdown) - Modus "Projekte" zeigt nie Personen,
+     * Modus "Personen" mit einer gewählten Person bzw. Modus "Jobs" beim
+     * Draufklicken auf einen einzelnen Job zeigen personenbezogene Zeilen.
+     */
+    public function zeitenGesamtansicht(Request $request, Project $project): Response
+    {
+        abort_unless($request->user()->can('project.view'), 403);
+        abort_unless($request->user()->can('project.hours.person_breakdown'), 403);
+
+        $data = $request->validate([
+            'mode' => ['nullable', Rule::in(['project', 'person', 'job'])],
+            'person_id' => ['nullable', 'integer'],
+            'job_id' => ['nullable', 'integer'],
+        ]);
+        $mode = $data['mode'] ?? 'project';
+        $showInactive = $request->boolean('show_inactive');
+
+        return response(view('projekte.partials.zeiten-gesamt-body', [
+            'project' => $project,
+            // defaultToOwnPerson=false: ein Reload aus der Filterleiste trägt den
+            // zuletzt gültigen Stand (auch "– Alle –" = null) immer explizit weiter,
+            // siehe zeitenGesamtansichtData().
+            'gesamt' => $this->zeitenGesamtansichtData($project, $mode, $data['person_id'] ?? null, $data['job_id'] ?? null, $showInactive),
+        ])->render());
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function zeitenGesamtansichtData(Project $project, string $mode, ?int $personId, ?int $jobId, bool $showInactive, bool $defaultToOwnPerson = false): array
+    {
+        $participantIds = $this->projectFamilyIds($project);
+        $tenantId = $project->tenant_id;
+        $timeGrid = (int) DB::table('tenants')->where('id', $tenantId)->value('jobload_time_grid');
+        $hourDecimals = match ($timeGrid) { 60 => 0, 30 => 1, default => 2 };
+
+        // Zeitraum: frühestes Start- bis spätestes Enddatum unter den beteiligten
+        // Projekten (Ralf, 2026-09-28: "Start ist der erste Tag, der in einem der
+        // beteiligten Projekte als Startdatum eingetragen ist, analog das Ende").
+        $dates = Project::withoutGlobalScope('tenant')->whereIn('id', $participantIds)->get(['start_date', 'end_date']);
+        $starts = $dates->pluck('start_date')->filter();
+        $ends = $dates->pluck('end_date')->filter();
+        if ($starts->isEmpty() || $ends->isEmpty()) {
+            return ['hasRange' => false];
+        }
+        $start = CarbonImmutable::parse((string) $starts->min())->startOfWeek();
+        $end = CarbonImmutable::parse((string) $ends->max())->endOfWeek();
+
+        $collator = new \Collator('de_DE');
+        $ownPersonId = (int) (auth()->user()->person_id ?? 0);
+
+        $people = DB::table('people')
+            ->whereIn('id', DB::table('job_hours')->select('person_id')->distinct()->whereIn('project_id', $participantIds))
+            ->get(['id', 'first_name', 'last_name', 'active']);
+        $people = $people->filter(fn ($p) => $showInactive || $p->active || (int) $p->id === $ownPersonId)
+            ->sort(fn ($a, $b) => $collator->compare($a->last_name.', '.$a->first_name, $b->last_name.', '.$b->first_name))
+            ->values();
+        $peopleById = $people->keyBy('id');
+        // Ralf, 2026-09-28: "– Alle –" im Personen-Dropdown - personId=null ist ab
+        // hier ein GÜLTIGER, expliziter Zustand (Zeilen dann nach Person
+        // aufgeschlüsselt statt nach Job), kein "nicht gesetzt" mehr. Nur der
+        // allererste, noch nicht interaktive Aufbau (zeitenData()) bekommt
+        // defaultToOwnPerson=true und damit einen sinnvollen Startwert statt
+        // gleich alle Personen offenzulegen.
+        if ($personId !== null && ! $peopleById->has($personId)) {
+            $personId = null;
+        }
+        if ($personId === null && $defaultToOwnPerson) {
+            $personId = $peopleById->has($ownPersonId) ? $ownPersonId : (int) ($people->first()->id ?? 0);
+        }
+
+        $jobs = DB::table('project_job_types')
+            ->join('job_types', 'job_types.id', '=', 'project_job_types.job_type_id')
+            ->whereIn('project_job_types.project_id', $participantIds)
+            ->where('job_types.tenant_id', $tenantId)
+            ->distinct()
+            ->orderBy('job_types.code')->orderBy('job_types.name')
+            ->get(['job_types.id', 'job_types.code', 'job_types.name']);
+        $jobsById = $jobs->keyBy('id');
+        $jobId = $jobId !== null && $jobsById->has($jobId) ? $jobId : null;
+
+        $weeks = collect();
+        $monthSegments = collect();
+        for ($day = $start; $day->lessThanOrEqualTo($end); $day = $day->addWeek()) {
+            $key = sprintf('%04d-W%02d', $day->isoWeekYear(), $day->isoWeek());
+            $month = $day->addDays(3)->format('Y-m');
+            $weeks->push(['key' => $key, 'number' => $day->isoWeek(), 'start' => $day, 'end' => $day->addDays(6), 'month' => $month]);
+            if ($monthSegments->isNotEmpty() && $monthSegments->last()['key'] === $month) {
+                $segment = $monthSegments->pop();
+                $segment['count']++;
+                $monthSegments->push($segment);
+            } else {
+                $monthSegments->push(['key' => $month, 'label' => $day->addDays(3)->translatedFormat('F Y'), 'count' => 1]);
+            }
+        }
+
+        // "Nach Projekten" (Ralf, 2026-09-28): eigene, projektweise Zeilen statt
+        // Job-/Personen-Zeilen - deshalb ohne Personen-/Job-Filter, dafür mit
+        // fester HP-zuerst-dann-UP-nach-PN-Reihenfolge (gleiches Prinzip wie
+        // zeitenData()/zeitenPersonBreakdownData()) statt alphabetischer Sortierung.
+        $projectOrder = [$project->id => 0];
+        $projectInfo = collect([$project->id => (object) ['source_pn' => $project->source_pn, 'title' => $project->title, 'isHauptprojekt' => $project->verbund_rolle === 1]]);
+        $milestonesByProjectWeek = [];
+        if ($mode === 'project') {
+            $unterprojekte = DB::table('projects')->whereIn('id', $participantIds)->where('id', '!=', $project->id)
+                ->orderBy('source_pn')->get(['id', 'source_pn', 'title']);
+            foreach ($unterprojekte as $index => $up) {
+                $projectOrder[$up->id] = $index + 1;
+                $projectInfo[$up->id] = (object) ['source_pn' => $up->source_pn, 'title' => $up->title, 'isHauptprojekt' => false];
+            }
+
+            // Meilenstein-Punkte (Ralf, 2026-09-28): je Projekt-Zeile die EIGENEN,
+            // aktuell gültigen Workflow-Termine (has_due_date=true, nur die aktuell
+            // zugewiesene Workflow-Generation - gleiches Prinzip wie
+            // ProjectScheduleController::scheduleStepsFor()), gruppiert nach KW.
+            $familyProjects = Project::withoutGlobalScope('tenant')->whereIn('id', $participantIds)
+                ->with(['projectWorkflowSteps' => fn ($query) => $query->whereNotNull('due_date')->whereHas('workflowStep', fn ($q) => $q->where('has_due_date', true)), 'projectWorkflowSteps.workflowStep'])
+                ->get();
+            foreach ($familyProjects as $fp) {
+                foreach ($fp->projectWorkflowSteps as $pws) {
+                    if ($pws->workflowStep->workflow_id !== $fp->workflow_id) {
+                        continue;
+                    }
+                    $date = CarbonImmutable::parse($pws->due_date);
+                    $weekKey = sprintf('%04d-W%02d', $date->isoWeekYear(), $date->isoWeek());
+                    $milestonesByProjectWeek[$fp->id][$weekKey][] = [
+                        'date' => $date->format('d.m.Y'),
+                        'title' => $pws->effectiveMilestoneTitle() ?: $pws->workflowStep->title,
+                    ];
+                }
+            }
+        }
+
+        $entries = DB::table('job_hours')
+            ->whereIn('project_id', $participantIds)
+            ->where('work_date', '>=', $start->toDateString())
+            ->where('work_date', '<=', $end->toDateString())
+            ->where('hours', '>', 0);
+        if ($mode === 'person' && $personId !== null) {
+            $entries->where('person_id', $personId);
+        } elseif ($mode === 'job' && $jobId !== null) {
+            $entries->where('job_type_id', $jobId);
+        }
+
+        // rowKind bestimmt, wonach die Zeilen gruppiert werden: "project" (neuer
+        // Modus), "person" (Modus "Personen" mit "– Alle –", oder Modus "Jobs" mit
+        // einem einzelnen gewählten Job - dann personenbezogen) oder "job" (Modus
+        // "Jobs" ohne Auswahl, oder Modus "Personen" mit einer gewählten Person).
+        $rowKind = match (true) {
+            $mode === 'project' => 'project',
+            $mode === 'person' => $personId === null ? 'person' : 'job',
+            default => $jobId !== null ? 'person' : 'job',
+        };
+
+        $jobOrder = $jobs->pluck('id')->flip();
+        $rows = [];
+        $weekTotals = $weeks->pluck('key')->mapWithKeys(fn ($key) => [$key => 0.0])->all();
+        $total = 0.0;
+        foreach ($entries->select('person_id', 'job_type_id', 'project_id', 'work_date', 'hours')->cursor() as $entry) {
+            $date = CarbonImmutable::parse($entry->work_date);
+            $weekKey = sprintf('%04d-W%02d', $date->isoWeekYear(), $date->isoWeek());
+            $rowId = match ($rowKind) {
+                'project' => (int) $entry->project_id,
+                'person' => (int) $entry->person_id,
+                'job' => (int) $entry->job_type_id,
+            };
+            if (! isset($rows[$rowId])) {
+                if ($rowKind === 'project') {
+                    $proj = $projectInfo->get($rowId);
+                    if (! $proj) {
+                        continue;
+                    }
+                    $label = $proj->source_pn.' – '.$proj->title;
+                    $sort = sprintf('%08d', $projectOrder[$rowId] ?? 99999999);
+                } elseif ($rowKind === 'person') {
+                    $person = $peopleById->get($rowId);
+                    if (! $person) {
+                        continue;
+                    }
+                    $label = trim($person->last_name.', '.$person->first_name, ', ');
+                    $sort = mb_strtolower($label);
+                } else {
+                    $job = $jobsById->get($rowId);
+                    if (! $job) {
+                        continue;
+                    }
+                    $label = ($job->code ? $job->code.' – ' : '').$job->name;
+                    $sort = sprintf('%08d', $jobOrder->get($rowId, 99999999));
+                }
+                $rows[$rowId] = ['id' => $rowId, 'label' => $label, 'sort' => $sort, 'weeks' => [], 'total' => 0.0];
+            }
+            $hours = (float) $entry->hours;
+            $rows[$rowId]['weeks'][$weekKey] = ($rows[$rowId]['weeks'][$weekKey] ?? 0) + $hours;
+            $rows[$rowId]['total'] += $hours;
+            $weekTotals[$weekKey] += $hours;
+            $total += $hours;
+        }
+        $rows = collect($rows)->sortBy('sort')->values();
+
+        return [
+            'hasRange' => true, 'mode' => $mode, 'rowKind' => $rowKind, 'people' => $people, 'personId' => $personId,
+            'showInactive' => $showInactive, 'jobs' => $jobs, 'jobId' => $jobId,
+            'weeks' => $weeks, 'monthSegments' => $monthSegments, 'rows' => $rows,
+            'weekTotals' => $weekTotals, 'total' => $total, 'hourDecimals' => $hourDecimals,
+            'milestonesByProjectWeek' => $milestonesByProjectWeek,
         ];
     }
 

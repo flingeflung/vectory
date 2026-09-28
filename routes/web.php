@@ -131,6 +131,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Zeiten-Tab, Unterreiter "Nach Person & Tag" (Ralf, 2026-09-28) - eigenes Recht
     // project.hours.person_breakdown, siehe ProjectController::zeitenPersonBreakdown().
     Route::get('/projekte/{project}/zeiten/personen', [ProjectController::class, 'zeitenPersonBreakdown'])->name('projekte.zeiten.personen');
+    // Zeiten-Tab, Unterreiter "Gesamtansicht" (Ralf, 2026-09-28) - gleiches Recht,
+    // siehe ProjectController::zeitenGesamtansicht().
+    Route::get('/projekte/{project}/zeiten/gesamt', [ProjectController::class, 'zeitenGesamtansicht'])->name('projekte.zeiten.gesamt');
     // Versionskette / "Stamm-ID" (Ralf, 2026-09-20)
     Route::get('/projekte/{project}/stamm-id/kette', [StammIdController::class, 'chain'])->name('projekte.stamm-id.chain');
     Route::post('/projekte/{project}/stamm-id/loesen', [StammIdController::class, 'detach'])->name('projekte.stamm-id.detach');
@@ -353,6 +356,10 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     Route::get('/personen/{person}', [AdminPersonController::class, 'edit'])->name('personen.edit');
     Route::post('/personen/{person}', [AdminPersonController::class, 'update'])->name('personen.update');
     Route::post('/personen/{person}/login', [AdminPersonController::class, 'createLogin'])->name('personen.login.store');
+    // Wochenstunden-Historie (Ralf, 2026-09-28) - eigenes kleines Overlay,
+    // siehe PersonController::weeklyHours()/storeWeeklyHours().
+    Route::get('/personen/{person}/wochenstunden', [AdminPersonController::class, 'weeklyHours'])->name('personen.wochenstunden');
+    Route::post('/personen/{person}/wochenstunden', [AdminPersonController::class, 'storeWeeklyHours'])->name('personen.wochenstunden.store');
     Route::post('/personen/{person}/passwort', [AdminPersonController::class, 'resetPassword'])->name('personen.password.reset');
     Route::post('/personen/{person}/kunden', [AdminPersonController::class, 'updateTenantAccess'])->name('personen.tenant-access.update');
     Route::post('/personen/{person}/rolle', [AdminPersonController::class, 'updateRole'])->name('personen.role.update');

@@ -32,17 +32,22 @@
 </div>
 
 {{--
-    h-full statt max-h-[75vh] (Ralf-Fund, 2026-09-27: "Speichern-Button ist nur per
-    Scroll vollständig sichtbar"): dieses Formular sitzt bereits in einer eigenen
-    scrollenden Box (#project-jobs-body in layouts/app.blade.php) - eine zweite,
-    unabhängig geschätzte Höhe (75vh) darin führte dazu, dass bei vielen Jobs die
-    ÄUSSERE Box gescrollt hat statt der inneren, wodurch der per shrink-0 fixierte
-    Speichern-Footer nicht mehr am sichtbaren unteren Rand klebte. h-full übernimmt
-    stattdessen exakt die vom Elternelement tatsächlich zugeteilte Höhe.
+    Ralf-Fund, 2026-09-27 + erneut 2026-09-28: "Speichern-Button ist nur per Scroll
+    vollständig sichtbar". Ein zweiter, unabhängiger Scroll-Bereich (per h-full/
+    flex-1) INNERHALB der bereits scrollenden Box (#project-jobs-body in
+    layouts/app.blade.php) verlässt sich darauf, dass diese Box eine per CSS
+    EXPLIZIT gesetzte Höhe hat - hat sie aber nicht (ihre Höhe ergibt sich nur aus
+    dem flex-1 im Eltern-Layout), ein Block-Kind mit height:100%/h-full bekommt
+    dadurch laut CSS-Spezifikation gar keine feste Höhe und wächst stattdessen mit
+    dem Inhalt - bei vielen Jobs eben höher als der sichtbare Bereich, der Footer
+    rutscht mit raus. Lösung: gar keinen zweiten Scroll-Bereich mehr - die schon
+    zuverlässig funktionierende äußere Box scrollt, der Footer bleibt per
+    "sticky bottom-0" darin am unteren Rand kleben (gleiches Prinzip wie die
+    "sticky top-0"-Tabellenköpfe, z.B. in zeiten-gesamt-body.blade.php).
 --}}
-<form id="project-jobs-form" x-data="{ dirty: false }" @input="dirty = window.formIsDirty($el)" method="POST" action="{{ route('projekte.jobs.update', $project) }}" class="flex h-full min-h-0 flex-col">
+<form id="project-jobs-form" x-data="{ dirty: false }" @input="dirty = window.formIsDirty($el)" method="POST" action="{{ route('projekte.jobs.update', $project) }}">
     @csrf
-    <div class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
+    <div class="px-4 py-3 text-sm">
         <div class="mb-3 flex items-start justify-between gap-3">
             <p class="text-xs text-gray-500">
                 {{ __('Auf diese Jobs kann von Projekt :pn direkt gebucht werden.', ['pn' => $project->source_pn]) }}
@@ -83,7 +88,7 @@
             <p class="text-gray-500">{{ __('Es sind noch keine Jobs verfügbar.') }}</p>
         @endforelse
     </div>
-    <div class="flex shrink-0 justify-end gap-2 border-t border-gray-200 px-4 py-3">
+    <div class="sticky bottom-0 flex justify-end gap-2 border-t border-gray-200 bg-white px-4 py-3">
         <button
             type="button"
             onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-time-tracking' }))"

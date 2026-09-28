@@ -8,7 +8,7 @@
             <fieldset class="flex items-center gap-3">
                 <legend class="sr-only">{{ __('Darstellung') }}</legend>
                 <label class="flex items-center gap-1.5"><input type="radio" name="mode" value="person" onchange="window.submitJobloadOverview(this.form)" @checked($mode === 'person') class="border-gray-300 text-btn-primary">{{ __('Nach Personen') }}</label>
-                <label class="flex items-center gap-1.5"><input type="radio" name="mode" value="job" onchange="window.submitJobloadOverview(this.form)" @checked($mode === 'job') class="border-gray-300 text-btn-primary">{{ __('Nach Themen') }}</label>
+                <label class="flex items-center gap-1.5"><input type="radio" name="mode" value="job" onchange="window.submitJobloadOverview(this.form)" @checked($mode === 'job') class="border-gray-300 text-btn-primary">{{ __('Nach Jobs') }}</label>
                 @if ($canViewCustomerSummary)
                     <label class="flex items-center gap-1.5"><input type="radio" name="mode" value="group" onchange="window.submitJobloadOverview(this.form)" @checked($mode === 'group') class="border-gray-300 text-btn-primary">{{ __('Nach Jobgruppen') }}</label>
                 @endif
@@ -31,9 +31,9 @@
                     </label>
                 @endif
             @elseif ($mode === 'job')
-                <label class="flex items-center gap-2 text-gray-700">{{ __('Thema') }}
+                <label class="flex items-center gap-2 text-gray-700">{{ __('Job') }}
                     <select name="job_id" onchange="window.submitJobloadOverview(this.form)" class="max-w-80 rounded-md border-gray-300 py-1 text-sm">
-                        <option value="" @selected($jobId === null)>{{ __('Alle Themen') }}</option>
+                        <option value="" @selected($jobId === null)>{{ __('Alle Jobs') }}</option>
                         @foreach ($jobs as $job)
                             <option value="{{ $job->id }}" @selected($jobId === $job->id)>{{ $job->code ? $job->code.' – ' : '' }}{{ $job->name }}</option>
                         @endforeach

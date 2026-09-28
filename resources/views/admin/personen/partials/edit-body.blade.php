@@ -186,10 +186,6 @@
                         <label class="block text-xs text-gray-500">{{ __('E-Mail') }}</label>
                         <input type="email" name="email" value="{{ old('email', $person->email) }}" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                     </div>
-                    <div>
-                        <label class="block text-xs text-gray-500" title="{{ __('Wird beim Anlegen eines Logins automatisch mit dem Standardwert des Kunden vorbelegt.') }}">{{ __('Wochenstunden') }}</label>
-                        <input type="number" name="weekly_hours" value="{{ old('weekly_hours', $person->weekly_hours !== null ? rtrim(rtrim(number_format((float) $person->weekly_hours, 1, '.', ''), '0'), '.') : '') }}" min="0" max="80" step="0.5" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
-                    </div>
                     @if ($multiTenantEnabled)
                         <div>
                             <label class="block text-xs text-gray-500">{{ __('Kunde') }}</label>
@@ -295,6 +291,15 @@
                             @endforeach
                         </select>
                     </div>
+                </div>
+
+                {{-- Ralf, 2026-09-28: "Im Unternehmen seit"/"Bis" in einer eigenen,
+                     festen 2er-Reihe statt im fortlaufenden Grid oben - dort hätte
+                     ihre Spalten-Position (und ob sie überhaupt in einer Zeile
+                     zusammenstehen) von der Anzahl der Felder davor abgehangen,
+                     genau das brach beim Entfernen des alten Wochenstunden-Feldes
+                     (siehe Ralf-Bug-Report 2026-09-28). --}}
+                <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('Im Unternehmen seit') }}</label>
                         <input type="date" name="start_date" value="{{ old('start_date', $person->start_date?->format('Y-m-d')) }}" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
@@ -304,6 +309,32 @@
                         <input type="date" name="end_date" value="{{ old('end_date', $person->end_date?->format('Y-m-d')) }}" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                     </div>
                 </div>
+
+                {{-- Ralf, 2026-09-28: Wochenstunden jetzt historisiert statt eines
+                     einzelnen Werts (Grundlage der personellen Ressourcenplanung -
+                     ein Mitarbeiter kann im Jahresverlauf mehrfach seine WoSt
+                     ändern). Nur lesend hier, Pflege im eigenen Overlay
+                     ("verwalten"), löst das bisherige Feld person.weekly_hours ab.
+                     Nur für Personen mit Login relevant (nur die buchen Stunden).
+                     Eigene 2er-Reihe wie "Im Unternehmen seit"/"Bis" oben, aus
+                     demselben Grund. --}}
+                @if ($person->user)
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <div class="flex items-center justify-between">
+                                <label class="block text-xs text-gray-500">{{ __('Wochenstunden') }}</label>
+                                <button
+                                    type="button"
+                                    onclick="window.openPersonWeeklyHours({{ $person->id }})"
+                                    class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                                >{{ __('verwalten') }}</button>
+                            </div>
+                            <div id="person-weekly-hours-display" class="mt-0.5 w-full rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-sm text-gray-600">
+                                {{ $person->currentWeeklyHours() !== null ? rtrim(rtrim(number_format((float) $person->currentWeeklyHours(), 1, '.', ''), '0'), '.').' h' : '–' }}
+                            </div>
+                        </div>
+                    </div>
+                @endif
 
                 <div>
                     <label class="block text-xs text-gray-500">{{ __('Bemerkungen') }}</label>

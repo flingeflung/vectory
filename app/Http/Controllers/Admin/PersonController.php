@@ -10,6 +10,7 @@ use App\Models\FunctionGroup;
 use App\Models\LegacyRole;
 use App\Models\PermissionTemplate;
 use App\Models\Person;
+use App\Models\PersonWeeklyHours;
 use App\Models\SystemSetting;
 use App\Models\Tenant;
 use App\Models\User;
@@ -273,7 +274,7 @@ class PersonController extends Controller
         if ($validator->fails()) {
             if ($isOverlay) {
                 return response()
-                    ->view('admin.personen.partials.edit-body', [...$this->editData($request, $person), 'overlay' => true, 'errors' => $validator->errors()])
+                    ->view('admin.personen.partials.edit-body', [...$this->editData($request, $person), 'overlay' => true, 'errors' => $this->viewErrors($validator->errors())])
                     ->setStatusCode(422);
             }
 
@@ -350,7 +351,7 @@ class PersonController extends Controller
         if ($validator->fails()) {
             if ($isOverlay) {
                 return response()
-                    ->view('admin.personen.partials.edit-body', [...$this->editData($request, $person), 'overlay' => true, 'errors' => $validator->errors()])
+                    ->view('admin.personen.partials.edit-body', [...$this->editData($request, $person), 'overlay' => true, 'errors' => $this->viewErrors($validator->errors())])
                     ->setStatusCode(422);
             }
 
@@ -368,14 +369,18 @@ class PersonController extends Controller
             'password' => $validated['password'],
         ]);
 
-        // Ralf, 2026-09-19: Wochenstunden werden nur für Personen mit Login
+        // Ralf, 2026-09-28: Wochenstunden werden nur für Personen mit Login
         // gebraucht (nur die erfassen Zeiten) - beim Anlegen des Logins den
-        // Standardwert des Mandanten der Person übernehmen, aber einen schon
-        // von Hand gepflegten Wert nie überschreiben.
-        if ($person->weekly_hours === null) {
+        // Standardwert des Mandanten der Person als ersten Historien-Datensatz
+        // anlegen (kein Start, kein Ende - "schon immer so, gilt bis heute").
+        if (! $person->weeklyHours()->exists()) {
             $defaultHours = Tenant::query()->whereKey($person->tenant_id)->value('default_weekly_hours');
             if ($defaultHours !== null) {
-                $person->update(['weekly_hours' => $defaultHours]);
+                PersonWeeklyHours::query()->create([
+                    'tenant_id' => $person->tenant_id,
+                    'person_id' => $person->id,
+                    'hours' => $defaultHours,
+                ]);
             }
         }
 
@@ -386,6 +391,85 @@ class PersonController extends Controller
         }
 
         return redirect()->route('admin.personen.edit', $person)->with('status', 'login-created');
+    }
+
+    /**
+     * Wochenstunden-Historie (Ralf, 2026-09-28) - eigenes globales Overlay,
+     * gleiches Muster wie company-manager/department-manager (kleines
+     * Unterbereich-Overlay aus dem Personen-Overlay heraus). Rein anhängbar:
+     * die Historie selbst bietet hier nur das Anlegen eines neuen Datensatzes,
+     * keine Bearbeitung bestehender Zeilen (Ralf, 2026-09-28).
+     */
+    public function weeklyHours(Request $request, Person $person): View|Response
+    {
+        abort_unless($this->personVisibleInCurrentTenant($request, $person), 404);
+
+        return response()->view('admin.personen.partials.weekly-hours-body', [
+            'person' => $person,
+            'canEdit' => $this->personFullyEditableByCurrentUser($request, $person),
+            'history' => $person->weeklyHours,
+        ]);
+    }
+
+    public function storeWeeklyHours(Request $request, Person $person): Response
+    {
+        abort_unless($this->personVisibleInCurrentTenant($request, $person), 404);
+        abort_unless($this->personFullyEditableByCurrentUser($request, $person), 403);
+        $this->abortIfProtectedFromEditing($request, $person);
+        abort_unless($person->user, 422);
+
+        // Der noch offene (aktuell gültige) Datensatz, falls schon Historie
+        // existiert - dessen Ende wird beim Anlegen des neuen Datensatzes
+        // automatisch gesetzt (Ralf, 2026-09-28: "Der Start des neuen
+        // Datensatz - 1 Tag ist gleichzeitig das Ende des letzten
+        // Datensatzes"). Es kann zu jedem Zeitpunkt höchstens einen offenen
+        // Datensatz geben, da ausschließlich angehängt wird.
+        $openEntry = $person->weeklyHours->firstWhere('valid_to', null);
+
+        $validator = Validator::make($request->all(), [
+            'hours' => ['required', 'numeric', 'between:0,80', 'multiple_of:0.5'],
+            // Ralf, 2026-09-28: nur der allererste Datensatz überhaupt darf
+            // ohne Start auskommen ("schon immer so") - jeder weitere braucht
+            // zwingend ein Datum, sonst wäre die Reihenfolge der Historie
+            // nicht mehr eindeutig.
+            'valid_from' => [$openEntry ? 'required' : 'nullable', 'date'],
+        ], [], ['hours' => __('Wochenstunden'), 'valid_from' => __('Start')]);
+
+        $validator->after(function ($validator) use ($openEntry, $request) {
+            if ($openEntry && $openEntry->valid_from !== null && $request->filled('valid_from')
+                && $request->date('valid_from')->lessThanOrEqualTo($openEntry->valid_from)) {
+                $validator->errors()->add('valid_from', __('Der Start muss nach dem Start des bisher letzten Datensatzes liegen (:date).', ['date' => $openEntry->valid_from->format('d.m.Y')]));
+            }
+        });
+
+        if ($validator->fails()) {
+            return response()->view('admin.personen.partials.weekly-hours-body', [
+                'person' => $person,
+                'canEdit' => true,
+                'history' => $person->weeklyHours,
+                'errors' => $this->viewErrors($validator->errors()),
+            ])->setStatusCode(422);
+        }
+
+        $validated = $validator->validated();
+
+        if ($openEntry) {
+            $openEntry->update(['valid_to' => \Carbon\CarbonImmutable::parse($validated['valid_from'])->subDay()]);
+        }
+
+        PersonWeeklyHours::query()->create([
+            'tenant_id' => $person->tenant_id,
+            'person_id' => $person->id,
+            'hours' => $validated['hours'],
+            'valid_from' => $validated['valid_from'] ?? null,
+            'valid_to' => null,
+        ]);
+
+        return response()->view('admin.personen.partials.weekly-hours-body', [
+            'person' => $person,
+            'canEdit' => true,
+            'history' => $person->weeklyHours()->get(),
+        ]);
     }
 
     public function resetPassword(Request $request, Person $person): RedirectResponse|Response
@@ -402,7 +486,7 @@ class PersonController extends Controller
         if ($validator->fails()) {
             if ($isOverlay) {
                 return response()
-                    ->view('admin.personen.partials.edit-body', [...$this->editData($request, $person), 'overlay' => true, 'errors' => $validator->errors()])
+                    ->view('admin.personen.partials.edit-body', [...$this->editData($request, $person), 'overlay' => true, 'errors' => $this->viewErrors($validator->errors())])
                     ->setStatusCode(422);
             }
 
