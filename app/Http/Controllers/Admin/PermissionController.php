@@ -75,6 +75,9 @@ class PermissionController extends Controller
         $embeddedBausteinIds = collect();
         $usedInSets = collect();
         $derivedSets = collect();
+        // Plain array statt Collection - $arr[$id][] = ... braucht echtes
+        // Array-Autovivification, das ArrayAccess auf Collection nicht bietet.
+        $inheritedPermissionSources = [];
 
         if ($request->filled('set')) {
             // Der Query-Param heißt weiterhin "set", zeigt aber auf EINEN von
@@ -92,6 +95,22 @@ class PermissionController extends Controller
                     $templatePeople = $people->where('permission_template_id', $selectedTemplate->id)->values();
                     $embeddedBausteinIds = $selectedTemplate->bausteine->pluck('id');
                     $derivedSets = $selectedTemplate->derivedSets;
+
+                    // Ralf, 2026-09-28: "müssten die Rechte aus Basis/Bausteinen nicht
+                    // angehakt und gesperrt sein?" - die Checkliste zeigte bisher nur
+                    // EIGENE Rechte, Basis/Baustein wirkten zwar korrekt, aber ohne
+                    // sichtbaren Haken. Für jede so übernommene permission_id sammeln,
+                    // WOHER sie kommt (für Häkchen + Tooltip in der View).
+                    if ($selectedTemplate->basis) {
+                        foreach ($selectedTemplate->basis->effectivePermissions() as $permission) {
+                            $inheritedPermissionSources[$permission->id][] = __('Basis „:name"', ['name' => $selectedTemplate->basis->name]);
+                        }
+                    }
+                    foreach ($selectedTemplate->bausteine as $baustein) {
+                        foreach ($baustein->permissions as $permission) {
+                            $inheritedPermissionSources[$permission->id][] = __('Baustein „:name"', ['name' => $baustein->name]);
+                        }
+                    }
 
                     // Bei der Bulk-Zuordnung erst die schon angehakten Personen
                     // (alphabetisch), danach der Rest (ebenfalls alphabetisch) -
@@ -127,6 +146,7 @@ class PermissionController extends Controller
             'embeddedBausteinIds' => $embeddedBausteinIds,
             'usedInSets' => $usedInSets,
             'derivedSets' => $derivedSets,
+            'inheritedPermissionSources' => $inheritedPermissionSources,
         ]);
     }
 

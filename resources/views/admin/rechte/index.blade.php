@@ -373,17 +373,34 @@
                             <table class="min-w-full divide-y divide-gray-100 text-sm">
                                 <tbody class="divide-y divide-gray-100">
                                     @foreach ($permissions as $permission)
+                                        @php
+                                            $isOwn = $grantedPermissionIds->contains($permission->id);
+                                            $inheritedFrom = $inheritedPermissionSources[$permission->id] ?? null;
+                                        @endphp
                                         <tr x-show="!search || {{ \Illuminate\Support\Js::from(mb_strtolower($permission->label)) }}.includes(search.toLowerCase())">
                                             <td class="w-10 px-3 py-2 text-center">
+                                                {{-- Ralf, 2026-09-28: "müssten die Rechte aus Basis/Bausteinen nicht
+                                                     angehakt und gesperrt sein?" - ja. Ein per Basis/Baustein
+                                                     übernommenes Recht wird hier angehakt + gesperrt gezeigt
+                                                     (disabled, damit es beim Speichern nicht als EIGENES Recht
+                                                     mit-abgeschickt wird - das bleibt weiterhin nur in der Basis
+                                                     bzw. im Baustein selbst änderbar). --}}
                                                 <input
                                                     type="checkbox"
                                                     name="permissions[]"
                                                     value="{{ $permission->id }}"
-                                                    class="rounded border-gray-300"
-                                                    @checked($grantedPermissionIds->contains($permission->id))
+                                                    class="rounded border-gray-300 disabled:opacity-60"
+                                                    @checked($isOwn || $inheritedFrom)
+                                                    @disabled(! $isOwn && $inheritedFrom)
+                                                    @if (! $isOwn && $inheritedFrom) title="{{ __('Übernommen über: :sources - dort ändern, nicht hier.', ['sources' => implode(', ', $inheritedFrom)]) }}" @endif
                                                 >
                                             </td>
-                                            <td class="px-3 py-2 text-gray-700" title="{{ $permission->key }}">{{ $permission->label }}</td>
+                                            <td class="px-3 py-2 text-gray-700" title="{{ $permission->key }}">
+                                                {{ $permission->label }}
+                                                @if (! $isOwn && $inheritedFrom)
+                                                    <span class="ml-1 text-[11px] text-gray-400">({{ __('über :sources', ['sources' => implode(', ', $inheritedFrom)]) }})</span>
+                                                @endif
+                                            </td>
                                         </tr>
                                     @endforeach
                                 </tbody>
