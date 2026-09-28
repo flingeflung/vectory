@@ -64,28 +64,39 @@ class PermissionTemplate extends Model
      * die Bausteine, die dieses Set zusätzlich zu seinen eigenen Rechten
      * einbindet.
      */
+    /**
+     * withoutGlobalScope('tenant'): Ralf-Bug-Report 2026-09-28 - ohne das
+     * filtert der Mandanten-Scope diese Relation nach dem gerade AKTIVEN
+     * Mandanten des Prüfenden, nicht nach dem Mandanten des Sets selbst.
+     * Weicht der aktive Mandant ab, wurde effectivePermissions() dadurch
+     * still leer (Basis "verschwand"), obwohl beide Seiten im selben
+     * Mandanten liegen - gleicher Fehler, den Person::permissionTemplate()/
+     * User::person() aus genau diesem Grund schon immer vermeiden.
+     */
     public function bausteine(): BelongsToMany
     {
-        return $this->belongsToMany(self::class, 'permission_template_baustein', 'permission_template_id', 'baustein_id')->withTimestamps();
+        return $this->belongsToMany(self::class, 'permission_template_baustein', 'permission_template_id', 'baustein_id')->withoutGlobalScope('tenant')->withTimestamps();
     }
 
     /**
      * Nur relevant, wenn dies selbst ein Baustein ist (is_baustein = true) -
      * umgekehrte Richtung: welche Sets diesen Baustein einbinden (analog zu
-     * people() bei einem Set, nur eine Ebene höher).
+     * people() bei einem Set, nur eine Ebene höher). withoutGlobalScope
+     * siehe bausteine() oben.
      */
     public function usedInSets(): BelongsToMany
     {
-        return $this->belongsToMany(self::class, 'permission_template_baustein', 'baustein_id', 'permission_template_id')->withTimestamps();
+        return $this->belongsToMany(self::class, 'permission_template_baustein', 'baustein_id', 'permission_template_id')->withoutGlobalScope('tenant')->withTimestamps();
     }
 
     /**
      * Nur relevant für ein Set - das andere Set, dessen Rechte hier LEBEND
      * (nicht kopiert) mit einfließen. Für einen Baustein immer null.
+     * withoutGlobalScope siehe bausteine() oben.
      */
     public function basis(): BelongsTo
     {
-        return $this->belongsTo(self::class, 'basis_id');
+        return $this->belongsTo(self::class, 'basis_id')->withoutGlobalScope('tenant');
     }
 
     /**
