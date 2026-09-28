@@ -154,9 +154,13 @@
                     </table>
                 </div>
                 @if ($hasProjectHours)
+                    {{-- Ralf, 2026-09-28: Legenden-Punkte müssen exakt denselben Farbton wie die
+                         Textfarbe der Tagessumme in der Tabelle treffen (bg-indigo-700/bg-amber-700,
+                         nicht die hellere -500-Stufe) - sonst wirken sie wie andere Farben. --}}
                     <div class="flex flex-wrap items-center gap-3 border-t border-gray-200 px-2 py-1 text-[10px] text-gray-400">
-                        <span class="flex items-center gap-1"><span class="inline-block h-1.5 w-1.5 rounded-full bg-indigo-500"></span>{{ __('Rein projektbezogen') }}</span>
-                        <span class="flex items-center gap-1"><span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>{{ __('Projekt-Stunden + eigene Ergänzung (eigenes Risiko der Ergänzung)') }}</span>
+                        <span>{{ __('Erläuterung zu den Summenspalten:') }}</span>
+                        <span class="flex items-center gap-1"><span class="inline-block h-1.5 w-1.5 rounded-full bg-indigo-700"></span>{{ __('direkt auf ein Projekt gebuchte Std.') }}</span>
+                        <span class="flex items-center gap-1"><span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-700"></span>{{ __('Projekt-Stunden + eigene Ergänzung') }}</span>
                     </div>
                 @endif
                 @if ($jobs->isNotEmpty())
