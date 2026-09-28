@@ -506,6 +506,14 @@
                         @csrf
                         <div class="mb-3 text-xs text-gray-500">{{ __('Rechte-Set auswählen - bestimmt die Rechte dieser Person vollständig.') }}</div>
                         <div class="space-y-1">
+                            {{-- Ralf, 2026-09-28: "ich kann der Person kein Set entziehen" - bisher
+                                 ließ sich nur ZWISCHEN Sets wechseln, nie auf "gar kein Set"
+                                 zurücksetzen (permission_template_id ist in der DB längst nullable,
+                                 dafür fehlte nur diese eine Option hier). --}}
+                            <label class="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-gray-50">
+                                <input type="radio" name="permission_template_id" value="" @checked($selectedPerson->permission_template_id === null)>
+                                <span class="text-sm text-gray-500">{{ __('– kein Rechte-Set –') }}</span>
+                            </label>
                             @foreach ($templates as $template)
                                 <label class="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-gray-50">
                                     <input type="radio" name="permission_template_id" value="{{ $template->id }}" @checked($selectedPerson->permission_template_id === $template->id)>

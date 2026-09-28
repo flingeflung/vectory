@@ -285,11 +285,21 @@ class PermissionController extends Controller
 
     /**
      * Einer Person ihr Set zuweisen - bestimmt darüber vollständig ihre
-     * Rechte, keine individuellen Ausnahmen mehr.
+     * Rechte, keine individuellen Ausnahmen mehr. Ralf, 2026-09-28: bisher
+     * ließ sich immer nur ZWISCHEN Sets wechseln, nie auf "gar kein Set"
+     * zurücksetzen (obwohl people.permission_template_id in der DB längst
+     * nullable ist, für frisch angelegte Personen) - permission_template_id
+     * ist deshalb jetzt optional, leer = Set komplett entziehen.
      */
     public function assignPerson(Request $request, Person $person): RedirectResponse
     {
         abort_unless($person->tenant_id === CurrentTenant::id(), 404);
+
+        if (! $request->filled('permission_template_id')) {
+            $this->assignTemplate($person, null);
+
+            return redirect()->route('admin.rechte', ['person' => $person->id])->with('status', 'rechte-updated');
+        }
 
         // Ein Baustein ist nie einer Person zuweisbar (siehe Model-Docblock) -
         // is_baustein=false hier statt nur im View zu verlassen.
@@ -350,12 +360,16 @@ class PermissionController extends Controller
      * hinter access-admin - nur echte Admins/Super-Admins kommen überhaupt
      * hierher.
      */
-    private function assignTemplate(Person $person, PermissionTemplate $template): void
+    private function assignTemplate(Person $person, ?PermissionTemplate $template): void
     {
-        $person->update(['permission_template_id' => $template->id]);
+        $person->update(['permission_template_id' => $template?->id]);
 
+        // Kein Set (Recht komplett entzogen) -> User-Rolle auf die
+        // rechtloseste Stufe zurück, sonst bliebe z.B. ein früherer
+        // access-admin-Zugriff (der an der groben User-Rolle hängt, nicht
+        // am Set) trotz "kein Set" bestehen.
         if ($person->user) {
-            $person->user->update(['role' => $template->effectiveRole()]);
+            $person->user->update(['role' => $template?->effectiveRole() ?? 'user']);
         }
     }
 }
