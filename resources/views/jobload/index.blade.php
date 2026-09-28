@@ -185,7 +185,7 @@
                      eine Anzeige-Auswahl fürs eigene Wochenraster. Wer Zugriff auf einen
                      Kunden hat, kann trotzdem auf jeden dort verknüpften Job buchen (siehe
                      ProjectHourController), unabhängig von dieser Auswahl. --}}
-                <p class="mb-2 text-xs text-gray-500">{{ __('Bestimmt nur, welche Jobs hier in Ihrer eigenen Übersicht erscheinen - keine Einschränkung, was Sie buchen dürfen.') }}</p>
+                <p class="mb-2 text-xs text-gray-500">{{ __('Hier legen Sie fest, welche Jobs in Ihrer eigenen Übersicht erscheinen sollen.') }}</p>
                 @forelse ($availableJobs->groupBy(fn ($job) => $job->group_name ?? __('Ohne Gruppe')) as $groupName => $groupJobs)
                     <div class="pt-2 text-sm font-semibold text-gray-700">{{ $groupName }}</div>
                     @foreach ($groupJobs as $job)
