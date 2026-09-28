@@ -66,8 +66,24 @@
             this.locked = false;
             await this.notifyFormChanged();
         },
+        // Ralf-Bug-Report, 2026-09-28: nach 'Lösen' im Zeiten-Tab (eigene SHA dort, bereits
+        // serverseitig gespeichert) meldete 'Schließen'/Blättern dauerhaft 'ungespeicherte
+        // Änderungen'. Ursache: dieses 'locked = true' hier ändert reaktiv den versteckten
+        // relink_template-Wert zurück auf '0' - aber der Dirty-Snapshot (projectOverlayIsDirty,
+        // app.blade.php) wurde nicht neu genommen, obwohl der neue Stand bereits gespeichert ist.
+        // Gleicher Fall wie der bestehende window.resnapshotProjectOverlay-Mechanismus (WFS-
+        // Personen-Picker): ein Hintergrund-Sync ändert Formularwerte ohne Nutzerzutun, also muss
+        // der Snapshot mitgezogen werden. Erst NACH einem Makrotask-Tick aufrufen, aus demselben
+        // Grund wie bei notifyFormChanged() oben - Alpines :value-Reaktion auf 'locked' muss den
+        // DOM zuerst tatsächlich gepatcht haben.
+        async syncAfterExternalRelink() {
+            this.hasOwnHours = true;
+            this.locked = true;
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            window.resnapshotProjectOverlay?.();
+        },
     }"
-    x-on:planstunden-linked-state-changed.window="hasOwnHours = true; locked = true;"
+    x-on:planstunden-linked-state-changed.window="syncAfterExternalRelink()"
 >
     <div class="flex items-center gap-1.5">
         <label class="block text-xs text-gray-500">{{ __('Aufwandsschablone') }}</label>
