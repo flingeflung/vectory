@@ -42,14 +42,14 @@
                     @click="reload({{ \Illuminate\Support\Js::from($weekValue) }}, 'person')"
                     class="rounded border px-2 py-0.5 {{ $sortBy === 'person' ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-gray-300 text-gray-600 hover:bg-gray-50' }}"
                 >
-                    {{ __('Person – Projekt') }}
+                    {{ __('Personen – Projekte') }}
                 </button>
                 <button
                     type="button"
                     @click="reload({{ \Illuminate\Support\Js::from($weekValue) }}, 'project')"
                     class="rounded border px-2 py-0.5 {{ $sortBy === 'project' ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-gray-300 text-gray-600 hover:bg-gray-50' }}"
                 >
-                    {{ __('Projekt – Personen') }}
+                    {{ __('Projekte – Personen') }}
                 </button>
             </div>
         @endif
@@ -58,9 +58,16 @@
     <table class="w-full max-w-2xl text-xs">
         <thead>
             <tr class="border-b border-gray-200 text-gray-500">
-                <th class="py-1 pr-3 text-left font-medium">{{ __('Person') }}</th>
-                @if ($breakdown['isHauptprojekt'])
-                    <th class="px-2 py-1 text-left font-medium">{{ __('Projekt') }}</th>
+                {{-- Ralf, 2026-09-28: bei "Projekte - Personen" steht Projekt links,
+                     Person rechts - passend zur Reihenfolge im Umschalter-Namen. --}}
+                @if ($breakdown['isHauptprojekt'] && $sortBy === 'project')
+                    <th class="py-1 pr-3 text-left font-medium">{{ __('Projekt') }}</th>
+                    <th class="px-2 py-1 text-left font-medium">{{ __('Person') }}</th>
+                @else
+                    <th class="py-1 pr-3 text-left font-medium">{{ __('Person') }}</th>
+                    @if ($breakdown['isHauptprojekt'])
+                        <th class="px-2 py-1 text-left font-medium">{{ __('Projekt') }}</th>
+                    @endif
                 @endif
                 @foreach ($breakdown['days'] as $day)
                     {{-- Ralf, 2026-09-28: Wochenenden dezenter als die Werktage. --}}
@@ -72,9 +79,14 @@
         <tbody>
             @forelse ($breakdown['rows'] as $row)
                 <tr class="border-b border-gray-100">
-                    <td class="py-1 pr-3" title="{{ $row['departmentName'] }}">{{ $row['name'] }}</td>
-                    @if ($breakdown['isHauptprojekt'])
-                        <td class="px-2 py-1 text-gray-500" title="{{ $row['projectTitle'] }}">{{ $row['projectLabel'] }}</td>
+                    @if ($breakdown['isHauptprojekt'] && $sortBy === 'project')
+                        <td class="py-1 pr-3 text-gray-500" title="{{ $row['projectTitle'] }}">{{ $row['projectLabel'] }}</td>
+                        <td class="px-2 py-1" title="{{ $row['departmentName'] }}">{{ $row['name'] }}</td>
+                    @else
+                        <td class="py-1 pr-3" title="{{ $row['departmentName'] }}">{{ $row['name'] }}</td>
+                        @if ($breakdown['isHauptprojekt'])
+                            <td class="px-2 py-1 text-gray-500" title="{{ $row['projectTitle'] }}">{{ $row['projectLabel'] }}</td>
+                        @endif
                     @endif
                     @foreach ($breakdown['days'] as $day)
                         <td class="px-1 py-1 text-center tabular-nums {{ $day->isWeekend() ? 'text-gray-400' : '' }}">{{ isset($row['days'][$day->toDateString()]) ? $fmt($row['days'][$day->toDateString()]) : '–' }}</td>
