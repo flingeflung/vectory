@@ -50,7 +50,15 @@
                  Muster wie beim Dashboard-Kachel-Layout) - rein visuelle
                  Rangordnung (z.B. "wer hat absteigend die meisten Rechte"),
                  kein fachlicher Effekt. --}}
-            <div class="flex h-64 shrink-0 flex-col rounded-lg border border-gray-200 bg-white">
+            {{-- Ralf, 2026-09-28: "Personen-Feld ist zu klein" - mit der neuen
+                 Bausteine-Box kam eine dritte feste Boxhöhe dazu und drängte
+                 Personen (die einzige flexible Box) zu weit zusammen. Fix:
+                 Rechte-Sets/Bausteine wachsen jetzt nur noch mit ihrem
+                 tatsächlichen Inhalt (max-h als Deckel, kein fester h-*),
+                 statt immer denselben Platz zu beanspruchen egal wie wenige
+                 Einträge drin sind - Personen bekommt dadurch automatisch
+                 den Rest. --}}
+            <div class="flex max-h-56 shrink-0 flex-col rounded-lg border border-gray-200 bg-white">
                 <div class="shrink-0 flex items-center justify-between border-b border-gray-100 p-2">
                     <span class="text-xs font-semibold text-gray-500">{{ __('Rechte-Sets') }}</span>
                     <button type="button" @click="newSet = !newSet; if (newSet) $nextTick(() => $refs.newSetBase.focus())" class="text-xs text-indigo-600 hover:text-indigo-800">
@@ -117,7 +125,7 @@
                  visuelle Rangordnung, geteilte reorder-Route/-Spalte -
                  Sets/Bausteine landen einfach in unterschiedlichen sort-
                  Bereichen, keine Überschneidung, da getrennt geladen). --}}
-            <div class="flex h-40 shrink-0 flex-col rounded-lg border border-gray-200 bg-white">
+            <div class="flex max-h-40 shrink-0 flex-col rounded-lg border border-gray-200 bg-white">
                 <div class="shrink-0 flex items-center justify-between border-b border-gray-100 p-2">
                     <span class="flex items-center gap-1.5 text-xs font-semibold text-gray-500">
                         {{ __('Bausteine') }}
