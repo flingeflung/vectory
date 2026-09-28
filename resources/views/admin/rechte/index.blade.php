@@ -19,6 +19,7 @@
                 search: {{ \Illuminate\Support\Js::from(request('suche', '')) }},
                 showInactive: {{ request()->boolean('inaktive') ? 'true' : 'false' }},
                 newSet: false,
+                newBaustein: false,
                 dirty: false,
                 sortMode: {{ \Illuminate\Support\Js::from(request('sort', 'alpha')) }},
                 departmentFilter: {{ \Illuminate\Support\Js::from(request('abteilung', '')) }},
@@ -100,6 +101,60 @@
                 </div>
             </div>
 
+            {{-- Bausteine (Ralf, 2026-09-28): bewusst eine eigene, optisch
+                 klar getrennte Box statt nur eine zweite Gruppe in derselben
+                 Liste - "Set" und "Baustein" sind zwei unterschiedliche
+                 Dinge (Baustein nie einer Person zuweisbar, nur in Sets
+                 einbindbar, siehe PermissionTemplate-Model-Docblock), das
+                 soll auch auf den ersten Blick so aussehen. Gleiches
+                 Drag&Drop-Sortier-Muster wie bei den Rechte-Sets oben (rein
+                 visuelle Rangordnung, geteilte reorder-Route/-Spalte -
+                 Sets/Bausteine landen einfach in unterschiedlichen sort-
+                 Bereichen, keine Überschneidung, da getrennt geladen). --}}
+            <div class="flex h-40 shrink-0 flex-col rounded-lg border border-gray-200 bg-white">
+                <div class="shrink-0 flex items-center justify-between border-b border-gray-100 p-2">
+                    <span class="flex items-center gap-1.5 text-xs font-semibold text-gray-500">
+                        {{ __('Bausteine') }}
+                        <span class="text-gray-400" title="{{ __('Wiederverwendbare Rechte-Häppchen - können in beliebig viele Rechte-Sets eingebunden werden, sind selbst aber nie einer Person direkt zuweisbar.') }}">
+                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        </span>
+                    </span>
+                    <button type="button" @click="newBaustein = !newBaustein; if (newBaustein) $nextTick(() => $refs.newBausteinBase.focus())" class="text-xs text-indigo-600 hover:text-indigo-800">
+                        + {{ __('Neu') }}
+                    </button>
+                </div>
+                <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => $el.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' }))">
+                    <form x-show="newBaustein" x-cloak method="POST" action="{{ route('admin.rechte.sets.store') }}" class="mb-2 space-y-1.5 rounded border border-gray-200 p-2">
+                        <input type="hidden" name="is_baustein" value="1">
+                        {{-- base_id bewusst NICHT required - anders als bei einem neuen Set
+                             (immer mind. ein Set vorhanden, siehe Standard-Seed) gibt es beim
+                             allerersten Baustein eines Mandanten noch keine Vorlage. --}}
+                        <select name="base_id" x-ref="newBausteinBase" class="w-full rounded-md border-gray-300 text-xs">
+                            <option value="">{{ __('– leer, ohne Vorlage –') }}</option>
+                            @foreach ($bausteine as $baustein)
+                                <option value="{{ $baustein->id }}">{{ __('Kopie von: ') }}{{ $baustein->name }}</option>
+                            @endforeach
+                        </select>
+                        <input type="text" name="name" placeholder="{{ __('Name des neuen Bausteins') }}" class="w-full rounded-md border-gray-300 text-xs" required>
+                        @csrf
+                        <button type="submit" class="w-full rounded-md bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
+                            {{ __('Speichern') }}
+                        </button>
+                    </form>
+                    @forelse ($bausteine as $baustein)
+                        <a
+                            :href="navUrl({ set: {{ $baustein->id }} })"
+                            @if ($selectedTemplate?->id === $baustein->id) data-selected @endif
+                            class="block rounded px-1.5 py-1 {{ $selectedTemplate?->id === $baustein->id ? 'bg-indigo-50 font-medium text-indigo-700' : 'text-gray-700 hover:bg-gray-50' }}"
+                        >
+                            {{ $baustein->name }}
+                        </a>
+                    @empty
+                        <p class="px-1.5 py-1 text-xs text-gray-400">{{ __('Noch keine Bausteine angelegt.') }}</p>
+                    @endforelse
+                </div>
+            </div>
+
             {{-- Personen: nimmt den restlichen Platz. --}}
             <div class="flex flex-1 min-h-0 flex-col rounded-lg border border-gray-200 bg-white">
                 <div class="shrink-0 space-y-1.5 border-b border-gray-100 p-2">
@@ -143,7 +198,9 @@
                     </label>
                     <div class="text-xs text-gray-400" x-text="visibleCount + ' ' + (visibleCount === 1 ? {{ \Illuminate\Support\Js::from(__('Person gefunden')) }} : {{ \Illuminate\Support\Js::from(__('Personen gefunden')) }})"></div>
 
-                    @if ($selectedTemplate)
+                    {{-- is_baustein ausgeschlossen: ein Baustein ist nie einer Person
+                         direkt zuweisbar (siehe PermissionTemplate-Model-Docblock). --}}
+                    @if ($selectedTemplate && ! $selectedTemplate->is_baustein)
                         <button
                             type="submit"
                             form="bulk-assign-form"
@@ -156,7 +213,7 @@
                     @endif
                 </div>
                 <div x-ref="personList" class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => $el.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' }))">
-                @if ($selectedTemplate)
+                @if ($selectedTemplate && ! $selectedTemplate->is_baustein)
                     {{-- Bulk-Zuordnung: nur unzugeordnete Personen sind hier
                          anklickbar (leer). Wer schon einem Set angehört -
                          diesem oder einem anderen - ist gesperrt, damit man
@@ -226,6 +283,11 @@
             @if ($selectedTemplate)
                 <div class="shrink-0 flex items-center justify-between gap-3 border-b border-gray-100 p-3">
                     <div class="text-sm font-medium text-gray-900">
+                        {{-- Ralf, 2026-09-28: "optisch sauber trennen" - Typ-Badge direkt am
+                             Namen, unabhängig davon, aus welcher Box man hierher kam. --}}
+                        <span class="mr-1 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide {{ $selectedTemplate->is_baustein ? 'bg-purple-100 text-purple-700' : 'bg-indigo-100 text-indigo-700' }}">
+                            {{ $selectedTemplate->is_baustein ? __('Baustein') : __('Set') }}
+                        </span>
                         <input
                             type="text"
                             name="name"
@@ -235,7 +297,11 @@
                             class="rounded-md border-gray-300 py-0.5 text-sm font-medium text-gray-900"
                         >
                         <span class="ml-1 text-xs font-normal text-gray-400">
-                            {{ __('Gilt für :count Person(en) - Änderungen wirken sofort für alle.', ['count' => $templatePeople->count()]) }}
+                            @if ($selectedTemplate->is_baustein)
+                                {{ __('Eingebunden in :count Rechte-Set(s) - Änderungen wirken dort sofort.', ['count' => $usedInSets->count()]) }}
+                            @else
+                                {{ __('Gilt für :count Person(en) - Änderungen wirken sofort für alle.', ['count' => $templatePeople->count()]) }}
+                            @endif
                         </span>
                     </div>
                     <input
@@ -257,6 +323,21 @@
                     >
                         @csrf
                         <div class="flex-1 min-h-0 overflow-y-auto">
+                            @unless ($selectedTemplate->is_baustein)
+                                {{-- Bausteine einbinden (Ralf, 2026-09-28): nur bei einem Set - ein
+                                     Baustein bindet selbst nie weitere Bausteine ein. --}}
+                                <div class="border-b border-gray-100 bg-gray-50 p-3">
+                                    <p class="mb-1.5 text-xs font-semibold text-gray-500">{{ __('Bausteine einbinden') }}</p>
+                                    @forelse ($bausteine as $baustein)
+                                        <label class="flex items-center gap-2 py-0.5 text-sm text-gray-700">
+                                            <input type="checkbox" name="bausteine[]" value="{{ $baustein->id }}" class="rounded border-gray-300" @checked($embeddedBausteinIds->contains($baustein->id))>
+                                            {{ $baustein->name }}
+                                        </label>
+                                    @empty
+                                        <p class="text-xs text-gray-400">{{ __('Noch keine Bausteine angelegt.') }}</p>
+                                    @endforelse
+                                </div>
+                            @endunless
                             <table class="min-w-full divide-y divide-gray-100 text-sm">
                                 <tbody class="divide-y divide-gray-100">
                                     @foreach ($permissions as $permission)
@@ -284,39 +365,69 @@
                     </form>
 
                     <div class="flex w-64 shrink-0 flex-col">
-                        <div class="shrink-0 border-b border-gray-100 p-3 text-xs font-semibold text-gray-500">
-                            {{ __('Personen mit diesem Set') }} ({{ $templatePeople->count() }})
-                        </div>
-                        <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm">
-                            @forelse ($templatePeople as $person)
-                                <div class="px-1 py-1 {{ $person->active ? 'text-gray-700' : 'text-gray-400' }}">
-                                    {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }} <x-absence-icon :person="$person" /> <x-department-tag :person="$person" />
-                                </div>
-                            @empty
-                                <div class="px-1 py-1 text-gray-400">{{ __('Niemand.') }}</div>
-                            @endforelse
-                        </div>
-                        <div class="shrink-0 border-t border-gray-100 p-3" x-data="{}">
-                            <form method="POST" action="{{ route('admin.rechte.sets.destroy', $selectedTemplate) }}" x-ref="deleteForm" class="hidden">
-                                @csrf
-                                @method('DELETE')
-                                <input type="hidden" name="reassign_to" value="">
-                            </form>
-                            <button
-                                type="button"
-                                @click="window.deleteWithConfirm($refs.deleteForm, {
-                                    title: {{ \Illuminate\Support\Js::from(__('Set löschen')) }},
-                                    message: {{ \Illuminate\Support\Js::from($templatePeople->isNotEmpty() ? __('Zum Löschen muss jede zugewiesene Person in ein anderes Set übernommen werden.') : __('Dieses Set wirklich löschen?')) }},
-                                    confirmLabel: {{ \Illuminate\Support\Js::from(__('Löschen')) }},
-                                    reassignOptions: @js($templatePeople->isNotEmpty() ? $templates->where('id', '!=', $selectedTemplate->id)->map(fn ($template) => ['value' => (string) $template->id, 'label' => $template->name])->values() : []),
-                                    reassignPlaceholder: {{ \Illuminate\Support\Js::from(__('Personen übernehmen in…')) }},
-                                    reassignRequired: {{ $templatePeople->isNotEmpty() ? 'true' : 'false' }},
-                                })"
-                                class="w-full rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
-                            >
-                                {{ __('Set löschen') }}
-                            </button>
-                        </div>
+                        @if ($selectedTemplate->is_baustein)
+                            <div class="shrink-0 border-b border-gray-100 p-3 text-xs font-semibold text-gray-500">
+                                {{ __('Eingebunden in diese Sets') }} ({{ $usedInSets->count() }})
+                            </div>
+                            <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm">
+                                @forelse ($usedInSets as $set)
+                                    <div class="px-1 py-1 text-gray-700">{{ $set->name }}</div>
+                                @empty
+                                    <div class="px-1 py-1 text-gray-400">{{ __('Noch in keinem Set eingebunden.') }}</div>
+                                @endforelse
+                            </div>
+                            <div class="shrink-0 border-t border-gray-100 p-3" x-data="{}">
+                                <form method="POST" action="{{ route('admin.rechte.sets.destroy', $selectedTemplate) }}" x-ref="deleteForm" class="hidden">
+                                    @csrf
+                                    @method('DELETE')
+                                </form>
+                                <button
+                                    type="button"
+                                    @click="window.deleteWithConfirm($refs.deleteForm, {
+                                        title: {{ \Illuminate\Support\Js::from(__('Baustein löschen')) }},
+                                        message: {{ \Illuminate\Support\Js::from($usedInSets->isNotEmpty() ? __('Dieser Baustein ist noch in Sets eingebunden - beim Löschen verlieren diese Sets die darüber vererbten Rechte. Wirklich löschen?') : __('Diesen Baustein wirklich löschen?')) }},
+                                        confirmLabel: {{ \Illuminate\Support\Js::from(__('Löschen')) }},
+                                    })"
+                                    class="w-full rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                                >
+                                    {{ __('Baustein löschen') }}
+                                </button>
+                            </div>
+                        @else
+                            <div class="shrink-0 border-b border-gray-100 p-3 text-xs font-semibold text-gray-500">
+                                {{ __('Personen mit diesem Set') }} ({{ $templatePeople->count() }})
+                            </div>
+                            <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm">
+                                @forelse ($templatePeople as $person)
+                                    <div class="px-1 py-1 {{ $person->active ? 'text-gray-700' : 'text-gray-400' }}">
+                                        {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }} <x-absence-icon :person="$person" /> <x-department-tag :person="$person" />
+                                    </div>
+                                @empty
+                                    <div class="px-1 py-1 text-gray-400">{{ __('Niemand.') }}</div>
+                                @endforelse
+                            </div>
+                            <div class="shrink-0 border-t border-gray-100 p-3" x-data="{}">
+                                <form method="POST" action="{{ route('admin.rechte.sets.destroy', $selectedTemplate) }}" x-ref="deleteForm" class="hidden">
+                                    @csrf
+                                    @method('DELETE')
+                                    <input type="hidden" name="reassign_to" value="">
+                                </form>
+                                <button
+                                    type="button"
+                                    @click="window.deleteWithConfirm($refs.deleteForm, {
+                                        title: {{ \Illuminate\Support\Js::from(__('Set löschen')) }},
+                                        message: {{ \Illuminate\Support\Js::from($templatePeople->isNotEmpty() ? __('Zum Löschen muss jede zugewiesene Person in ein anderes Set übernommen werden.') : __('Dieses Set wirklich löschen?')) }},
+                                        confirmLabel: {{ \Illuminate\Support\Js::from(__('Löschen')) }},
+                                        reassignOptions: @js($templatePeople->isNotEmpty() ? $templates->where('id', '!=', $selectedTemplate->id)->map(fn ($template) => ['value' => (string) $template->id, 'label' => $template->name])->values() : []),
+                                        reassignPlaceholder: {{ \Illuminate\Support\Js::from(__('Personen übernehmen in…')) }},
+                                        reassignRequired: {{ $templatePeople->isNotEmpty() ? 'true' : 'false' }},
+                                    })"
+                                    class="w-full rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                                >
+                                    {{ __('Set löschen') }}
+                                </button>
+                            </div>
+                        @endif
                     </div>
                 </div>
             @elseif ($selectedPerson)

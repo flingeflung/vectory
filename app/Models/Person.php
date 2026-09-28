@@ -136,7 +136,7 @@ class Person extends Model
 
     public function hasPermission(string $key): bool
     {
-        return $this->permissionTemplate?->permissions()->where('key', $key)->exists() ?? false;
+        return $this->permissionTemplate?->hasPermission($key) ?? false;
     }
 
     /**

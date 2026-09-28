@@ -26,7 +26,12 @@ class PermissionController extends Controller
     {
         $tenantId = CurrentTenant::id();
 
-        $templates = PermissionTemplate::query()->where('tenant_id', $tenantId)->orderBy('sort')->get();
+        // Ralf, 2026-09-28: zwei getrennte Listen (Sets/Bausteine, siehe
+        // PermissionTemplate-Model-Docblock) - $templates bleibt bewusst
+        // "nur Sets", damit bestehende Stellen (Personen-Zuweisung,
+        // Klon-Basis für ein neues Set) unverändert nur echte Sets sehen.
+        $templates = PermissionTemplate::query()->where('tenant_id', $tenantId)->where('is_baustein', false)->orderBy('sort')->get();
+        $bausteine = PermissionTemplate::query()->where('tenant_id', $tenantId)->where('is_baustein', true)->orderBy('sort')->get();
 
         // withoutGlobalScope + visibleInTenant: zeigt auch DL-eigene
         // Mitarbeiter mit Kundenzugriff-Freigabe für diesen Kunden (gleiche
@@ -67,18 +72,31 @@ class PermissionController extends Controller
         $selectedPerson = null;
         $grantedPermissionIds = collect();
         $templatePeople = collect();
+        $embeddedBausteinIds = collect();
+        $usedInSets = collect();
 
         if ($request->filled('set')) {
-            $selectedTemplate = $templates->firstWhere('id', (int) $request->query('set'));
+            // Der Query-Param heißt weiterhin "set", zeigt aber auf EINEN von
+            // beiden (Set ODER Baustein, siehe Model-Docblock) - deshalb
+            // direkt aus der DB statt aus der (jetzt nach Typ getrennten)
+            // $templates-Collection gesucht.
+            $selectedTemplate = PermissionTemplate::query()->where('tenant_id', $tenantId)
+                ->with(['bausteine', 'usedInSets'])
+                ->find((int) $request->query('set'));
             if ($selectedTemplate) {
                 $grantedPermissionIds = $selectedTemplate->permissions()->pluck('permissions.id');
-                $templatePeople = $people->where('permission_template_id', $selectedTemplate->id)->values();
+                if ($selectedTemplate->is_baustein) {
+                    $usedInSets = $selectedTemplate->usedInSets;
+                } else {
+                    $templatePeople = $people->where('permission_template_id', $selectedTemplate->id)->values();
+                    $embeddedBausteinIds = $selectedTemplate->bausteine->pluck('id');
 
-                // Bei der Bulk-Zuordnung erst die schon angehakten Personen
-                // (alphabetisch), danach der Rest (ebenfalls alphabetisch) -
-                // sortByDesc ist stabil, behält also die alphabetische
-                // Reihenfolge innerhalb jeder der beiden Gruppen bei.
-                $people = $people->sortByDesc(fn (Person $person) => $person->permission_template_id === $selectedTemplate->id)->values();
+                    // Bei der Bulk-Zuordnung erst die schon angehakten Personen
+                    // (alphabetisch), danach der Rest (ebenfalls alphabetisch) -
+                    // sortByDesc ist stabil, behält also die alphabetische
+                    // Reihenfolge innerhalb jeder der beiden Gruppen bei.
+                    $people = $people->sortByDesc(fn (Person $person) => $person->permission_template_id === $selectedTemplate->id)->values();
+                }
             }
         } elseif ($request->filled('person')) {
             $selectedPerson = Person::query()->withoutGlobalScope('tenant')->visibleInTenant($tenantId)
@@ -88,6 +106,7 @@ class PermissionController extends Controller
 
         return view('admin.rechte.index', [
             'templates' => $templates,
+            'bausteine' => $bausteine,
             'people' => $people,
             'departments' => $departments,
             'permissions' => $permissions,
@@ -103,17 +122,29 @@ class PermissionController extends Controller
                 : null,
             'grantedPermissionIds' => $grantedPermissionIds,
             'templatePeople' => $templatePeople,
+            'embeddedBausteinIds' => $embeddedBausteinIds,
+            'usedInSets' => $usedInSets,
         ]);
     }
 
     /**
-     * Neues Set anlegen: immer als Kopie eines vorhandenen (übernimmt
-     * dessen Rechte 1:1 als Startpunkt) - "auf Basis von" X, Name vergeben.
+     * Neues Set ODER neuen Baustein anlegen (siehe Model-Docblock) - wahl-
+     * weise leer oder als Kopie eines vorhandenen DESSELBEN Typs (übernimmt
+     * dessen Rechte 1:1 als Startpunkt, bei einem Set zusätzlich dessen
+     * eingebundene Bausteine). base_id ist bewusst optional, nicht
+     * required: der allererste Baustein eines Mandanten hat naturgemäß noch
+     * keine Vorlage zum Klonen (anders als Sets, die immer vorbestückt
+     * sind, siehe Standard-Seed). is_baustein kommt aus dem jeweiligen
+     * "+ Neu"-Formular (eigenes je Box in der View), nicht frei wählbar -
+     * so kann eine Kopie nie den Typ wechseln.
      */
     public function store(Request $request): RedirectResponse
     {
         $tenantId = CurrentTenant::id();
-        $base = PermissionTemplate::query()->where('tenant_id', $tenantId)->findOrFail($request->integer('base_id'));
+        $isBaustein = $request->boolean('is_baustein');
+        $base = $request->filled('base_id')
+            ? PermissionTemplate::query()->where('tenant_id', $tenantId)->where('is_baustein', $isBaustein)->findOrFail($request->integer('base_id'))
+            : null;
 
         $name = trim((string) $request->string('name'));
         abort_if($name === '', 422);
@@ -121,19 +152,29 @@ class PermissionController extends Controller
         $nextSort = 1 + (int) PermissionTemplate::query()->where('tenant_id', $tenantId)->max('sort');
         $template = PermissionTemplate::query()->create([
             'tenant_id' => $tenantId,
-            'role' => $base->role,
+            'role' => $base?->role ?? 'user',
             'name' => $name,
             'sort' => $nextSort,
+            'is_baustein' => $isBaustein,
         ]);
-        $template->permissions()->sync($base->permissions()->pluck('permissions.id'));
+        if ($base) {
+            $template->permissions()->sync($base->permissions()->pluck('permissions.id'));
+            if (! $isBaustein) {
+                $template->bausteine()->sync($base->bausteine()->pluck('permission_templates.id'));
+            }
+        }
 
         return redirect()->route('admin.rechte', ['set' => $template->id])->with('status', 'rechte-updated');
     }
 
     /**
-     * Rechte EINES Sets komplett neu setzen - wirkt sofort für alle
-     * Personen, die dieses Set haben (keine Rückfrage nötig, siehe
-     * "Personen mit diesem Set" im View - macht die Tragweite sichtbar).
+     * Rechte EINES Sets/Bausteins komplett neu setzen - wirkt sofort für
+     * alle Personen, die dieses Set haben bzw. (indirekt) für alle Sets, die
+     * diesen Baustein einbinden (keine Rückfrage nötig, siehe "Personen mit
+     * diesem Set"/"Eingebunden in diese Sets" im View - macht die Tragweite
+     * sichtbar). bausteine[] wird bewusst NUR bei einem Set übernommen - ein
+     * Baustein bindet nie weitere Bausteine ein (siehe Model-Docblock),
+     * unabhängig davon, was ein manipulierter Request hier mitschickt.
      */
     public function update(Request $request, PermissionTemplate $template): RedirectResponse
     {
@@ -145,6 +186,13 @@ class PermissionController extends Controller
         $permissionIds = collect($request->array('permissions'))->map(fn ($id) => (int) $id);
         $template->update(['name' => $name]);
         $template->permissions()->sync($permissionIds);
+
+        if (! $template->is_baustein) {
+            $bausteinIds = collect($request->array('bausteine'))->map(fn ($id) => (int) $id);
+            $validBausteinIds = PermissionTemplate::query()->where('tenant_id', $template->tenant_id)
+                ->where('is_baustein', true)->whereIn('id', $bausteinIds)->pluck('id');
+            $template->bausteine()->sync($validBausteinIds);
+        }
 
         return redirect()->route('admin.rechte', ['set' => $template->id])->with('status', 'rechte-updated');
     }
@@ -160,6 +208,7 @@ class PermissionController extends Controller
         if ($template->people()->exists()) {
             $reassignTo = PermissionTemplate::query()
                 ->where('tenant_id', $template->tenant_id)
+                ->where('is_baustein', false)
                 ->where('id', '!=', $template->id)
                 ->find($request->integer('reassign_to'));
 
@@ -181,7 +230,10 @@ class PermissionController extends Controller
     {
         abort_unless($person->tenant_id === CurrentTenant::id(), 404);
 
-        $template = PermissionTemplate::query()->where('tenant_id', $person->tenant_id)->findOrFail($request->integer('permission_template_id'));
+        // Ein Baustein ist nie einer Person zuweisbar (siehe Model-Docblock) -
+        // is_baustein=false hier statt nur im View zu verlassen.
+        $template = PermissionTemplate::query()->where('tenant_id', $person->tenant_id)
+            ->where('is_baustein', false)->findOrFail($request->integer('permission_template_id'));
 
         $this->assignTemplate($person, $template);
 
@@ -198,6 +250,7 @@ class PermissionController extends Controller
     public function assignPeopleToTemplate(Request $request, PermissionTemplate $template): RedirectResponse
     {
         abort_unless($template->tenant_id === CurrentTenant::id(), 404);
+        abort_if($template->is_baustein, 422);
 
         $personIds = collect($request->array('person_ids'))->map(fn ($id) => (int) $id);
 
