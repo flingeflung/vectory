@@ -17,6 +17,7 @@
     <div>
         <label class="block text-xs text-gray-500">{{ __('Format') }}</label>
         <select name="format" class="mt-0.5 rounded-md border-gray-300 py-1 text-sm">
+            <option value="">{{ __('– nicht festgelegt –') }}</option>
             @foreach (\App\Models\ProjectTemplate::formatOptions() as $value => $label)
                 <option value="{{ $value }}" @selected(($template->format ?? null) == $value)>{{ $label }}</option>
             @endforeach

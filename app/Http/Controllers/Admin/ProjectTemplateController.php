@@ -337,7 +337,7 @@ class ProjectTemplateController extends Controller
     {
         $rules = [
             'name' => ['required', 'string', 'max:255'],
-            'format' => ['required', 'integer', 'in:1,2,3'],
+            'format' => ['nullable', 'integer', 'in:1,2,3'],
             'workflow_id' => ['nullable', 'integer', Rule::exists('workflows', 'id')->where('tenant_id', $tenantId)],
             'duration_value' => ['required', 'numeric', 'min:0.5', 'max:999', 'multiple_of:0.5'],
             'duration_unit' => ['required', 'string', 'in:weeks,months'],
