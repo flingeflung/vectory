@@ -23,7 +23,12 @@
         </select>
     </div>
     <div>
-        <label class="block text-xs text-gray-500">{{ __('Workflow') }}</label>
+        <span class="flex items-center gap-1">
+            <label class="block text-xs text-gray-500">{{ __('Workflow') }}</label>
+            <span class="shrink-0 text-gray-400" title="{{ __('Bestimmt die für diese Schablone verfügbaren Funktionsgruppen: Sie ergeben sich aus den Schritten des gewählten Workflows. Ohne Workflow sind keine Funktionsgruppen zuweisbar.') }}">
+                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </span>
+        </span>
         <select name="workflow_id" class="mt-0.5 rounded-md border-gray-300 py-1 text-sm">
             <option value="">{{ __('– keiner –') }}</option>
             @foreach ($workflows as $workflow)
