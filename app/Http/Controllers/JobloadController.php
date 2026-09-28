@@ -40,15 +40,21 @@ class JobloadController extends Controller
             })
             ->where('job_types.active', true)->orderBy('job_groups.sort')->orderBy('job_groups.name')->orderBy('job_types.code')->orderBy('job_types.name')
             ->get(['job_types.id', 'job_types.code', 'job_types.name', 'job_groups.name as group_name']);
-        // whereNull('project_id'): das klassische Wochenraster zeigt (Slice 2, 2026-09-27) bewusst
-        // nur die manuell gebuchten Stunden - projektbezogene Buchungen bekommen ihre eigene, davon
-        // getrennte Anzeige (Kombination beider erst in Slice 3, siehe Roadmap-Backlog).
+        // whereNull('project_id'): eigene, manuell ergaenzte Stunden ohne Projektbezug -
+        // editierbar im Raster. Getrennt davon die projektbezogenen Buchungen (Slice 2,
+        // 2026-09-27) - schreibgeschuetzt, kommen aus dem Projekt (Zeiten-Tab). Slice 3
+        // (2026-09-28): beide nebeneinander je Job/Tag anzeigen statt getrennter Ansichten.
         $hours = DB::table('job_hours')->where('tenant_id', $tenantId)
             ->where('person_id', $personId)->whereNull('project_id')
             ->whereBetween('work_date', [$week->toDateString(), $week->addDays(6)->toDateString()])
             ->get()->groupBy('job_type_id')->map(fn ($entries) => $entries->pluck('hours', 'work_date'));
+        $projectHours = DB::table('job_hours')->where('tenant_id', $tenantId)
+            ->where('person_id', $personId)->whereNotNull('project_id')
+            ->whereBetween('work_date', [$week->toDateString(), $week->addDays(6)->toDateString()])
+            ->get()->groupBy('job_type_id')
+            ->map(fn ($entries) => $entries->groupBy('work_date')->map(fn ($dayEntries) => $dayEntries->sum('hours')));
 
-        return view('jobload.index', compact('week', 'days', 'jobs', 'availableJobs', 'hours', 'showWeekends', 'hourDecimals', 'timeGrid', 'stepHundredths'));
+        return view('jobload.index', compact('week', 'days', 'jobs', 'availableJobs', 'hours', 'projectHours', 'showWeekends', 'hourDecimals', 'timeGrid', 'stepHundredths'));
     }
 
     public function saveWeekendPreference(Request $request): Response
