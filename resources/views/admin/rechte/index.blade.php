@@ -59,10 +59,16 @@
                 </div>
                 <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => $el.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' }))">
                     <form x-show="newSet" x-cloak method="POST" action="{{ route('admin.rechte.sets.store') }}" class="mb-2 space-y-1.5 rounded border border-gray-200 p-2">
-                        <select name="base_id" x-ref="newSetBase" class="w-full rounded-md border-gray-300 text-xs" required>
-                            <option value="">{{ __('– Basis wählen –') }}</option>
+                        {{-- Ralf, 2026-09-28: bewusst "Kopiervorlage", nicht "Basis" - das
+                             hier ist eine EINMALIGE Kopie beim Anlegen, keine lebende
+                             Verknüpfung (die heißt jetzt "Basis", siehe unten im Set-Editor,
+                             und wird dort separat gepflegt). base_id ist NICHT required -
+                             ein neues Set kann auch leer starten (z.B. um es gleich über
+                             eine lebende Basis + Bausteine aufzubauen, statt zu kopieren). --}}
+                        <select name="base_id" x-ref="newSetBase" class="w-full rounded-md border-gray-300 text-xs">
+                            <option value="">{{ __('– leer, ohne Kopiervorlage –') }}</option>
                             @foreach ($templates as $template)
-                                <option value="{{ $template->id }}">{{ $template->name }}</option>
+                                <option value="{{ $template->id }}">{{ __('Kopie von: ') }}{{ $template->name }}</option>
                             @endforeach
                         </select>
                         <input type="text" name="name" placeholder="{{ __('Name des neuen Sets') }}" class="w-full rounded-md border-gray-300 text-xs" required>
@@ -130,7 +136,7 @@
                              (immer mind. ein Set vorhanden, siehe Standard-Seed) gibt es beim
                              allerersten Baustein eines Mandanten noch keine Vorlage. --}}
                         <select name="base_id" x-ref="newBausteinBase" class="w-full rounded-md border-gray-300 text-xs">
-                            <option value="">{{ __('– leer, ohne Vorlage –') }}</option>
+                            <option value="">{{ __('– leer, ohne Kopiervorlage –') }}</option>
                             @foreach ($bausteine as $baustein)
                                 <option value="{{ $baustein->id }}">{{ __('Kopie von: ') }}{{ $baustein->name }}</option>
                             @endforeach
@@ -324,8 +330,26 @@
                         @csrf
                         <div class="flex-1 min-h-0 overflow-y-auto">
                             @unless ($selectedTemplate->is_baustein)
-                                {{-- Bausteine einbinden (Ralf, 2026-09-28): nur bei einem Set - ein
-                                     Baustein bindet selbst nie weitere Bausteine ein. --}}
+                                {{-- Basis (Ralf, 2026-09-28): LEBENDE Verknüpfung zu einem anderen
+                                     Set (nicht kopiert wie bei "Kopiervorlage" beim Anlegen) - ändert
+                                     sich die Basis später, zieht das hier automatisch nach. Ring-
+                                     bezüge werden serverseitig geprüft (PermissionController::update()). --}}
+                                <div class="border-b border-gray-100 bg-gray-50 p-3">
+                                    <label class="mb-1.5 block text-xs font-semibold text-gray-500">
+                                        {{ __('Basis (lebend verknüpft, nicht kopiert)') }}
+                                    </label>
+                                    <select name="basis_id" class="w-full max-w-xs rounded-md border-gray-300 py-1 text-sm">
+                                        <option value="">{{ __('– keine –') }}</option>
+                                        @foreach ($templates->where('id', '!=', $selectedTemplate->id) as $template)
+                                            <option value="{{ $template->id }}" @selected($selectedTemplate->basis_id === $template->id)>{{ $template->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    @if ($selectedTemplate->basis)
+                                        <p class="mt-1 text-[11px] text-gray-400">{{ __('Änderungen an „:name" wirken hier automatisch mit.', ['name' => $selectedTemplate->basis->name]) }}</p>
+                                    @endif
+                                </div>
+                                {{-- Bausteine einbinden - nur bei einem Set, ein Baustein bindet
+                                     selbst nie weitere Bausteine ein. --}}
                                 <div class="border-b border-gray-100 bg-gray-50 p-3">
                                     <p class="mb-1.5 text-xs font-semibold text-gray-500">{{ __('Bausteine einbinden') }}</p>
                                     @forelse ($bausteine as $baustein)
@@ -407,25 +431,36 @@
                                 @endforelse
                             </div>
                             <div class="shrink-0 border-t border-gray-100 p-3" x-data="{}">
-                                <form method="POST" action="{{ route('admin.rechte.sets.destroy', $selectedTemplate) }}" x-ref="deleteForm" class="hidden">
-                                    @csrf
-                                    @method('DELETE')
-                                    <input type="hidden" name="reassign_to" value="">
-                                </form>
-                                <button
-                                    type="button"
-                                    @click="window.deleteWithConfirm($refs.deleteForm, {
-                                        title: {{ \Illuminate\Support\Js::from(__('Set löschen')) }},
-                                        message: {{ \Illuminate\Support\Js::from($templatePeople->isNotEmpty() ? __('Zum Löschen muss jede zugewiesene Person in ein anderes Set übernommen werden.') : __('Dieses Set wirklich löschen?')) }},
-                                        confirmLabel: {{ \Illuminate\Support\Js::from(__('Löschen')) }},
-                                        reassignOptions: @js($templatePeople->isNotEmpty() ? $templates->where('id', '!=', $selectedTemplate->id)->map(fn ($template) => ['value' => (string) $template->id, 'label' => $template->name])->values() : []),
-                                        reassignPlaceholder: {{ \Illuminate\Support\Js::from(__('Personen übernehmen in…')) }},
-                                        reassignRequired: {{ $templatePeople->isNotEmpty() ? 'true' : 'false' }},
-                                    })"
-                                    class="w-full rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
-                                >
-                                    {{ __('Set löschen') }}
-                                </button>
+                                {{-- Ralf, 2026-09-28: dient dieses Set noch als lebende Basis für
+                                     andere, wird das Löschen komplett blockiert (kein Reassign
+                                     dafür - erst dort die Basis-Referenz bewusst ändern/entfernen,
+                                     sonst würden diese Sets stillschweigend Rechte verlieren). --}}
+                                @if ($derivedSets->isNotEmpty())
+                                    <p class="mb-2 text-xs text-gray-500">{{ __('Kann nicht gelöscht werden - ist Basis von: :names. Dort erst die Basis ändern/entfernen.', ['names' => $derivedSets->pluck('name')->join(', ')]) }}</p>
+                                    <button type="button" disabled class="w-full cursor-not-allowed rounded-md border border-gray-200 px-2 py-1 text-xs font-medium text-gray-400">
+                                        {{ __('Set löschen') }}
+                                    </button>
+                                @else
+                                    <form method="POST" action="{{ route('admin.rechte.sets.destroy', $selectedTemplate) }}" x-ref="deleteForm" class="hidden">
+                                        @csrf
+                                        @method('DELETE')
+                                        <input type="hidden" name="reassign_to" value="">
+                                    </form>
+                                    <button
+                                        type="button"
+                                        @click="window.deleteWithConfirm($refs.deleteForm, {
+                                            title: {{ \Illuminate\Support\Js::from(__('Set löschen')) }},
+                                            message: {{ \Illuminate\Support\Js::from($templatePeople->isNotEmpty() ? __('Zum Löschen muss jede zugewiesene Person in ein anderes Set übernommen werden.') : __('Dieses Set wirklich löschen?')) }},
+                                            confirmLabel: {{ \Illuminate\Support\Js::from(__('Löschen')) }},
+                                            reassignOptions: @js($templatePeople->isNotEmpty() ? $templates->where('id', '!=', $selectedTemplate->id)->map(fn ($template) => ['value' => (string) $template->id, 'label' => $template->name])->values() : []),
+                                            reassignPlaceholder: {{ \Illuminate\Support\Js::from(__('Personen übernehmen in…')) }},
+                                            reassignRequired: {{ $templatePeople->isNotEmpty() ? 'true' : 'false' }},
+                                        })"
+                                        class="w-full rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                                    >
+                                        {{ __('Set löschen') }}
+                                    </button>
+                                @endif
                             </div>
                         @endif
                     </div>

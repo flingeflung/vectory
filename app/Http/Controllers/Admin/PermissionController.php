@@ -74,6 +74,7 @@ class PermissionController extends Controller
         $templatePeople = collect();
         $embeddedBausteinIds = collect();
         $usedInSets = collect();
+        $derivedSets = collect();
 
         if ($request->filled('set')) {
             // Der Query-Param heißt weiterhin "set", zeigt aber auf EINEN von
@@ -81,7 +82,7 @@ class PermissionController extends Controller
             // direkt aus der DB statt aus der (jetzt nach Typ getrennten)
             // $templates-Collection gesucht.
             $selectedTemplate = PermissionTemplate::query()->where('tenant_id', $tenantId)
-                ->with(['bausteine', 'usedInSets'])
+                ->with(['bausteine', 'usedInSets', 'basis'])
                 ->find((int) $request->query('set'));
             if ($selectedTemplate) {
                 $grantedPermissionIds = $selectedTemplate->permissions()->pluck('permissions.id');
@@ -90,6 +91,7 @@ class PermissionController extends Controller
                 } else {
                     $templatePeople = $people->where('permission_template_id', $selectedTemplate->id)->values();
                     $embeddedBausteinIds = $selectedTemplate->bausteine->pluck('id');
+                    $derivedSets = $selectedTemplate->derivedSets;
 
                     // Bei der Bulk-Zuordnung erst die schon angehakten Personen
                     // (alphabetisch), danach der Rest (ebenfalls alphabetisch) -
@@ -124,6 +126,7 @@ class PermissionController extends Controller
             'templatePeople' => $templatePeople,
             'embeddedBausteinIds' => $embeddedBausteinIds,
             'usedInSets' => $usedInSets,
+            'derivedSets' => $derivedSets,
         ]);
     }
 
@@ -192,18 +195,56 @@ class PermissionController extends Controller
             $validBausteinIds = PermissionTemplate::query()->where('tenant_id', $template->tenant_id)
                 ->where('is_baustein', true)->whereIn('id', $bausteinIds)->pluck('id');
             $template->bausteine()->sync($validBausteinIds);
+
+            // Ralf, 2026-09-28: "Basis" - lebende statt kopierte Vererbung
+            // (siehe Model-Docblock). Nur bei einem Set relevant, nie bei
+            // einem Baustein. Leer = keine Basis (Kette gekappt).
+            $basisId = $request->filled('basis_id') ? $request->integer('basis_id') : null;
+            if ($basisId !== null) {
+                $basis = PermissionTemplate::query()->where('tenant_id', $template->tenant_id)
+                    ->where('is_baustein', false)->where('id', '!=', $template->id)->find($basisId);
+                abort_if($basis === null, 422);
+                abort_if($this->wouldCreateCycle($basis, $template->id), 422, __('Das würde einen Ringbezug erzeugen.'));
+                $template->update(['basis_id' => $basis->id]);
+            } else {
+                $template->update(['basis_id' => null]);
+            }
         }
 
         return redirect()->route('admin.rechte', ['set' => $template->id])->with('status', 'rechte-updated');
     }
 
     /**
+     * Würde $candidateBasis als Basis von Set $targetId zu einem Ringbezug
+     * führen? Läuft die Basis-Kette von $candidateBasis aus rückwärts hoch
+     * und prüft, ob $targetId darin vorkommt (dann würde die Kette
+     * irgendwann wieder bei sich selbst ankommen).
+     */
+    private function wouldCreateCycle(PermissionTemplate $candidateBasis, int $targetId): bool
+    {
+        $current = $candidateBasis;
+        while ($current !== null) {
+            if ($current->id === $targetId) {
+                return true;
+            }
+            $current = $current->basis;
+        }
+
+        return false;
+    }
+
+    /**
      * Set löschen - hat es noch zugeordnete Personen, muss vorher ein
-     * Ziel-Set gewählt werden (nie Personen ohne Set zurücklassen).
+     * Ziel-Set gewählt werden (nie Personen ohne Set zurücklassen). Dient
+     * dieses Set noch als lebende Basis für andere Sets, wird das Löschen
+     * ganz blockiert (kein Reassign-Mechanismus dafür - Ralf muss die
+     * Basis-Referenz dort erst bewusst ändern/entfernen, sonst würden
+     * andere Sets stillschweigend Rechte verlieren).
      */
     public function destroy(Request $request, PermissionTemplate $template): RedirectResponse
     {
         abort_unless($template->tenant_id === CurrentTenant::id(), 404);
+        abort_if($template->derivedSets()->exists(), 422);
 
         if ($template->people()->exists()) {
             $reassignTo = PermissionTemplate::query()
@@ -294,7 +335,7 @@ class PermissionController extends Controller
         $person->update(['permission_template_id' => $template->id]);
 
         if ($person->user) {
-            $person->user->update(['role' => $template->role]);
+            $person->user->update(['role' => $template->effectiveRole()]);
         }
     }
 }
