@@ -78,13 +78,29 @@
                 </svg>
             </button>
         </template>
-        <template x-if="hasOwnHours">
-            <input type="hidden" name="relink_template" :value="locked ? '0' : '1'">
-        </template>
+        {{-- Ralf-Bug-Report, 2026-09-28: "ungespeicherte Änderungen"-Meldung erschien schon direkt
+             nach dem Öffnen, ganz ohne Eingabe. Ursache: der Dirty-Snapshot (projectOverlayIsDirty,
+             siehe app.blade.php) wird SYNCHRON direkt nach dem innerHTML-Einfügen genommen - noch
+             bevor Alpine <template x-if> auswertet. Innerhalb eines x-if existiert dieses Feld zu
+             dem Zeitpunkt im echten DOM noch gar nicht (nur inert im <template>), taucht danach
+             aber in der FormData auf - macht das Formular für immer fälschlich "dirty". Deshalb
+             hier bewusst KEIN x-if: das Feld existiert immer. Der statische value-Fallback muss
+             dabei GENAU denselben PHP-Ausgangswert spiegeln, den Alpines :value-Bindung nach der
+             Initialisierung berechnet (nicht einfach "0" hart codieren - ein zweiter, subtilerer
+             Fund derselben Sitzung: bei einem NICHT gelösten Projekt startet "locked" mit false,
+             Alpine berechnet dann "1", ein hartes value="0" hätte also bei jedem normalen Projekt
+             denselben Dirty-Fehlalarm ausgelöst). Gleiches Muster wie der bereits dokumentierte
+             Fall bei "Projektbeteiligte Personen". --}}
+        <input type="hidden" name="relink_template" value="{{ $project->functionGroupHours->isNotEmpty() ? '0' : '1' }}" :value="locked ? '0' : '1'">
     </div>
+    {{-- Ralf-Bug-Report, 2026-09-28 (zweiter Fund derselben Ursache): ein disabled-Feld fehlt
+         komplett in der FormData (siehe project-percentage-body.blade.php, dieselbe Lektion) -
+         ohne statischen @disabled-Fallback stand project_template_id im zu frühen Dirty-Snapshot
+         noch drin (Alpines :disabled war noch nicht ausgewertet), fehlte aber danach. --}}
     <select
         name="project_template_id"
         x-model="templateId"
+        @disabled($project->functionGroupHours->isNotEmpty())
         :disabled="locked"
         class="mt-0.5 w-full max-w-sm rounded border-gray-300 py-1 text-sm"
         :class="locked ? 'bg-gray-100 text-gray-400' : ''"
