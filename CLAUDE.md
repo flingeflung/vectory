@@ -55,25 +55,27 @@ Umsetzungsidee: Rolle 4 als eigene `person`-Entität modellieren, `user` referen
 
 ## Subagent-Richtlinie
 
-Subagenten nur sparsam einsetzen.
+Subagenten sind standardmäßig VERBOTEN.
 
-Keine Subagenten verwenden für:
-- einfache Fragen
-- kleine Änderungen oder Änderungen an einzelnen Dateien
-- einfache Suchaufgaben
-- sequenzielle Aufgaben
-- Aufgaben, die direkt im aktuellen Kontext bearbeitet werden können
+Verwende keine Subagenten, außer ich fordere sie ausdrücklich an.
 
-Direkte Bearbeitung durch den Hauptagenten bevorzugen.
+Auch bei:
+- größeren Aufgaben
+- parallelen Arbeitspaketen
+- Codeanalyse über mehrere Dateien
+- Recherche
+- Refactorings
+- Tests
+- Fehlersuche
 
-Subagenten nur einsetzen, wenn:
-- unabhängige Arbeitspakete tatsächlich parallel bearbeitet werden können
-- ein separater Kontext das Ergebnis deutlich verbessert
-- die Aufgabe groß genug ist, um den zusätzlichen Nutzungsverbrauch zu rechtfertigen
+arbeitest du zunächst ausschließlich im Hauptagenten.
 
-Die Anzahl der Subagenten auf das notwendige Minimum beschränken.
+Wenn du glaubst, dass ein Subagent einen erheblichen Vorteil hätte:
+1. Stoppe vor der Erstellung des Subagenten.
+2. Erkläre mir kurz, warum du ihn verwenden möchtest.
+3. Warte auf meine ausdrückliche Zustimmung.
 
-Standardmäßig keine Subagenten verwenden, sofern sie nicht eindeutig erforderlich sind.
+Ohne meine Zustimmung: keine Subagenten.
 
 
 ## Modellwahl
