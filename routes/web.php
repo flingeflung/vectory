@@ -128,6 +128,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/projekte/{project}', [ProjectController::class, 'update'])->name('projekte.update');
     Route::post('/projekte/{project}/planstunden/loesen', [ProjectController::class, 'breakPlannedHoursLink'])->name('projekte.planstunden.loesen');
     Route::post('/projekte/{project}/planstunden', [ProjectController::class, 'updatePlannedFunctionGroupHours'])->name('projekte.planstunden');
+    // Zeiten-Tab, Unterreiter "Nach Person & Tag" (Ralf, 2026-09-28) - eigenes Recht
+    // project.hours.person_breakdown, siehe ProjectController::zeitenPersonBreakdown().
+    Route::get('/projekte/{project}/zeiten/personen', [ProjectController::class, 'zeitenPersonBreakdown'])->name('projekte.zeiten.personen');
     // Versionskette / "Stamm-ID" (Ralf, 2026-09-20)
     Route::get('/projekte/{project}/stamm-id/kette', [StammIdController::class, 'chain'])->name('projekte.stamm-id.chain');
     Route::post('/projekte/{project}/stamm-id/loesen', [StammIdController::class, 'detach'])->name('projekte.stamm-id.detach');

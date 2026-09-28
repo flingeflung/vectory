@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\ActivityType;
 use App\Enums\GraphicOrderStatus;
+use Carbon\CarbonImmutable;
 use App\Mail\ProjectRequestMail;
 use App\Models\Activity;
 use App\Models\Attribute;
@@ -1075,7 +1076,117 @@ class ProjectController extends Controller
             'ownTemplateName' => $project->projectTemplate?->name,
             'ownBreakdown' => $ownBreakdown,
             'ownRelevantFunctionGroups' => $ownRelevantFunctionGroups,
+            // Unterreiter "Nach Person & Tag" (Ralf, 2026-09-28) - nur berechnet, wenn das
+            // eigene, personenbezogene Recht vorliegt (sonst unnötige Query, das Fragment
+            // wird im View ohnehin nicht gerendert). auth() statt eines durchgereichten
+            // Request, da zeitenData() auch aus zeitenBodyResponse() (kein Request-Param)
+            // aufgerufen wird.
+            'personBreakdownWeek' => CarbonImmutable::today()->startOfWeek(),
+            'personBreakdown' => auth()->user()?->can('project.hours.person_breakdown')
+                ? $this->zeitenPersonBreakdownData($project, CarbonImmutable::today()->startOfWeek())
+                : null,
         ];
+    }
+
+    /**
+     * Zeiten-Tab, Unterreiter "Nach Person & Tag" (Ralf, 2026-09-28) - eigenes
+     * Recht project.hours.person_breakdown, bewusst getrennt von project.view:
+     * eine Personen×Tage-Aufschlüsselung ist personenbezogen (Leistungskontrolle-
+     * Sensibilität, siehe Rechtekonzept-Diskussion), die restliche Zeiten-Ansicht
+     * (Summen, kein Personenbezug) bleibt für alle Projektbeteiligten offen.
+     * Der Unterreiter selbst erscheint im View nur, wenn dieses Recht vorliegt -
+     * kein sichtbares, nur gesperrtes Element für alle anderen.
+     */
+    public function zeitenPersonBreakdown(Request $request, Project $project): Response
+    {
+        abort_unless($request->user()->can('project.view'), 403);
+        abort_unless($request->user()->can('project.hours.person_breakdown'), 403);
+
+        $week = $this->parseIsoWeek($request->query('week'));
+
+        return response(view('projekte.partials.zeiten-personen-body', [
+            'project' => $project,
+            'week' => $week,
+            'breakdown' => $this->zeitenPersonBreakdownData($project, $week),
+        ])->render());
+    }
+
+    /**
+     * @return array{isHauptprojekt: bool, days: \Illuminate\Support\Collection, rows: \Illuminate\Support\Collection, dayTotals: array<string, float>, total: float}
+     */
+    private function zeitenPersonBreakdownData(Project $project, CarbonImmutable $week): array
+    {
+        $isHauptprojekt = $project->verbund_rolle === 1;
+        $participantIds = [$project->id];
+        if ($isHauptprojekt) {
+            $participantIds = array_merge($participantIds, DB::table('projects')
+                ->where('hauptprojekt_id', $project->id)->where('verbund_rolle', 2)->pluck('id')->all());
+        }
+        $projectLabels = $isHauptprojekt
+            ? DB::table('projects')->whereIn('id', $participantIds)->pluck('source_pn', 'id')
+            : collect();
+
+        $days = collect(range(0, 6))->map(fn ($offset) => $week->addDays($offset));
+
+        $entries = DB::table('job_hours')
+            ->join('people', 'people.id', '=', 'job_hours.person_id')
+            ->whereIn('job_hours.project_id', $participantIds)
+            ->whereBetween('job_hours.work_date', [$week->toDateString(), $week->addDays(6)->toDateString()])
+            ->where('job_hours.hours', '>', 0)
+            ->get(['job_hours.person_id', 'job_hours.project_id', 'job_hours.work_date', 'job_hours.hours', 'people.first_name', 'people.last_name']);
+
+        // Am Hauptprojekt zusätzlich nach Unterprojekt aufgeschlüsselt (Ralf, 2026-09-28:
+        // "+ UP beim HP") - dieselbe Person taucht dann pro beteiligtem (Unter-)Projekt
+        // in einer eigenen Zeile auf, statt über alle hinweg zusammengefasst zu werden.
+        $rows = [];
+        foreach ($entries as $entry) {
+            $key = $isHauptprojekt ? $entry->person_id.'|'.$entry->project_id : (string) $entry->person_id;
+            if (! isset($rows[$key])) {
+                $rows[$key] = [
+                    'name' => trim($entry->last_name.', '.$entry->first_name, ', '),
+                    'projectLabel' => $isHauptprojekt ? $projectLabels->get((int) $entry->project_id) : null,
+                    'days' => [],
+                    'total' => 0.0,
+                ];
+            }
+            $rows[$key]['days'][$entry->work_date] = ($rows[$key]['days'][$entry->work_date] ?? 0) + (float) $entry->hours;
+            $rows[$key]['total'] += (float) $entry->hours;
+        }
+
+        // German-Kollation statt sortBy() (siehe [[vectory_german_collation_sorting]]) -
+        // sonst landen Ä/Ö/Ü/ß hinter Z statt an der richtigen alphabetischen Stelle.
+        $collator = new \Collator('de_DE');
+        $rows = collect($rows)->values()->sort(fn ($a, $b) => $collator->compare($a['name'], $b['name']).($a['projectLabel'] <=> $b['projectLabel']))->values();
+
+        $dayTotals = $days->mapWithKeys(fn ($day) => [$day->toDateString() => 0.0])->all();
+        foreach ($rows as $row) {
+            foreach ($row['days'] as $date => $hours) {
+                $dayTotals[$date] = ($dayTotals[$date] ?? 0) + $hours;
+            }
+        }
+
+        return [
+            'isHauptprojekt' => $isHauptprojekt,
+            'days' => $days,
+            'rows' => $rows,
+            'dayTotals' => $dayTotals,
+            'total' => array_sum($dayTotals),
+        ];
+    }
+
+    private function parseIsoWeek(?string $value): CarbonImmutable
+    {
+        if ($value === null) {
+            return CarbonImmutable::today()->startOfWeek();
+        }
+        if (! preg_match('/^(\d{4})-W(\d{2})$/', $value, $matches)) {
+            return CarbonImmutable::today()->startOfWeek();
+        }
+        $week = CarbonImmutable::now()->setISODate((int) $matches[1], (int) $matches[2])->startOfWeek();
+
+        return $week->isoWeekYear() === (int) $matches[1] && $week->isoWeek() === (int) $matches[2]
+            ? $week
+            : CarbonImmutable::today()->startOfWeek();
     }
 
     /**

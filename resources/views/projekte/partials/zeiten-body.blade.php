@@ -20,9 +20,22 @@
     ein Unterprojekt) trägt seinen Plan unabhängig - im Verbund gilt implizit der Plan des
     Hauptprojekts für alle, solange kein Unterprojekt einen eigenen hat.
 --}}
-<div id="project-zeiten-body" class="text-sm">
+<div id="project-zeiten-body" class="text-sm" x-data="{ subTab: 'uebersicht' }">
     @php($fmt = fn ($hours) => number_format($hours, 2, ',', '.'))
 
+    {{-- Unterreiter "Nach Person & Tag" (Ralf, 2026-09-28) - nur sichtbar mit eigenem
+         Recht project.hours.person_breakdown (personenbezogen, siehe
+         ProjectController::zeitenPersonBreakdown()). Wer das Recht nicht hat, sieht
+         gar keinen Hinweis auf diesen Unterreiter - bewusst kein gesperrtes/gegrautes
+         Element (Leistungskontrolle-Sensibilität, siehe Rechtekonzept-Diskussion). --}}
+    @can('project.hours.person_breakdown')
+        <div class="mb-3 flex gap-1 border-b border-gray-100">
+            <button type="button" @click="subTab = 'uebersicht'" :class="subTab === 'uebersicht' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700'" class="border-b-2 px-2 pb-1.5 text-xs font-medium">{{ __('Übersicht') }}</button>
+            <button type="button" @click="subTab = 'personen'" :class="subTab === 'personen' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700'" class="border-b-2 px-2 pb-1.5 text-xs font-medium">{{ __('Nach Person & Tag') }}</button>
+        </div>
+    @endcan
+
+    <div x-show="subTab === 'uebersicht'">
     @if ($zeiten['ownPlanLinked'])
         <div
             x-data="{
@@ -244,4 +257,11 @@
             </tfoot>
         </table>
     @endif
+    </div>
+
+    @can('project.hours.person_breakdown')
+        <div x-show="subTab === 'personen'" x-cloak>
+            @include('projekte.partials.zeiten-personen-body', ['week' => $zeiten['personBreakdownWeek'], 'breakdown' => $zeiten['personBreakdown']])
+        </div>
+    @endcan
 </div>
