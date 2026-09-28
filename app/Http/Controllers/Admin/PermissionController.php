@@ -66,7 +66,11 @@ class PermissionController extends Controller
             ->orderBy('name')
             ->pluck('name');
 
-        $permissions = Permission::query()->orderBy('key')->get();
+        // Ralf, 2026-09-28: alphabetisch nach Label (er hat die Texte gerade neu
+        // formuliert), nicht mehr nach dem technischen key. Collator statt orderBy('label')/
+        // sortBy() (siehe [[vectory_german_collation_sorting]]) - sonst landen Ä/Ö/Ü hinter Z.
+        $collator = new \Collator('de_DE');
+        $permissions = Permission::query()->get()->sort(fn ($a, $b) => $collator->compare($a->label, $b->label))->values();
 
         $selectedTemplate = null;
         $selectedPerson = null;
