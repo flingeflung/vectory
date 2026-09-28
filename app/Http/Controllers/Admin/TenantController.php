@@ -99,6 +99,7 @@ class TenantController extends Controller
             'gantt_max_projects' => ['required', 'integer', 'between:1,200'],
             'jobload_time_grid' => ['required', 'integer', 'in:60,30,15'],
             'default_weekly_hours' => ['required', 'numeric', 'between:0,80', 'multiple_of:0.5'],
+            'default_vacation_days' => ['required', 'numeric', 'between:0,100', 'multiple_of:0.5'],
         ]);
         $name = trim((string) $request->string('name'));
         abort_if($name === '', 422);

@@ -80,6 +80,24 @@ class Person extends Model
     }
 
     /**
+     * Urlaubstage-Historie (Ralf, 2026-09-28) - gleiche Systematik wie
+     * weeklyHours() oben.
+     */
+    public function vacationDays(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PersonVacationDays::class)->withoutGlobalScope('tenant')->orderBy('valid_from');
+    }
+
+    public function currentVacationDays(): ?float
+    {
+        $today = now()->toDateString();
+        $entry = $this->vacationDays->first(fn (PersonVacationDays $row) => ($row->valid_from === null || $row->valid_from->toDateString() <= $today)
+            && ($row->valid_to === null || $row->valid_to->toDateString() >= $today));
+
+        return $entry?->days !== null ? (float) $entry->days : null;
+    }
+
+    /**
      * withoutGlobalScope('tenant') auf company/department/businessUnit/
      * legacyRole/functionGroups (Ralf-Bug-Report 2026-09-18, mehrfach
      * wiederholt): diese Attribute gehören immer dem HEIMAT-Mandanten DER

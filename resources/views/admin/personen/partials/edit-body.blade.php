@@ -310,10 +310,10 @@
                     </div>
                 </div>
 
-                {{-- Ralf, 2026-09-28: Wochenstunden jetzt historisiert statt eines
-                     einzelnen Werts (Grundlage der personellen Ressourcenplanung -
-                     ein Mitarbeiter kann im Jahresverlauf mehrfach seine WoSt
-                     ändern). Nur lesend hier, Pflege im eigenen Overlay
+                {{-- Ralf, 2026-09-28: Wochenstunden UND Urlaubstage jetzt historisiert
+                     statt einzelner Werte (Grundlage der personellen
+                     Ressourcenplanung - beides kann sich im Zeitverlauf ändern).
+                     Nur lesend hier, Pflege im jeweils eigenen Overlay
                      ("verwalten"), löst das bisherige Feld person.weekly_hours ab.
                      Nur für Personen mit Login relevant (nur die buchen Stunden).
                      Eigene 2er-Reihe wie "Im Unternehmen seit"/"Bis" oben, aus
@@ -331,6 +331,19 @@
                             </div>
                             <div id="person-weekly-hours-display" class="mt-0.5 w-full rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-sm text-gray-600">
                                 {{ $person->currentWeeklyHours() !== null ? rtrim(rtrim(number_format((float) $person->currentWeeklyHours(), 1, '.', ''), '0'), '.').' h' : '–' }}
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex items-center justify-between">
+                                <label class="block text-xs text-gray-500">{{ __('Urlaubstage') }}</label>
+                                <button
+                                    type="button"
+                                    onclick="window.openPersonVacationDays({{ $person->id }})"
+                                    class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                                >{{ __('verwalten') }}</button>
+                            </div>
+                            <div id="person-vacation-days-display" class="mt-0.5 w-full rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-sm text-gray-600">
+                                {{ $person->currentVacationDays() !== null ? rtrim(rtrim(number_format((float) $person->currentVacationDays(), 1, '.', ''), '0'), '.') : '–' }}
                             </div>
                         </div>
                     </div>

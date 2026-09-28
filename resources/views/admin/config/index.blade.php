@@ -115,10 +115,14 @@
                             <label class="block text-sm font-medium text-gray-700" title="{{ __('Wird beim Anlegen eines Logins automatisch als Wochenstunden der Person eingetragen.') }}">{{ __('Standard-Wochenstunden') }}
                                 <input type="number" name="default_weekly_hours" value="{{ old('default_weekly_hours', rtrim(rtrim(number_format((float) $currentTenant->default_weekly_hours, 1, '.', ''), '0'), '.')) }}" min="0" max="80" step="0.5" required class="mt-1 block w-28 rounded-md border-gray-300 text-sm">
                             </label>
+                            <label class="block text-sm font-medium text-gray-700" title="{{ __('Wird beim Anlegen eines Logins automatisch als Urlaubstage der Person eingetragen.') }}">{{ __('Standard-Urlaubstage') }}
+                                <input type="number" name="default_vacation_days" value="{{ old('default_vacation_days', rtrim(rtrim(number_format((float) $currentTenant->default_vacation_days, 1, '.', ''), '0'), '.')) }}" min="0" max="100" step="0.5" required class="mt-1 block w-28 rounded-md border-gray-300 text-sm">
+                            </label>
                         </div>
                         <x-input-error :messages="$errors->get('gantt_max_projects')" />
                         <x-input-error :messages="$errors->get('jobload_time_grid')" />
                         <x-input-error :messages="$errors->get('default_weekly_hours')" />
+                        <x-input-error :messages="$errors->get('default_vacation_days')" />
 
                         <div class="flex items-center gap-4 pt-2">
                             <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">

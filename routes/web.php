@@ -29,6 +29,7 @@ use App\Http\Controllers\GraphicOrderController;
 use App\Http\Controllers\HelpController;
 use App\Http\Controllers\IllustrationOverviewController;
 use App\Http\Controllers\JobloadController;
+use App\Http\Controllers\PlanningController;
 use App\Http\Controllers\JobloadOverviewController;
 use App\Http\Controllers\LocaleSwitchController;
 use App\Http\Controllers\MultichangeController;
@@ -72,6 +73,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    // Neuer Hauptnavigationspunkt "Planung" (Ralf, 2026-09-28) - rechtegesteuert
+    // (planning.view), siehe PlanningController.
+    Route::redirect('/planung', '/planung/stunden');
+    Route::get('/planung/stunden', [PlanningController::class, 'stunden'])->name('planung.stunden');
     Route::get('/jobload', [JobloadController::class, 'index'])->name('jobload');
     Route::get('/jobload/uebersicht', [JobloadOverviewController::class, 'index'])->name('jobload.overview');
     Route::get('/jobload/uebersicht/wochenwerte', [JobloadOverviewController::class, 'weekDetail'])->name('jobload.overview.week-detail');
@@ -360,6 +365,9 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     // siehe PersonController::weeklyHours()/storeWeeklyHours().
     Route::get('/personen/{person}/wochenstunden', [AdminPersonController::class, 'weeklyHours'])->name('personen.wochenstunden');
     Route::post('/personen/{person}/wochenstunden', [AdminPersonController::class, 'storeWeeklyHours'])->name('personen.wochenstunden.store');
+    // Urlaubstage-Historie (Ralf, 2026-09-28) - gleiche Systematik.
+    Route::get('/personen/{person}/urlaubstage', [AdminPersonController::class, 'vacationDays'])->name('personen.urlaubstage');
+    Route::post('/personen/{person}/urlaubstage', [AdminPersonController::class, 'storeVacationDays'])->name('personen.urlaubstage.store');
     Route::post('/personen/{person}/passwort', [AdminPersonController::class, 'resetPassword'])->name('personen.password.reset');
     Route::post('/personen/{person}/kunden', [AdminPersonController::class, 'updateTenantAccess'])->name('personen.tenant-access.update');
     Route::post('/personen/{person}/rolle', [AdminPersonController::class, 'updateRole'])->name('personen.role.update');

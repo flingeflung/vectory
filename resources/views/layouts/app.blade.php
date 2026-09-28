@@ -1538,6 +1538,26 @@
                     }
                 };
 
+                // Urlaubstage-Historie (Ralf, 2026-09-28): gleiches Prinzip wie
+                // refreshPersonWeeklyHoursDisplay oben.
+                window.refreshPersonVacationDaysDisplay = async function refreshPersonVacationDaysDisplay() {
+                    if (currentPersonId === null) {
+                        return;
+                    }
+                    const liveDisplay = body()?.querySelector('#person-vacation-days-display');
+                    if (!liveDisplay) {
+                        return;
+                    }
+
+                    const html = await fetch('/admin/personen/' + currentPersonId, {
+                        headers: { 'X-Overlay': '1' },
+                    }).then((r) => r.text());
+                    const freshDisplay = new DOMParser().parseFromString(html, 'text/html').getElementById('person-vacation-days-display');
+                    if (freshDisplay) {
+                        liveDisplay.innerHTML = freshDisplay.innerHTML;
+                    }
+                };
+
                 // Event-Delegation: die Formulare werden erst nach dem Öffnen per fetch eingefügt.
                 document.addEventListener('submit', async (event) => {
                     if (!body() || !body().contains(event.target)) {
@@ -1794,6 +1814,87 @@
                         return;
                     }
                     window.refreshPersonWeeklyHoursDisplay?.();
+                });
+
+                document.addEventListener('submit', async (event) => {
+                    if (!body() || !body().contains(event.target)) {
+                        return;
+                    }
+                    event.preventDefault();
+
+                    const formData = new FormData(event.target);
+                    const response = await fetch(event.target.action, {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': csrfToken },
+                        body: formData,
+                    });
+                    body().innerHTML = await response.text();
+                    if (response.ok) {
+                        snapshot();
+                    }
+                });
+            })();
+        </script>
+
+        {{--
+            Urlaubstage-Historie (Ralf, 2026-09-28): gleiche Systematik wie
+            person-weekly-hours oben.
+        --}}
+        <x-modal name="person-vacation-days" max-width="md" :dirty-check="'personVacationDaysIsDirty'">
+            <div class="flex max-h-[80vh] flex-col">
+                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Urlaubstage') }}</h3>
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'person-vacation-days' }))"
+                        class="text-gray-400 hover:text-gray-600"
+                        aria-label="{{ __('Schließen') }}"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="person-vacation-days-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
+                    {{ __('Lädt…') }}
+                </div>
+            </div>
+        </x-modal>
+
+        <script>
+            (function () {
+                const body = () => document.getElementById('person-vacation-days-body');
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                let currentPersonId = null;
+                let savedSnapshot = null;
+
+                const serializeAllForms = () => [...body().querySelectorAll('form')]
+                    .map((form) => new URLSearchParams(new FormData(form)).toString())
+                    .join('|');
+
+                const snapshot = () => {
+                    savedSnapshot = serializeAllForms();
+                };
+
+                window.personVacationDaysIsDirty = () => savedSnapshot !== null && serializeAllForms() !== savedSnapshot;
+
+                const load = async () => {
+                    body().innerHTML = await fetch('/admin/personen/' + currentPersonId + '/urlaubstage').then((r) => r.text());
+                    snapshot();
+                };
+
+                window.openPersonVacationDays = function (personId) {
+                    currentPersonId = personId;
+                    body().innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
+                    window.dispatchEvent(new CustomEvent('open-modal', { detail: 'person-vacation-days' }));
+                    load();
+                };
+
+                window.addEventListener('close-modal', (event) => {
+                    if (event.detail !== 'person-vacation-days' || currentPersonId === null) {
+                        return;
+                    }
+                    window.refreshPersonVacationDaysDisplay?.();
                 });
 
                 document.addEventListener('submit', async (event) => {

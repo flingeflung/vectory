@@ -10,6 +10,7 @@ use App\Models\FunctionGroup;
 use App\Models\LegacyRole;
 use App\Models\PermissionTemplate;
 use App\Models\Person;
+use App\Models\PersonVacationDays;
 use App\Models\PersonWeeklyHours;
 use App\Models\SystemSetting;
 use App\Models\Tenant;
@@ -384,6 +385,19 @@ class PersonController extends Controller
             }
         }
 
+        // Ralf, 2026-09-28: Urlaubstage nach gleicher Systematik - Standardwert
+        // des Mandanten als ersten Historien-Datensatz beim Anlegen des Logins.
+        if (! $person->vacationDays()->exists()) {
+            $defaultVacationDays = Tenant::query()->whereKey($person->tenant_id)->value('default_vacation_days');
+            if ($defaultVacationDays !== null) {
+                PersonVacationDays::query()->create([
+                    'tenant_id' => $person->tenant_id,
+                    'person_id' => $person->id,
+                    'days' => $defaultVacationDays,
+                ]);
+            }
+        }
+
         if ($isOverlay) {
             $request->session()->flash('status', 'login-created');
 
@@ -469,6 +483,72 @@ class PersonController extends Controller
             'person' => $person,
             'canEdit' => true,
             'history' => $person->weeklyHours()->get(),
+        ]);
+    }
+
+    /**
+     * Urlaubstage-Historie (Ralf, 2026-09-28) - gleiche Systematik wie
+     * weeklyHours()/storeWeeklyHours() oben.
+     */
+    public function vacationDays(Request $request, Person $person): View|Response
+    {
+        abort_unless($this->personVisibleInCurrentTenant($request, $person), 404);
+
+        return response()->view('admin.personen.partials.vacation-days-body', [
+            'person' => $person,
+            'canEdit' => $this->personFullyEditableByCurrentUser($request, $person),
+            'history' => $person->vacationDays,
+        ]);
+    }
+
+    public function storeVacationDays(Request $request, Person $person): Response
+    {
+        abort_unless($this->personVisibleInCurrentTenant($request, $person), 404);
+        abort_unless($this->personFullyEditableByCurrentUser($request, $person), 403);
+        $this->abortIfProtectedFromEditing($request, $person);
+        abort_unless($person->user, 422);
+
+        $openEntry = $person->vacationDays->firstWhere('valid_to', null);
+
+        $validator = Validator::make($request->all(), [
+            'days' => ['required', 'numeric', 'between:0,100', 'multiple_of:0.5'],
+            'valid_from' => [$openEntry ? 'required' : 'nullable', 'date'],
+        ], [], ['days' => __('Urlaubstage'), 'valid_from' => __('Start')]);
+
+        $validator->after(function ($validator) use ($openEntry, $request) {
+            if ($openEntry && $openEntry->valid_from !== null && $request->filled('valid_from')
+                && $request->date('valid_from')->lessThanOrEqualTo($openEntry->valid_from)) {
+                $validator->errors()->add('valid_from', __('Der Start muss nach dem Start des bisher letzten Datensatzes liegen (:date).', ['date' => $openEntry->valid_from->format('d.m.Y')]));
+            }
+        });
+
+        if ($validator->fails()) {
+            return response()->view('admin.personen.partials.vacation-days-body', [
+                'person' => $person,
+                'canEdit' => true,
+                'history' => $person->vacationDays,
+                'errors' => $this->viewErrors($validator->errors()),
+            ])->setStatusCode(422);
+        }
+
+        $validated = $validator->validated();
+
+        if ($openEntry) {
+            $openEntry->update(['valid_to' => \Carbon\CarbonImmutable::parse($validated['valid_from'])->subDay()]);
+        }
+
+        PersonVacationDays::query()->create([
+            'tenant_id' => $person->tenant_id,
+            'person_id' => $person->id,
+            'days' => $validated['days'],
+            'valid_from' => $validated['valid_from'] ?? null,
+            'valid_to' => null,
+        ]);
+
+        return response()->view('admin.personen.partials.vacation-days-body', [
+            'person' => $person,
+            'canEdit' => true,
+            'history' => $person->vacationDays()->get(),
         ]);
     }
 

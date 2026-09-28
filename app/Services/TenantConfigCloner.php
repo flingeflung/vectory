@@ -25,7 +25,7 @@ use Illuminate\Support\Facades\DB;
  * Dinge von einem Kunden zum anderen kopieren zu können" (ehemaliger
  * Arbeitgeber hat über 100 Kunden, jedes Mal alles neu anlegen wäre
  * unzumutbar). Bewusst NUR Struktur/Konfiguration, KEINE echten Daten -
- * keine Personen, Projekte, Firmen/Subunternehmer-Einträge, die sind
+ * keine Personen, Projekte, Firmen/Dienstleister-Einträge, die sind
  * wirklich kundenspezifisch (Ralfs eigene Abgrenzung, von ihm bestätigt).
  *
  * Reihenfolge ist wichtig: erst die "blattständigen" Kataloge (keine

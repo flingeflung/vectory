@@ -211,6 +211,19 @@
             {{ __('Produkte') }}
         </a>
 
+        {{-- Ralf, 2026-09-28: neuer Hauptnavigationspunkt "Planung" -
+             rechtegesteuert statt an eine Rolle gebunden, siehe
+             App\Support\PlanningNav. --}}
+        @can('planning.view')
+            <a
+                onclick="return window.navigateOrConfirm(event)"
+                href="{{ route('planung.stunden') }}"
+                class="flex items-center px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('planung.*') ? 'bg-sidebar-active text-sidebar-active-content' : 'text-sidebar-content hover:bg-sidebar-hover hover:text-sidebar-content-hover' }}"
+            >
+                {{ __('Planung') }}
+            </a>
+        @endcan
+
         @can('access-admin')
             <div class="my-2 border-t border-gray-100"></div>
 
