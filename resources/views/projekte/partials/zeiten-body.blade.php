@@ -20,7 +20,18 @@
     ein Unterprojekt) trägt seinen Plan unabhängig - im Verbund gilt implizit der Plan des
     Hauptprojekts für alle, solange kein Unterprojekt einen eigenen hat.
 --}}
-<div id="project-zeiten-body" class="text-sm" x-data="{ subTab: 'uebersicht' }">
+{{-- Ralf, 2026-09-28: "wenn ich oben blättere, soll der Sub-Reiter bestehen
+     bleiben" - gleiches Muster wie window.projectOverlayActiveTab für den
+     Haupt-Reiter (detail.blade.php): globale Variable statt nur lokalem
+     Alpine-State, da ein Projektwechsel dieses Fragment komplett neu rendert
+     (frischer x-data-Start), eine normale Alpine-Persistenz also nichts
+     nützt. --}}
+<div
+    id="project-zeiten-body"
+    class="text-sm"
+    x-data="{ subTab: {{ auth()->user()->can('project.hours.person_breakdown') ? 'window.projectZeitenSubTab || ' : '' }}'uebersicht' }"
+    x-init="$watch('subTab', value => window.projectZeitenSubTab = value)"
+>
     @php($fmt = fn ($hours) => number_format($hours, 2, ',', '.'))
 
     {{-- Unterreiter "Nach Person & Tag" (Ralf, 2026-09-28) - nur sichtbar mit eigenem
@@ -261,7 +272,7 @@
 
     @can('project.hours.person_breakdown')
         <div x-show="subTab === 'personen'" x-cloak>
-            @include('projekte.partials.zeiten-personen-body', ['week' => $zeiten['personBreakdownWeek'], 'breakdown' => $zeiten['personBreakdown']])
+            @include('projekte.partials.zeiten-personen-body', ['week' => $zeiten['personBreakdownWeek'], 'sortBy' => $zeiten['personBreakdownSort'], 'breakdown' => $zeiten['personBreakdown']])
         </div>
     @endcan
 </div>

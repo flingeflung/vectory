@@ -1082,6 +1082,7 @@ class ProjectController extends Controller
             // Request, da zeitenData() auch aus zeitenBodyResponse() (kein Request-Param)
             // aufgerufen wird.
             'personBreakdownWeek' => CarbonImmutable::today()->startOfWeek(),
+            'personBreakdownSort' => 'person',
             'personBreakdown' => auth()->user()?->can('project.hours.person_breakdown')
                 ? $this->zeitenPersonBreakdownData($project, CarbonImmutable::today()->startOfWeek())
                 : null,
@@ -1103,37 +1104,50 @@ class ProjectController extends Controller
         abort_unless($request->user()->can('project.hours.person_breakdown'), 403);
 
         $week = $this->parseIsoWeek($request->query('week'));
+        $sortBy = $request->query('sort') === 'project' ? 'project' : 'person';
 
         return response(view('projekte.partials.zeiten-personen-body', [
             'project' => $project,
             'week' => $week,
-            'breakdown' => $this->zeitenPersonBreakdownData($project, $week),
+            'sortBy' => $sortBy,
+            'breakdown' => $this->zeitenPersonBreakdownData($project, $week, $sortBy),
         ])->render());
     }
 
     /**
      * @return array{isHauptprojekt: bool, days: \Illuminate\Support\Collection, rows: \Illuminate\Support\Collection, dayTotals: array<string, float>, total: float}
      */
-    private function zeitenPersonBreakdownData(Project $project, CarbonImmutable $week): array
+    private function zeitenPersonBreakdownData(Project $project, CarbonImmutable $week, string $sortBy = 'person'): array
     {
         $isHauptprojekt = $project->verbund_rolle === 1;
         $participantIds = [$project->id];
+        // HP zuerst, dann UP nach PN (Ralf, 2026-09-27, gleiche Reihenfolge wie in
+        // der "Je Projekt"-Tabelle/zeitenData()) - eigene Order-Nummer je Projekt-ID
+        // für den Sortiermodus "Projekt - Personen" unten.
+        $projectOrder = [$project->id => 0];
+        // Ralf, 2026-09-28: "bei den Projekten die Bezeichnung" als Tooltip -
+        // Titel gleich mit einsammeln, nicht nur die PN.
+        $projectInfo = collect([$project->id => (object) ['source_pn' => $project->source_pn, 'title' => $project->title]]);
         if ($isHauptprojekt) {
-            $participantIds = array_merge($participantIds, DB::table('projects')
-                ->where('hauptprojekt_id', $project->id)->where('verbund_rolle', 2)->pluck('id')->all());
+            $unterprojekte = DB::table('projects')->where('hauptprojekt_id', $project->id)
+                ->where('verbund_rolle', 2)->orderBy('source_pn')->get(['id', 'source_pn', 'title']);
+            foreach ($unterprojekte as $index => $up) {
+                $participantIds[] = $up->id;
+                $projectOrder[$up->id] = $index + 1;
+                $projectInfo[$up->id] = $up;
+            }
         }
-        $projectLabels = $isHauptprojekt
-            ? DB::table('projects')->whereIn('id', $participantIds)->pluck('source_pn', 'id')
-            : collect();
 
         $days = collect(range(0, 6))->map(fn ($offset) => $week->addDays($offset));
 
+        // Ralf, 2026-09-28: "bei den Personen die Abteilung" als Tooltip.
         $entries = DB::table('job_hours')
             ->join('people', 'people.id', '=', 'job_hours.person_id')
+            ->leftJoin('departments', 'departments.id', '=', 'people.department_id')
             ->whereIn('job_hours.project_id', $participantIds)
             ->whereBetween('job_hours.work_date', [$week->toDateString(), $week->addDays(6)->toDateString()])
             ->where('job_hours.hours', '>', 0)
-            ->get(['job_hours.person_id', 'job_hours.project_id', 'job_hours.work_date', 'job_hours.hours', 'people.first_name', 'people.last_name']);
+            ->get(['job_hours.person_id', 'job_hours.project_id', 'job_hours.work_date', 'job_hours.hours', 'people.first_name', 'people.last_name', 'departments.name as department_name']);
 
         // Am Hauptprojekt zusätzlich nach Unterprojekt aufgeschlüsselt (Ralf, 2026-09-28:
         // "+ UP beim HP") - dieselbe Person taucht dann pro beteiligtem (Unter-)Projekt
@@ -1142,9 +1156,13 @@ class ProjectController extends Controller
         foreach ($entries as $entry) {
             $key = $isHauptprojekt ? $entry->person_id.'|'.$entry->project_id : (string) $entry->person_id;
             if (! isset($rows[$key])) {
+                $entryProject = $projectInfo->get((int) $entry->project_id);
                 $rows[$key] = [
                     'name' => trim($entry->last_name.', '.$entry->first_name, ', '),
-                    'projectLabel' => $isHauptprojekt ? $projectLabels->get((int) $entry->project_id) : null,
+                    'departmentName' => $entry->department_name,
+                    'projectId' => (int) $entry->project_id,
+                    'projectLabel' => $isHauptprojekt ? $entryProject?->source_pn : null,
+                    'projectTitle' => $entryProject?->title,
                     'days' => [],
                     'total' => 0.0,
                 ];
@@ -1155,8 +1173,17 @@ class ProjectController extends Controller
 
         // German-Kollation statt sortBy() (siehe [[vectory_german_collation_sorting]]) -
         // sonst landen Ä/Ö/Ü/ß hinter Z statt an der richtigen alphabetischen Stelle.
+        // Zwei Sortiermodi (Ralf, 2026-09-28): "person" (Standard) = Person zuerst,
+        // Projekt nur als Tiebreaker; "project" = Projekt zuerst (HP vor UP nach PN,
+        // siehe $projectOrder oben), Person innerhalb des Projekts alphabetisch.
         $collator = new \Collator('de_DE');
-        $rows = collect($rows)->values()->sort(fn ($a, $b) => $collator->compare($a['name'], $b['name']).($a['projectLabel'] <=> $b['projectLabel']))->values();
+        $rows = collect($rows)->values()->sort(function ($a, $b) use ($collator, $projectOrder, $sortBy) {
+            if ($sortBy === 'project') {
+                return ($projectOrder[$a['projectId']] <=> $projectOrder[$b['projectId']]) ?: $collator->compare($a['name'], $b['name']);
+            }
+
+            return $collator->compare($a['name'], $b['name']) ?: ($projectOrder[$a['projectId']] <=> $projectOrder[$b['projectId']]);
+        })->values();
 
         $dayTotals = $days->mapWithKeys(fn ($day) => [$day->toDateString() => 0.0])->all();
         foreach ($rows as $row) {
