@@ -36,9 +36,25 @@
         templateId: {{ \Illuminate\Support\Js::from((string) old('project_template_id', $project->project_template_id ?? '')) }},
         hasOwnHours: {{ \Illuminate\Support\Js::from($project->functionGroupHours->isNotEmpty()) }},
         locked: {{ \Illuminate\Support\Js::from($project->functionGroupHours->isNotEmpty()) }},
+        // Ralf-Bug-Report, 2026-09-28: der Speichern-Button kommt nicht mehr, wenn das Dropdown
+        // entsperrt wird - das Schloss ändert 'locked' rein per Alpine, ohne ein echtes
+        // input/change-Event auf #project-detail-form. Der Footer-Speichern-Button (siehe
+        // detail.blade.php) hört aber genau darauf, um seinen eigenen Dirty-Check erneut
+        // auszuführen (fiel vorher nicht auf, weil der Button wegen des Dirty-Snapshot-Bugs
+        // ohnehin dauerhaft sichtbar war). Fix: nach jeder Sperren/Entsperren-Änderung ein
+        // echtes change-Event auf dem Formular auslösen. Wichtig: erst NACH einem Makrotask-Tick
+        // (setTimeout statt direkt) - sonst hat Alpine die eigene :value/:disabled-Reaktion auf
+        // 'locked' noch gar nicht verarbeitet, der Dirty-Check sähe noch den alten DOM-Stand und
+        // hielte den Button fälschlich für nicht nötig. Gleiches Timing-Prinzip wie an anderer
+        // Stelle in app.blade.php dokumentiert (Alpine.nextTick() ist dafür nicht geeignet).
+        async notifyFormChanged() {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            document.getElementById('project-detail-form')?.dispatchEvent(new Event('change', { bubbles: true }));
+        },
         async toggleLock() {
             if (! this.locked) {
                 this.locked = true;
+                await this.notifyFormChanged();
                 return;
             }
             if (! await window.confirmDialog({
@@ -48,6 +64,7 @@
                 cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
             })) { return; }
             this.locked = false;
+            await this.notifyFormChanged();
         },
     }"
     x-on:planstunden-linked-state-changed.window="hasOwnHours = true; locked = true;"
