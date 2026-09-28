@@ -13,11 +13,19 @@ use Illuminate\View\View;
 /**
  * Slice 2 der Zeiterfassung/Ressourcenplanung-Idee (Ralf, 2026-09-27, siehe
  * Roadmap-Backlog): Stunden direkt im Projekt buchen. Jede Person bucht nur
- * ihre EIGENEN Stunden (wie in der klassischen Zeiterfassung), auf einen
- * Job, der sowohl am Projekt verknüpft (project_job_types, Slice 1) als
- * auch ihr selbst zugewiesen ist (person_job_types) - die Schnittmenge.
- * Schreibt in dieselbe job_hours-Tabelle wie die klassische Zeiterfassung,
- * nur mit gesetzter project_id (siehe Migrations-Kommentar).
+ * ihre EIGENEN Stunden (wie in der klassischen Zeiterfassung), auf einen der
+ * am Projekt verknüpften Jobs (project_job_types, Slice 1).
+ *
+ * Ralf-Korrektur, 2026-09-28: bookableJobs() verglich das bisher zusätzlich
+ * mit person_job_types ("Meine Jobs" / "Job-Anzeigefilter") - konzeptionell
+ * falsch. person_job_types ist ein reiner ANZEIGEFILTER fürs eigene
+ * Wochenraster (welche Jobs man dort sieht), keine Buchungs-Berechtigung.
+ * Wer Zugriff auf einen Kunden hat, darf auf jeden dort einem Projekt
+ * verknüpften Job buchen, unabhängig von der eigenen Anzeige-Auswahl (Vietto-
+ * Vorbild: "Job hinzufügen/entfernen" zeigt dort ebenfalls den kompletten
+ * Katalog, rein zur Übersichtlichkeit der eigenen Ansicht). Schreibt in
+ * dieselbe job_hours-Tabelle wie die klassische Zeiterfassung, nur mit
+ * gesetzter project_id (siehe Migrations-Kommentar).
  */
 class ProjectHourController extends Controller
 {
@@ -226,9 +234,9 @@ class ProjectHourController extends Controller
     }
 
     /**
-     * Schnittmenge: am Projekt verknüpfte Jobs (Slice 1), die außerdem
-     * dieser Person selbst zugewiesen sind (wie in der klassischen
-     * Zeiterfassung) - nur die darf sie hier buchen.
+     * Alle am Projekt verknüpften (aktiven) Jobs (Slice 1) - buchbar für
+     * JEDE Person mit Zugriff auf diesen Kunden, unabhängig von deren
+     * eigenem Job-Anzeigefilter (person_job_types, siehe Klassen-Docblock).
      */
     private function bookableJobs(int $projectId, ?int $personId, int $tenantId)
     {
@@ -238,11 +246,6 @@ class ProjectHourController extends Controller
 
         return DB::table('project_job_types')
             ->join('job_types', 'job_types.id', '=', 'project_job_types.job_type_id')
-            ->join('person_job_types', function ($join) use ($personId, $tenantId) {
-                $join->on('person_job_types.job_type_id', '=', 'job_types.id')
-                    ->where('person_job_types.person_id', $personId)
-                    ->where('person_job_types.tenant_id', $tenantId);
-            })
             ->leftJoin('job_groups', function ($join) use ($tenantId) {
                 $join->on('job_groups.id', '=', 'job_types.job_group_id')->where('job_groups.tenant_id', '=', $tenantId);
             })

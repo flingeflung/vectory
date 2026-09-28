@@ -76,7 +76,10 @@
             @endif
         </p>
     @elseif ($bookableJobs->isEmpty())
-        <p class="text-gray-500">{{ __('Keiner der für dieses Projekt verknüpften Jobs ist Ihnen selbst zugewiesen - buchen können Sie deshalb hier nicht. Die eigenen Jobs lassen sich in der Zeiterfassung anpassen.') }}</p>
+        {{-- Ralf-Korrektur, 2026-09-28: bookableJobs() vergleicht nicht mehr mit dem
+             eigenen Job-Anzeigefilter (siehe ProjectHourController-Docblock) - dieser
+             Zweig greift jetzt nur noch, wenn die verknüpften Jobs allesamt inaktiv sind. --}}
+        <p class="text-gray-500">{{ __('Die für dieses Projekt verknüpften Jobs sind alle inaktiv - buchen können Sie deshalb hier nicht.') }}</p>
     @else
         @if ($entries->isEmpty())
             <p class="mb-2 text-gray-400">{{ __('Noch keine eigenen Buchungen an diesem Projekt.') }}</p>

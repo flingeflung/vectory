@@ -67,7 +67,7 @@
                     <input type="checkbox" x-model="showWeekends" @change="saveWeekendPreference($event)" :disabled="savingWeekends" class="rounded border-gray-300">
                     {{ __('Sa/So anzeigen') }}
                 </label>
-                <button type="button" x-data @click="$dispatch('open-modal', 'jobload-jobs')" class="ml-auto rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Anpassen') }}</button>
+                <button type="button" x-data @click="$dispatch('open-modal', 'jobload-jobs')" class="ml-auto rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Job-Anzeigefilter') }}</button>
             </div>
 
             <form id="jobload-hours-form" method="POST" action="{{ route('jobload.hours') }}" x-data="{ dirty: false }" x-init="window.adminPageIsDirty = () => dirty" @input="dirty = window.formIsDirty($el)" @change="dirty = window.formIsDirty($el)" @submit="dirty = false" class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
@@ -137,7 +137,7 @@
                                     </tr>
                                 @endforeach
                             @empty
-                                <tr><td colspan="23" class="px-3 py-6 text-center text-gray-500">{{ __('Noch keine Jobs ausgewählt. Über „Anpassen“ können Sie verfügbare Jobs hinzufügen.') }}</td></tr>
+                                <tr><td colspan="23" class="px-3 py-6 text-center text-gray-500">{{ __('Noch keine Jobs ausgewählt. Über „Job-Anzeigefilter“ können Sie welche einblenden.') }}</td></tr>
                             @endforelse
                         </tbody>
                         <tfoot class="bg-gray-50 font-medium text-gray-800">
@@ -177,10 +177,15 @@
             @csrf
             <input type="hidden" name="week" value="{{ $weekValue }}">
             <div class="flex shrink-0 items-center justify-between border-b border-gray-200 bg-gray-100 px-4 py-2" data-drag-handle title="{{ __('Ziehen zum Verschieben') }}">
-                <h2 class="text-sm font-semibold text-gray-900">{{ __('Jobs anpassen') }}</h2>
+                <h2 class="text-sm font-semibold text-gray-900">{{ __('Angezeigte Jobs') }}</h2>
                 <button type="button" @click="$dispatch('close-modal', 'jobload-jobs')" class="text-gray-500 hover:text-gray-700" aria-label="{{ __('Schließen') }}">×</button>
             </div>
             <div class="min-h-0 space-y-2 overflow-y-auto p-4 text-sm">
+                {{-- Ralf, 2026-09-28: "Anpassen" klang nach "darf/darf nicht" - ist aber nur
+                     eine Anzeige-Auswahl fürs eigene Wochenraster. Wer Zugriff auf einen
+                     Kunden hat, kann trotzdem auf jeden dort verknüpften Job buchen (siehe
+                     ProjectHourController), unabhängig von dieser Auswahl. --}}
+                <p class="mb-2 text-xs text-gray-500">{{ __('Bestimmt nur, welche Jobs hier in Ihrer eigenen Übersicht erscheinen - keine Einschränkung, was Sie buchen dürfen.') }}</p>
                 @forelse ($availableJobs->groupBy(fn ($job) => $job->group_name ?? __('Ohne Gruppe')) as $groupName => $groupJobs)
                     <div class="pt-2 text-sm font-semibold text-gray-700">{{ $groupName }}</div>
                     @foreach ($groupJobs as $job)
