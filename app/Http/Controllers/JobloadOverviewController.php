@@ -30,14 +30,16 @@ class JobloadOverviewController extends Controller
         $job = DB::table('job_types')->where('tenant_id', $tenantId)->find($data['job_id']);
         abort_unless($job, 404);
 
-        $canViewAll = $user->can('jobload.overview.view_all');
+        // Ralf, 2026-09-28: "view_all" in zwei Rechte aufgeteilt - hier geht es nur
+        // darum, ob man ANDERE einzelne Personen sehen darf (siehe Migration).
+        $canViewOthers = $user->can('jobload.overview.view_others');
         $query = DB::table('job_hours')
             ->join('people', 'people.id', '=', 'job_hours.person_id')
             ->where('job_hours.tenant_id', $tenantId)
             ->where('job_hours.job_type_id', $job->id)
             ->whereBetween('job_hours.work_date', [$start->toDateString(), $start->addDays(6)->toDateString()])
             ->where('job_hours.hours', '>', 0);
-        if (! $canViewAll) {
+        if (! $canViewOthers) {
             $query->where('job_hours.person_id', $user->person_id);
         } elseif (isset($data['person_id'])) {
             $query->where('job_hours.person_id', $data['person_id']);
@@ -71,7 +73,11 @@ class JobloadOverviewController extends Controller
         $timeGrid = (int) DB::table('tenants')->where('id', $tenantId)->value('jobload_time_grid');
         $hourDecimals = match ($timeGrid) { 60 => 0, 30 => 1, default => 2 };
         $ownPersonId = (int) $user->person_id;
-        $canViewAll = $user->can('jobload.overview.view_all');
+        // Ralf, 2026-09-28: "view_all" aufgeteilt (siehe Migration) - andere einzelne
+        // Personen sehen (personenbezogen) und die kundenweite Jobgruppen-Auswertung
+        // (aggregiert, ohne Personenbezug) sind zwei unabhängige Rechte geworden.
+        $canViewOthers = $user->can('jobload.overview.view_others');
+        $canViewCustomerSummary = $user->can('jobload.overview.customer_summary');
 
         $filters = $request->validate([
             'year' => ['nullable', 'integer', 'between:2000,2100'],
@@ -84,8 +90,8 @@ class JobloadOverviewController extends Controller
         $currentWeekKey = sprintf('%04d-W%02d', CarbonImmutable::today()->isoWeekYear(), CarbonImmutable::today()->isoWeek());
         $mode = $filters['mode'] ?? 'person';
         // Ralf, 2026-09-19: die Auswertung nach Jobgruppen gilt über alle Stunden des
-        // Kunden - deshalb nur mit dem Recht "alle Personen + Auswertung sehen".
-        if ($mode === 'group' && ! $canViewAll) {
+        // Kunden - deshalb nur mit dem Recht für die kundenweite Auswertung.
+        if ($mode === 'group' && ! $canViewCustomerSummary) {
             $mode = 'person';
         }
         $start = CarbonImmutable::now()->setISODate($year, 1)->startOfWeek();
@@ -93,7 +99,7 @@ class JobloadOverviewController extends Controller
 
         if ($mode === 'group') {
             return view('jobload.overview', $this->groupEvaluation($tenantId, $start, $end, $filters['group_id'] ?? null, $hourDecimals) + [
-                'year' => $year, 'mode' => $mode, 'canViewAll' => $canViewAll,
+                'year' => $year, 'mode' => $mode, 'canViewOthers' => $canViewOthers, 'canViewCustomerSummary' => $canViewCustomerSummary,
             ]);
         }
 
@@ -107,7 +113,7 @@ class JobloadOverviewController extends Controller
             // in der Personen-Auswahl sinnlos.
             ->whereIn('people.id', DB::table('users')->select('person_id')->whereNotNull('person_id'))
             ->orderBy('last_name')->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'active']);
-        if (! $canViewAll) {
+        if (! $canViewOthers) {
             $people = $people->where('id', $ownPersonId)->values();
         }
         // Ralf, 2026-09-19: Personen ohne Einträge im gewählten Jahr sind in der
@@ -124,7 +130,7 @@ class JobloadOverviewController extends Controller
             || ($peopleWithEntries->has($person->id) && ($showInactive || $person->active)))->values();
         $peopleById = $people->keyBy('id');
         $personId = (int) ($filters['person_id'] ?? $ownPersonId);
-        if (! $canViewAll || ! $peopleById->has($personId)) {
+        if (! $canViewOthers || ! $peopleById->has($personId)) {
             $personId = $ownPersonId;
         }
 
@@ -158,7 +164,7 @@ class JobloadOverviewController extends Controller
             ->where('work_date', '>=', $start->toDateString())
             ->where('work_date', '<', $end->toDateString())
             ->where('hours', '>', 0);
-        if ($mode === 'person' || ! $canViewAll) {
+        if ($mode === 'person' || ! $canViewOthers) {
             $entries->where('person_id', $mode === 'person' ? $personId : $ownPersonId);
         }
         if ($mode === 'job' && $jobId !== null) {
@@ -202,7 +208,7 @@ class JobloadOverviewController extends Controller
 
 
         return view('jobload.overview', compact(
-            'year', 'currentWeekKey', 'mode', 'people', 'showInactive', 'personId', 'jobs', 'jobId', 'canViewAll',
+            'year', 'currentWeekKey', 'mode', 'people', 'showInactive', 'personId', 'jobs', 'jobId', 'canViewOthers', 'canViewCustomerSummary',
             'weeks', 'monthSegments', 'rows', 'weekTotals', 'yearTotal', 'hourDecimals'
         ));
     }

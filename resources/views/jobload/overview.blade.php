@@ -9,7 +9,7 @@
                 <legend class="sr-only">{{ __('Darstellung') }}</legend>
                 <label class="flex items-center gap-1.5"><input type="radio" name="mode" value="person" onchange="window.submitJobloadOverview(this.form)" @checked($mode === 'person') class="border-gray-300 text-btn-primary">{{ __('Nach Personen') }}</label>
                 <label class="flex items-center gap-1.5"><input type="radio" name="mode" value="job" onchange="window.submitJobloadOverview(this.form)" @checked($mode === 'job') class="border-gray-300 text-btn-primary">{{ __('Nach Themen') }}</label>
-                @if ($canViewAll)
+                @if ($canViewCustomerSummary)
                     <label class="flex items-center gap-1.5"><input type="radio" name="mode" value="group" onchange="window.submitJobloadOverview(this.form)" @checked($mode === 'group') class="border-gray-300 text-btn-primary">{{ __('Nach Jobgruppen') }}</label>
                 @endif
             </fieldset>
@@ -24,7 +24,7 @@
                         @endforeach
                     </select>
                 </label>
-                @if ($canViewAll)
+                @if ($canViewOthers)
                     <label class="flex items-center gap-1.5 text-gray-600">
                         <input type="checkbox" name="show_inactive" value="1" @checked($showInactive) onchange="window.submitJobloadOverview(this.form)" class="rounded border-gray-300">
                         {{ __('Inaktive zeigen') }}
