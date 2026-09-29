@@ -54,9 +54,6 @@ class PlanningController extends Controller
             ->flatMap(fn (Person $item) => $this->overlappingWeeklyHours($item, $yearStart, $yearEnd))
             ->max(fn (PersonWeeklyHours $row) => (float) $row->hours) ?? 0);
         $yMax = (int) ceil($highestWeeklyHours / 10) * 10;
-        if ($highestWeeklyHours > 0 && $highestWeeklyHours < 40 && fmod($highestWeeklyHours, 10.0) === 0.0) {
-            $yMax += 10;
-        }
         $yMax = max(10, $yMax);
         $points = collect();
 
