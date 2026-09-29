@@ -30,12 +30,14 @@
                 <tr class="border-b border-gray-200">
                     <x-sortable-th field="name" :sort="$sort" :direction="$direction" :compact="true">{{ __('Name') }}</x-sortable-th>
                     <x-sortable-th field="department" :sort="$sort" :direction="$direction" :compact="true">{{ __('Abteilung') }}</x-sortable-th>
+                    <x-sortable-th field="annotation" :sort="$sort" :direction="$direction" :compact="true"><span title="{{ __('Anmerkungen') }}">{{ __('Anm.') }}</span></x-sortable-th>
                     <x-sortable-th field="wost" :sort="$sort" :direction="$direction" align="right" :compact="true">{{ __('WoStd') }}</x-sortable-th>
                     <x-sortable-th field="workdays" :sort="$sort" :direction="$direction" align="right" :compact="true">
                         <span title="{{ __('Reine Wochentage (Mo-Fr) des Jahres - ohne Feiertage oder Krankheitstage abzuziehen.') }}">{{ __('Arbeitstage') }}</span>
                     </x-sortable-th>
                     <x-sortable-th field="vacation_hours" :sort="$sort" :direction="$direction" align="right" :compact="true">{{ __('Urlaub (Std)') }}</x-sortable-th>
                     <x-sortable-th field="annual_hours" :sort="$sort" :direction="$direction" align="right" :compact="true">{{ __('Jahresstd.') }}</x-sortable-th>
+                    <x-sortable-th field="base_load" :sort="$sort" :direction="$direction" align="right" :compact="true">{{ __('Grundlast') }}</x-sortable-th>
                 </tr>
             </thead>
             <tbody>
@@ -51,20 +53,27 @@
                             </div>
                         </td>
                         <td class="px-3 py-1.5 text-gray-500">{{ $row['department'] ?: '–' }}</td>
+                        <td class="px-3 py-1.5 text-xs whitespace-nowrap">
+                            @if ($row['inactive'])<span class="font-medium text-red-600">{{ __('Inaktiv') }}</span>@endif
+                            @if ($row['inactive'] && $row['annotation'] !== ''), @endif
+                            @if ($row['annotation'] !== '')<span class="text-gray-500">{{ $row['annotation'] }}</span>@elseif (! $row['inactive'])<span class="text-gray-400">–</span>@endif
+                        </td>
                         <td class="px-3 py-1.5 text-right tabular-nums">{{ $fmt($row['wost']) }}</td>
-                        <td class="px-3 py-1.5 text-right tabular-nums text-gray-500">{{ $totalWorkdays }}</td>
+                        <td class="px-3 py-1.5 text-right tabular-nums text-gray-500">{{ $row['workdays'] }}</td>
                         <td class="px-3 py-1.5 text-right tabular-nums text-gray-500">{{ $fmt($row['vacationHours']) }}</td>
                         <td class="px-3 py-1.5 text-right font-medium tabular-nums">{{ $fmt($row['jahresstd']) }}</td>
+                        <td class="px-3 py-1.5 text-right font-medium tabular-nums">{{ $fmt($row['baseLoad']) }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">{{ __('Für :year sind keine Personen sichtbar - entweder ist bei niemandem "Ressourcenplanung" angehakt, oder es fehlen gültige Wochenstunden-Daten für dieses Jahr.', ['year' => $year]) }}</td></tr>
+                    <tr><td colspan="8" class="px-4 py-8 text-center text-gray-400">{{ __('Für :year sind keine Personen sichtbar - entweder ist bei niemandem "Ressourcenplanung" angehakt, oder es fehlen gültige Wochenstunden-Daten für dieses Jahr.', ['year' => $year]) }}</td></tr>
                 @endforelse
             </tbody>
             @if ($rows->isNotEmpty())
                 <tfoot class="bg-gray-50 font-semibold text-gray-800">
                     <tr class="border-t-2 border-gray-500">
-                        <td class="px-3 py-2" colspan="5">{{ __('Summe') }}</td>
+                        <td class="px-3 py-2" colspan="6">{{ __('Summe') }}</td>
                         <td class="px-3 py-2 text-right tabular-nums">{{ $fmt($total) }}</td>
+                        <td class="px-3 py-2 text-right tabular-nums">{{ $fmt($baseLoadTotal) }}</td>
                     </tr>
                 </tfoot>
             @endif

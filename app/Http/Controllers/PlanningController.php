@@ -24,7 +24,7 @@ use Illuminate\View\View;
  */
 class PlanningController extends Controller
 {
-    private const HOURS_SORTABLE_COLUMNS = ['name', 'department', 'wost', 'workdays', 'vacation_hours', 'annual_hours'];
+    private const HOURS_SORTABLE_COLUMNS = ['name', 'department', 'annotation', 'wost', 'workdays', 'vacation_hours', 'annual_hours', 'base_load'];
 
     public function grundlast(Request $request, PlanningBaseLoadCalculator $calculator): View
     {
@@ -93,7 +93,13 @@ class PlanningController extends Controller
         $personId = $request->integer('person');
         $person = $people->firstWhere('id', $personId) ?? $people->first();
         $highestWeeklyHours = (float) ($people
-            ->flatMap(fn (Person $item) => $this->overlappingWeeklyHours($item, $yearStart, $yearEnd))
+            ->flatMap(function (Person $item) use ($yearStart, $yearEnd) {
+                [$employmentStart, $employmentEnd] = $this->employmentPeriod($item, $yearStart, $yearEnd);
+
+                return $employmentStart->lessThanOrEqualTo($employmentEnd)
+                    ? $this->overlappingWeeklyHours($item, $employmentStart, $employmentEnd)
+                    : collect();
+            })
             ->max(fn (PersonWeeklyHours $row) => (float) $row->hours) ?? 0);
         $yMax = (int) ceil($highestWeeklyHours / 10) * 10;
         $yMax = max(10, $yMax);
@@ -101,28 +107,37 @@ class PlanningController extends Controller
 
         if ($person) {
             $daysInYear = $yearStart->diffInDays($yearEnd) + 1;
-            $points = $this->overlappingWeeklyHours($person, $yearStart, $yearEnd)
-                ->map(function (PersonWeeklyHours $row) use ($yearStart) {
-                    $start = $row->valid_from
-                        ? CarbonImmutable::parse($row->valid_from->toDateString())->max($yearStart)
-                        : $yearStart;
+            [$employmentStart, $employmentEnd] = $this->employmentPeriod($person, $yearStart, $yearEnd);
+            if ($employmentStart->greaterThan($employmentEnd)) {
+                $points = collect([['x' => 0, 'y' => 0], ['x' => $daysInYear, 'y' => 0, 'terminal' => true]]);
+            } else {
+                if ($employmentStart->greaterThan($yearStart)) {
+                    $points->push(['x' => 0, 'y' => 0]);
+                }
+                $this->overlappingWeeklyHours($person, $employmentStart, $employmentEnd)
+                    ->each(function (PersonWeeklyHours $row) use ($employmentStart, $points, $yearStart) {
+                        $start = $row->valid_from
+                            ? CarbonImmutable::parse($row->valid_from->toDateString())->max($employmentStart)
+                            : $employmentStart;
+                        $points->push([
+                            'x' => $yearStart->diffInDays($start),
+                            'y' => (float) $row->hours,
+                        ]);
+                    });
 
-                    return [
-                        'x' => $yearStart->diffInDays($start),
-                        'y' => (float) $row->hours,
-                    ];
-                })
-                ->values();
-
-            if ($points->isNotEmpty()) {
-                $points->push(['x' => $daysInYear, 'y' => $points->last()['y'], 'terminal' => true]);
+                if ($points->isNotEmpty() && $employmentEnd->lessThan($yearEnd)) {
+                    $points->push(['x' => $yearStart->diffInDays($employmentEnd->addDay()), 'y' => 0]);
+                }
+                if ($points->isNotEmpty()) {
+                    $points->push(['x' => $daysInYear, 'y' => $points->last()['y'], 'terminal' => true]);
+                }
             }
         }
 
         return view('planning.arbeitszeit', compact('years', 'year', 'people', 'person', 'points', 'yMax'));
     }
 
-    public function stunden(Request $request): View
+    public function stunden(Request $request, PlanningBaseLoadCalculator $baseLoadCalculator): View
     {
         abort_unless($request->user()->can('planning.view'), 403);
 
@@ -151,6 +166,10 @@ class PlanningController extends Controller
         $yearStart = CarbonImmutable::create($year, 1, 1)->startOfDay();
         $yearEnd = CarbonImmutable::create($year, 12, 31)->startOfDay();
         $totalWorkdays = $this->countWeekdays($yearStart, $yearEnd);
+        $baseLoads = PlanningBaseLoad::query()
+            ->where('tenant_id', $tenantId)
+            ->where('year', $year)
+            ->get();
         $sort = in_array($request->query('sort'), self::HOURS_SORTABLE_COLUMNS, true)
             ? $request->query('sort')
             : 'name';
@@ -168,22 +187,46 @@ class PlanningController extends Controller
             ->get();
 
         $collator = new \Collator('de_DE');
-        $rows = $people->map(function (Person $person) use ($yearStart, $yearEnd, $totalWorkdays) {
-            $brutto = $this->overlappingSum($person->weeklyHours, $yearStart, $yearEnd, fn (PersonWeeklyHours $row, int $segmentWorkdays) => $segmentWorkdays * ((float) $row->hours / 5));
-            if ($brutto === null) {
-                return null;
-            }
+        $rows = $people->map(function (Person $person) use ($baseLoadCalculator, $baseLoads, $yearStart, $yearEnd, $totalWorkdays) {
+            $employmentStart = $person->start_date
+                ? CarbonImmutable::parse($person->start_date->toDateString())->max($yearStart)
+                : $yearStart;
+            $employmentEnd = $person->end_date
+                ? CarbonImmutable::parse($person->end_date->toDateString())->min($yearEnd)
+                : $yearEnd;
+            $employmentWorkdays = $employmentStart->lessThanOrEqualTo($employmentEnd)
+                ? $this->countWeekdays($employmentStart, $employmentEnd)
+                : 0;
 
-            $effectiveWoSt = $totalWorkdays > 0 ? $brutto / $totalWorkdays * 5 : 0.0;
+            if ($employmentWorkdays === 0) {
+                $brutto = 0.0;
+                $effectiveWoSt = 0.0;
+            } else {
+                $brutto = $this->overlappingSum($person->weeklyHours, $employmentStart, $employmentEnd, fn (PersonWeeklyHours $row, int $segmentWorkdays) => $segmentWorkdays * ((float) $row->hours / 5));
+                if ($brutto === null) {
+                    return null;
+                }
+                $effectiveWoSt = $brutto / $employmentWorkdays * 5;
+            }
 
             // Urlaubstage-Historie (Ralf, 2026-09-28): ändert sich der
             // Jahresanspruch innerhalb des Jahres, wird er anteilig nach
             // Arbeitstagen der jeweiligen Gültigkeit geblendet (analog zu
             // einer unterjährigen Anpassung) - dieselbe Denkweise wie bei
             // den Wochenstunden.
-            $vacationDaysEffective = $this->overlappingSum($person->vacationDays, $yearStart, $yearEnd, fn (PersonVacationDays $row, int $segmentWorkdays) => $totalWorkdays > 0 ? (float) $row->days * $segmentWorkdays / $totalWorkdays : 0.0) ?? 0.0;
+            $vacationDaysEffective = $employmentWorkdays > 0
+                ? $this->overlappingSum($person->vacationDays, $employmentStart, $employmentEnd, fn (PersonVacationDays $row, int $segmentWorkdays) => $totalWorkdays > 0 ? (float) $row->days * $segmentWorkdays / $totalWorkdays : 0.0) ?? 0.0
+                : 0.0;
             $vacationHours = $vacationDaysEffective * $effectiveWoSt / 5;
             $netto = $brutto - $vacationHours;
+            $annotations = collect();
+            if ($person->start_date && $person->start_date->year === $yearStart->year) {
+                $annotations->push(__('ab :date', ['date' => $person->start_date->format('d.m.Y')]));
+            }
+            if ($person->end_date && $person->end_date->year === $yearStart->year) {
+                $annotations->push(__('bis :date', ['date' => $person->end_date->format('d.m.Y')]));
+            }
+            $baseLoad = $baseLoadCalculator->totals($baseLoads, $yearStart->year, $employmentStart, $employmentEnd)['yearly'];
 
             return [
                 'personId' => $person->id,
@@ -191,19 +234,26 @@ class PlanningController extends Controller
                 'lastName' => $person->last_name,
                 'sortKey' => $person->last_name.', '.$person->first_name,
                 'department' => $person->department?->name ?? '',
+                'annotation' => $annotations->implode(', '),
+                'annotationSort' => collect([! $person->active ? __('Inaktiv') : null, ...$annotations])->filter()->implode(', '),
+                'inactive' => ! $person->active,
                 'wost' => $effectiveWoSt,
+                'workdays' => $employmentWorkdays,
                 'vacationHours' => $vacationHours,
                 'jahresstd' => $netto,
+                'baseLoad' => $baseLoad,
             ];
         })
             ->filter()
-            ->sort(function ($a, $b) use ($collator, $direction, $sort, $totalWorkdays) {
+            ->sort(function ($a, $b) use ($collator, $direction, $sort) {
                 $result = match ($sort) {
                     'department' => $collator->compare($a['department'], $b['department']),
+                    'annotation' => $collator->compare($a['annotationSort'], $b['annotationSort']),
                     'wost' => $a['wost'] <=> $b['wost'],
-                    'workdays' => $totalWorkdays <=> $totalWorkdays,
+                    'workdays' => $a['workdays'] <=> $b['workdays'],
                     'vacation_hours' => $a['vacationHours'] <=> $b['vacationHours'],
                     'annual_hours' => $a['jahresstd'] <=> $b['jahresstd'],
+                    'base_load' => $a['baseLoad'] <=> $b['baseLoad'],
                     default => $collator->compare($a['sortKey'], $b['sortKey']),
                 };
                 if ($result === 0 && $sort !== 'name') {
@@ -215,8 +265,9 @@ class PlanningController extends Controller
             ->values();
 
         $total = (float) $rows->sum('jahresstd');
+        $baseLoadTotal = (float) $rows->sum('baseLoad');
 
-        return view('planning.stunden', compact('years', 'year', 'totalWorkdays', 'rows', 'total', 'sort', 'direction'));
+        return view('planning.stunden', compact('years', 'year', 'totalWorkdays', 'rows', 'total', 'baseLoadTotal', 'sort', 'direction'));
     }
 
     private function planningYears($personIds, Request $request): array
@@ -242,6 +293,21 @@ class PlanningController extends Controller
 
             return $rowStart->lessThanOrEqualTo($yearEnd) && $rowEnd->greaterThanOrEqualTo($yearStart);
         })->values();
+    }
+
+    /**
+     * @return array{0: CarbonImmutable, 1: CarbonImmutable}
+     */
+    private function employmentPeriod(Person $person, CarbonImmutable $yearStart, CarbonImmutable $yearEnd): array
+    {
+        $start = $person->start_date
+            ? CarbonImmutable::parse($person->start_date->toDateString())->max($yearStart)
+            : $yearStart;
+        $end = $person->end_date
+            ? CarbonImmutable::parse($person->end_date->toDateString())->min($yearEnd)
+            : $yearEnd;
+
+        return [$start, $end];
     }
 
     /**

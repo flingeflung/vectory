@@ -13,16 +13,26 @@ class PlanningBaseLoadCalculator
      * @param  iterable<PlanningBaseLoad>  $baseLoads
      * @return array{yearly: float, weekly: float}
      */
-    public function totals(iterable $baseLoads, int $year): array
-    {
+    public function totals(
+        iterable $baseLoads,
+        int $year,
+        ?CarbonImmutable $availableFrom = null,
+        ?CarbonImmutable $availableTo = null
+    ): array {
         $yearStart = CarbonImmutable::create($year, 1, 1);
         $yearEnd = CarbonImmutable::create($year, 12, 31);
         $yearWorkdays = $this->countWeekdays($yearStart, $yearEnd);
+        $periodStart = $availableFrom?->max($yearStart) ?? $yearStart;
+        $periodEnd = $availableTo?->min($yearEnd) ?? $yearEnd;
         $yearly = 0.0;
 
+        if ($periodStart->greaterThan($periodEnd)) {
+            return ['yearly' => 0.0, 'weekly' => 0.0];
+        }
+
         foreach ($baseLoads as $baseLoad) {
-            $validFrom = CarbonImmutable::parse($baseLoad->valid_from)->max($yearStart);
-            $validTo = CarbonImmutable::parse($baseLoad->valid_to)->min($yearEnd);
+            $validFrom = CarbonImmutable::parse($baseLoad->valid_from)->max($periodStart);
+            $validTo = CarbonImmutable::parse($baseLoad->valid_to)->min($periodEnd);
             if ($validFrom->greaterThan($validTo) || $yearWorkdays === 0) {
                 continue;
             }
