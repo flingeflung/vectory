@@ -63,7 +63,7 @@
                             <input type="text" readonly value="{{ number_format($yearlyTotal, 2, ',', '.') }}" class="w-24 rounded-md border-gray-300 bg-gray-50 py-1 text-right text-sm font-medium tabular-nums text-gray-800">
                         </label>
                     </div>
-                    <p class="text-right text-xs text-gray-400">{{ __('Berechnung mit 52 Standard-Wochen pro Jahr.') }}</p>
+                    <p class="text-right text-xs text-gray-400">{{ __('Berechnung mit :count Standard-Wochen pro Jahr.', ['count' => $standardWeeks]) }}</p>
                 </div>
             </div>
             <p class="max-w-3xl text-xs text-gray-500">

@@ -6,6 +6,7 @@ use App\Models\Person;
 use App\Models\PersonVacationDays;
 use App\Models\PersonWeeklyHours;
 use App\Models\PlanningBaseLoad;
+use App\Services\PlanningBaseLoadCalculator;
 use App\Support\CurrentTenant;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -25,7 +26,7 @@ class PlanningController extends Controller
 {
     private const HOURS_SORTABLE_COLUMNS = ['name', 'department', 'wost', 'workdays', 'vacation_hours', 'annual_hours'];
 
-    public function grundlast(Request $request): View
+    public function grundlast(Request $request, PlanningBaseLoadCalculator $calculator): View
     {
         abort_unless($request->user()->can('planning.view'), 403);
 
@@ -50,26 +51,17 @@ class PlanningController extends Controller
             ->orderBy('valid_from')
             ->orderBy('name')
             ->get();
-        $yearStart = CarbonImmutable::create($year, 1, 1);
-        $yearEnd = CarbonImmutable::create($year, 12, 31);
-        $yearWorkdays = $this->countWeekdays($yearStart, $yearEnd);
-        $weightedValue = fn (PlanningBaseLoad $baseLoad) => $yearWorkdays > 0
-            ? (float) $baseLoad->value * $this->countWeekdays(
-                CarbonImmutable::parse($baseLoad->valid_from->toDateString()),
-                CarbonImmutable::parse($baseLoad->valid_to->toDateString())
-            ) / $yearWorkdays
-            : 0.0;
-        $yearlyTotal = (float) $baseLoads->sum(
-            fn (PlanningBaseLoad $baseLoad) => $weightedValue($baseLoad) * ($baseLoad->calculation_type === 'weekly' ? 52 : 1)
-        );
-        $weeklyTotal = $yearlyTotal / 52;
+        $totals = $calculator->totals($baseLoads, $year);
+        $weeklyTotal = $totals['weekly'];
+        $yearlyTotal = $totals['yearly'];
+        $standardWeeks = PlanningBaseLoadCalculator::STANDARD_WEEKS_PER_YEAR;
         $previousYearCount = PlanningBaseLoad::query()
             ->where('tenant_id', $tenantId)
             ->where('year', $year - 1)
             ->count();
         $tenant = CurrentTenant::current();
 
-        return view('planning.grundlast', compact('years', 'year', 'baseLoads', 'weeklyTotal', 'yearlyTotal', 'previousYearCount', 'tenant'));
+        return view('planning.grundlast', compact('years', 'year', 'baseLoads', 'weeklyTotal', 'yearlyTotal', 'standardWeeks', 'previousYearCount', 'tenant'));
     }
 
     public function arbeitszeit(Request $request): View
