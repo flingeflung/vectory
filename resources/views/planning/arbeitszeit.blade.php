@@ -43,7 +43,8 @@
                     const yearStart = Date.UTC(year, 0, 1);
                     const monthStarts = Array.from({ length: 13 }, (_, month) => (Date.UTC(year, month, 1) - yearStart) / dayMs);
                     const monthCenters = monthStarts.slice(0, 12).map((start, month) => (start + monthStarts[month + 1]) / 2);
-                    const monthLabels = [{{ collect(range(1, 12))->map(fn ($month) => \Illuminate\Support\Js::from(\Carbon\CarbonImmutable::create($year, $month, 1)->locale(app()->getLocale())->isoFormat('MMM')))->implode(', ') }}];
+                    const monthFormatter = new Intl.DateTimeFormat(document.documentElement.lang || 'de-DE', { month: 'short', timeZone: 'UTC' });
+                    const monthLabels = Array.from({ length: 12 }, (_, month) => monthFormatter.format(new Date(Date.UTC(year, month, 1))));
 
                     return {
                         async init() {
