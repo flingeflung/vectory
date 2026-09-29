@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\CopyTemplateController;
 use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\FunctionGroupController;
 use App\Http\Controllers\Admin\HelpArticleController;
+use App\Http\Controllers\Admin\HolidayController;
 use App\Http\Controllers\Admin\JobTypeController;
 use App\Http\Controllers\Admin\LegacyRoleController;
 use App\Http\Controllers\Admin\MailTemplateController;
@@ -217,6 +218,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage::class])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/feiertage', [HolidayController::class, 'index'])->name('feiertage');
+    Route::post('/feiertage', [HolidayController::class, 'store'])->name('feiertage.store');
+    Route::post('/feiertage/{holiday}', [HolidayController::class, 'update'])->name('feiertage.update');
+    Route::delete('/feiertage/{holiday}', [HolidayController::class, 'destroy'])->name('feiertage.destroy');
+
     Route::get('/jobtypen', [JobTypeController::class, 'index'])->name('jobtypen');
     Route::post('/jobtypen/gruppen', [JobTypeController::class, 'storeGroup'])->name('jobtypen.gruppen.store');
     Route::post('/jobtypen/gruppen/reihenfolge', [JobTypeController::class, 'reorderGroups'])->name('jobtypen.gruppen.reorder');
