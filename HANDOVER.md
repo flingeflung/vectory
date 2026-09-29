@@ -2,7 +2,7 @@
 
 Grund: Ralfs Claude-Nutzungslimit läuft bis Freitag knapp, Codex übernimmt bis
 zum Reset. Diese Datei ist ein Schnappschuss des aktuellen Stands - bitte
-zuerst lesen, dann löschen/archivieren, sobald sie nicht mehr aktuell ist.
+zuerst lesen, dann archivieren, sobald sie nicht mehr aktuell ist.
 
 **Zuerst lesen, in dieser Reihenfolge:**
 1. `agents.md` (Projekt-Root) - regelt die Arbeitsweise/Git-Workflow für dich als Implementierer. Wichtig: dort steht "nach jeder Änderung automatisch commit+push" - das ist dein Standardverhalten, nicht das von Claude (siehe unten).
@@ -16,7 +16,7 @@ zuerst lesen, dann löschen/archivieren, sobald sie nicht mehr aktuell ist.
 - Erwartet, dass offene Design-Entscheidungen/Widersprüche zu früheren Entscheidungen VOR dem Bauen angesprochen werden, nicht stillschweigend gelöst.
 - Testet oft selbst live im Browser und meldet Bugs sehr präzise - nimm seine Beobachtungen ernst, auch wenn sie erstmal unplausibel klingen (in dieser Session gab es mehrfach echte, nicht-offensichtliche Bugs, die sich bei genauerem Hinsehen bestätigten).
 - Bei Bug-Meldungen an ihn: nur den beobachtbaren Effekt und "kein Handlungsbedarf" o.ä. beschreiben, KEINE Klassennamen/Exception-Texte/Methodennamen - das hat er explizit zurückgewiesen.
-- Deutsche UI-Texte: er ist gelernter technischer Redakteur, bevorzugt "Wenn X, dann Y" statt gestapelter Verb-Erst-Konstruktionen in Hinweistexten.
+- Deutsche UI-Texte: er ist studierter technischer Redakteur, bevorzugt "Wenn X, dann Y" statt gestapelter Verb-Erst-Konstruktionen in Hinweistexten.
 
 ## Aktueller fachlicher Kontext: Personelle Ressourcenplanung
 
@@ -148,14 +148,16 @@ nachgezogen (Tooltip-Texte, Kommentare, `lang/en.json`).
 
 ## Git-Stand
 
-- Branch `main`, aktueller HEAD: `27e1f07` ("Ressourcenplanung-Checkbox statt
+- Branch `main`, aktueller HEAD: `1a17ffe` ("Handover-Dokument für
+  Codex-Übergabe"), direkt davor `27e1f07` ("Ressourcenplanung-Checkbox statt
   Abteilungsfilter, Personen-Overlay in Planung").
-- Bis inkl. Commit `635dca3` ist bereits auf `origin/main` gepusht. `27e1f07`
-  ist NUR lokal committet, noch nicht gepusht (Claude-Konvention: erst nach
-  Ralfs Review pushen). Bitte laut `agents.md` ab jetzt wieder normal nach
-  jeder Änderung committen UND pushen.
+- Alles bis `1a17ffe` ist auf `origin/main` gepusht - kein lokaler Rückstand.
+  Bitte laut `agents.md` ab jetzt wieder normal nach jeder Änderung
+  committen UND pushen.
 - Migrationen sind bereits lokal ausgeführt (`php artisan migrate`), Backfill
   ist erfolgt - keine offenen Migrationen.
+- Backlog-Artifact (separate, von Ralf geteilte Übersichtsseite, nicht Teil
+  des Repos) ist ebenfalls aktuell: https://claude.ai/artifact/2kMLBruuM5D7EKRJwwdQaz
 
 ## Wo die Datei liegt
 
