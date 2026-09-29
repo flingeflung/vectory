@@ -76,7 +76,7 @@
     </div>
 
     <p class="mb-1 shrink-0 text-xs text-gray-500">
-        {{ trans_choice('{1} :count gespeicherter Feiertag für dieses Jahr|[2,*] :count gespeicherte Feiertage für dieses Jahr', $holidays->count(), ['count' => $holidays->count()]) }}
+        {{ trans_choice('{1} :count gespeicherter Feiertag für dieses Jahr, davon :active als aktiv markiert|[2,*] :count gespeicherte Feiertage für dieses Jahr, davon :active als aktiv markiert', $holidays->count(), ['count' => $holidays->count(), 'active' => $holidays->where('active', true)->count()]) }}
     </p>
 
     <div class="min-h-0 flex-1 overflow-auto rounded-lg border border-gray-200 bg-white">
