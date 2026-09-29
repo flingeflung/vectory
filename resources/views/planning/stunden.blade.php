@@ -38,6 +38,9 @@
                     <x-sortable-th field="vacation_hours" :sort="$sort" :direction="$direction" align="right" :compact="true">{{ __('Urlaub (Std)') }}</x-sortable-th>
                     <x-sortable-th field="annual_hours" :sort="$sort" :direction="$direction" align="right" :compact="true">{{ __('Jahresstd.') }}</x-sortable-th>
                     <x-sortable-th field="base_load" :sort="$sort" :direction="$direction" align="right" :compact="true">{{ __('Grundlast') }}</x-sortable-th>
+                    <x-sortable-th field="project_hours" :sort="$sort" :direction="$direction" align="right" :compact="true">
+                        <span title="{{ __('Stunden, die für Projekte zur Verfügung stehen') }}">{{ __('Projektstd.') }}</span>
+                    </x-sortable-th>
                 </tr>
             </thead>
             <tbody>
@@ -63,9 +66,10 @@
                         <td class="px-3 py-1.5 text-right tabular-nums text-gray-500">{{ $fmt($row['vacationHours']) }}</td>
                         <td class="px-3 py-1.5 text-right font-medium tabular-nums">{{ $fmt($row['jahresstd']) }}</td>
                         <td class="px-3 py-1.5 text-right font-medium tabular-nums">{{ $fmt($row['baseLoad']) }}</td>
+                        <td class="px-3 py-1.5 text-right font-medium tabular-nums">{{ $fmt($row['projectHours']) }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="8" class="px-4 py-8 text-center text-gray-400">{{ __('Für :year sind keine Personen sichtbar - entweder ist bei niemandem "Ressourcenplanung" angehakt, oder es fehlen gültige Wochenstunden-Daten für dieses Jahr.', ['year' => $year]) }}</td></tr>
+                    <tr><td colspan="9" class="px-4 py-8 text-center text-gray-400">{{ __('Für :year sind keine Personen sichtbar - entweder ist bei niemandem "Ressourcenplanung" angehakt, oder es fehlen gültige Wochenstunden-Daten für dieses Jahr.', ['year' => $year]) }}</td></tr>
                 @endforelse
             </tbody>
             @if ($rows->isNotEmpty())
@@ -74,6 +78,7 @@
                         <td class="px-3 py-2" colspan="6">{{ __('Summe') }}</td>
                         <td class="px-3 py-2 text-right tabular-nums">{{ $fmt($total) }}</td>
                         <td class="px-3 py-2 text-right tabular-nums">{{ $fmt($baseLoadTotal) }}</td>
+                        <td class="px-3 py-2 text-right tabular-nums">{{ $fmt($projectHoursTotal) }}</td>
                     </tr>
                 </tfoot>
             @endif

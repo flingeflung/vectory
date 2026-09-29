@@ -24,7 +24,7 @@ use Illuminate\View\View;
  */
 class PlanningController extends Controller
 {
-    private const HOURS_SORTABLE_COLUMNS = ['name', 'department', 'annotation', 'wost', 'workdays', 'vacation_hours', 'annual_hours', 'base_load'];
+    private const HOURS_SORTABLE_COLUMNS = ['name', 'department', 'annotation', 'wost', 'workdays', 'vacation_hours', 'annual_hours', 'base_load', 'project_hours'];
 
     public function grundlast(Request $request, PlanningBaseLoadCalculator $calculator): View
     {
@@ -227,6 +227,7 @@ class PlanningController extends Controller
                 $annotations->push(__('bis :date', ['date' => $person->end_date->format('d.m.Y')]));
             }
             $baseLoad = $baseLoadCalculator->totals($baseLoads, $yearStart->year, $employmentStart, $employmentEnd)['yearly'];
+            $projectHours = $netto - $baseLoad;
 
             return [
                 'personId' => $person->id,
@@ -242,6 +243,7 @@ class PlanningController extends Controller
                 'vacationHours' => $vacationHours,
                 'jahresstd' => $netto,
                 'baseLoad' => $baseLoad,
+                'projectHours' => $projectHours,
             ];
         })
             ->filter()
@@ -254,6 +256,7 @@ class PlanningController extends Controller
                     'vacation_hours' => $a['vacationHours'] <=> $b['vacationHours'],
                     'annual_hours' => $a['jahresstd'] <=> $b['jahresstd'],
                     'base_load' => $a['baseLoad'] <=> $b['baseLoad'],
+                    'project_hours' => $a['projectHours'] <=> $b['projectHours'],
                     default => $collator->compare($a['sortKey'], $b['sortKey']),
                 };
                 if ($result === 0 && $sort !== 'name') {
@@ -266,8 +269,9 @@ class PlanningController extends Controller
 
         $total = (float) $rows->sum('jahresstd');
         $baseLoadTotal = (float) $rows->sum('baseLoad');
+        $projectHoursTotal = (float) $rows->sum('projectHours');
 
-        return view('planning.stunden', compact('years', 'year', 'totalWorkdays', 'rows', 'total', 'baseLoadTotal', 'sort', 'direction'));
+        return view('planning.stunden', compact('years', 'year', 'totalWorkdays', 'rows', 'total', 'baseLoadTotal', 'projectHoursTotal', 'sort', 'direction'));
     }
 
     private function planningYears($personIds, Request $request): array
