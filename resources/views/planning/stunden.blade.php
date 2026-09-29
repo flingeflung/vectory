@@ -38,7 +38,9 @@
                     <x-sortable-th field="holidays" :sort="$sort" :direction="$direction" align="right" :compact="true">
                         <span title="{{ __('Aktive Feiertage von Montag bis Freitag im Beschäftigungszeitraum.') }}">{{ __('Feiertage') }}</span>
                     </x-sortable-th>
-                    <x-sortable-th field="vacation_hours" :sort="$sort" :direction="$direction" align="right" :compact="true">{{ __('Urlaub (Std)') }}</x-sortable-th>
+                    <x-sortable-th field="vacation_hours" :sort="$sort" :direction="$direction" align="right" :compact="true">
+                        <span title="{{ __('Anteilig berechneter Urlaubsanspruch, umgerechnet in Stunden.') }}">{{ __('Urlaub (Std)') }}</span>
+                    </x-sortable-th>
                     <x-sortable-th field="annual_hours" :sort="$sort" :direction="$direction" align="right" :compact="true">{{ __('Jahresstd.') }}</x-sortable-th>
                     <x-sortable-th field="base_load" :sort="$sort" :direction="$direction" align="right" :compact="true">{{ __('Grundlast') }}</x-sortable-th>
                     <x-sortable-th field="project_hours" :sort="$sort" :direction="$direction" align="right" :compact="true">
