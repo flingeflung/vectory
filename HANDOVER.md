@@ -85,13 +85,9 @@ Summenzeile.
   wann du das machst" - also frei, wann es passiert, aber PFLICHT bevor eine
   zweite Stelle dieselbe Rechnung braucht.
 - **Wer wird angezeigt:** nur Personen mit Login, für die `people.resource_planning`
-  = true ist (neues Boolean-Feld, Default true). Ein zuerst gebauter
-  Abteilungsfilter wurde WIEDER ENTFERNT (Ralf: "funktioniert nicht", nach
-  Überlegung über Nacht - der Grund: ohne Mandantenfähigkeit sind ALLE
-  Personen eigene Mitarbeiter, ein Dienstleister/Abteilungs-Kriterium zum
-  Ausschließen externer Kräfte gibt's dann nicht). Stattdessen: eine direkte
-  Checkbox "Ressourcenplanung" in den Personendetails (Tooltip "Diese Person
-  in die Ressourcenplanung mit einbeziehen"), gleiche Position wie
+  = true ist (neues Boolean-Feld, Default true) - eine direkte Checkbox
+  "Ressourcenplanung" in den Personendetails (Tooltip "Diese Person in die
+  Ressourcenplanung mit einbeziehen"), gleiche Position wie
   Wochenstunden/Urlaubstage. Zusätzlich ein Filter-Dropdown
   "Ressourcenplanung" (Alle/enthalten/nicht enthalten) in der
   Personenübersicht (`admin/personen`), weil Ralf das Feld teils direkt in
@@ -138,20 +134,11 @@ nachgezogen (Tooltip-Texte, Kommentare, `lang/en.json`).
    MessageBag durchreichen. Gleiches Muster kommt laut Grep evtl. noch in
    `ProjectController.php`/`MultichangeController.php` vor - dort nicht
    geprüft.
-4. **Beim Testen von `PersonController::update()` (oder ähnlichen Controllern
-   mit Checkbox-Feldern) per Skript/Tinker**: IMMER alle relevanten
-   Checkbox-Felder explizit im Test-Request mitgeben, auch wenn sie
-   unverändert bleiben sollen - ein fehlendes Feld wird wie eine
-   ausgeschaltete Checkbox behandelt (`$request->boolean(...)` = false). Ist
-   in dieser Session real passiert und hat kurzzeitig Ralfs eigenen
-   "Aktiv"-Status gekippt.
 
 ## Git-Stand
 
-- Branch `main`, aktueller HEAD: `1a17ffe` ("Handover-Dokument für
-  Codex-Übergabe"), direkt davor `27e1f07` ("Ressourcenplanung-Checkbox statt
-  Abteilungsfilter, Personen-Overlay in Planung").
-- Alles bis `1a17ffe` ist auf `origin/main` gepusht - kein lokaler Rückstand.
+- Branch `main`, aktueller HEAD: `d3499cb`.
+- Alles bis `d3499cb` ist auf `origin/main` gepusht - kein lokaler Rückstand.
   Bitte laut `agents.md` ab jetzt wieder normal nach jeder Änderung
   committen UND pushen.
 - Migrationen sind bereits lokal ausgeführt (`php artisan migrate`), Backfill
