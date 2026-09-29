@@ -22,7 +22,7 @@ class HolidayController extends Controller
             ->pluck('year')
             ->map(fn ($year) => (int) $year)
             ->values();
-        $year = $request->integer('year');
+        $year = $request->has('year') ? $request->integer('year') : (int) now()->year;
         if (! $years->contains($year)) {
             $year = $years->first() ?? (int) now()->year;
         }
