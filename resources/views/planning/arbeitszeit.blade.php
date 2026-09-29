@@ -38,6 +38,12 @@
                 Alpine.data('planningWorkingHoursChart', (points) => {
                     let chart = null;
                     let ChartClass = null;
+                    const year = {{ $year }};
+                    const dayMs = 86400000;
+                    const yearStart = Date.UTC(year, 0, 1);
+                    const monthStarts = Array.from({ length: 13 }, (_, month) => (Date.UTC(year, month, 1) - yearStart) / dayMs);
+                    const monthCenters = monthStarts.slice(0, 12).map((start, month) => (start + monthStarts[month + 1]) / 2);
+                    const monthLabels = [{{ collect(range(1, 12))->map(fn ($month) => \Illuminate\Support\Js::from(\Carbon\CarbonImmutable::create($year, $month, 1)->locale(app()->getLocale())->isoFormat('MMM')))->implode(', ') }}];
 
                     return {
                         async init() {
@@ -46,8 +52,26 @@
                             if (!this.$refs.canvas) return;
 
                             chart?.destroy();
+                            const monthGrid = {
+                                id: 'monthGrid',
+                                beforeDatasetsDraw(instance) {
+                                    const { ctx, chartArea, scales: { x } } = instance;
+                                    ctx.save();
+                                    ctx.strokeStyle = '#e5e7eb';
+                                    ctx.lineWidth = 1;
+                                    monthStarts.forEach((day) => {
+                                        const pixel = x.getPixelForValue(day);
+                                        ctx.beginPath();
+                                        ctx.moveTo(pixel, chartArea.top);
+                                        ctx.lineTo(pixel, chartArea.bottom);
+                                        ctx.stroke();
+                                    });
+                                    ctx.restore();
+                                },
+                            };
                             chart = new ChartClass(this.$refs.canvas, {
                                 type: 'line',
+                                plugins: [monthGrid],
                                 data: {
                                     datasets: [{
                                         label: {{ \Illuminate\Support\Js::from(__('Wochenstunden')) }},
@@ -56,8 +80,8 @@
                                         borderColor: '#2563eb',
                                         backgroundColor: 'rgba(37, 99, 235, 0.08)',
                                         borderWidth: 2,
-                                        pointRadius: 3,
-                                        pointHoverRadius: 5,
+                                        pointRadius: (context) => context.raw?.terminal ? 0 : 3,
+                                        pointHoverRadius: (context) => context.raw?.terminal ? 0 : 5,
                                         fill: true,
                                     }],
                                 },
@@ -72,10 +96,8 @@
                                             callbacks: {
                                                 title: (items) => {
                                                     if (!items.length) return '';
-                                                    const year = {{ $year }};
-                                                    const daysInYear = (Date.UTC(year + 1, 0, 1) - Date.UTC(year, 0, 1)) / 86400000;
-                                                    const dayOffset = Math.round(items[0].parsed.x / 11 * (daysInYear - 1));
-                                                    const date = new Date(Date.UTC(year, 0, 1 + dayOffset));
+                                                    const dayOffset = Math.min(Math.round(items[0].parsed.x), monthStarts[12] - 1);
+                                                    const date = new Date(yearStart + dayOffset * dayMs);
                                                     return date.toLocaleDateString(document.documentElement.lang || 'de-DE');
                                                 },
                                                 label: (context) => `${context.parsed.y.toLocaleString('de-DE', { maximumFractionDigits: 1 })} h`,
@@ -86,18 +108,15 @@
                                         x: {
                                             type: 'linear',
                                             min: 0,
-                                            max: 11,
-                                            grid: {
-                                                display: true,
-                                                color: '#e5e7eb',
-                                                lineWidth: 1,
-                                                drawTicks: false,
+                                            max: monthStarts[12],
+                                            afterBuildTicks: (axis) => {
+                                                axis.ticks = monthCenters.map((value) => ({ value }));
                                             },
+                                            grid: { display: false },
                                             ticks: {
-                                                count: 12,
                                                 autoSkip: false,
                                                 padding: 8,
-                                                callback: (value) => [{{ collect(range(1, 12))->map(fn ($month) => \Illuminate\Support\Js::from(\Carbon\CarbonImmutable::create($year, $month, 1)->locale(app()->getLocale())->isoFormat('MMM')))->implode(', ') }}][Math.round(value)] ?? '',
+                                                callback: (_value, index) => monthLabels[index] ?? '',
                                             },
                                         },
                                         y: {

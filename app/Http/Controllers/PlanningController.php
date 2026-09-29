@@ -53,22 +53,22 @@ class PlanningController extends Controller
         $points = collect();
 
         if ($person) {
-            $daysInYear = $yearStart->diffInDays($yearEnd);
+            $daysInYear = $yearStart->diffInDays($yearEnd) + 1;
             $points = $this->overlappingWeeklyHours($person, $yearStart, $yearEnd)
-                ->map(function (PersonWeeklyHours $row) use ($yearStart, $daysInYear) {
+                ->map(function (PersonWeeklyHours $row) use ($yearStart) {
                     $start = $row->valid_from
                         ? CarbonImmutable::parse($row->valid_from->toDateString())->max($yearStart)
                         : $yearStart;
 
                     return [
-                        'x' => $daysInYear > 0 ? $yearStart->diffInDays($start) / $daysInYear * 11 : 0,
+                        'x' => $yearStart->diffInDays($start),
                         'y' => (float) $row->hours,
                     ];
                 })
                 ->values();
 
             if ($points->isNotEmpty()) {
-                $points->push(['x' => 11, 'y' => $points->last()['y']]);
+                $points->push(['x' => $daysInYear, 'y' => $points->last()['y'], 'terminal' => true]);
             }
         }
 
