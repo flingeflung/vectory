@@ -30,6 +30,7 @@ use App\Http\Controllers\HelpController;
 use App\Http\Controllers\IllustrationOverviewController;
 use App\Http\Controllers\JobloadController;
 use App\Http\Controllers\PlanningController;
+use App\Http\Controllers\PlanningBaseLoadController;
 use App\Http\Controllers\JobloadOverviewController;
 use App\Http\Controllers\LocaleSwitchController;
 use App\Http\Controllers\MultichangeController;
@@ -77,6 +78,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // (planning.view), siehe PlanningController.
     Route::redirect('/planung', '/planung/stunden');
     Route::get('/planung/stunden', [PlanningController::class, 'stunden'])->name('planung.stunden');
+    Route::get('/planung/grundlast', [PlanningController::class, 'grundlast'])->name('planung.grundlast');
+    Route::post('/planung/grundlast', [PlanningBaseLoadController::class, 'store'])->name('planung.grundlast.store');
+    Route::put('/planung/grundlast/{planningBaseLoad}', [PlanningBaseLoadController::class, 'update'])->name('planung.grundlast.update');
+    Route::delete('/planung/grundlast/{planningBaseLoad}', [PlanningBaseLoadController::class, 'destroy'])->name('planung.grundlast.destroy');
+    Route::post('/planung/grundlast/vorjahr-kopieren', [PlanningBaseLoadController::class, 'copyPreviousYear'])->name('planung.grundlast.copy-previous');
     Route::get('/planung/arbeitszeit', [PlanningController::class, 'arbeitszeit'])->name('planung.arbeitszeit');
     Route::get('/jobload', [JobloadController::class, 'index'])->name('jobload');
     Route::get('/jobload/uebersicht', [JobloadOverviewController::class, 'index'])->name('jobload.overview');

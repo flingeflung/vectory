@@ -17,6 +17,7 @@ class PlanningNav
     {
         return [
             ['route' => 'planung.stunden', 'match' => 'planung.stunden', 'label' => __('Stunden')],
+            ['route' => 'planung.grundlast', 'match' => 'planung.grundlast', 'label' => __('Grundlast')],
             ['route' => 'planung.arbeitszeit', 'match' => 'planung.arbeitszeit', 'label' => __('Arbeitszeit')],
         ];
     }

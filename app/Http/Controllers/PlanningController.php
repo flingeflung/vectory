@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Person;
 use App\Models\PersonVacationDays;
 use App\Models\PersonWeeklyHours;
+use App\Models\PlanningBaseLoad;
 use App\Support\CurrentTenant;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -23,6 +24,48 @@ use Illuminate\View\View;
 class PlanningController extends Controller
 {
     private const HOURS_SORTABLE_COLUMNS = ['name', 'department', 'wost', 'workdays', 'vacation_hours', 'annual_hours'];
+
+    public function grundlast(Request $request): View
+    {
+        abort_unless($request->user()->can('planning.view'), 403);
+
+        $tenantId = CurrentTenant::id();
+        $peopleQuery = Person::query()->withoutGlobalScope('tenant')
+            ->visibleToRole($request->user()->role)
+            ->visibleInTenant($tenantId)
+            ->whereHas('user')
+            ->where('resource_planning', true);
+        [$planningYears] = $this->planningYears((clone $peopleQuery)->pluck('id'), $request);
+
+        $currentYear = (int) now()->year;
+        $baseLoadYears = PlanningBaseLoad::query()->where('tenant_id', $tenantId)->pluck('year');
+        $years = collect($planningYears)
+            ->merge($baseLoadYears)
+            ->merge([$currentYear, $currentYear + 1, $currentYear + 2])
+            ->map(fn ($year) => (int) $year)
+            ->unique()
+            ->sortDesc()
+            ->values()
+            ->all();
+        $year = $request->integer('year', $currentYear);
+        if (! in_array($year, $years, true)) {
+            $year = $currentYear;
+        }
+
+        $baseLoads = PlanningBaseLoad::query()
+            ->where('tenant_id', $tenantId)
+            ->where('year', $year)
+            ->orderBy('valid_from')
+            ->orderBy('name')
+            ->get();
+        $previousYearCount = PlanningBaseLoad::query()
+            ->where('tenant_id', $tenantId)
+            ->where('year', $year - 1)
+            ->count();
+        $tenant = CurrentTenant::current();
+
+        return view('planning.grundlast', compact('years', 'year', 'baseLoads', 'previousYearCount', 'tenant'));
+    }
 
     public function arbeitszeit(Request $request): View
     {
