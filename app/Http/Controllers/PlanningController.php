@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Holiday;
 use App\Models\Person;
 use App\Models\PersonVacationDays;
 use App\Models\PersonWeeklyHours;
@@ -25,7 +26,7 @@ use Illuminate\View\View;
  */
 class PlanningController extends Controller
 {
-    private const HOURS_SORTABLE_COLUMNS = ['name', 'department', 'annotation', 'wost', 'workdays', 'vacation_hours', 'annual_hours', 'base_load', 'project_hours'];
+    private const HOURS_SORTABLE_COLUMNS = ['name', 'department', 'annotation', 'wost', 'workdays', 'holidays', 'vacation_hours', 'annual_hours', 'base_load', 'project_hours'];
 
     public function grundlast(Request $request, PlanningBaseLoadCalculator $calculator): View
     {
@@ -211,6 +212,12 @@ class PlanningController extends Controller
         $yearStart = CarbonImmutable::create($year, 1, 1)->startOfDay();
         $yearEnd = CarbonImmutable::create($year, 12, 31)->startOfDay();
         $totalWorkdays = $this->countWeekdays($yearStart, $yearEnd);
+        $activeHolidays = Holiday::query()
+            ->where('tenant_id', $tenantId)
+            ->where('active', true)
+            ->whereBetween('date', [$yearStart->toDateString(), $yearEnd->toDateString()])
+            ->whereBetween('weekday', [1, 5])
+            ->get();
         $baseLoads = PlanningBaseLoad::query()
             ->where('tenant_id', $tenantId)
             ->where('year', $year)
@@ -238,7 +245,7 @@ class PlanningController extends Controller
             ->get();
 
         $collator = new \Collator('de_DE');
-        $rows = $people->map(function (Person $person) use ($baseLoadCalculator, $baseLoads, $personBaseLoads, $yearStart, $yearEnd, $totalWorkdays) {
+        $rows = $people->map(function (Person $person) use ($activeHolidays, $baseLoadCalculator, $baseLoads, $personBaseLoads, $yearStart, $yearEnd, $totalWorkdays) {
             $employmentStart = $person->start_date
                 ? CarbonImmutable::parse($person->start_date->toDateString())->max($yearStart)
                 : $yearStart;
@@ -248,16 +255,25 @@ class PlanningController extends Controller
             $employmentWorkdays = $employmentStart->lessThanOrEqualTo($employmentEnd)
                 ? $this->countWeekdays($employmentStart, $employmentEnd)
                 : 0;
+            $holidayCount = $employmentWorkdays > 0
+                ? $this->countHolidays($activeHolidays, $employmentStart, $employmentEnd)
+                : 0;
 
             if ($employmentWorkdays === 0) {
                 $brutto = 0.0;
                 $effectiveWoSt = 0.0;
             } else {
-                $brutto = $this->overlappingSum($person->weeklyHours, $employmentStart, $employmentEnd, fn (PersonWeeklyHours $row, int $segmentWorkdays) => $segmentWorkdays * ((float) $row->hours / 5));
-                if ($brutto === null) {
+                $contractHours = $this->overlappingSum($person->weeklyHours, $employmentStart, $employmentEnd, fn (PersonWeeklyHours $row, int $segmentWorkdays) => $segmentWorkdays * ((float) $row->hours / 5));
+                $brutto = $this->overlappingSum(
+                    $person->weeklyHours,
+                    $employmentStart,
+                    $employmentEnd,
+                    fn (PersonWeeklyHours $row, int $segmentWorkdays, CarbonImmutable $segmentStart, CarbonImmutable $segmentEnd) => ($segmentWorkdays - $this->countHolidays($activeHolidays, $segmentStart, $segmentEnd)) * ((float) $row->hours / 5)
+                );
+                if ($contractHours === null || $brutto === null) {
                     return null;
                 }
-                $effectiveWoSt = $brutto / $employmentWorkdays * 5;
+                $effectiveWoSt = $contractHours / $employmentWorkdays * 5;
             }
 
             // Urlaubstage-Historie (Ralf, 2026-09-28): ändert sich der
@@ -297,6 +313,7 @@ class PlanningController extends Controller
                 'inactive' => ! $person->active,
                 'wost' => $effectiveWoSt,
                 'workdays' => $employmentWorkdays,
+                'holidays' => $holidayCount,
                 'vacationHours' => $vacationHours,
                 'jahresstd' => $netto,
                 'baseLoad' => $baseLoad,
@@ -310,6 +327,7 @@ class PlanningController extends Controller
                     'annotation' => $collator->compare($a['annotationSort'], $b['annotationSort']),
                     'wost' => $a['wost'] <=> $b['wost'],
                     'workdays' => $a['workdays'] <=> $b['workdays'],
+                    'holidays' => $a['holidays'] <=> $b['holidays'],
                     'vacation_hours' => $a['vacationHours'] <=> $b['vacationHours'],
                     'annual_hours' => $a['jahresstd'] <=> $b['jahresstd'],
                     'base_load' => $a['baseLoad'] <=> $b['baseLoad'],
@@ -381,7 +399,7 @@ class PlanningController extends Controller
      * Daten - wird dann aus der Liste ausgeschlossen).
      *
      * @param  Collection<int, PersonWeeklyHours|PersonVacationDays>  $history
-     * @param  \Closure(PersonWeeklyHours|PersonVacationDays, int): float  $valueFn
+     * @param  \Closure(PersonWeeklyHours|PersonVacationDays, int, CarbonImmutable, CarbonImmutable): float  $valueFn
      */
     private function overlappingSum($history, CarbonImmutable $yearStart, CarbonImmutable $yearEnd, \Closure $valueFn): ?float
     {
@@ -396,10 +414,18 @@ class PlanningController extends Controller
                 continue;
             }
             $touched = true;
-            $sum += $valueFn($row, $this->countWeekdays($segmentStart, $segmentEnd));
+            $sum += $valueFn($row, $this->countWeekdays($segmentStart, $segmentEnd), $segmentStart, $segmentEnd);
         }
 
         return $touched ? $sum : null;
+    }
+
+    private function countHolidays(Collection $holidays, CarbonImmutable $start, CarbonImmutable $end): int
+    {
+        return $holidays
+            ->filter(fn (Holiday $holiday) => $holiday->date->betweenIncluded($start, $end))
+            ->unique(fn (Holiday $holiday) => $holiday->date->toDateString())
+            ->count();
     }
 
     /**
