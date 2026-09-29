@@ -75,47 +75,84 @@
         </form>
     </div>
 
-    <div class="min-h-0 flex-1 space-y-2 overflow-y-auto rounded-lg border border-gray-200 bg-white p-3">
-        @forelse ($holidays as $holiday)
-            <div class="flex items-end gap-2 rounded-md border border-gray-200 p-2">
-                <form
-                    method="POST"
-                    action="{{ route('admin.feiertage.update', $holiday) }}"
-                    x-data="{ dirty: false }"
-                    @input="dirty = window.formIsDirty($el, window.__holidayDirtyForms)"
-                    @submit="window.__holidayDirtyForms.delete($el)"
-                    class="grid min-w-0 flex-1 grid-cols-1 items-end gap-2 md:grid-cols-[minmax(12rem,2fr)_10rem_minmax(14rem,3fr)_auto_auto]"
-                >
-                    @csrf
-                    <label class="text-xs text-gray-500">{{ __('Bezeichnung') }}
-                        <input type="text" name="name" value="{{ $holiday->name }}" required maxlength="255" class="mt-0.5 w-full rounded-md border-gray-300 py-1 text-sm">
-                    </label>
-                    <label class="text-xs text-gray-500">{{ __('Datum') }}
-                        <input type="date" name="date" value="{{ $holiday->date->format('Y-m-d') }}" required class="mt-0.5 w-full rounded-md border-gray-300 py-1 text-sm">
-                    </label>
-                    <label class="text-xs text-gray-500">{{ __('Bemerkungen') }}
-                        <input type="text" name="remarks" value="{{ $holiday->remarks }}" maxlength="5000" class="mt-0.5 w-full rounded-md border-gray-300 py-1 text-sm">
-                    </label>
-                    <label class="flex items-center gap-2 pb-1.5 text-sm text-gray-700">
-                        <input type="hidden" name="active" value="0">
-                        <input type="checkbox" name="active" value="1" @checked($holiday->active) class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                        {{ __('Aktiv') }}
-                    </label>
-                    <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
-                </form>
+    <p class="mb-1 shrink-0 text-xs text-gray-500">
+        {{ trans_choice('{1} :count gespeicherter Feiertag für dieses Jahr|[2,*] :count gespeicherte Feiertage für dieses Jahr', $holidays->count(), ['count' => $holidays->count()]) }}
+    </p>
 
-                <form method="POST" action="{{ route('admin.feiertage.destroy', $holiday) }}" x-ref="deleteForm{{ $holiday->id }}" class="hidden">
-                    @csrf
-                    @method('DELETE')
-                </form>
-                <button
-                    type="button"
-                    @click="if (await window.confirmDialog({ title: {{ \Illuminate\Support\Js::from(__('Feiertag löschen')) }}, message: {{ \Illuminate\Support\Js::from(__('Diesen Feiertag wirklich endgültig löschen?')) }}, confirmLabel: {{ \Illuminate\Support\Js::from(__('Löschen')) }} })) $refs.deleteForm{{ $holiday->id }}.submit()"
-                    class="rounded-md border border-red-300 px-2 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
-                >{{ __('Löschen') }}</button>
-            </div>
-        @empty
-            <div class="p-4 text-center text-sm text-gray-400">{{ __('Für :year sind noch keine Feiertage angelegt.', ['year' => $year]) }}</div>
-        @endforelse
+    <div class="min-h-0 flex-1 overflow-auto rounded-lg border border-gray-200 bg-white">
+        <table class="min-w-full text-sm">
+            <thead class="sticky top-0 bg-gray-50 text-left text-xs text-gray-500">
+                <tr class="border-b border-gray-200">
+                    <th class="w-8 px-2 py-1.5"><span class="sr-only">{{ __('Bearbeiten') }}</span></th>
+                    <th class="w-28 px-2 py-1.5 font-medium">{{ __('Datum') }}</th>
+                    <th class="w-24 px-2 py-1.5 font-medium">{{ __('Wochentag') }}</th>
+                    <th class="px-2 py-1.5 font-medium">{{ __('Bezeichnung') }}</th>
+                    <th class="px-2 py-1.5 font-medium">{{ __('Bemerkungen') }}</th>
+                    <th class="w-20 px-2 py-1.5 font-medium">{{ __('Status') }}</th>
+                    <th class="w-36 px-2 py-1.5"><span class="sr-only">{{ __('Aktionen') }}</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse ($holidays as $holiday)
+                    @php
+                        $failedUpdate = old('_form') === 'update' && (int) old('_holiday') === $holiday->id;
+                        $weekdayName = match ($holiday->weekday) {
+                            1 => __('Montag'), 2 => __('Dienstag'), 3 => __('Mittwoch'), 4 => __('Donnerstag'),
+                            5 => __('Freitag'), 6 => __('Samstag'), 7 => __('Sonntag'), default => '–',
+                        };
+                        $formId = 'holiday-form-'.$holiday->id;
+                    @endphp
+                    <tr
+                        class="border-b border-gray-100 last:border-b-0 hover:bg-gray-50"
+                        x-data="{ editing: {{ $failedUpdate ? 'true' : 'false' }}, dirty: {{ $failedUpdate ? 'true' : 'false' }} }"
+                        x-init="if (dirty) window.__holidayDirtyForms.add(document.getElementById('{{ $formId }}'))"
+                        @input="dirty = window.formIsDirty(document.getElementById('{{ $formId }}'), window.__holidayDirtyForms)"
+                    >
+                        <td class="px-2 py-1.5 align-middle">
+                            <x-edit-icon-button x-show="!editing" @click="const form = document.getElementById('{{ $formId }}'); form.dataset.dirtyBaseline = window.formSnapshot(form); editing = true; $nextTick(() => $refs.editName.focus())" :title="__('Feiertag bearbeiten')" />
+                        </td>
+                        <td class="px-2 py-1.5 align-middle tabular-nums">
+                            <span x-show="!editing">{{ $holiday->date->format('d.m.Y') }}</span>
+                            <input x-show="editing" x-cloak form="{{ $formId }}" type="date" name="date" value="{{ $failedUpdate ? old('date') : $holiday->date->format('Y-m-d') }}" required class="w-36 rounded-md border-gray-300 py-1 text-sm">
+                        </td>
+                        <td class="px-2 py-1.5 align-middle text-gray-500">{{ $weekdayName }}</td>
+                        <td class="px-2 py-1.5 align-middle">
+                            <span x-show="!editing">{{ $holiday->name }}</span>
+                            <input x-ref="editName" x-show="editing" x-cloak form="{{ $formId }}" type="text" name="name" value="{{ $failedUpdate ? old('name') : $holiday->name }}" required maxlength="255" class="w-full min-w-48 rounded-md border-gray-300 py-1 text-sm">
+                        </td>
+                        <td class="px-2 py-1.5 align-middle text-gray-500">
+                            <span x-show="!editing">{{ $holiday->remarks ?: '–' }}</span>
+                            <input x-show="editing" x-cloak form="{{ $formId }}" type="text" name="remarks" value="{{ $failedUpdate ? old('remarks') : $holiday->remarks }}" maxlength="5000" class="w-full min-w-64 rounded-md border-gray-300 py-1 text-sm">
+                        </td>
+                        <td class="px-2 py-1.5 align-middle">
+                            <span x-show="!editing" class="{{ $holiday->active ? 'text-gray-600' : 'text-red-600' }}">{{ $holiday->active ? __('Aktiv') : __('Inaktiv') }}</span>
+                            <label x-show="editing" x-cloak class="flex items-center gap-2 whitespace-nowrap text-gray-700">
+                                <input form="{{ $formId }}" type="hidden" name="active" value="0">
+                                <input form="{{ $formId }}" type="checkbox" name="active" value="1" @checked($failedUpdate ? old('active') : $holiday->active) class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                {{ __('Aktiv') }}
+                            </label>
+                        </td>
+                        <td class="px-2 py-1.5 align-middle">
+                            <div x-show="editing" x-cloak class="flex items-center justify-end gap-2">
+                                <form id="{{ $formId }}" method="POST" action="{{ route('admin.feiertage.update', $holiday) }}" @submit="window.__holidayDirtyForms.delete($el)">
+                                    @csrf
+                                    <input type="hidden" name="_form" value="update">
+                                    <input type="hidden" name="_holiday" value="{{ $holiday->id }}">
+                                </form>
+                                <button type="button" @click="const form = document.getElementById('{{ $formId }}'); window.__holidayDirtyForms.delete(form); form.reset(); dirty = false; editing = false" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Abbrechen') }}</button>
+                                <button form="{{ $formId }}" type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
+                                <form method="POST" action="{{ route('admin.feiertage.destroy', $holiday) }}" x-ref="deleteForm{{ $holiday->id }}" class="hidden">
+                                    @csrf
+                                    @method('DELETE')
+                                </form>
+                                <button type="button" @click="if (await window.confirmDialog({ title: {{ \Illuminate\Support\Js::from(__('Feiertag löschen')) }}, message: {{ \Illuminate\Support\Js::from(__('Diesen Feiertag wirklich endgültig löschen?')) }}, confirmLabel: {{ \Illuminate\Support\Js::from(__('Löschen')) }} })) $refs.deleteForm{{ $holiday->id }}.submit()" class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50">{{ __('Löschen') }}</button>
+                            </div>
+                        </td>
+                    </tr>
+                @empty
+                    <tr><td colspan="7" class="p-4 text-center text-sm text-gray-400">{{ __('Für :year sind noch keine Feiertage angelegt.', ['year' => $year]) }}</td></tr>
+                @endforelse
+            </tbody>
+        </table>
     </div>
 </x-admin-layout>
