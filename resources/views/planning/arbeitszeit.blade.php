@@ -95,6 +95,7 @@
                                         borderWidth: 2,
                                         pointRadius: (context) => context.raw?.terminal ? 0 : 3,
                                         pointHoverRadius: (context) => context.raw?.terminal ? 0 : 5,
+                                        pointHitRadius: (context) => context.raw?.terminal ? 0 : 6,
                                         fill: true,
                                     }],
                                 },
@@ -103,7 +104,7 @@
                                     maintainAspectRatio: false,
                                     parsing: false,
                                     layout: { padding: { bottom: 24 } },
-                                    interaction: { intersect: false, mode: 'nearest' },
+                                    interaction: { intersect: true, mode: 'nearest' },
                                     plugins: {
                                         legend: { display: false },
                                         tooltip: {
