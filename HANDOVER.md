@@ -98,6 +98,36 @@ Summenzeile.
   Tabelle aktualisiert sich danach automatisch per fetch() (Listener auf
   `close-modal`/`person-overlay` in `stunden.blade.php`).
 
+**Nachtrag zur aktuellen Kapazitätsberechnung (Ralf, 2026-09-29; ersetzt die
+oben noch beschriebene Vereinfachung ohne Feiertage):**
+
+- In `holidays` liegen die deutschen gesetzlichen Feiertage 2026–2036 fest
+  gespeichert, einschließlich regionaler Sonderfälle und `weekday` (1 =
+  Montag bis 7 = Sonntag). Welche regionalen Feiertage für einen Kunden
+  tatsächlich gelten, entscheidet der spätere Benutzer bewusst selbst über
+  das mandantenweite Aktiv-Flag. Personen zusätzlich nach Bundesland zu
+  klassifizieren wäre für Vectory unverhältnismäßig und ist nicht vorgesehen.
+- Die Stundenübersicht zählt nur aktive Feiertage, die auf Montag bis Freitag
+  und in den Beschäftigungszeitraum der Person fallen. Mehrere aktive
+  Feiertage am selben Datum zählen nur einmal. Diese Feiertage werden von der
+  verfügbaren Jahreskapazität abgezogen.
+- Die Verteilung der Wochenstunden auf fünf Arbeitstage ist eine bewusst
+  akzeptierte Näherung. Auch Teilzeitkräfte werden üblicherweise rechnerisch
+  auf fünf Tage verteilt, dann mit entsprechend weniger Stunden pro Tag.
+- Urlaub folgt derselben Logik: häufig gelten auch bei Teilzeit 30 Urlaubstage;
+  pro Urlaubstag werden dann die geringeren durchschnittlichen Tagesstunden
+  abgezogen. Die verbleibende Unschärfe ist fachlich akzeptiert.
+- Längere Abwesenheiten brauchen kein eigenes Abwesenheitsmodell für diese
+  Berechnung. Sie werden in der Wochenstunden-Historie im Reiter
+  **Arbeitszeit** für den betreffenden Zeitraum mit 0 Wochenstunden abgebildet.
+- Aktuelle Formel: Projektstunden = Jahreskapazität aus der zeitabhängigen
+  Wochenstunden-Historie, abzüglich aktiver Werktags-Feiertage, anteiliger
+  Urlaubsstunden und Grundlast. Eintritt/Austritt begrenzen alle relevanten
+  Zeiträume. Existieren individuelle Grundlast-Datensätze für Person und Jahr,
+  ersetzen sie die Grundlastbasis vollständig; andernfalls gilt die Basis.
+- Ralfs ausdrückliche Einschätzung: Mit diesen Festlegungen sind die für die
+  Projektstunden derzeit benötigten Einflussgrößen vollständig berücksichtigt.
+
 **5. Terminologie:** "Subunternehmer" → "Dienstleister" umbenannt
 (`SystemSetting::companyLabel()`) - passt besser auch für eine einzelne
 freiberuflich arbeitende Person, nicht nur eine Firma. Überall konsistent
