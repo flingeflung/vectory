@@ -66,7 +66,7 @@
             action="{{ route('planung.grundlast.store') }}"
             x-init="if (createDirty) window.__baseLoadDirtyForms.add($el)"
             @input="createDirty = window.formIsDirty($el, window.__baseLoadDirtyForms)"
-            @submit="window.__baseLoadDirtyForms.delete($el)"
+            @submit.prevent="window.submitBaseLoadForm($event)"
             class="grid grid-cols-1 items-end gap-2 rounded-md border border-gray-200 bg-white p-3 md:grid-cols-[minmax(12rem,2fr)_minmax(10rem,1fr)_8rem_10rem_10rem_auto_auto]"
         >
             @csrf
@@ -104,7 +104,7 @@
                     data-row-form
                     x-data="{ dirty: false }"
                     @input="dirty = window.formIsDirty($el, window.__baseLoadDirtyForms)"
-                    @submit="window.__baseLoadDirtyForms.delete($el)"
+                    @submit.prevent="window.submitBaseLoadForm($event)"
                     class="grid min-w-0 flex-1 grid-cols-1 items-end gap-2 md:grid-cols-[minmax(12rem,2fr)_minmax(10rem,1fr)_8rem_10rem_10rem_auto]"
                 >
                     @csrf
@@ -146,4 +146,20 @@
             <div class="p-4 text-center text-sm text-gray-400">{{ __('Für :year ist noch keine Grundlast angelegt.', ['year' => $year]) }}</div>
         @endforelse
     </div>
+
+    <div id="base-load-saving" class="fixed inset-0 z-[100] hidden cursor-wait items-center justify-center bg-gray-900/20" role="status" aria-live="polite">
+        <div class="flex flex-col items-center gap-3 rounded-lg bg-white px-8 py-6 shadow-lg">
+            <x-loading-spinner class="h-10 w-10 text-gray-600" />
+            <span class="text-sm text-gray-600">{{ __('Speichert…') }}</span>
+        </div>
+    </div>
+
+    <script>
+        window.submitBaseLoadForm = (event) => {
+            const form = event.target;
+            window.__baseLoadDirtyForms.delete(form);
+            document.getElementById('base-load-saving')?.classList.replace('hidden', 'flex');
+            requestAnimationFrame(() => requestAnimationFrame(() => form.submit()));
+        };
+    </script>
 </x-planning-layout>
