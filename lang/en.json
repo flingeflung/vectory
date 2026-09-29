@@ -268,6 +268,7 @@
     "Das Hauptprojekt kann nicht einzeln entfernt werden - bitte erst den Verbund auflösen.": "The main project cannot be removed individually - please dissolve the project bundle first.",
     "Das Projekt erhält eine neue, eigene Stamm-ID und gehört danach nicht mehr zu dieser Versionskette. Die übrigen Versionen bleiben unverändert.": "",
     "Das Projektverzeichnis für Projekt :pn wurde im Arbeitsverzeichnis nicht gefunden.": "",
+    "Das gewählte Jahr ist für die Grundlast nicht verfügbar.": "",
     "Das letzte Filterset kann nicht gelöscht werden.": "The last remaining filter set cannot be deleted.",
     "Das würde einen Ringbezug erzeugen.": "",
     "Daten gelangen erst durch Auschecken aus dem gesperrten Verzeichnis ins Arbeitsverzeichnis.": "",

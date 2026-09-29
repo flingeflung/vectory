@@ -48,6 +48,7 @@ class PlanningBaseLoadController extends Controller
     {
         $this->authorizePlanning($request);
         $year = $request->validate(['year' => ['required', 'integer', 'min:1900', 'max:2100']])['year'];
+        $this->ensureYearIsAllowed((int) $year);
         $tenantId = CurrentTenant::id();
         $sourceRows = PlanningBaseLoad::query()->where('tenant_id', $tenantId)->where('year', $year - 1)->get();
 
@@ -84,6 +85,7 @@ class PlanningBaseLoadController extends Controller
         ]);
 
         $year = (int) $data['year'];
+        $this->ensureYearIsAllowed($year);
         if ((int) substr($data['valid_from'], 0, 4) !== $year || (int) substr($data['valid_to'], 0, 4) !== $year) {
             throw ValidationException::withMessages([
                 'valid_from' => __('Der Gültigkeitszeitraum muss vollständig im gewählten Jahr liegen.'),
@@ -91,6 +93,22 @@ class PlanningBaseLoadController extends Controller
         }
 
         return $data;
+    }
+
+    private function ensureYearIsAllowed(int $year): void
+    {
+        $currentYear = (int) now()->year;
+        $isPlanningYear = $year >= $currentYear && $year <= $currentYear + 2;
+        $hasExistingBaseLoad = PlanningBaseLoad::query()
+            ->where('tenant_id', CurrentTenant::id())
+            ->where('year', $year)
+            ->exists();
+
+        if (! $isPlanningYear && ! $hasExistingBaseLoad) {
+            throw ValidationException::withMessages([
+                'year' => __('Das gewählte Jahr ist für die Grundlast nicht verfügbar.'),
+            ]);
+        }
     }
 
     private function moveDateToYear($date, int $year): CarbonImmutable

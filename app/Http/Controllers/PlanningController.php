@@ -30,17 +30,9 @@ class PlanningController extends Controller
         abort_unless($request->user()->can('planning.view'), 403);
 
         $tenantId = CurrentTenant::id();
-        $peopleQuery = Person::query()->withoutGlobalScope('tenant')
-            ->visibleToRole($request->user()->role)
-            ->visibleInTenant($tenantId)
-            ->whereHas('user')
-            ->where('resource_planning', true);
-        [$planningYears] = $this->planningYears((clone $peopleQuery)->pluck('id'), $request);
-
         $currentYear = (int) now()->year;
         $baseLoadYears = PlanningBaseLoad::query()->where('tenant_id', $tenantId)->pluck('year');
-        $years = collect($planningYears)
-            ->merge($baseLoadYears)
+        $years = $baseLoadYears
             ->merge([$currentYear, $currentYear + 1, $currentYear + 2])
             ->map(fn ($year) => (int) $year)
             ->unique()
