@@ -128,6 +128,7 @@
                                         },
                                         y: {
                                             beginAtZero: true,
+                                            max: {{ $yMax }},
                                             title: { display: true, text: {{ \Illuminate\Support\Js::from(__('Wochenstunden')) }} },
                                             ticks: { callback: (value) => `${value.toLocaleString('de-DE')} h` },
                                         },

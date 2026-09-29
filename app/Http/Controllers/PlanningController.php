@@ -50,6 +50,14 @@ class PlanningController extends Controller
 
         $personId = $request->integer('person');
         $person = $people->firstWhere('id', $personId) ?? $people->first();
+        $highestWeeklyHours = (float) ($people
+            ->flatMap(fn (Person $item) => $this->overlappingWeeklyHours($item, $yearStart, $yearEnd))
+            ->max(fn (PersonWeeklyHours $row) => (float) $row->hours) ?? 0);
+        $yMax = (int) ceil($highestWeeklyHours / 10) * 10;
+        if ($highestWeeklyHours > 0 && $highestWeeklyHours < 40 && fmod($highestWeeklyHours, 10.0) === 0.0) {
+            $yMax += 10;
+        }
+        $yMax = max(10, $yMax);
         $points = collect();
 
         if ($person) {
@@ -72,7 +80,7 @@ class PlanningController extends Controller
             }
         }
 
-        return view('planning.arbeitszeit', compact('years', 'year', 'people', 'person', 'points'));
+        return view('planning.arbeitszeit', compact('years', 'year', 'people', 'person', 'points', 'yMax'));
     }
 
     public function stunden(Request $request): View
