@@ -20,7 +20,7 @@
         </div>
     @endif
 
-    <div class="mb-3 shrink-0 space-y-2" x-data="{ creating: {{ old('_form') === 'create' ? 'true' : 'false' }} }">
+    <div class="mb-3 shrink-0 space-y-2" x-data="{ creating: {{ old('_form') === 'create' ? 'true' : 'false' }}, createDirty: {{ old('_form') === 'create' && $errors->any() ? 'true' : 'false' }} }">
         <p class="text-xs text-gray-500">
             {{ __('Kunde') }}:
             <span class="font-medium text-gray-700">{{ $tenant?->short_name ?: ($tenant?->name ?? '–') }}</span>
@@ -57,9 +57,8 @@
             x-cloak
             method="POST"
             action="{{ route('planung.grundlast.store') }}"
-            x-data="{ dirty: {{ old('_form') === 'create' && $errors->any() ? 'true' : 'false' }} }"
-            x-init="if (dirty) window.__baseLoadDirtyForms.add($el)"
-            @input="dirty = window.formIsDirty($el, window.__baseLoadDirtyForms)"
+            x-init="if (createDirty) window.__baseLoadDirtyForms.add($el)"
+            @input="createDirty = window.formIsDirty($el, window.__baseLoadDirtyForms)"
             @submit="window.__baseLoadDirtyForms.delete($el)"
             class="grid grid-cols-1 items-end gap-2 rounded-md border border-gray-200 bg-white p-3 md:grid-cols-[minmax(12rem,2fr)_minmax(10rem,1fr)_8rem_10rem_10rem_auto_auto]"
         >
@@ -84,8 +83,8 @@
             <label class="text-xs text-gray-500">{{ __('Gültig bis') }}
                 <input type="date" name="valid_to" value="{{ old('valid_to', $year.'-12-31') }}" min="{{ $year }}-01-01" max="{{ $year }}-12-31" required class="mt-0.5 w-full rounded-md border-gray-300 py-1 text-sm">
             </label>
-            <button type="button" @click="window.__baseLoadDirtyForms.delete($el.closest('form')); $el.closest('form').reset(); dirty = false; creating = false" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Abbrechen') }}</button>
-            <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
+            <button type="button" @click="window.__baseLoadDirtyForms.delete($el.closest('form')); $el.closest('form').reset(); createDirty = false; creating = false" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Abbrechen') }}</button>
+            <button type="submit" x-show="createDirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
         </form>
     </div>
 
