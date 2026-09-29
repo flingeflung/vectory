@@ -79,9 +79,17 @@
                                             type: 'linear',
                                             min: 0,
                                             max: 11,
-                                            grid: { display: false },
+                                            grid: {
+                                                display: true,
+                                                color: '#e5e7eb',
+                                                lineWidth: 1,
+                                                drawTicks: false,
+                                            },
                                             ticks: {
                                                 stepSize: 1,
+                                                autoSkip: false,
+                                                maxTicksLimit: 12,
+                                                padding: 8,
                                                 callback: (value) => [{{ collect(range(1, 12))->map(fn ($month) => \Illuminate\Support\Js::from(\Carbon\CarbonImmutable::create($year, $month, 1)->locale(app()->getLocale())->isoFormat('MMM')))->implode(', ') }}][value] ?? '',
                                             },
                                         },
