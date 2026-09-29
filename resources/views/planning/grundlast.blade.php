@@ -26,16 +26,23 @@
             <span class="font-medium text-gray-700">{{ $tenant?->name ?? '–' }}</span>
         </p>
 
-        <div class="flex flex-wrap items-center gap-3 text-sm">
-            <form method="GET" action="{{ route('planung.grundlast') }}" class="flex items-center gap-2">
-                <label class="flex items-center gap-2 text-gray-700">{{ __('Jahr') }}
-                    <select name="year" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 text-sm">
-                        @foreach ($years as $itemYear)
-                            <option value="{{ $itemYear }}" @selected($year === $itemYear)>{{ $itemYear }}</option>
-                        @endforeach
-                    </select>
-                </label>
-            </form>
+        <div class="flex flex-wrap items-start gap-3 text-sm">
+            <div>
+                <form method="GET" action="{{ route('planung.grundlast') }}" class="flex items-center gap-2">
+                    <label class="flex items-center gap-2 text-gray-700">{{ __('Jahr') }}
+                        <select name="year" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 text-sm">
+                            @foreach ($years as $itemYear)
+                                <option value="{{ $itemYear }}" @selected($year === $itemYear)>{{ $itemYear }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+                </form>
+                <p class="mt-1 max-w-3xl text-xs text-gray-500">
+                    {{ __('Grundlasten werden hier zentral definiert, gelten aber bei der Berechnung') }}
+                    <strong class="font-semibold text-gray-600">{{ __('pro Person') }}</strong>.
+                    {{ __('Individuelle Abweichungen sind je Person und Jahr möglich, siehe (...).') }}
+                </p>
+            </div>
 
             <button type="button" x-show="!creating" @click="creating = true; $nextTick(() => $refs.newName.focus())" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover">
                 + {{ __('Grundlast anlegen') }}
