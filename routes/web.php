@@ -77,6 +77,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // (planning.view), siehe PlanningController.
     Route::redirect('/planung', '/planung/stunden');
     Route::get('/planung/stunden', [PlanningController::class, 'stunden'])->name('planung.stunden');
+    Route::get('/planung/arbeitszeit', [PlanningController::class, 'arbeitszeit'])->name('planung.arbeitszeit');
     Route::get('/jobload', [JobloadController::class, 'index'])->name('jobload');
     Route::get('/jobload/uebersicht', [JobloadOverviewController::class, 'index'])->name('jobload.overview');
     Route::get('/jobload/uebersicht/wochenwerte', [JobloadOverviewController::class, 'weekDetail'])->name('jobload.overview.week-detail');
