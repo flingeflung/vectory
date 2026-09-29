@@ -62,7 +62,7 @@
             </tbody>
             @if ($rows->isNotEmpty())
                 <tfoot class="bg-gray-50 font-semibold text-gray-800">
-                    <tr class="border-t-2 border-gray-500">
+                    <tr class="border-t border-gray-500">
                         <td class="px-3 py-2" colspan="5">{{ __('Summe') }}</td>
                         <td class="px-3 py-2 text-right tabular-nums">{{ $fmt($total) }}</td>
                     </tr>
