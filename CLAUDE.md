@@ -1,7 +1,7 @@
 # Vectory – Projekt-Kontext
 
 ## Ausgangslage
-- Vectory ist die Neuentwicklung/Modernisierung von Vietto (internes PHP/MySQL-Tool). Referenz: D:\htdocs\vietto (siehe dortige agents.md für Umgangsregeln – nie verändern, nur lesend analysieren).
+- Vectory ist die Neuentwicklung/Modernisierung von Vietto (internes PHP/MySQL-Tool). Referenz: D:\htdocs\vietto – nie verändern, nur lesend analysieren (Umgangsregeln dazu stehen im Abschnitt „Vietto als Referenz" der `agents.md` hier im Vectory-Projekt, nicht in einer Datei bei Vietto selbst – dort existiert keine `agents.md`).
 - Ralf hat Vietto selbst entwickelt und kennt es im Detail. Er gibt fachlich vor, was gebaut wird; Umsetzung liegt bei Claude, Vorschläge sind willkommen.
 - One-Man-Show, kein Team.
 

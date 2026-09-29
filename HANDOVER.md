@@ -143,8 +143,10 @@ nachgezogen (Tooltip-Texte, Kommentare, `lang/en.json`).
   committen UND pushen.
 - Migrationen sind bereits lokal ausgeführt (`php artisan migrate`), Backfill
   ist erfolgt - keine offenen Migrationen.
-- Backlog-Artifact (separate, von Ralf geteilte Übersichtsseite, nicht Teil
-  des Repos) ist ebenfalls aktuell: https://claude.ai/artifact/2kMLBruuM5D7EKRJwwdQaz
+- Es gibt zusätzlich eine Backlog-Übersichtsseite, aber die ist an Claudes
+  Oberfläche gebunden (kein normaler Link, für andere Tools nicht öffenbar) -
+  nur für Ralf relevant, nicht für dich. Alles, was du als Codex brauchst,
+  steht hier oder in den lokalen Dateien.
 
 ## Wo die Datei liegt
 
