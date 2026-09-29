@@ -85,6 +85,7 @@ class PlanningBaseLoadController extends Controller
         ]);
 
         $year = (int) $data['year'];
+        $data['year'] = $year;
         $this->ensureYearIsAllowed($year);
         if ((int) substr($data['valid_from'], 0, 4) !== $year || (int) substr($data['valid_to'], 0, 4) !== $year) {
             throw ValidationException::withMessages([
