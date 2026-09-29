@@ -89,7 +89,7 @@
                                     datasets: [{
                                         label: {{ \Illuminate\Support\Js::from(__('Wochenstunden')) }},
                                         data: points,
-                                        stepped: 'after',
+                                        stepped: 'before',
                                         borderColor: '#2563eb',
                                         backgroundColor: 'rgba(37, 99, 235, 0.08)',
                                         borderWidth: 2,
