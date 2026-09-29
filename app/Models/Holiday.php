@@ -6,7 +6,7 @@ use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 
-#[Fillable(['tenant_id', 'name', 'date', 'remarks', 'active'])]
+#[Fillable(['tenant_id', 'name', 'date', 'weekday', 'remarks', 'active'])]
 class Holiday extends Model
 {
     use BelongsToTenant;
@@ -15,6 +15,7 @@ class Holiday extends Model
     {
         return [
             'date' => 'date',
+            'weekday' => 'integer',
             'active' => 'boolean',
         ];
     }

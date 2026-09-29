@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Holiday;
 use App\Support\CurrentTenant;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -72,6 +73,7 @@ class HolidayController extends Controller
         ]);
         $data['remarks'] = isset($data['remarks']) && trim($data['remarks']) !== '' ? trim($data['remarks']) : null;
         $data['active'] = $request->boolean('active');
+        $data['weekday'] = CarbonImmutable::createFromFormat('Y-m-d', $data['date'])->isoWeekday();
 
         return $data;
     }
