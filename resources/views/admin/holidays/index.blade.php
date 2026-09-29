@@ -103,7 +103,8 @@
                         $formId = 'holiday-form-'.$holiday->id;
                     @endphp
                     <tr
-                        class="border-b border-gray-100 last:border-b-0 hover:bg-gray-50"
+                        class="border-b border-gray-100 last:border-b-0 hover:bg-gray-50 {{ $holiday->active ? '' : 'bg-gray-50 opacity-60 hover:opacity-80' }}"
+                        :class="{ 'opacity-100': editing }"
                         x-data="{ editing: {{ $failedUpdate ? 'true' : 'false' }}, dirty: {{ $failedUpdate ? 'true' : 'false' }} }"
                         x-init="if (dirty) window.__holidayDirtyForms.add(document.getElementById('{{ $formId }}'))"
                         @input="dirty = window.formIsDirty(document.getElementById('{{ $formId }}'), window.__holidayDirtyForms)"
