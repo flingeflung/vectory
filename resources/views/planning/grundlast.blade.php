@@ -41,13 +41,15 @@
                 + {{ __('Grundlast anlegen') }}
             </button>
 
-            <form method="POST" action="{{ route('planung.grundlast.copy-previous') }}">
-                @csrf
-                <input type="hidden" name="year" value="{{ $year }}">
-                <button type="submit" @disabled($previousYearCount === 0) class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:cursor-not-allowed disabled:opacity-40">
-                    {{ __('Aus :year kopieren', ['year' => $year - 1]) }}
-                </button>
-            </form>
+            @if ($previousYearCount > 0)
+                <form method="POST" action="{{ route('planung.grundlast.copy-previous') }}">
+                    @csrf
+                    <input type="hidden" name="year" value="{{ $year }}">
+                    <button type="submit" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover">
+                        {{ __('Aus :year kopieren', ['year' => $year - 1]) }}
+                    </button>
+                </form>
+            @endif
         </div>
 
         <form
