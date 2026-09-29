@@ -51,7 +51,7 @@ class PersonController extends Controller
     /**
      * @var list<string>
      */
-    private const FILTER_KEYS = ['search', 'company_id', 'department_id', 'business_unit_id', 'permission_template_id', 'legacy_role_id', 'typ', 'show_inactive', 'tenant_id'];
+    private const FILTER_KEYS = ['search', 'company_id', 'department_id', 'business_unit_id', 'permission_template_id', 'legacy_role_id', 'typ', 'show_inactive', 'tenant_id', 'resource_planning'];
 
     public function index(Request $request): View
     {
@@ -262,15 +262,15 @@ class PersonController extends Controller
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date'],
             'remarks' => ['nullable', 'string'],
-            'weekly_hours' => ['nullable', 'numeric', 'between:0,80', 'multiple_of:0.5'],
             'active' => ['boolean'],
             'is_absent' => ['boolean'],
+            'resource_planning' => ['boolean'],
             'absent_until' => ['nullable', 'date', 'after_or_equal:today'],
         ], [
             // Gleiche eigene Meldung wie SettingsController::updateAbsence()
             // (Laravels Standardtext übersetzt "today" nicht).
             'absent_until.after_or_equal' => __('Das Datum darf nicht in der Vergangenheit liegen.'),
-        ], ['short_name' => __('Kürzel'), 'absent_until' => __('Abwesend bis'), 'weekly_hours' => __('Wochenstunden')]);
+        ], ['short_name' => __('Kürzel'), 'absent_until' => __('Abwesend bis')]);
 
         if ($validator->fails()) {
             if ($isOverlay) {
@@ -285,6 +285,7 @@ class PersonController extends Controller
         $validated = $validator->validated();
         $validated['active'] = $request->boolean('active');
         $validated['is_absent'] = $request->boolean('is_absent');
+        $validated['resource_planning'] = $request->boolean('resource_planning');
         $functionGroupIds = collect($validated['function_group_ids'] ?? []);
         unset($validated['function_group_ids']);
         $person->update($validated);
@@ -833,6 +834,12 @@ class PersonController extends Controller
             // User-Accounts (Login-User vs. Kontaktperson) - kein eigenes
             // Feld, damit es nie mit der Realität auseinanderlaufen kann.
             $filters['typ'] === 'login' ? $query->has('user') : $query->doesntHave('user');
+        }
+        // Ralf, 2026-09-29: Filter fürs neue Ressourcenplanung-Häkchen, um es
+        // bequem massenhaft durchsehen/prüfen zu können (statt jede Person
+        // einzeln öffnen zu müssen).
+        if (($filters['resource_planning'] ?? '') !== '') {
+            $query->where('resource_planning', $filters['resource_planning'] === '1');
         }
 
         return $query;

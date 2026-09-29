@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
     'tenant_id', 'legacy_id', 'first_name', 'last_name', 'short_name', 'email',
     'company_id', 'department_id', 'business_unit_id', 'legacy_role_id', 'permission_template_id',
     'last_login_at', 'start_date', 'end_date', 'remarks', 'language', 'sort', 'active',
-    'is_absent', 'absent_until',
+    'is_absent', 'absent_until', 'resource_planning',
 ])]
 class Person extends Model
 {
@@ -26,6 +26,7 @@ class Person extends Model
         return [
             'active' => 'boolean',
             'is_absent' => 'boolean',
+            'resource_planning' => 'boolean',
             'absent_until' => 'date',
             'last_login_at' => 'datetime',
             'start_date' => 'date',

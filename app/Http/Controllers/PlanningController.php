@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Department;
 use App\Models\Person;
 use App\Models\PersonVacationDays;
 use App\Models\PersonWeeklyHours;
@@ -39,7 +38,7 @@ class PlanningController extends Controller
             ->visibleInTenant($tenantId)
             ->whereHas('user');
 
-        $personIds = (clone $peopleQuery)->pluck('id');
+        $personIds = (clone $peopleQuery)->where('resource_planning', true)->pluck('id');
 
         // Jahre fürs Dropdown: alle Jahre, die irgendein Wochenstunden-
         // Datensatz dieser (sichtbaren) Personen berührt (Ralf, 2026-09-28:
@@ -64,24 +63,16 @@ class PlanningController extends Controller
         $yearEnd = CarbonImmutable::create($year, 12, 31)->startOfDay();
         $totalWorkdays = $this->countWeekdays($yearStart, $yearEnd);
 
-        // Abteilungsfilter statt eines Dienstleister-Flags (Ralf, 2026-09-28):
-        // funktioniert auch OHNE Mandantenfähigkeit, wo alle Personen eigene
-        // Mitarbeiter sind (kein Dienstleister-Merkmal zum Ausschließen
-        // externer Kräfte) - trotzdem will man z.B. nur die eigene Abteilung
-        // (TR) auswerten. "departments_submitted" unterscheidet "Formular
-        // noch nie abgeschickt" (Default: alle) von "bewusst alle Häkchen
-        // entfernt" (Checkboxen senden bei keiner Auswahl gar kein Feld).
-        $departments = Department::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('name')->get();
-        $allDepartmentValues = $departments->pluck('id')->push('none')->map(fn ($v) => (string) $v)->all();
-        $selectedDepartments = $request->boolean('departments_submitted')
-            ? array_map('strval', (array) $request->input('departments', []))
-            : $allDepartmentValues;
-
+        // Ralf, 2026-09-29: Abteilungsfilter funktionierte nicht zuverlässig für
+        // alle Szenarien (ohne Mandantenfähigkeit sind alle Personen eigene
+        // Mitarbeiter, kein Kriterium zum Ausschließen externer Kräfte) -
+        // ersetzt durch eine direkte, manuell gepflegte Markierung je Person
+        // (Person::resource_planning, siehe Personendetails).
         $people = (clone $peopleQuery)
+            ->where('resource_planning', true)
             ->with(['weeklyHours', 'vacationDays'])
             ->orderBy('last_name')->orderBy('first_name')
-            ->get()
-            ->filter(fn (Person $person) => in_array($person->department_id !== null ? (string) $person->department_id : 'none', $selectedDepartments, true));
+            ->get();
 
         $collator = new \Collator('de_DE');
         $rows = $people->map(function (Person $person) use ($yearStart, $yearEnd, $totalWorkdays) {
@@ -102,6 +93,7 @@ class PlanningController extends Controller
                 $netto = $brutto - $vacationHours;
 
                 return [
+                    'personId' => $person->id,
                     'firstName' => $person->first_name,
                     'lastName' => $person->last_name,
                     'sortKey' => $person->last_name.', '.$person->first_name,
@@ -116,7 +108,7 @@ class PlanningController extends Controller
 
         $total = (float) $rows->sum('jahresstd');
 
-        return view('planning.stunden', compact('years', 'year', 'totalWorkdays', 'rows', 'total', 'departments', 'selectedDepartments'));
+        return view('planning.stunden', compact('years', 'year', 'totalWorkdays', 'rows', 'total'));
     }
 
     /**

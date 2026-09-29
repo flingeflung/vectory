@@ -105,11 +105,19 @@
                         <option value="kontakt" @selected(request('typ') === 'kontakt')>{{ __('Kontaktperson') }}</option>
                     </select>
                 </div>
+                <div>
+                    <label class="block text-xs text-gray-500">{{ __('Ressourcenplanung') }}</label>
+                    <select name="resource_planning" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-xs">
+                        <option value="">{{ __('– Alle –') }}</option>
+                        <option value="1" @selected(request('resource_planning') === '1')>{{ __('enthalten') }}</option>
+                        <option value="0" @selected(request('resource_planning') === '0')>{{ __('nicht enthalten') }}</option>
+                    </select>
+                </div>
                 <label class="flex items-center gap-1.5 pb-1.5 text-xs text-gray-600">
                     <input type="checkbox" name="show_inactive" value="1" @checked(request()->boolean('show_inactive')) onchange="this.form.submit()" class="rounded border-gray-300">
                     {{ __('Inaktive zeigen') }}
                 </label>
-                @if (request()->anyFilled(['search', 'company_id', 'department_id', 'business_unit_id', 'permission_template_id', 'legacy_role_id', 'typ', 'tenant_id']) || request()->boolean('show_inactive'))
+                @if (request()->anyFilled(['search', 'company_id', 'department_id', 'business_unit_id', 'permission_template_id', 'legacy_role_id', 'typ', 'tenant_id', 'resource_planning']) || request()->boolean('show_inactive'))
                     <a href="{{ route('admin.personen') }}" class="mb-1.5 inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Filter zurücksetzen') }}</a>
                 @endif
                 </div>

@@ -147,7 +147,7 @@
                 <div class="flex items-end gap-4">
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('ID') }}</label>
-                        <input type="text" value="{{ $person->id }}" disabled class="mt-0.5 w-20 rounded-md border-gray-300 bg-gray-50 text-sm text-gray-500">
+                        <input type="text" value="{{ $person->id }}" disabled class="mt-0.5 w-20 rounded-md border-gray-300 bg-gray-50 py-1.5 text-sm text-gray-500">
                     </div>
                     <label class="mb-1.5 flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-sm font-medium text-gray-700">
                         <input type="checkbox" name="active" value="1" @checked($person->active) class="rounded border-gray-300">
@@ -347,6 +347,16 @@
                             </div>
                         </div>
                     </div>
+
+                    {{-- Ralf, 2026-09-29: Abteilungsfilter in der Planung ersatzlos
+                         entfernt (funktionierte nicht zuverlässig für alle
+                         Szenarien) - stattdessen direkt hier je Person markieren,
+                         ob sie einbezogen wird (z.B. um externe Dienstleister wie
+                         Florian auszuschließen). --}}
+                    <label class="flex items-center gap-2 text-sm text-gray-700" title="{{ __('Diese Person in die Ressourcenplanung mit einbeziehen') }}">
+                        <input type="checkbox" name="resource_planning" value="1" @checked(old('resource_planning', $person->resource_planning)) class="rounded border-gray-300">
+                        {{ __('Ressourcenplanung') }}
+                    </label>
                 @endif
 
                 <div>
