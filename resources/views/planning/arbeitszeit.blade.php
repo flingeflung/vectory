@@ -52,8 +52,8 @@
                             if (!this.$refs.canvas) return;
 
                             chart?.destroy();
-                            const monthGrid = {
-                                id: 'monthGrid',
+                            const calendarGrid = {
+                                id: 'calendarGrid',
                                 beforeDatasetsDraw(instance) {
                                     const { ctx, chartArea, scales: { x } } = instance;
                                     ctx.save();
@@ -68,10 +68,22 @@
                                     });
                                     ctx.restore();
                                 },
+                                afterDraw(instance) {
+                                    const { ctx, chartArea, scales: { x } } = instance;
+                                    ctx.save();
+                                    ctx.fillStyle = '#4b5563';
+                                    ctx.font = '12px sans-serif';
+                                    ctx.textAlign = 'center';
+                                    ctx.textBaseline = 'top';
+                                    monthCenters.forEach((day, index) => {
+                                        ctx.fillText(monthLabels[index], x.getPixelForValue(day), chartArea.bottom + 10);
+                                    });
+                                    ctx.restore();
+                                },
                             };
                             chart = new ChartClass(this.$refs.canvas, {
                                 type: 'line',
-                                plugins: [monthGrid],
+                                plugins: [calendarGrid],
                                 data: {
                                     datasets: [{
                                         label: {{ \Illuminate\Support\Js::from(__('Wochenstunden')) }},
@@ -89,6 +101,7 @@
                                     responsive: true,
                                     maintainAspectRatio: false,
                                     parsing: false,
+                                    layout: { padding: { bottom: 24 } },
                                     interaction: { intersect: false, mode: 'nearest' },
                                     plugins: {
                                         legend: { display: false },
@@ -109,15 +122,8 @@
                                             type: 'linear',
                                             min: 0,
                                             max: monthStarts[12],
-                                            afterBuildTicks: (axis) => {
-                                                axis.ticks = monthCenters.map((value) => ({ value }));
-                                            },
                                             grid: { display: false },
-                                            ticks: {
-                                                autoSkip: false,
-                                                padding: 8,
-                                                callback: (_value, index) => monthLabels[index] ?? '',
-                                            },
+                                            ticks: { display: false },
                                         },
                                         y: {
                                             beginAtZero: true,
