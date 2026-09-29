@@ -22,6 +22,8 @@ use Illuminate\View\View;
  */
 class PlanningController extends Controller
 {
+    private const HOURS_SORTABLE_COLUMNS = ['name', 'department', 'wost', 'workdays', 'vacation_hours', 'annual_hours'];
+
     public function arbeitszeit(Request $request): View
     {
         abort_unless($request->user()->can('planning.view'), 403);
@@ -109,6 +111,10 @@ class PlanningController extends Controller
         $yearStart = CarbonImmutable::create($year, 1, 1)->startOfDay();
         $yearEnd = CarbonImmutable::create($year, 12, 31)->startOfDay();
         $totalWorkdays = $this->countWeekdays($yearStart, $yearEnd);
+        $sort = in_array($request->query('sort'), self::HOURS_SORTABLE_COLUMNS, true)
+            ? $request->query('sort')
+            : 'name';
+        $direction = $request->query('direction') === 'desc' ? 'desc' : 'asc';
 
         // Ralf, 2026-09-29: Abteilungsfilter funktionierte nicht zuverlässig für
         // alle Szenarien (ohne Mandantenfähigkeit sind alle Personen eigene
@@ -117,7 +123,7 @@ class PlanningController extends Controller
         // (Person::resource_planning, siehe Personendetails).
         $people = (clone $peopleQuery)
             ->where('resource_planning', true)
-            ->with(['weeklyHours', 'vacationDays'])
+            ->with(['weeklyHours', 'vacationDays', 'department'])
             ->orderBy('last_name')->orderBy('first_name')
             ->get();
 
@@ -144,18 +150,33 @@ class PlanningController extends Controller
                 'firstName' => $person->first_name,
                 'lastName' => $person->last_name,
                 'sortKey' => $person->last_name.', '.$person->first_name,
+                'department' => $person->department?->name ?? '',
                 'wost' => $effectiveWoSt,
                 'vacationHours' => $vacationHours,
                 'jahresstd' => $netto,
             ];
         })
             ->filter()
-            ->sort(fn ($a, $b) => $collator->compare($a['sortKey'], $b['sortKey']))
+            ->sort(function ($a, $b) use ($collator, $direction, $sort, $totalWorkdays) {
+                $result = match ($sort) {
+                    'department' => $collator->compare($a['department'], $b['department']),
+                    'wost' => $a['wost'] <=> $b['wost'],
+                    'workdays' => $totalWorkdays <=> $totalWorkdays,
+                    'vacation_hours' => $a['vacationHours'] <=> $b['vacationHours'],
+                    'annual_hours' => $a['jahresstd'] <=> $b['jahresstd'],
+                    default => $collator->compare($a['sortKey'], $b['sortKey']),
+                };
+                if ($result === 0 && $sort !== 'name') {
+                    $result = $collator->compare($a['sortKey'], $b['sortKey']);
+                }
+
+                return $direction === 'desc' ? -$result : $result;
+            })
             ->values();
 
         $total = (float) $rows->sum('jahresstd');
 
-        return view('planning.stunden', compact('years', 'year', 'totalWorkdays', 'rows', 'total'));
+        return view('planning.stunden', compact('years', 'year', 'totalWorkdays', 'rows', 'total', 'sort', 'direction'));
     }
 
     private function planningYears($personIds, Request $request): array
