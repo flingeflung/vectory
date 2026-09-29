@@ -70,6 +70,14 @@
                                         legend: { display: false },
                                         tooltip: {
                                             callbacks: {
+                                                title: (items) => {
+                                                    if (!items.length) return '';
+                                                    const year = {{ $year }};
+                                                    const daysInYear = (Date.UTC(year + 1, 0, 1) - Date.UTC(year, 0, 1)) / 86400000;
+                                                    const dayOffset = Math.round(items[0].parsed.x / 11 * (daysInYear - 1));
+                                                    const date = new Date(Date.UTC(year, 0, 1 + dayOffset));
+                                                    return date.toLocaleDateString(document.documentElement.lang || 'de-DE');
+                                                },
                                                 label: (context) => `${context.parsed.y.toLocaleString('de-DE', { maximumFractionDigits: 1 })} h`,
                                             },
                                         },
@@ -86,11 +94,10 @@
                                                 drawTicks: false,
                                             },
                                             ticks: {
-                                                stepSize: 1,
+                                                count: 12,
                                                 autoSkip: false,
-                                                maxTicksLimit: 12,
                                                 padding: 8,
-                                                callback: (value) => [{{ collect(range(1, 12))->map(fn ($month) => \Illuminate\Support\Js::from(\Carbon\CarbonImmutable::create($year, $month, 1)->locale(app()->getLocale())->isoFormat('MMM')))->implode(', ') }}][value] ?? '',
+                                                callback: (value) => [{{ collect(range(1, 12))->map(fn ($month) => \Illuminate\Support\Js::from(\Carbon\CarbonImmutable::create($year, $month, 1)->locale(app()->getLocale())->isoFormat('MMM')))->implode(', ') }}][Math.round(value)] ?? '',
                                             },
                                         },
                                         y: {
