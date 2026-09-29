@@ -50,13 +50,15 @@ class PlanningController extends Controller
             ->orderBy('valid_from')
             ->orderBy('name')
             ->get();
+        $weeklyTotal = (float) $baseLoads->where('calculation_type', 'weekly')->sum('value');
+        $yearlyTotal = (float) $baseLoads->where('calculation_type', 'yearly')->sum('value');
         $previousYearCount = PlanningBaseLoad::query()
             ->where('tenant_id', $tenantId)
             ->where('year', $year - 1)
             ->count();
         $tenant = CurrentTenant::current();
 
-        return view('planning.grundlast', compact('years', 'year', 'baseLoads', 'previousYearCount', 'tenant'));
+        return view('planning.grundlast', compact('years', 'year', 'baseLoads', 'weeklyTotal', 'yearlyTotal', 'previousYearCount', 'tenant'));
     }
 
     public function arbeitszeit(Request $request): View
