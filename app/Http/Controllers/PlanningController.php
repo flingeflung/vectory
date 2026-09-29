@@ -50,8 +50,17 @@ class PlanningController extends Controller
             ->orderBy('valid_from')
             ->orderBy('name')
             ->get();
-        $weeklyTotal = (float) $baseLoads->where('calculation_type', 'weekly')->sum('value');
-        $yearlyTotal = (float) $baseLoads->where('calculation_type', 'yearly')->sum('value');
+        $yearStart = CarbonImmutable::create($year, 1, 1);
+        $yearEnd = CarbonImmutable::create($year, 12, 31);
+        $yearWorkdays = $this->countWeekdays($yearStart, $yearEnd);
+        $weightedValue = fn (PlanningBaseLoad $baseLoad) => $yearWorkdays > 0
+            ? (float) $baseLoad->value * $this->countWeekdays(
+                CarbonImmutable::parse($baseLoad->valid_from->toDateString()),
+                CarbonImmutable::parse($baseLoad->valid_to->toDateString())
+            ) / $yearWorkdays
+            : 0.0;
+        $weeklyTotal = (float) $baseLoads->where('calculation_type', 'weekly')->sum($weightedValue);
+        $yearlyTotal = (float) $baseLoads->where('calculation_type', 'yearly')->sum($weightedValue);
         $previousYearCount = PlanningBaseLoad::query()
             ->where('tenant_id', $tenantId)
             ->where('year', $year - 1)
