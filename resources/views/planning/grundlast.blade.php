@@ -52,15 +52,18 @@
                     </form>
                 @endif
 
-                <div class="ml-auto flex items-center gap-3">
-                    <label class="flex items-center gap-2 text-xs text-gray-600">
-                        {{ __('Summe Std/Woche') }}
-                        <input type="text" readonly value="{{ number_format($weeklyTotal, 2, ',', '.') }}" class="w-24 rounded-md border-gray-300 bg-gray-50 py-1 text-right text-sm font-medium tabular-nums text-gray-800">
-                    </label>
-                    <label class="flex items-center gap-2 text-xs text-gray-600">
-                        {{ __('Summe Std/Jahr') }}
-                        <input type="text" readonly value="{{ number_format($yearlyTotal, 2, ',', '.') }}" class="w-24 rounded-md border-gray-300 bg-gray-50 py-1 text-right text-sm font-medium tabular-nums text-gray-800">
-                    </label>
+                <div class="ml-auto space-y-1">
+                    <div class="flex items-center gap-3">
+                        <label class="flex items-center gap-2 text-xs text-gray-600">
+                            {{ __('Summe Std/Woche') }}
+                            <input type="text" readonly value="{{ number_format($weeklyTotal, 2, ',', '.') }}" class="w-24 rounded-md border-gray-300 bg-gray-50 py-1 text-right text-sm font-medium tabular-nums text-gray-800">
+                        </label>
+                        <label class="flex items-center gap-2 text-xs text-gray-600">
+                            {{ __('Summe Std/Jahr') }}
+                            <input type="text" readonly value="{{ number_format($yearlyTotal, 2, ',', '.') }}" class="w-24 rounded-md border-gray-300 bg-gray-50 py-1 text-right text-sm font-medium tabular-nums text-gray-800">
+                        </label>
+                    </div>
+                    <p class="text-right text-xs text-gray-400">{{ __('Berechnung mit 52 Standard-Wochen pro Jahr.') }}</p>
                 </div>
             </div>
             <p class="max-w-3xl text-xs text-gray-500">

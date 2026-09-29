@@ -59,8 +59,10 @@ class PlanningController extends Controller
                 CarbonImmutable::parse($baseLoad->valid_to->toDateString())
             ) / $yearWorkdays
             : 0.0;
-        $weeklyTotal = (float) $baseLoads->where('calculation_type', 'weekly')->sum($weightedValue);
-        $yearlyTotal = (float) $baseLoads->where('calculation_type', 'yearly')->sum($weightedValue);
+        $yearlyTotal = (float) $baseLoads->sum(
+            fn (PlanningBaseLoad $baseLoad) => $weightedValue($baseLoad) * ($baseLoad->calculation_type === 'weekly' ? 52 : 1)
+        );
+        $weeklyTotal = $yearlyTotal / 52;
         $previousYearCount = PlanningBaseLoad::query()
             ->where('tenant_id', $tenantId)
             ->where('year', $year - 1)
