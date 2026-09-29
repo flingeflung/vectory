@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Models\PlanningBaseLoad;
+use App\Models\PlanningPersonBaseLoad;
 use App\Services\PlanningBaseLoadCalculator;
 use Carbon\CarbonImmutable;
 use Tests\TestCase;
@@ -69,5 +70,39 @@ class PlanningBaseLoadCalculatorTest extends TestCase
 
         $this->assertEqualsWithDelta(132, $totals['yearly'], 0.00001);
         $this->assertEqualsWithDelta(132 / 52, $totals['weekly'], 0.00001);
+    }
+
+    public function test_it_uses_the_basis_when_no_personal_records_exist(): void
+    {
+        $basis = [new PlanningBaseLoad([
+            'calculation_type' => 'weekly',
+            'value' => 2,
+            'valid_from' => '2026-01-01',
+            'valid_to' => '2026-12-31',
+        ])];
+
+        $totals = (new PlanningBaseLoadCalculator)->totalsForPerson($basis, [], 2026);
+
+        $this->assertEqualsWithDelta(104, $totals['yearly'], 0.00001);
+    }
+
+    public function test_personal_records_replace_the_basis_completely(): void
+    {
+        $basis = [new PlanningBaseLoad([
+            'calculation_type' => 'weekly',
+            'value' => 2,
+            'valid_from' => '2026-01-01',
+            'valid_to' => '2026-12-31',
+        ])];
+        $personal = [new PlanningPersonBaseLoad([
+            'calculation_type' => 'yearly',
+            'value' => 20,
+            'valid_from' => '2026-01-01',
+            'valid_to' => '2026-12-31',
+        ])];
+
+        $totals = (new PlanningBaseLoadCalculator)->totalsForPerson($basis, $personal, 2026);
+
+        $this->assertEqualsWithDelta(20, $totals['yearly'], 0.00001);
     }
 }

@@ -69,7 +69,8 @@
             <p class="max-w-3xl text-xs text-gray-500">
                 {{ __('Grundlasten werden hier zentral definiert, gelten aber bei der Berechnung') }}
                 <strong class="font-semibold text-gray-600">{{ __('pro Person') }}</strong>.
-                {{ __('Individuelle Abweichungen sind je Person und Jahr möglich, siehe (...).') }}
+                {{ __('Individuelle Abweichungen sind je Person und Jahr möglich, siehe') }}
+                <a href="{{ route('planung.grundlast-person', ['year' => $year]) }}" class="text-blue-600 hover:underline">{{ __('Grundlast/Person') }}</a>.
             </p>
         </div>
 

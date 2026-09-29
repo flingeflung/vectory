@@ -29,38 +29,40 @@ use App\Http\Controllers\GraphicOrderController;
 use App\Http\Controllers\HelpController;
 use App\Http\Controllers\IllustrationOverviewController;
 use App\Http\Controllers\JobloadController;
-use App\Http\Controllers\PlanningController;
-use App\Http\Controllers\PlanningBaseLoadController;
 use App\Http\Controllers\JobloadOverviewController;
 use App\Http\Controllers\LocaleSwitchController;
 use App\Http\Controllers\MultichangeController;
+use App\Http\Controllers\PlanningBaseLoadController;
+use App\Http\Controllers\PlanningController;
+use App\Http\Controllers\PlanningPersonBaseLoadController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectChecklistController;
 use App\Http\Controllers\ProjectConnectionController;
 use App\Http\Controllers\ProjectController;
-use App\Http\Controllers\ProjectFilterSetController;
-use App\Http\Controllers\StammIdController;
-use App\Http\Controllers\ProjectGanttPeopleController;
-use App\Http\Controllers\ProjectGanttPreferenceController;
 use App\Http\Controllers\ProjectCopyController;
 use App\Http\Controllers\ProjectDirectoryController;
+use App\Http\Controllers\ProjectFilterSetController;
 use App\Http\Controllers\ProjectFormatController;
+use App\Http\Controllers\ProjectGanttPeopleController;
+use App\Http\Controllers\ProjectGanttPreferenceController;
 use App\Http\Controllers\ProjectGroupController;
 use App\Http\Controllers\ProjectHourController;
 use App\Http\Controllers\ProjectJobTypeController;
-use App\Http\Controllers\ProjectPercentageSplitController;
 use App\Http\Controllers\ProjectNoteController;
+use App\Http\Controllers\ProjectPercentageSplitController;
 use App\Http\Controllers\ProjectProductController;
 use App\Http\Controllers\ProjectScheduleController;
 use App\Http\Controllers\ProjectWorkflowStepController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\StammIdController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TenantSwitchController;
 use App\Http\Controllers\UserTablePreferenceController;
 use App\Http\Controllers\VerbundController;
 use App\Http\Controllers\WorkflowStepFreigabeActionController;
 use App\Http\Middleware\RememberLastAdminPage;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -83,6 +85,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/planung/grundlast/{planningBaseLoad}', [PlanningBaseLoadController::class, 'update'])->name('planung.grundlast.update');
     Route::delete('/planung/grundlast/{planningBaseLoad}', [PlanningBaseLoadController::class, 'destroy'])->name('planung.grundlast.destroy');
     Route::post('/planung/grundlast/vorjahr-kopieren', [PlanningBaseLoadController::class, 'copyPreviousYear'])->name('planung.grundlast.copy-previous');
+    Route::get('/planung/grundlast-person', [PlanningController::class, 'grundlastPerson'])->name('planung.grundlast-person');
+    Route::post('/planung/grundlast-person/uebernehmen', [PlanningPersonBaseLoadController::class, 'inherit'])->name('planung.grundlast-person.inherit');
+    Route::put('/planung/grundlast-person/{planningPersonBaseLoad}', [PlanningPersonBaseLoadController::class, 'update'])->name('planung.grundlast-person.update');
     Route::get('/planung/arbeitszeit', [PlanningController::class, 'arbeitszeit'])->name('planung.arbeitszeit');
     Route::get('/jobload', [JobloadController::class, 'index'])->name('jobload');
     Route::get('/jobload/uebersicht', [JobloadOverviewController::class, 'index'])->name('jobload.overview');
@@ -444,7 +449,7 @@ Route::middleware('auth')->group(function () {
 // aus: die Signatur ist der Nachweis, und ein Mail-Client-Browser ohne
 // Session-Cookie (In-App-Browser) würde sonst mit 419 scheitern.
 Route::middleware(['signed', 'throttle:30,1'])
-    ->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class)
+    ->withoutMiddleware(PreventRequestForgery::class)
     ->prefix('freigabe/{freigabeRequest}')
     ->name('freigabe.')
     ->group(function () {

@@ -3,11 +3,36 @@
 namespace App\Services;
 
 use App\Models\PlanningBaseLoad;
+use App\Models\PlanningPersonBaseLoad;
 use Carbon\CarbonImmutable;
 
 class PlanningBaseLoadCalculator
 {
     public const STANDARD_WEEKS_PER_YEAR = 52;
+
+    /**
+     * Individuelle Datensätze ersetzen für Person und Jahr die Basis vollständig.
+     *
+     * @param  iterable<PlanningBaseLoad>  $baseLoads
+     * @param  iterable<PlanningPersonBaseLoad>  $personBaseLoads
+     * @return array{yearly: float, weekly: float}
+     */
+    public function totalsForPerson(
+        iterable $baseLoads,
+        iterable $personBaseLoads,
+        int $year,
+        ?CarbonImmutable $availableFrom = null,
+        ?CarbonImmutable $availableTo = null
+    ): array {
+        $personBaseLoads = collect($personBaseLoads);
+
+        return $this->totals(
+            $personBaseLoads->isNotEmpty() ? $personBaseLoads : $baseLoads,
+            $year,
+            $availableFrom,
+            $availableTo
+        );
+    }
 
     /**
      * @param  iterable<PlanningBaseLoad>  $baseLoads

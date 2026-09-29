@@ -6,6 +6,7 @@ use App\Models\Person;
 use App\Models\PersonVacationDays;
 use App\Models\PersonWeeklyHours;
 use App\Models\PlanningBaseLoad;
+use App\Models\PlanningPersonBaseLoad;
 use App\Services\PlanningBaseLoadCalculator;
 use App\Support\CurrentTenant;
 use Carbon\CarbonImmutable;
@@ -62,6 +63,50 @@ class PlanningController extends Controller
         $tenant = CurrentTenant::current();
 
         return view('planning.grundlast', compact('years', 'year', 'baseLoads', 'weeklyTotal', 'yearlyTotal', 'standardWeeks', 'previousYearCount', 'tenant'));
+    }
+
+    public function grundlastPerson(Request $request, PlanningBaseLoadCalculator $calculator): View
+    {
+        abort_unless($request->user()->can('planning.view'), 403);
+
+        $tenantId = CurrentTenant::id();
+        $currentYear = (int) now()->year;
+        $years = PlanningBaseLoad::query()->where('tenant_id', $tenantId)->pluck('year')
+            ->merge(PlanningPersonBaseLoad::query()->where('tenant_id', $tenantId)->pluck('year'))
+            ->merge([$currentYear, $currentYear + 1, $currentYear + 2])
+            ->map(fn ($value) => (int) $value)->unique()->sortDesc()->values()->all();
+        $year = $request->integer('year', $currentYear);
+        if (! in_array($year, $years, true)) {
+            $year = $currentYear;
+        }
+        $people = Person::query()->withoutGlobalScope('tenant')
+            ->visibleToRole($request->user()->role)
+            ->visibleInTenant($tenantId)
+            ->whereHas('user')
+            ->where('resource_planning', true)
+            ->orderBy('last_name')->orderBy('first_name')
+            ->get();
+        $person = $people->firstWhere('id', $request->integer('person')) ?? $people->first();
+        $personBaseLoads = $person
+            ? PlanningPersonBaseLoad::query()
+                ->where('tenant_id', $tenantId)
+                ->where('person_id', $person->id)
+                ->where('year', $year)
+                ->orderBy('valid_from')->orderBy('name')->get()
+            : collect();
+        $baseLoads = PlanningBaseLoad::query()->where('tenant_id', $tenantId)->where('year', $year)->get();
+        $linkedBaseIds = $personBaseLoads->pluck('planning_base_load_id')->filter();
+        $missingBaseLoadCount = $baseLoads->whereNotIn('id', $linkedBaseIds)->count();
+        $deletedBaseLoadCount = $personBaseLoads->whereNull('planning_base_load_id')->count();
+        $totals = $calculator->totals($personBaseLoads, $year);
+        $weeklyTotal = $totals['weekly'];
+        $yearlyTotal = $totals['yearly'];
+        $standardWeeks = PlanningBaseLoadCalculator::STANDARD_WEEKS_PER_YEAR;
+
+        return view('planning.grundlast-person', compact(
+            'years', 'year', 'people', 'person', 'personBaseLoads', 'missingBaseLoadCount',
+            'deletedBaseLoadCount', 'weeklyTotal', 'yearlyTotal', 'standardWeeks'
+        ));
     }
 
     public function arbeitszeit(Request $request): View
@@ -170,6 +215,12 @@ class PlanningController extends Controller
             ->where('tenant_id', $tenantId)
             ->where('year', $year)
             ->get();
+        $personBaseLoads = PlanningPersonBaseLoad::query()
+            ->where('tenant_id', $tenantId)
+            ->where('year', $year)
+            ->whereIn('person_id', $personIds)
+            ->get()
+            ->groupBy('person_id');
         $sort = in_array($request->query('sort'), self::HOURS_SORTABLE_COLUMNS, true)
             ? $request->query('sort')
             : 'name';
@@ -187,7 +238,7 @@ class PlanningController extends Controller
             ->get();
 
         $collator = new \Collator('de_DE');
-        $rows = $people->map(function (Person $person) use ($baseLoadCalculator, $baseLoads, $yearStart, $yearEnd, $totalWorkdays) {
+        $rows = $people->map(function (Person $person) use ($baseLoadCalculator, $baseLoads, $personBaseLoads, $yearStart, $yearEnd, $totalWorkdays) {
             $employmentStart = $person->start_date
                 ? CarbonImmutable::parse($person->start_date->toDateString())->max($yearStart)
                 : $yearStart;
@@ -226,7 +277,13 @@ class PlanningController extends Controller
             if ($person->end_date && $person->end_date->year === $yearStart->year) {
                 $annotations->push(__('bis :date', ['date' => $person->end_date->format('d.m.Y')]));
             }
-            $baseLoad = $baseLoadCalculator->totals($baseLoads, $yearStart->year, $employmentStart, $employmentEnd)['yearly'];
+            $baseLoad = $baseLoadCalculator->totalsForPerson(
+                $baseLoads,
+                $personBaseLoads->get($person->id, collect()),
+                $yearStart->year,
+                $employmentStart,
+                $employmentEnd
+            )['yearly'];
             $projectHours = $netto - $baseLoad;
 
             return [
