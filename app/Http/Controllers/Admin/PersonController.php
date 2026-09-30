@@ -16,11 +16,13 @@ use App\Models\SystemSetting;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Support\CurrentTenant;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -265,6 +267,7 @@ class PersonController extends Controller
             'active' => ['boolean'],
             'is_absent' => ['boolean'],
             'resource_planning' => ['boolean'],
+            'calendar_enabled' => ['boolean'],
             'absent_until' => ['nullable', 'date', 'after_or_equal:today'],
         ], [
             // Gleiche eigene Meldung wie SettingsController::updateAbsence()
@@ -286,6 +289,7 @@ class PersonController extends Controller
         $validated['active'] = $request->boolean('active');
         $validated['is_absent'] = $request->boolean('is_absent');
         $validated['resource_planning'] = $request->boolean('resource_planning');
+        $validated['calendar_enabled'] = $request->boolean('calendar_enabled');
         $functionGroupIds = collect($validated['function_group_ids'] ?? []);
         unset($validated['function_group_ids']);
         $person->update($validated);
@@ -469,7 +473,7 @@ class PersonController extends Controller
         $validated = $validator->validated();
 
         if ($openEntry) {
-            $openEntry->update(['valid_to' => \Carbon\CarbonImmutable::parse($validated['valid_from'])->subDay()]);
+            $openEntry->update(['valid_to' => CarbonImmutable::parse($validated['valid_from'])->subDay()]);
         }
 
         PersonWeeklyHours::query()->create([
@@ -535,7 +539,7 @@ class PersonController extends Controller
         $validated = $validator->validated();
 
         if ($openEntry) {
-            $openEntry->update(['valid_to' => \Carbon\CarbonImmutable::parse($validated['valid_from'])->subDay()]);
+            $openEntry->update(['valid_to' => CarbonImmutable::parse($validated['valid_from'])->subDay()]);
         }
 
         PersonVacationDays::query()->create([
@@ -697,7 +701,7 @@ class PersonController extends Controller
     }
 
     /**
-     * @return array{person: Person, companies: \Illuminate\Support\Collection, departments: \Illuminate\Support\Collection, businessUnits: \Illuminate\Support\Collection, legacyRoles: \Illuminate\Support\Collection, permissionTemplates: \Illuminate\Support\Collection, functionGroups: \Illuminate\Support\Collection, filters: array, previousPerson: ?Person, nextPerson: ?Person}
+     * @return array{person: Person, companies: Collection, departments: Collection, businessUnits: Collection, legacyRoles: Collection, permissionTemplates: Collection, functionGroups: Collection, filters: array, previousPerson: ?Person, nextPerson: ?Person}
      */
     private function editData(Request $request, Person $person): array
     {

@@ -353,10 +353,16 @@
                          Szenarien) - stattdessen direkt hier je Person markieren,
                          ob sie einbezogen wird (z.B. um externe Dienstleister wie
                          Florian auszuschließen). --}}
-                    <label class="flex items-center gap-2 text-sm text-gray-700" title="{{ __('Diese Person in die Ressourcenplanung mit einbeziehen') }}">
-                        <input type="checkbox" name="resource_planning" value="1" @checked(old('resource_planning', $person->resource_planning)) class="rounded border-gray-300">
-                        {{ __('Ressourcenplanung') }}
-                    </label>
+                    <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+                        <label class="flex items-center gap-2 text-sm text-gray-700" title="{{ __('Diese Person in die Ressourcenplanung mit einbeziehen') }}">
+                            <input type="checkbox" name="resource_planning" value="1" @checked(old('resource_planning', $person->resource_planning)) class="rounded border-gray-300">
+                            {{ __('Ressourcenplanung') }}
+                        </label>
+                        <label class="flex items-center gap-2 text-sm text-gray-700" title="{{ __('Die Person ist im Kalender sichtbar und kann dort eigene Einträge machen') }}">
+                            <input type="checkbox" name="calendar_enabled" value="1" @checked(old('calendar_enabled', $person->calendar_enabled)) class="rounded border-gray-300">
+                            {{ __('Kalender') }}
+                        </label>
+                    </div>
                 @endif
 
                 <div>

@@ -8,14 +8,16 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 #[Fillable([
     'tenant_id', 'legacy_id', 'first_name', 'last_name', 'short_name', 'email',
     'company_id', 'department_id', 'business_unit_id', 'legacy_role_id', 'permission_template_id',
     'last_login_at', 'start_date', 'end_date', 'remarks', 'language', 'sort', 'active',
-    'is_absent', 'absent_until', 'resource_planning',
+    'is_absent', 'absent_until', 'resource_planning', 'calendar_enabled',
 ])]
 class Person extends Model
 {
@@ -27,6 +29,7 @@ class Person extends Model
             'active' => 'boolean',
             'is_absent' => 'boolean',
             'resource_planning' => 'boolean',
+            'calendar_enabled' => 'boolean',
             'absent_until' => 'date',
             'last_login_at' => 'datetime',
             'start_date' => 'date',
@@ -61,7 +64,7 @@ class Person extends Model
      * Grund wie company()/permissionTemplate() unten: gehört immer dem
      * Heimat-Mandanten der Person, nicht zwingend dem gerade aktiven.
      */
-    public function weeklyHours(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function weeklyHours(): HasMany
     {
         return $this->hasMany(PersonWeeklyHours::class)->withoutGlobalScope('tenant')->orderBy('valid_from');
     }
@@ -84,7 +87,7 @@ class Person extends Model
      * Urlaubstage-Historie (Ralf, 2026-09-28) - gleiche Systematik wie
      * weeklyHours() oben.
      */
-    public function vacationDays(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function vacationDays(): HasMany
     {
         return $this->hasMany(PersonVacationDays::class)->withoutGlobalScope('tenant')->orderBy('valid_from');
     }
@@ -242,9 +245,9 @@ class Person extends Model
      * Bug-Report: Abteilungen angelegt, Dropdown trotzdem leer, weil noch
      * niemand zugeordnet war).
      *
-     * @return \Illuminate\Support\Collection<int, int>
+     * @return Collection<int, int>
      */
-    public static function visibleTenantIds(int $tenantId): \Illuminate\Support\Collection
+    public static function visibleTenantIds(int $tenantId): Collection
     {
         $grantedHomeTenantIds = self::query()
             ->withoutGlobalScope('tenant')
