@@ -58,9 +58,9 @@
                         <th scope="row" class="sticky left-0 z-[1] whitespace-nowrap border-r border-gray-200 bg-white px-2 py-1.5 text-left font-medium text-gray-700">{{ __('Feiertage') }}</th>
                         @foreach ($days as $day)
                             @php($holidays = $holidaysByDate->get($day->toDateString(), collect()))
-                            <td class="border-r border-gray-100 px-1 py-1.5 text-center {{ $holidays->isNotEmpty() ? 'bg-[#eff6ff]' : ($day->isWeekend() ? 'bg-[#fffaeb]' : '') }}">
+                            <td class="border-r border-gray-100 px-1 py-1.5 text-center {{ $holidays->isNotEmpty() ? 'bg-[#eff6ff]' : ($day->isWeekend() ? 'bg-[#fffaeb]' : '') }}" @if ($holidays->isNotEmpty()) title="{{ $holidays->pluck('name')->implode(', ') }}" @endif>
                                 @if ($holidays->isNotEmpty())
-                                    <span class="inline-block h-2 w-2 rounded-full bg-blue-500" title="{{ $holidays->pluck('name')->implode(', ') }}"></span>
+                                    <span class="inline-block h-2 w-2 rounded-full bg-blue-500"></span>
                                 @endif
                             </td>
                         @endforeach
