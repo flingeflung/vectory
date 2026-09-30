@@ -97,6 +97,10 @@
             </div>
         </div>
 
+        <p class="shrink-0 px-1 text-xs text-gray-400">
+            {{ __('Gewünschten Tag anklicken, um einen neuen Eintrag anzulegen oder zu bearbeiten.') }}
+        </p>
+
         <div class="min-h-0 flex-1 overflow-auto rounded-lg border border-gray-200 bg-white">
             <table class="min-w-max border-collapse text-xs">
                 <thead class="sticky top-0 z-10 bg-gray-50 text-gray-700">
@@ -156,12 +160,22 @@
                                         $isHoliday = $holidaysByDate->has($date);
                                         $tooltip = $personEntries->map(fn ($entry) => $entry->typeLabel().($entry->note ? ': '.$entry->note : ''))->implode(' · ');
                                         $canCreate = $person->id === $ownPersonId && $person->calendar_enabled;
-                                        $hasEditableEntry = $personEntries->contains(fn ($entry) => $entry->person_id === $ownPersonId || $canManageOthers);
+                                        $firstEditableEntry = $personEntries->first(fn ($entry) => $entry->person_id === $ownPersonId || $canManageOthers);
+                                        $firstEditData = $firstEditableEntry ? [
+                                            'id' => $firstEditableEntry->id,
+                                            'person_name' => $person->fullName(),
+                                            'type' => $firstEditableEntry->type,
+                                            'starts_on' => $firstEditableEntry->starts_on->toDateString(),
+                                            'ends_on' => $firstEditableEntry->ends_on->toDateString(),
+                                            'note' => $firstEditableEntry->note,
+                                        ] : null;
                                     @endphp
                                     <td
-                                        class="h-7 border-r border-gray-100 p-0 text-center {{ $isHoliday ? 'bg-[#eff6ff]' : ($day->isWeekend() ? 'bg-[#fffaeb]' : '') }} {{ ($hasEditableEntry || $canCreate) ? 'hover:bg-blue-50' : '' }} {{ $canCreate ? 'cursor-pointer' : '' }}"
+                                        class="h-7 border-r border-gray-100 p-0 text-center {{ $isHoliday ? 'bg-[#eff6ff]' : ($day->isWeekend() ? 'bg-[#fffaeb]' : '') }} {{ ($firstEditableEntry || $canCreate) ? 'cursor-pointer hover:bg-blue-50' : '' }}"
                                         @if ($tooltip) title="{{ $tooltip }}" @endif
-                                        @if ($canCreate)
+                                        @if ($firstEditableEntry)
+                                            x-on:click="openEdit(@js($firstEditData))"
+                                        @elseif ($canCreate)
                                             x-on:click="openCreate(@js($date))"
                                         @endif
                                     >
