@@ -233,7 +233,7 @@
             </table>
         </div>
 
-        <x-modal name="calendar-entry" max-width="md" :show="$errors->any()" :dirty-check="'calendarEntryIsDirty'" :draggable="true" focusable>
+        <x-modal name="calendar-entry" max-width="md" :show="$errors->any()" :dirty-check="'calendarEntryIsDirty'" :draggable="true">
             <form id="calendar-entry-form" method="POST" :action="editing ? updateUrlTemplate.replace('__ID__', entryId) : createUrl" class="flex max-h-[85vh] flex-col">
                 @csrf
                 <input type="hidden" name="_method" value="PUT" :disabled="! editing">
