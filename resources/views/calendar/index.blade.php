@@ -105,6 +105,10 @@
                 @else
                     <span class="p-1 text-gray-300">›</span>
                 @endif
+                <a
+                    href="{{ route('kalender', ['year' => now()->year, 'month' => now()->month]) }}"
+                    class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                >{{ __('heute') }}</a>
             </div>
 
             <div class="ml-auto flex flex-wrap items-center gap-3 text-[11px] text-gray-500">
