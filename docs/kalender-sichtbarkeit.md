@@ -44,7 +44,7 @@ sensible persönliche Angaben sind für den gemeinsamen Kalender nicht nötig.
 ## Bearbeitungsrecht
 
 Jede Kalenderperson darf eigene Einträge anlegen, bearbeiten und löschen.
-Einträge anderer sichtbarer Personen dürfen nur mit dem Recht
+Einträge für andere sichtbare Personen dürfen nur mit dem Recht
 `calendar.entries.manage_others` (**Kalender: Einträge anderer Personen
-bearbeiten und löschen**) geändert oder gelöscht werden. Das Recht erweitert
-nicht den sichtbaren Personenkreis.
+anlegen, bearbeiten und löschen**) angelegt, geändert oder gelöscht werden.
+Das Recht erweitert nicht den sichtbaren Personenkreis.

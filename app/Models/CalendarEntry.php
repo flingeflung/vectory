@@ -27,6 +27,11 @@ class CalendarEntry extends Model
         return $this->belongsTo(Person::class)->withoutGlobalScope('tenant');
     }
 
+    public function createdByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by_user_id');
+    }
+
     public function typeLabel(): string
     {
         return match ($this->type) {

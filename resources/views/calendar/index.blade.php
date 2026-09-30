@@ -8,7 +8,9 @@
         x-data="{
             editing: @js(old('entry_id') !== null),
             entryId: @js(old('entry_id')),
+            targetPersonId: @js(old('person_id')),
             personName: '',
+            createdMeta: '',
             type: @js(old('type', \App\Models\CalendarEntry::TYPE_ABSENCE)),
             startsOn: @js(old('starts_on', $monthStart->toDateString())),
             endsOn: @js(old('ends_on', $monthStart->toDateString())),
@@ -16,10 +18,12 @@
             createUrl: @js(route('kalender.eintraege.store')),
             updateUrlTemplate: @js(route('kalender.eintraege.update', ['calendarEntry' => '__ID__'])),
             deleteUrlTemplate: @js(route('kalender.eintraege.destroy', ['calendarEntry' => '__ID__'])),
-            openCreate(date) {
+            openCreate(date, personId, personName) {
                 this.editing = false;
                 this.entryId = null;
-                this.personName = '';
+                this.targetPersonId = personId;
+                this.personName = personName;
+                this.createdMeta = '';
                 this.type = @js(\App\Models\CalendarEntry::TYPE_ABSENCE);
                 this.startsOn = date;
                 this.endsOn = date;
@@ -29,7 +33,9 @@
             openEdit(entry) {
                 this.editing = true;
                 this.entryId = entry.id;
+                this.targetPersonId = entry.person_id;
                 this.personName = entry.person_name;
+                this.createdMeta = entry.created_meta;
                 this.type = entry.type;
                 this.startsOn = entry.starts_on;
                 this.endsOn = entry.ends_on;
@@ -159,11 +165,17 @@
                                         $personEntries = $entriesByPersonAndDate->get($person->id.'|'.$date, collect());
                                         $isHoliday = $holidaysByDate->has($date);
                                         $tooltip = $personEntries->map(fn ($entry) => $entry->typeLabel().($entry->note ? ' ('.$entry->note.')' : ''))->implode(' · ');
-                                        $canCreate = $person->id === $ownPersonId && $person->calendar_enabled;
+                                        $canCreate = ($person->id === $ownPersonId || $canManageOthers) && $person->calendar_enabled;
                                         $firstEditableEntry = $personEntries->first(fn ($entry) => $entry->person_id === $ownPersonId || $canManageOthers);
                                         $firstEditData = $firstEditableEntry ? [
                                             'id' => $firstEditableEntry->id,
+                                            'person_id' => $person->id,
                                             'person_name' => $person->fullName(),
+                                            'created_meta' => __('Angelegt von :name am :date um :time Uhr', [
+                                                'name' => $firstEditableEntry->createdByUser?->person?->fullName() ?? $firstEditableEntry->createdByUser?->name ?? __('Unbekannt'),
+                                                'date' => $firstEditableEntry->created_at->local()->format('d.m.Y'),
+                                                'time' => $firstEditableEntry->created_at->local()->format('H:i'),
+                                            ]),
                                             'type' => $firstEditableEntry->type,
                                             'starts_on' => $firstEditableEntry->starts_on->toDateString(),
                                             'ends_on' => $firstEditableEntry->ends_on->toDateString(),
@@ -176,7 +188,7 @@
                                         @if ($firstEditableEntry)
                                             x-on:click="openEdit(@js($firstEditData))"
                                         @elseif ($canCreate)
-                                            x-on:click="openCreate(@js($date))"
+                                            x-on:click="openCreate(@js($date), @js($person->id), @js($person->fullName()))"
                                         @endif
                                     >
                                         <span class="inline-flex max-w-9 flex-wrap items-center justify-center gap-0.5">
@@ -186,7 +198,13 @@
                                                     $entryTooltip = $entry->typeLabel().($entry->note ? ' ('.$entry->note.')' : '');
                                                     $editData = [
                                                         'id' => $entry->id,
+                                                        'person_id' => $person->id,
                                                         'person_name' => $person->fullName(),
+                                                        'created_meta' => __('Angelegt von :name am :date um :time Uhr', [
+                                                            'name' => $entry->createdByUser?->person?->fullName() ?? $entry->createdByUser?->name ?? __('Unbekannt'),
+                                                            'date' => $entry->created_at->local()->format('d.m.Y'),
+                                                            'time' => $entry->created_at->local()->format('H:i'),
+                                                        ]),
                                                         'type' => $entry->type,
                                                         'starts_on' => $entry->starts_on->toDateString(),
                                                         'ends_on' => $entry->ends_on->toDateString(),
@@ -220,13 +238,15 @@
                 @csrf
                 <input type="hidden" name="_method" value="PUT" :disabled="! editing">
                 <input type="hidden" name="entry_id" :value="entryId" :disabled="! editing">
+                <input type="hidden" name="person_id" :value="targetPersonId">
                 <input type="hidden" name="return_year" value="{{ $year }}">
                 <input type="hidden" name="return_month" value="{{ $month }}">
 
                 <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
                     <div>
                         <h3 class="font-semibold text-gray-900" x-text="editing ? @js(__('Kalendereintrag bearbeiten')) : @js(__('Kalendereintrag anlegen'))"></h3>
-                        <p x-show="editing && personName" x-text="personName" class="text-xs text-gray-400"></p>
+                        <p x-show="personName" x-text="personName" class="text-xs text-gray-500"></p>
+                        <p x-show="editing && createdMeta" x-text="createdMeta" class="text-xs text-gray-400"></p>
                     </div>
                     <button type="button" @click="$dispatch('close-modal', 'calendar-entry')" class="text-xl leading-none text-gray-400 hover:text-gray-700" aria-label="{{ __('Schließen') }}">×</button>
                 </div>

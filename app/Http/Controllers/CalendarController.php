@@ -53,6 +53,7 @@ class CalendarController extends Controller
 
         [$people, $groupPeopleByTenant] = $this->visiblePeople($request);
         $entries = CalendarEntry::query()
+            ->with('createdByUser.person')
             ->whereIn('person_id', $people->pluck('id'))
             ->whereDate('starts_on', '<=', $monthEnd)
             ->whereDate('ends_on', '>=', $monthStart)
@@ -87,13 +88,13 @@ class CalendarController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $person = $request->user()?->person;
-        abort_unless($person && $person->calendar_enabled, 403);
-
+        $personId = $request->integer('person_id');
+        abort_unless($personId > 0, 422);
+        $this->authorizeTargetPerson($request, $personId);
         $data = $this->validatedEntryData($request);
 
         CalendarEntry::query()->create([
-            'person_id' => $person->id,
+            'person_id' => $personId,
             'created_by_user_id' => $request->user()->id,
             'type' => $data['type'],
             'starts_on' => $data['starts_on'],
@@ -133,11 +134,16 @@ class CalendarController extends Controller
 
     private function authorizeEntryChange(Request $request, CalendarEntry $calendarEntry): void
     {
-        $ownEntry = $calendarEntry->person_id === $request->user()?->person_id;
-        $mayManageOthers = $request->user()?->can('calendar.entries.manage_others') ?? false;
-        $personIsVisible = $this->visiblePeople($request)[0]->contains('id', $calendarEntry->person_id);
+        $this->authorizeTargetPerson($request, $calendarEntry->person_id);
+    }
 
-        abort_unless($personIsVisible && ($ownEntry || $mayManageOthers), 403);
+    private function authorizeTargetPerson(Request $request, int $personId): void
+    {
+        $ownPerson = $personId === $request->user()?->person_id;
+        $mayManageOthers = $request->user()?->can('calendar.entries.manage_others') ?? false;
+        $personIsVisible = $this->visiblePeople($request)[0]->contains('id', $personId);
+
+        abort_unless($personIsVisible && ($ownPerson || $mayManageOthers), 403);
     }
 
     /** @return array{type: string, starts_on: string, ends_on: string, note?: string|null, return_year: int, return_month: int} */
