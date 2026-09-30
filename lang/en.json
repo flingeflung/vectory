@@ -1561,5 +1561,6 @@
     "„:name\" teilen mit:": "Share “:name\" with:",
     "Alle Feiertage des gewählten Kunden werden kopiert. Feiertage mit gleichem Datum und gleicher Bezeichnung werden übersprungen; vorhandene Datensätze werden nicht verändert.": "All holidays from the selected customer will be copied. Holidays with the same date and name will be skipped; existing records will not be changed.",
     "Feiertage importieren": "Import holidays",
-    "Von :name wurden :copied Feiertage importiert; :skipped bereits vorhandene Feiertage wurden übersprungen.": ":copied holidays were imported from :name; :skipped existing holidays were skipped."
+    "Von :name wurden :copied Feiertage importiert; :skipped bereits vorhandene Feiertage wurden übersprungen.": ":copied holidays were imported from :name; :skipped existing holidays were skipped.",
+    "Projektplanung": "Project planning"
 }

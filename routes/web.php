@@ -87,6 +87,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // (planning.view), siehe PlanningController.
     Route::redirect('/planung', '/planung/stunden');
     Route::get('/planung/stunden', [PlanningController::class, 'stunden'])->name('planung.stunden');
+    Route::get('/planung/projektplanung', [PlanningController::class, 'projektplanung'])->name('planung.projektplanung');
     Route::get('/planung/grundlast', [PlanningController::class, 'grundlast'])->name('planung.grundlast');
     Route::post('/planung/grundlast', [PlanningBaseLoadController::class, 'store'])->name('planung.grundlast.store');
     Route::put('/planung/grundlast/{planningBaseLoad}', [PlanningBaseLoadController::class, 'update'])->name('planung.grundlast.update');

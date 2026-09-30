@@ -28,6 +28,13 @@ class PlanningController extends Controller
 {
     private const HOURS_SORTABLE_COLUMNS = ['name', 'department', 'annotation', 'wost', 'workdays', 'holidays', 'vacation_hours', 'annual_hours', 'base_load', 'project_hours'];
 
+    public function projektplanung(Request $request): View
+    {
+        abort_unless($request->user()->can('planning.view'), 403);
+
+        return view('planning.projektplanung');
+    }
+
     public function grundlast(Request $request, PlanningBaseLoadCalculator $calculator): View
     {
         abort_unless($request->user()->can('planning.view'), 403);
