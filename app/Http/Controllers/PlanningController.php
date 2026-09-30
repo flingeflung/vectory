@@ -8,9 +8,12 @@ use App\Models\PersonVacationDays;
 use App\Models\PersonWeeklyHours;
 use App\Models\PlanningBaseLoad;
 use App\Models\PlanningPersonBaseLoad;
+use App\Models\SystemSetting;
+use App\Models\Tenant;
 use App\Services\PlanningBaseLoadCalculator;
 use App\Support\CurrentTenant;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -32,7 +35,113 @@ class PlanningController extends Controller
     {
         abort_unless($request->user()->can('planning.view'), 403);
 
-        return view('planning.projektplanung');
+        $displayMode = $request->query('view') === 'year' ? 'year' : 'month';
+        $firstYear = 2026;
+        $lastYear = (int) now()->year + 5;
+        $years = range($firstYear, $lastYear);
+        $year = $request->integer('year', (int) now()->year);
+        if ($year < $firstYear || $year > $lastYear) {
+            $year = (int) now()->year;
+        }
+        $month = $request->integer('month', (int) now()->month);
+        if ($month < 1 || $month > 12) {
+            $month = (int) now()->month;
+        }
+
+        $monthStart = CarbonImmutable::create($year, $month, 1)->startOfDay();
+        $days = collect(range(0, $monthStart->daysInMonth - 1))->map(fn (int $offset) => $monthStart->addDays($offset));
+        $dayWeekSegments = $days->reduce(function (Collection $segments, CarbonImmutable $day) {
+            $key = $day->isoWeekYear().'-'.$day->isoWeek();
+            if ($segments->isNotEmpty() && $segments->last()['key'] === $key) {
+                $segment = $segments->pop();
+                $segment['count']++;
+                $segments->push($segment);
+
+                return $segments;
+            }
+
+            return $segments->push(['key' => $key, 'week' => $day->isoWeek(), 'count' => 1]);
+        }, collect());
+
+        $yearStart = CarbonImmutable::now()->setISODate($year, 1)->startOfWeek();
+        $yearEnd = CarbonImmutable::now()->setISODate($year + 1, 1)->startOfWeek();
+        $weeks = collect();
+        $weekMonthSegments = collect();
+        for ($weekStart = $yearStart; $weekStart->lessThan($yearEnd); $weekStart = $weekStart->addWeek()) {
+            $monthKey = $weekStart->addDays(3)->format('Y-m');
+            $weeks->push(['key' => sprintf('%04d-W%02d', $weekStart->isoWeekYear(), $weekStart->isoWeek()), 'number' => $weekStart->isoWeek(), 'start' => $weekStart]);
+            if ($weekMonthSegments->isNotEmpty() && $weekMonthSegments->last()['key'] === $monthKey) {
+                $segment = $weekMonthSegments->pop();
+                $segment['count']++;
+                $weekMonthSegments->push($segment);
+            } else {
+                $weekMonthSegments->push(['key' => $monthKey, 'label' => $weekStart->addDays(3)->translatedFormat('F'), 'count' => 1]);
+            }
+        }
+
+        [$personGroups, $tenants] = $this->projectPlanningPeople($request);
+        $eligiblePeople = $personGroups->flatten(1);
+        $selectedPersonIds = $request->has('person_filter')
+            ? collect($request->input('people', []))->map(fn ($id) => (int) $id)->intersect($eligiblePeople->pluck('id'))->unique()->values()
+            : $eligiblePeople->pluck('id')->values();
+        $selectedPeople = $eligiblePeople->whereIn('id', $selectedPersonIds)->keyBy('id');
+        $selectedPersonGroups = $personGroups
+            ->map(fn (Collection $people) => $people->filter(fn (Person $person) => $selectedPeople->has($person->id))->values())
+            ->filter(fn (Collection $people) => $people->isNotEmpty());
+
+        $minimumMonth = CarbonImmutable::create($firstYear, 1, 1);
+        $maximumMonth = CarbonImmutable::create($lastYear, 12, 1);
+        $previousMonth = $monthStart->greaterThan($minimumMonth) ? $monthStart->subMonth() : null;
+        $nextMonth = $monthStart->lessThan($maximumMonth) ? $monthStart->addMonth() : null;
+
+        return view('planning.projektplanung', compact(
+            'displayMode', 'years', 'year', 'month', 'monthStart', 'days', 'dayWeekSegments',
+            'weeks', 'weekMonthSegments', 'personGroups', 'selectedPersonGroups', 'selectedPersonIds',
+            'tenants', 'previousMonth', 'nextMonth'
+        ));
+    }
+
+    /** @return array{0: Collection<int, Collection<int, Person>>, 1: Collection<int, Tenant>} */
+    private function projectPlanningPeople(Request $request): array
+    {
+        $user = $request->user();
+        $activeTenantId = CurrentTenant::id();
+        $homeTenant = Tenant::query()->where('is_home_tenant', true)->first();
+        $homeTenantId = $homeTenant?->id;
+        $isHomeMember = $homeTenantId !== null && $user->tenant_id === $homeTenantId;
+
+        $query = Person::query()
+            ->withoutGlobalScope('tenant')
+            ->visibleToRole($user->role)
+            ->where('active', true)
+            ->where('resource_planning', true)
+            ->orderBy('last_name')
+            ->orderBy('first_name');
+
+        if (! SystemSetting::multiTenantEnabled() || $homeTenantId === null) {
+            $people = $query->where('people.tenant_id', $activeTenantId)->get();
+        } elseif ($isHomeMember) {
+            $tenantIds = collect([$homeTenantId]);
+            if ($activeTenantId !== $homeTenantId) {
+                $tenantIds->push($activeTenantId);
+            }
+            $people = $query->whereIn('people.tenant_id', $tenantIds)->get();
+        } else {
+            $people = $query->where(function (Builder $query) use ($activeTenantId, $homeTenantId, $user) {
+                $query->where('people.tenant_id', $activeTenantId)
+                    ->orWhere('people.id', $user->person_id)
+                    ->orWhere(function (Builder $query) use ($activeTenantId, $homeTenantId) {
+                        $query->where('people.tenant_id', $homeTenantId)
+                            ->whereIn('people.id', DB::table('person_tenant')->select('person_id')->where('tenant_id', $activeTenantId));
+                    });
+            })->get();
+        }
+
+        $groups = $people->groupBy('tenant_id');
+        $groups = $groups->sortBy(fn (Collection $people, int|string $tenantId) => [(int) $tenantId !== $homeTenantId, (int) $tenantId]);
+        $tenants = Tenant::query()->whereIn('id', $groups->keys())->get()->keyBy('id');
+
+        return [$groups, $tenants];
     }
 
     public function grundlast(Request $request, PlanningBaseLoadCalculator $calculator): View
