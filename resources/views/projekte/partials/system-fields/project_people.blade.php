@@ -49,7 +49,7 @@
             $hasAssignablePeople = $allFunctionGroups->contains(fn ($group) => $group->members->isNotEmpty());
         @endphp
         @if (! $hasAssignablePeople)
-            <div class="mt-0.5 text-amber-700">{{ __('Für diese Firma sind noch keine Personen angelegt. Wenn hier jemand zugeordnet werden soll, dann zuerst unter :location Personen anlegen.', ['location' => \App\Models\SystemSetting::tenantConfigLocation()]) }}</div>
+            <div class="mt-0.5 text-amber-700">{{ __('Für diese Firma sind noch keine Funktionsgruppen mit Personen angelegt. Bitte zuerst unter Admin > Personen & Rechte > Funktionsgruppen entsprechende Gruppen anlegen und Personen zuordnen.') }}</div>
         @elseif ($groupedPeople->isEmpty())
             <div class="mt-0.5 text-gray-400">&ndash; {{ __('Keine Personen zugeordnet') }} &ndash;</div>
         @else
@@ -88,7 +88,7 @@
 
     <div x-show="editingPeople" x-cloak class="mt-0.5 max-h-56 overflow-y-auto rounded border border-gray-300 bg-white p-2 text-xs space-y-2">
         @if (! $hasAssignablePeople)
-            <div class="text-amber-700">{{ __('Für diese Firma sind noch keine Personen angelegt. Wenn hier jemand zugeordnet werden soll, dann zuerst unter :location Personen anlegen.', ['location' => \App\Models\SystemSetting::tenantConfigLocation()]) }}</div>
+            <div class="text-amber-700">{{ __('Für diese Firma sind noch keine Funktionsgruppen mit Personen angelegt. Bitte zuerst unter Admin > Personen & Rechte > Funktionsgruppen entsprechende Gruppen anlegen und Personen zuordnen.') }}</div>
         @endif
         @foreach ($allFunctionGroups as $group)
             @php
