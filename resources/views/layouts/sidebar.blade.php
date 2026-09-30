@@ -210,7 +210,7 @@
                 >{{ __('Übersicht') }}</a>
             </div>
         @endif
-        @if (auth()->user()?->person?->calendar_enabled)
+        @if (auth()->user()?->role === 'super_admin' || auth()->user()?->person?->calendar_enabled)
             <a
                 onclick="return window.navigateOrConfirm(event)"
                 href="{{ route('kalender') }}"

@@ -21,7 +21,10 @@ class CalendarController extends Controller
 {
     public function index(Request $request): View
     {
-        abort_unless($request->user()?->person?->calendar_enabled, 403);
+        abort_unless(
+            $request->user()?->role === 'super_admin' || $request->user()?->person?->calendar_enabled,
+            403
+        );
 
         $firstYear = 2026;
         $lastYear = (int) now()->year + 5;
