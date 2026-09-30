@@ -7,6 +7,7 @@
         class="flex h-full flex-col gap-2 p-2 sm:p-3"
         x-data="{
             editing: @js(old('entry_id') !== null),
+            saving: false,
             entryId: @js(old('entry_id')),
             targetPersonId: @js(old('person_id')),
             personName: '',
@@ -57,6 +58,16 @@
                     cancelLabel: @js(__('Abbrechen')),
                 })) return;
                 this.$refs.deleteForm.submit();
+            },
+            submitEntry(event) {
+                if (this.saving) {
+                    event.preventDefault();
+                    return;
+                }
+                event.preventDefault();
+                this.saving = true;
+                const form = event.target;
+                requestAnimationFrame(() => requestAnimationFrame(() => form.submit()));
             },
         }"
     >
@@ -234,7 +245,7 @@
         </div>
 
         <x-modal name="calendar-entry" max-width="md" :show="$errors->any()" :dirty-check="'calendarEntryIsDirty'" :draggable="true">
-            <form id="calendar-entry-form" method="POST" :action="editing ? updateUrlTemplate.replace('__ID__', entryId) : createUrl" class="flex max-h-[85vh] flex-col">
+            <form id="calendar-entry-form" method="POST" :action="editing ? updateUrlTemplate.replace('__ID__', entryId) : createUrl" x-on:submit="submitEntry($event)" class="flex max-h-[85vh] flex-col">
                 @csrf
                 <input type="hidden" name="_method" value="PUT" :disabled="! editing">
                 <input type="hidden" name="entry_id" :value="entryId" :disabled="! editing">
@@ -285,7 +296,7 @@
                 <div class="flex shrink-0 justify-end gap-2 border-t border-gray-200 px-4 py-3">
                     <button x-show="editing" type="button" @click="deleteEntry()" class="mr-auto rounded-md border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50">{{ __('Löschen') }}</button>
                     <button type="button" @click="$dispatch('close-modal', 'calendar-entry')" class="rounded-md border border-gray-300 bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200">{{ __('Abbrechen') }}</button>
-                    <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-sm text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
+                    <button type="submit" :disabled="saving" class="rounded-md bg-btn-primary px-3 py-1.5 text-sm text-white hover:bg-btn-primary-hover disabled:cursor-not-allowed disabled:opacity-50">{{ __('Speichern') }}</button>
                 </div>
             </form>
             <form x-ref="deleteForm" method="POST" :action="deleteUrlTemplate.replace('__ID__', entryId)" class="hidden">
@@ -295,6 +306,13 @@
                 <input type="hidden" name="return_month" value="{{ $month }}">
             </form>
         </x-modal>
+
+        <div x-show="saving" x-cloak class="fixed inset-0 z-[100] flex cursor-wait items-center justify-center bg-gray-900/20" role="status" aria-live="polite">
+            <div class="flex flex-col items-center gap-3 rounded-lg bg-white px-8 py-6 shadow-lg">
+                <x-loading-spinner class="h-10 w-10 text-gray-600" />
+                <span class="text-sm text-gray-600">{{ __('Speichert…') }}</span>
+            </div>
+        </div>
     </div>
 
     <script>
