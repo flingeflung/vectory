@@ -7,6 +7,7 @@ use App\Models\Holiday;
 use App\Models\Person;
 use App\Models\SystemSetting;
 use App\Models\Tenant;
+use App\Models\UserPreference;
 use App\Support\CurrentTenant;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -29,13 +30,24 @@ class CalendarController extends Controller
         $firstYear = 2026;
         $lastYear = (int) now()->year + 5;
         $years = range($firstYear, $lastYear);
-        $year = $request->integer('year', (int) now()->year);
+        $calendarPreference = UserPreference::configFor($request->user()->id, UserPreference::CALENDAR);
+        $year = $request->has('year')
+            ? $request->integer('year')
+            : (int) ($calendarPreference['year'] ?? now()->year);
         if ($year < $firstYear || $year > $lastYear) {
             $year = (int) now()->year;
         }
-        $month = $request->integer('month', (int) now()->month);
+        $month = $request->has('month')
+            ? $request->integer('month')
+            : (int) ($calendarPreference['month'] ?? now()->month);
         if ($month < 1 || $month > 12) {
-            $month = 1;
+            $month = (int) now()->month;
+        }
+        if ((int) ($calendarPreference['year'] ?? 0) !== $year || (int) ($calendarPreference['month'] ?? 0) !== $month) {
+            UserPreference::persist($request->user()->id, UserPreference::CALENDAR, [
+                'year' => $year,
+                'month' => $month,
+            ]);
         }
 
         $monthStart = CarbonImmutable::create($year, $month, 1)->startOfDay();

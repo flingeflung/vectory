@@ -10,6 +10,8 @@ class UserPreference extends Model
 {
     public const DASHBOARD = 'dashboard';
 
+    public const CALENDAR = 'calendar';
+
     public const PEOPLE_TABLE = 'people_table';
 
     protected function casts(): array

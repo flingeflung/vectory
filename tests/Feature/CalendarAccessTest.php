@@ -6,12 +6,38 @@ use App\Models\CalendarEntry;
 use App\Models\Person;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Models\UserPreference;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class CalendarAccessTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_calendar_remembers_the_last_displayed_month_for_each_user(): void
+    {
+        $tenant = Tenant::query()->firstOrFail();
+        $user = User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'role' => 'super_admin',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('kalender', ['year' => 2026, 'month' => 11]))
+            ->assertOk()
+            ->assertViewHas('year', 2026)
+            ->assertViewHas('month', 11);
+
+        $this->assertSame(
+            ['year' => 2026, 'month' => 11],
+            UserPreference::configFor($user->id, UserPreference::CALENDAR),
+        );
+
+        $this->get(route('kalender'))
+            ->assertOk()
+            ->assertViewHas('year', 2026)
+            ->assertViewHas('month', 11);
+    }
 
     public function test_superadmin_can_open_calendar_without_calendar_enabled_person(): void
     {
