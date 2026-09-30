@@ -533,7 +533,7 @@
     "Für diesen Job gibt es an diesem Tag bereits eine Buchung - Speichern ersetzt sie, statt die Stunden zu addieren.": "",
     "Für diesen Kunden ist noch keine Info-E-Mail hinterlegt (:location).": "No info email address is configured for this customer yet (:location).",
     "Für diesen Kunden sind noch keine Checklisten angelegt (Admin > Checklisten).": "No checklists have been created for this customer yet (Admin > Checklists).",
-    "Für diesen Mandanten sind noch keine Personen angelegt. Wenn hier jemand zugeordnet werden soll, dann zuerst unter :location Personen anlegen.": "No people have been created for this tenant yet. If someone is to be assigned here, first create people under :location.",
+    "Für diese Firma sind noch keine Personen angelegt. Wenn hier jemand zugeordnet werden soll, dann zuerst unter :location Personen anlegen.": "No people have been created for this company yet. If someone is to be assigned here, first create people under :location.",
     "Für dieses Projekt sind noch keine Jobs verknüpft.": "",
     "Für dieses Projekt sind noch keine Stunden gebucht.": "",
     "Für niemanden der Zuständigen ist eine E-Mail-Adresse hinterlegt - Versand nicht möglich.": "No email address is stored for any of the responsible people - sending is not possible.",
