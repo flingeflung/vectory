@@ -10,6 +10,7 @@ use App\Models\PlanningBaseLoad;
 use App\Models\PlanningPersonBaseLoad;
 use App\Models\SystemSetting;
 use App\Models\Tenant;
+use App\Models\UserPreference;
 use App\Services\PlanningBaseLoadCalculator;
 use App\Support\CurrentTenant;
 use Carbon\CarbonImmutable;
@@ -81,9 +82,22 @@ class PlanningController extends Controller
 
         [$personGroups, $tenants] = $this->projectPlanningPeople($request);
         $eligiblePeople = $personGroups->flatten(1);
-        $selectedPersonIds = $request->has('person_filter')
-            ? collect($request->input('people', []))->map(fn ($id) => (int) $id)->intersect($eligiblePeople->pluck('id'))->unique()->values()
-            : $eligiblePeople->pluck('id')->values();
+        $eligiblePersonIds = $eligiblePeople->pluck('id');
+        $preference = UserPreference::configFor($request->user()->id, UserPreference::PROJECT_PLANNING);
+        $hasSavedSelection = array_key_exists('person_ids', $preference);
+        $requestedPersonIds = $request->has('person_filter')
+            ? collect($request->input('people', []))
+            : collect($preference['person_ids'] ?? $eligiblePersonIds);
+        $selectedPersonIds = $requestedPersonIds
+            ->map(fn ($id) => (int) $id)
+            ->intersect($eligiblePersonIds)
+            ->unique()
+            ->values();
+        if ($request->has('person_filter') || ($hasSavedSelection && $selectedPersonIds->all() !== array_values($preference['person_ids']))) {
+            UserPreference::persist($request->user()->id, UserPreference::PROJECT_PLANNING, [
+                'person_ids' => $selectedPersonIds->all(),
+            ]);
+        }
         $selectedPeople = $eligiblePeople->whereIn('id', $selectedPersonIds)->keyBy('id');
         $selectedPersonGroups = $personGroups
             ->map(fn (Collection $people) => $people->filter(fn (Person $person) => $selectedPeople->has($person->id))->values())

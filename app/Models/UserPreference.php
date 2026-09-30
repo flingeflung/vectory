@@ -14,6 +14,8 @@ class UserPreference extends Model
 
     public const PEOPLE_TABLE = 'people_table';
 
+    public const PROJECT_PLANNING = 'project_planning';
+
     protected function casts(): array
     {
         return ['config' => 'array'];

@@ -6,6 +6,7 @@ use App\Models\Person;
 use App\Models\SystemSetting;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Models\UserPreference;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -13,6 +14,46 @@ use Tests\TestCase;
 class ProjectPlanningTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_person_selection_is_remembered_and_limited_to_eligible_people(): void
+    {
+        $tenant = Tenant::query()->firstOrFail();
+        $user = User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'role' => 'super_admin',
+        ]);
+        $selectedPerson = $this->person($tenant, 'Auswahl');
+        $otherPerson = $this->person($tenant, 'Andere');
+
+        $this->actingAs($user)
+            ->get(route('planung.projektplanung', [
+                'person_filter' => 1,
+                'people' => [$selectedPerson->id, 999999],
+            ]))
+            ->assertOk()
+            ->assertViewHas('selectedPersonIds', fn ($ids) => $ids->all() === [$selectedPerson->id]);
+
+        $this->assertSame(
+            ['person_ids' => [$selectedPerson->id]],
+            UserPreference::configFor($user->id, UserPreference::PROJECT_PLANNING),
+        );
+
+        $this->get(route('planung.projektplanung'))
+            ->assertOk()
+            ->assertViewHas('selectedPersonIds', fn ($ids) => $ids->all() === [$selectedPerson->id])
+            ->assertViewHas('selectedPersonIds', fn ($ids) => ! $ids->contains($otherPerson->id));
+
+        $selectedPerson->update(['resource_planning' => false]);
+
+        $this->get(route('planung.projektplanung'))
+            ->assertOk()
+            ->assertViewHas('selectedPersonIds', fn ($ids) => $ids->isEmpty());
+
+        $this->assertSame(
+            ['person_ids' => []],
+            UserPreference::configFor($user->id, UserPreference::PROJECT_PLANNING),
+        );
+    }
 
     public function test_home_member_sees_qualified_home_and_selected_customer_people(): void
     {
