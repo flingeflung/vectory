@@ -43,7 +43,7 @@
                         @endforeach
                     </tr>
                     <tr>
-                        <th class="sticky left-0 z-20 min-w-52 border-b border-r border-gray-200 bg-gray-50 px-2 py-1 text-left font-medium">{{ __('Person') }}</th>
+                        <th class="sticky left-0 z-20 min-w-52 border-b border-r border-gray-200 bg-gray-50 px-2 py-1"></th>
                         @foreach ($days as $day)
                             @php($isHoliday = $holidaysByDate->has($day->toDateString()))
                             <th class="min-w-10 border-b border-r border-gray-200 px-1 py-1 text-center font-medium {{ $isHoliday ? 'bg-[#eff6ff]' : ($day->isWeekend() ? 'bg-[#fffaeb]' : '') }}" title="{{ $day->translatedFormat('l, d.m.Y') }}">
