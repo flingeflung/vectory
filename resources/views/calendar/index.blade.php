@@ -1,9 +1,34 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Kalender') }}</h2>
+        <h2 class="font-semibold text-xl leading-tight text-gray-800">{{ __('Kalender') }}</h2>
     </x-slot>
 
-    <div class="flex h-full flex-col gap-2 p-2 sm:p-3">
+    <div
+        class="flex h-full flex-col gap-2 p-2 sm:p-3"
+        x-data="{
+            type: @js(old('type', \App\Models\CalendarEntry::TYPE_ABSENCE)),
+            startsOn: @js(old('starts_on', $monthStart->toDateString())),
+            endsOn: @js(old('ends_on', $monthStart->toDateString())),
+            note: @js(old('note', '')),
+            open(date) {
+                this.type = @js(\App\Models\CalendarEntry::TYPE_ABSENCE);
+                this.startsOn = date;
+                this.endsOn = date;
+                this.note = '';
+                this.$nextTick(() => {
+                    window.calendarEntrySnapshot = new FormData(document.getElementById('calendar-entry-form'));
+                    this.$dispatch('open-modal', 'calendar-entry');
+                    setTimeout(() => this.$refs.entryType?.focus(), 100);
+                });
+            }
+        }"
+    >
+        @if (session('status') === 'calendar-entry-saved')
+            <x-flash-message class="shrink-0 px-3 py-2 text-sm">
+                {{ __('Gespeichert.') }}
+            </x-flash-message>
+        @endif
+
         <div class="flex shrink-0 flex-wrap items-center gap-4 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm">
             <form method="GET" action="{{ route('kalender') }}" class="flex items-center gap-2">
                 <input type="hidden" name="month" value="{{ $month }}">
@@ -28,6 +53,12 @@
                 @else
                     <span class="p-1 text-gray-300">›</span>
                 @endif
+            </div>
+
+            <div class="ml-auto flex flex-wrap items-center gap-3 text-[11px] text-gray-500">
+                <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-amber-500"></span>{{ __('Abwesenheit') }}</span>
+                <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-emerald-500"></span>{{ __('Mobile-Office') }}</span>
+                <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-violet-500"></span>{{ __('Auswärtstermin') }}</span>
             </div>
         </div>
 
@@ -54,7 +85,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr class="border-b border-gray-100">
+                    <tr class="border-b border-gray-200">
                         <th scope="row" class="sticky left-0 z-[1] whitespace-nowrap border-r border-gray-200 bg-white px-2 py-1.5 text-left font-medium text-gray-700">{{ __('Feiertage') }}</th>
                         @foreach ($days as $day)
                             @php($holidays = $holidaysByDate->get($day->toDateString(), collect()))
@@ -65,8 +96,114 @@
                             </td>
                         @endforeach
                     </tr>
+
+                    @forelse ($personGroups as $tenantId => $people)
+                        @if ($groupPeopleByTenant)
+                            <tr>
+                                <th colspan="{{ $days->count() + 1 }}" class="sticky left-0 border-y border-gray-300 bg-slate-100 px-2 py-1 text-left font-semibold text-slate-700">
+                                    {{ $tenants->get($tenantId)?->name ?? __('Unbekannter Kunde') }}
+                                </th>
+                            </tr>
+                        @endif
+                        @foreach ($people as $person)
+                            <tr class="border-b border-gray-100">
+                                <th scope="row" class="sticky left-0 z-[1] whitespace-nowrap border-r border-gray-200 bg-white px-2 py-1.5 text-left font-medium text-gray-700" title="{{ $person->tenant?->name }}">
+                                    {{ $person->fullName() }}
+                                </th>
+                                @foreach ($days as $day)
+                                    @php
+                                        $date = $day->toDateString();
+                                        $personEntries = $entriesByPersonAndDate->get($person->id.'|'.$date, collect());
+                                        $isHoliday = $holidaysByDate->has($date);
+                                        $tooltip = $personEntries->map(fn ($entry) => $entry->typeLabel().($entry->note ? ': '.$entry->note : ''))->implode(' · ');
+                                        $canCreate = $person->id === $ownPersonId && $person->calendar_enabled;
+                                    @endphp
+                                    <td
+                                        class="h-7 border-r border-gray-100 p-0 text-center {{ $isHoliday ? 'bg-[#eff6ff]' : ($day->isWeekend() ? 'bg-[#fffaeb]' : '') }} {{ $canCreate ? 'cursor-pointer hover:bg-blue-50' : '' }}"
+                                        @if ($tooltip) title="{{ $tooltip }}" @endif
+                                        @if ($canCreate) @click="open(@js($date))" @endif
+                                    >
+                                        <span class="inline-flex max-w-9 flex-wrap items-center justify-center gap-0.5">
+                                            @foreach ($personEntries as $entry)
+                                                <span class="h-2 w-2 rounded-full {{ $entry->dotClass() }}"></span>
+                                            @endforeach
+                                        </span>
+                                    </td>
+                                @endforeach
+                            </tr>
+                        @endforeach
+                    @empty
+                        <tr>
+                            <td colspan="{{ $days->count() + 1 }}" class="p-6 text-center text-gray-400">{{ __('Keine für den Kalender freigeschalteten Personen gefunden.') }}</td>
+                        </tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>
+
+        <x-modal name="calendar-entry" max-width="md" :show="$errors->any()" :dirty-check="'calendarEntryIsDirty'" focusable>
+            <form id="calendar-entry-form" method="POST" action="{{ route('kalender.eintraege.store') }}" class="flex max-h-[85vh] flex-col">
+                @csrf
+                <input type="hidden" name="return_year" value="{{ $year }}">
+                <input type="hidden" name="return_month" value="{{ $month }}">
+
+                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+                    <h3 class="font-semibold text-gray-900">{{ __('Kalendereintrag anlegen') }}</h3>
+                    <button type="button" @click="$dispatch('close-modal', 'calendar-entry')" class="text-xl leading-none text-gray-400 hover:text-gray-700" aria-label="{{ __('Schließen') }}">×</button>
+                </div>
+
+                <div class="space-y-3 overflow-y-auto px-4 py-3 text-sm">
+                    <div>
+                        <label for="calendar-entry-type" class="mb-1 block text-xs text-gray-500">{{ __('Art') }}</label>
+                        <select id="calendar-entry-type" name="type" x-model="type" x-ref="entryType" class="w-full rounded-md border-gray-300 text-sm">
+                            <option value="{{ \App\Models\CalendarEntry::TYPE_ABSENCE }}">{{ __('Abwesenheit') }}</option>
+                            <option value="{{ \App\Models\CalendarEntry::TYPE_MOBILE_OFFICE }}">{{ __('Mobile-Office') }}</option>
+                            <option value="{{ \App\Models\CalendarEntry::TYPE_EXTERNAL_APPOINTMENT }}">{{ __('Auswärtstermin') }}</option>
+                        </select>
+                        @error('type') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label for="calendar-entry-start" class="mb-1 block text-xs text-gray-500">{{ __('Von') }}</label>
+                            <input id="calendar-entry-start" type="date" name="starts_on" x-model="startsOn" class="w-full rounded-md border-gray-300 text-sm">
+                            @error('starts_on') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                        <div>
+                            <label for="calendar-entry-end" class="mb-1 block text-xs text-gray-500">{{ __('Bis') }}</label>
+                            <input id="calendar-entry-end" type="date" name="ends_on" x-model="endsOn" class="w-full rounded-md border-gray-300 text-sm">
+                            @error('ends_on') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                    </div>
+
+                    <div x-show="type === @js(\App\Models\CalendarEntry::TYPE_ABSENCE)" x-cloak>
+                        <label for="calendar-entry-note" class="mb-1 block text-xs text-gray-500">{{ __('Erläuterung (optional)') }}</label>
+                        <input id="calendar-entry-note" type="text" name="note" maxlength="255" x-model="note" class="w-full rounded-md border-gray-300 text-sm">
+                        <p class="mt-1 text-xs text-gray-400">{{ __('Die Erläuterung wird anderen Kalenderteilnehmern als Tooltip angezeigt.') }}</p>
+                        @error('note') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                    </div>
+                </div>
+
+                <div class="flex shrink-0 justify-end gap-2 border-t border-gray-200 px-4 py-3">
+                    <button type="button" @click="$dispatch('close-modal', 'calendar-entry')" class="rounded-md border border-gray-300 bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200">{{ __('Abbrechen') }}</button>
+                    <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-sm text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
+                </div>
+            </form>
+        </x-modal>
     </div>
+
+    <script>
+        window.calendarEntrySnapshot = null;
+        window.calendarEntryIsDirty = function () {
+            const form = document.getElementById('calendar-entry-form');
+            if (! form || ! window.calendarEntrySnapshot) return false;
+            const current = new URLSearchParams(new FormData(form)).toString();
+            const original = new URLSearchParams(window.calendarEntrySnapshot).toString();
+            return current !== original;
+        };
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('calendar-entry-form');
+            if (form) window.calendarEntrySnapshot = new FormData(form);
+        });
+    </script>
 </x-app-layout>

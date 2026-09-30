@@ -58,6 +58,11 @@ class Person extends Model
         return $this->hasOne(User::class);
     }
 
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class)->withoutGlobalScope('tenant');
+    }
+
     /**
      * Wochenstunden-Historie (Ralf, 2026-09-28) - löst das frühere, statische
      * Feld people.weekly_hours ab. withoutGlobalScope('tenant') aus demselben
@@ -90,6 +95,12 @@ class Person extends Model
     public function vacationDays(): HasMany
     {
         return $this->hasMany(PersonVacationDays::class)->withoutGlobalScope('tenant')->orderBy('valid_from');
+    }
+
+    /** Personenbezogene, mandantenübergreifend sichtbare Kalendereinträge. */
+    public function calendarEntries(): HasMany
+    {
+        return $this->hasMany(CalendarEntry::class);
     }
 
     public function currentVacationDays(): ?float

@@ -7,6 +7,7 @@ zuerst lesen, dann archivieren, sobald sie nicht mehr aktuell ist.
 **Zuerst lesen, in dieser Reihenfolge:**
 1. `agents.md` (Projekt-Root) - regelt die Arbeitsweise/Git-Workflow für dich als Implementierer. Wichtig: dort steht "nach jeder Änderung automatisch commit+push" - das ist dein Standardverhalten, nicht das von Claude (siehe unten).
 2. `CLAUDE.md` (Projekt-Root) - alle UI-Konventionen (Speichern-Button-Regeln, Overlay-Muster, Sicherheitsabfragen, Sortierung, Formulierungsstil usw.). Bitte konsequent einhalten, Ralf achtet stark auf Konsistenz.
+3. `docs/kalender-sichtbarkeit.md` - verbindliche Sichtbarkeitsregeln des neuen Kalenders bei ein- und ausgeschalteter Mandantenfähigkeit.
 
 ## Wer ist Ralf, wie arbeitet er
 

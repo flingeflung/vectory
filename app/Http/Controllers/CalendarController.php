@@ -2,17 +2,27 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CalendarEntry;
 use App\Models\Holiday;
+use App\Models\Person;
+use App\Models\SystemSetting;
+use App\Models\Tenant;
 use App\Support\CurrentTenant;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class CalendarController extends Controller
 {
     public function index(Request $request): View
     {
+        abort_unless($request->user()?->person?->calendar_enabled, 403);
+
         $firstYear = 2026;
         $lastYear = (int) now()->year + 5;
         $years = range($firstYear, $lastYear);
@@ -37,6 +47,28 @@ class CalendarController extends Controller
             ->orderBy('name')
             ->get()
             ->groupBy(fn (Holiday $holiday) => $holiday->date->toDateString());
+
+        [$people, $groupPeopleByTenant] = $this->visiblePeople($request);
+        $entries = CalendarEntry::query()
+            ->whereIn('person_id', $people->pluck('id'))
+            ->whereDate('starts_on', '<=', $monthEnd)
+            ->whereDate('ends_on', '>=', $monthStart)
+            ->orderBy('starts_on')
+            ->get();
+        $entriesByPersonAndDate = $this->entriesByPersonAndDate($entries, $monthStart, $monthEnd);
+        $personGroups = $groupPeopleByTenant
+            ? $people->groupBy('tenant_id')->map(fn (Collection $group) => $group->values())
+            : collect([CurrentTenant::id() => $people]);
+        $tenants = Tenant::query()->whereIn('id', $personGroups->keys())->get()->keyBy('id');
+        if ($groupPeopleByTenant) {
+            $personGroups = $personGroups->sortBy(function (Collection $group, int|string $tenantId) use ($tenants) {
+                $tenant = $tenants->get((int) $tenantId);
+
+                return [! $tenant?->is_home_tenant, mb_strtolower($tenant?->name ?? '')];
+            });
+        }
+        $ownPersonId = $request->user()?->person_id;
+
         $minimumMonth = CarbonImmutable::create($firstYear, 1, 1);
         $maximumMonth = CarbonImmutable::create($lastYear, 12, 1);
         $previousMonth = $monthStart->greaterThan($minimumMonth) ? $monthStart->subMonth() : null;
@@ -44,14 +76,100 @@ class CalendarController extends Controller
 
         return view('calendar.index', compact(
             'years', 'year', 'month', 'monthStart', 'monthEnd', 'days',
-            'weekSegments', 'holidaysByDate', 'previousMonth', 'nextMonth'
+            'weekSegments', 'holidaysByDate', 'previousMonth', 'nextMonth',
+            'personGroups', 'tenants', 'entriesByPersonAndDate', 'ownPersonId', 'groupPeopleByTenant'
         ));
     }
 
-    /**
-     * @param  Collection<int, CarbonImmutable>  $days
-     * @return Collection<int, array{key: string, year: int, week: int, count: int}>
-     */
+    public function store(Request $request): RedirectResponse
+    {
+        $person = $request->user()?->person;
+        abort_unless($person && $person->calendar_enabled, 403);
+
+        $data = $request->validate([
+            'type' => ['required', Rule::in(CalendarEntry::TYPES)],
+            'starts_on' => ['required', 'date'],
+            'ends_on' => ['required', 'date', 'after_or_equal:starts_on'],
+            'note' => ['nullable', 'string', 'max:255'],
+            'return_year' => ['required', 'integer', 'min:2026'],
+            'return_month' => ['required', 'integer', 'between:1,12'],
+        ]);
+
+        CalendarEntry::query()->create([
+            'person_id' => $person->id,
+            'created_by_user_id' => $request->user()->id,
+            'type' => $data['type'],
+            'starts_on' => $data['starts_on'],
+            'ends_on' => $data['ends_on'],
+            'note' => $data['type'] === CalendarEntry::TYPE_ABSENCE ? ($data['note'] ?? null) : null,
+        ]);
+
+        return redirect()->route('kalender', [
+            'year' => $data['return_year'],
+            'month' => $data['return_month'],
+        ])->with('status', 'calendar-entry-saved');
+    }
+
+    /** @return array{0: Collection<int, Person>, 1: bool} */
+    private function visiblePeople(Request $request): array
+    {
+        $activeTenantId = CurrentTenant::id();
+        $multiTenant = SystemSetting::multiTenantEnabled();
+        $activeTenant = Tenant::query()->find($activeTenantId);
+        $query = Person::query()
+            ->withoutGlobalScope('tenant')
+            ->with('tenant')
+            ->where('calendar_enabled', true)
+            ->orderBy('last_name')
+            ->orderBy('first_name');
+
+        if (! $multiTenant) {
+            return [$query->where('people.tenant_id', $activeTenantId)->get(), false];
+        }
+
+        if ($activeTenant?->is_home_tenant) {
+            $user = $request->user();
+            $tenantIds = CurrentTenant::availableTenants()->pluck('id');
+            if ($tenantIds->isEmpty() && $user) {
+                $tenantIds = collect([$user->tenant_id]);
+            }
+
+            return [$query->whereIn('people.tenant_id', $tenantIds)->get(), $tenantIds->count() > 1];
+        }
+
+        $homeTenantId = Tenant::query()->where('is_home_tenant', true)->value('id');
+        $query->where(function (Builder $query) use ($activeTenantId, $homeTenantId) {
+            $query->where('people.tenant_id', $activeTenantId);
+            if ($homeTenantId) {
+                $query->orWhere(function (Builder $query) use ($activeTenantId, $homeTenantId) {
+                    $query->where('people.tenant_id', $homeTenantId)
+                        ->whereIn('people.id', DB::table('person_tenant')
+                            ->select('person_id')
+                            ->where('tenant_id', $activeTenantId));
+                });
+            }
+        });
+
+        return [$query->get(), false];
+    }
+
+    /** @param Collection<int, CalendarEntry> $entries */
+    private function entriesByPersonAndDate(Collection $entries, CarbonImmutable $monthStart, CarbonImmutable $monthEnd): Collection
+    {
+        $result = collect();
+        foreach ($entries as $entry) {
+            $start = CarbonImmutable::parse($entry->starts_on)->max($monthStart);
+            $end = CarbonImmutable::parse($entry->ends_on)->min($monthEnd);
+            for ($day = $start; $day->lte($end); $day = $day->addDay()) {
+                $key = $entry->person_id.'|'.$day->toDateString();
+                $result->put($key, $result->get($key, collect())->push($entry));
+            }
+        }
+
+        return $result;
+    }
+
+    /** @param Collection<int, CarbonImmutable> $days */
     private function weekSegments(Collection $days): Collection
     {
         return $days->reduce(function (Collection $segments, CarbonImmutable $day) {

@@ -210,13 +210,15 @@
                 >{{ __('Übersicht') }}</a>
             </div>
         @endif
-        <a
-            onclick="return window.navigateOrConfirm(event)"
-            href="{{ route('kalender') }}"
-            class="flex items-center px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('kalender') ? 'bg-sidebar-active text-sidebar-active-content' : 'text-sidebar-content hover:bg-sidebar-hover hover:text-sidebar-content-hover' }}"
-        >
-            {{ __('Kalender') }}
-        </a>
+        @if (auth()->user()?->person?->calendar_enabled)
+            <a
+                onclick="return window.navigateOrConfirm(event)"
+                href="{{ route('kalender') }}"
+                class="flex items-center px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('kalender') ? 'bg-sidebar-active text-sidebar-active-content' : 'text-sidebar-content hover:bg-sidebar-hover hover:text-sidebar-content-hover' }}"
+            >
+                {{ __('Kalender') }}
+            </a>
+        @endif
 
         {{-- Ralf, 2026-09-28: neuer Hauptnavigationspunkt "Planung" -
              rechtegesteuert statt an eine Rolle gebunden, siehe

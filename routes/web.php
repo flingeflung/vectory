@@ -74,6 +74,7 @@ Route::get('/', function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/kalender', [CalendarController::class, 'index'])->name('kalender');
+    Route::post('/kalender/eintraege', [CalendarController::class, 'store'])->name('kalender.eintraege.store');
     Route::post('/dashboard/layout', [DashboardController::class, 'updateLayout'])->name('dashboard.layout');
     Route::delete('/dashboard/recent/{recentlyViewedProject}', [DashboardController::class, 'removeRecent'])->name('dashboard.recent.destroy');
 });
