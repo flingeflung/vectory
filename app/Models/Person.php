@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
+use App\Support\CurrentAbsenceLookup;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -17,7 +18,7 @@ use Illuminate\Support\Facades\DB;
     'tenant_id', 'legacy_id', 'first_name', 'last_name', 'short_name', 'email',
     'company_id', 'department_id', 'business_unit_id', 'legacy_role_id', 'permission_template_id',
     'last_login_at', 'start_date', 'end_date', 'remarks', 'language', 'sort', 'active',
-    'is_absent', 'absent_until', 'resource_planning', 'calendar_enabled',
+    'resource_planning', 'calendar_enabled',
 ])]
 class Person extends Model
 {
@@ -27,30 +28,23 @@ class Person extends Model
     {
         return [
             'active' => 'boolean',
-            'is_absent' => 'boolean',
             'resource_planning' => 'boolean',
             'calendar_enabled' => 'boolean',
-            'absent_until' => 'date',
             'last_login_at' => 'datetime',
             'start_date' => 'date',
             'end_date' => 'date',
         ];
     }
 
-    /**
-     * Abwesenheits-Markierung (Ralf, 2026-09-12): das Häkchen allein reicht
-     * nicht - ist ein "bis wann"-Datum gesetzt und liegt es in der
-     * Vergangenheit, gilt die Person NICHT mehr als abwesend, auch wenn
-     * `is_absent` noch angehakt ist (kein manuelles Aufräumen nach der
-     * Rückkehr nötig).
-     */
     public function isCurrentlyAbsent(): bool
     {
-        if (! $this->is_absent) {
-            return false;
-        }
+        return $this->currentAbsenceEntries()->isNotEmpty();
+    }
 
-        return ! $this->absent_until || ! $this->absent_until->isPast();
+    /** @return Collection<int, CalendarEntry> */
+    public function currentAbsenceEntries(): Collection
+    {
+        return app(CurrentAbsenceLookup::class)->forPerson($this->id);
     }
 
     public function user(): HasOne

@@ -449,7 +449,6 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/einstellungen', [SettingsController::class, 'index'])->name('settings');
     Route::post('/einstellungen', [SettingsController::class, 'update'])->name('settings.update');
-    Route::post('/einstellungen/abwesenheit', [SettingsController::class, 'updateAbsence'])->name('settings.absence.update');
 
     // Hilfesystem: für jeden eingeloggten Nutzer erreichbar (erklärt das
     // Tool selbst), Pflege der Artikel läuft separat unter Admin (siehe

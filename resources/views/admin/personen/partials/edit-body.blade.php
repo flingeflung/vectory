@@ -130,8 +130,8 @@
                         <div class="col-span-2">
                             <span class="block text-xs text-gray-500">{{ __('Status') }}</span>
                             {{ $person->active ? __('Aktiv') : __('Inaktiv') }}
-                            @if ($person->is_absent)
-                                · {{ __('Abwesend') }}{{ $person->absent_until ? ' '.__('bis').' '.$person->absent_until->format('d.m.Y') : '' }}
+                            @if ($person->isCurrentlyAbsent())
+                                · {{ __('Abwesend') }}
                             @endif
                         </div>
                     </div>
@@ -368,31 +368,6 @@
                 <div>
                     <label class="block text-xs text-gray-500">{{ __('Bemerkungen') }}</label>
                     <textarea name="remarks" rows="3" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">{{ old('remarks', $person->remarks) }}</textarea>
-                </div>
-
-                {{-- Abwesenheits-Markierung (Ralf, 2026-09-12): auch hier
-                     statt nur in den eigenen Einstellungen pflegbar, damit
-                     z. B. ein Admin die Person bei Krankheit selbst markieren
-                     kann. Gleiche Felder/Logik wie
-                     SettingsController::updateAbsence(), hier nur Teil des
-                     ohnehin vorhandenen Speichern-Buttons dieses Formulars. --}}
-                <div class="flex flex-wrap items-end gap-3">
-                    <label class="flex items-center gap-2 text-sm text-gray-700">
-                        <input type="checkbox" name="is_absent" value="1" @checked(old('is_absent', $person->is_absent)) class="rounded border-gray-300">
-                        {{ __('Abwesend') }}
-                    </label>
-                    <div>
-                        <label class="block text-xs text-gray-500">{{ __('Abwesend bis (optional)') }}</label>
-                        <input
-                            type="date"
-                            name="absent_until"
-                            value="{{ old('absent_until', $person->absent_until?->format('Y-m-d')) }}"
-                            class="mt-0.5 rounded-md border-gray-300 text-sm @error('absent_until') border-red-300 @enderror"
-                        >
-                        @error('absent_until')
-                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
                 </div>
 
                 @csrf

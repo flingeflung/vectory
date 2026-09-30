@@ -80,6 +80,8 @@
     "Abwesend bis": "Absent until",
     "Abwesend bis (optional)": "Absent until (optional)",
     "Abwesenheit": "Absence",
+    "Abwesenheit am :date": "Absent on :date",
+    "Abwesenheit vom :from bis :to": "Absent from :from to :to",
     "Art": "Type",
     "Auswärtstermin": "External appointment",
     "Achtung! Wenn diese Option angehakt ist, wird bei Projekten mit einem anderen Workflow dieser und damit auch der bisherige Projektfortschritt überschrieben. Wenn die Option nicht angehakt ist, bleiben Projekte mit einem anderen Workflow unangetastet.": "Warning! If this option is checked, projects with a different workflow will have that workflow and their previous project progress overwritten. If the option is not checked, projects with a different workflow remain unchanged.",
