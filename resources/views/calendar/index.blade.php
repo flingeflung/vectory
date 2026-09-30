@@ -45,7 +45,8 @@
                     <tr>
                         <th class="sticky left-0 z-20 min-w-52 border-b border-r border-gray-200 bg-gray-50 px-2 py-1 text-left font-medium">{{ __('Person') }}</th>
                         @foreach ($days as $day)
-                            <th class="min-w-10 border-b border-r border-gray-200 px-1 py-1 text-center font-medium {{ $day->isWeekend() ? 'bg-[#fffaeb]' : '' }}" title="{{ $day->translatedFormat('l, d.m.Y') }}">
+                            @php($isHoliday = $holidaysByDate->has($day->toDateString()))
+                            <th class="min-w-10 border-b border-r border-gray-200 px-1 py-1 text-center font-medium {{ $isHoliday ? 'bg-[#eff6ff]' : ($day->isWeekend() ? 'bg-[#fffaeb]' : '') }}" title="{{ $day->translatedFormat('l, d.m.Y') }}">
                                 <span class="block text-[10px] text-gray-400">{{ $day->translatedFormat('D') }}</span>
                                 <span class="block tabular-nums">{{ $day->format('d') }}</span>
                             </th>
@@ -53,10 +54,16 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td colspan="{{ $days->count() + 1 }}" class="px-4 py-8 text-center text-gray-400">
-                            {{ __('Noch keine Einträge vorhanden.') }}
-                        </td>
+                    <tr class="border-b border-gray-100">
+                        <th scope="row" class="sticky left-0 z-[1] whitespace-nowrap border-r border-gray-200 bg-white px-2 py-1.5 text-left font-medium text-gray-700">{{ __('Feiertage') }}</th>
+                        @foreach ($days as $day)
+                            @php($holidays = $holidaysByDate->get($day->toDateString(), collect()))
+                            <td class="border-r border-gray-100 px-1 py-1.5 text-center {{ $holidays->isNotEmpty() ? 'bg-[#eff6ff]' : ($day->isWeekend() ? 'bg-[#fffaeb]' : '') }}">
+                                @if ($holidays->isNotEmpty())
+                                    <span class="inline-block h-2 w-2 rounded-full bg-blue-500" title="{{ $holidays->pluck('name')->implode(', ') }}"></span>
+                                @endif
+                            </td>
+                        @endforeach
                     </tr>
                 </tbody>
             </table>

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Holiday;
+use App\Support\CurrentTenant;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -28,6 +30,13 @@ class CalendarController extends Controller
         $days = collect(range(0, $monthStart->daysInMonth - 1))
             ->map(fn (int $offset) => $monthStart->addDays($offset));
         $weekSegments = $this->weekSegments($days);
+        $holidaysByDate = Holiday::query()
+            ->where('tenant_id', CurrentTenant::id())
+            ->where('active', true)
+            ->whereBetween('date', [$monthStart->toDateString(), $monthEnd->toDateString()])
+            ->orderBy('name')
+            ->get()
+            ->groupBy(fn (Holiday $holiday) => $holiday->date->toDateString());
         $minimumMonth = CarbonImmutable::create($firstYear, 1, 1);
         $maximumMonth = CarbonImmutable::create($lastYear, 12, 1);
         $previousMonth = $monthStart->greaterThan($minimumMonth) ? $monthStart->subMonth() : null;
@@ -35,7 +44,7 @@ class CalendarController extends Controller
 
         return view('calendar.index', compact(
             'years', 'year', 'month', 'monthStart', 'monthEnd', 'days',
-            'weekSegments', 'previousMonth', 'nextMonth'
+            'weekSegments', 'holidaysByDate', 'previousMonth', 'nextMonth'
         ));
     }
 
