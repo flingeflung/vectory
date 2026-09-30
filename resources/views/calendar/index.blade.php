@@ -6,26 +6,61 @@
     <div
         class="flex h-full flex-col gap-2 p-2 sm:p-3"
         x-data="{
+            editing: @js(old('entry_id') !== null),
+            entryId: @js(old('entry_id')),
+            personName: '',
             type: @js(old('type', \App\Models\CalendarEntry::TYPE_ABSENCE)),
             startsOn: @js(old('starts_on', $monthStart->toDateString())),
             endsOn: @js(old('ends_on', $monthStart->toDateString())),
             note: @js(old('note', '')),
-            open(date) {
+            createUrl: @js(route('kalender.eintraege.store')),
+            updateUrlTemplate: @js(route('kalender.eintraege.update', ['calendarEntry' => '__ID__'])),
+            deleteUrlTemplate: @js(route('kalender.eintraege.destroy', ['calendarEntry' => '__ID__'])),
+            openCreate(date) {
+                this.editing = false;
+                this.entryId = null;
+                this.personName = '';
                 this.type = @js(\App\Models\CalendarEntry::TYPE_ABSENCE);
                 this.startsOn = date;
                 this.endsOn = date;
                 this.note = '';
+                this.openModal();
+            },
+            openEdit(entry) {
+                this.editing = true;
+                this.entryId = entry.id;
+                this.personName = entry.person_name;
+                this.type = entry.type;
+                this.startsOn = entry.starts_on;
+                this.endsOn = entry.ends_on;
+                this.note = entry.note || '';
+                this.openModal();
+            },
+            openModal() {
                 this.$nextTick(() => {
                     window.calendarEntrySnapshot = new FormData(document.getElementById('calendar-entry-form'));
                     this.$dispatch('open-modal', 'calendar-entry');
                     setTimeout(() => this.$refs.entryType?.focus(), 100);
                 });
-            }
+            },
+            async deleteEntry() {
+                if (! await window.confirmDialog({
+                    title: @js(__('Kalendereintrag löschen')),
+                    message: @js(__('Diesen Kalendereintrag wirklich endgültig löschen?')),
+                    confirmLabel: @js(__('Löschen')),
+                    cancelLabel: @js(__('Abbrechen')),
+                })) return;
+                this.$refs.deleteForm.submit();
+            },
         }"
     >
         @if (session('status') === 'calendar-entry-saved')
             <x-flash-message class="shrink-0 px-3 py-2 text-sm">
                 {{ __('Gespeichert.') }}
+            </x-flash-message>
+        @elseif (session('status') === 'calendar-entry-deleted')
+            <x-flash-message class="shrink-0 px-3 py-2 text-sm">
+                {{ __('Kalendereintrag gelöscht.') }}
             </x-flash-message>
         @endif
 
@@ -117,15 +152,33 @@
                                         $isHoliday = $holidaysByDate->has($date);
                                         $tooltip = $personEntries->map(fn ($entry) => $entry->typeLabel().($entry->note ? ': '.$entry->note : ''))->implode(' · ');
                                         $canCreate = $person->id === $ownPersonId && $person->calendar_enabled;
+                                        $hasEditableEntry = $personEntries->contains(fn ($entry) => $entry->person_id === $ownPersonId || $canManageOthers);
                                     @endphp
                                     <td
-                                        class="h-7 border-r border-gray-100 p-0 text-center {{ $isHoliday ? 'bg-[#eff6ff]' : ($day->isWeekend() ? 'bg-[#fffaeb]' : '') }} {{ $canCreate ? 'cursor-pointer hover:bg-blue-50' : '' }}"
+                                        class="h-7 border-r border-gray-100 p-0 text-center {{ $isHoliday ? 'bg-[#eff6ff]' : ($day->isWeekend() ? 'bg-[#fffaeb]' : '') }} {{ ($hasEditableEntry || $canCreate) ? 'hover:bg-blue-50' : '' }} {{ $canCreate ? 'cursor-pointer' : '' }}"
                                         @if ($tooltip) title="{{ $tooltip }}" @endif
-                                        @if ($canCreate) @click="open(@js($date))" @endif
+                                        @if ($canCreate) @click="openCreate(@js($date))" @endif
                                     >
                                         <span class="inline-flex max-w-9 flex-wrap items-center justify-center gap-0.5">
                                             @foreach ($personEntries as $entry)
-                                                <span class="h-2 w-2 rounded-full {{ $entry->dotClass() }}"></span>
+                                                @php
+                                                    $mayEditEntry = $entry->person_id === $ownPersonId || $canManageOthers;
+                                                    $editData = [
+                                                        'id' => $entry->id,
+                                                        'person_name' => $person->fullName(),
+                                                        'type' => $entry->type,
+                                                        'starts_on' => $entry->starts_on->toDateString(),
+                                                        'ends_on' => $entry->ends_on->toDateString(),
+                                                        'note' => $entry->note,
+                                                    ];
+                                                @endphp
+                                                @if ($mayEditEntry)
+                                                    <button type="button" @click.stop="openEdit(@js($editData))" class="inline-flex h-4 w-3 items-center justify-center" title="{{ __('Kalendereintrag bearbeiten') }}">
+                                                        <span class="h-2 w-2 rounded-full {{ $entry->dotClass() }}"></span>
+                                                    </button>
+                                                @else
+                                                    <span class="h-2 w-2 rounded-full {{ $entry->dotClass() }}"></span>
+                                                @endif
                                             @endforeach
                                         </span>
                                     </td>
@@ -142,13 +195,18 @@
         </div>
 
         <x-modal name="calendar-entry" max-width="md" :show="$errors->any()" :dirty-check="'calendarEntryIsDirty'" focusable>
-            <form id="calendar-entry-form" method="POST" action="{{ route('kalender.eintraege.store') }}" class="flex max-h-[85vh] flex-col">
+            <form id="calendar-entry-form" method="POST" :action="editing ? updateUrlTemplate.replace('__ID__', entryId) : createUrl" class="flex max-h-[85vh] flex-col">
                 @csrf
+                <input type="hidden" name="_method" value="PUT" :disabled="! editing">
+                <input type="hidden" name="entry_id" :value="entryId" :disabled="! editing">
                 <input type="hidden" name="return_year" value="{{ $year }}">
                 <input type="hidden" name="return_month" value="{{ $month }}">
 
                 <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
-                    <h3 class="font-semibold text-gray-900">{{ __('Kalendereintrag anlegen') }}</h3>
+                    <div>
+                        <h3 class="font-semibold text-gray-900" x-text="editing ? @js(__('Kalendereintrag bearbeiten')) : @js(__('Kalendereintrag anlegen'))"></h3>
+                        <p x-show="editing && personName" x-text="personName" class="text-xs text-gray-400"></p>
+                    </div>
                     <button type="button" @click="$dispatch('close-modal', 'calendar-entry')" class="text-xl leading-none text-gray-400 hover:text-gray-700" aria-label="{{ __('Schließen') }}">×</button>
                 </div>
 
@@ -185,9 +243,16 @@
                 </div>
 
                 <div class="flex shrink-0 justify-end gap-2 border-t border-gray-200 px-4 py-3">
+                    <button x-show="editing" type="button" @click="deleteEntry()" class="mr-auto rounded-md border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50">{{ __('Löschen') }}</button>
                     <button type="button" @click="$dispatch('close-modal', 'calendar-entry')" class="rounded-md border border-gray-300 bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200">{{ __('Abbrechen') }}</button>
                     <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-sm text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
                 </div>
+            </form>
+            <form x-ref="deleteForm" method="POST" :action="deleteUrlTemplate.replace('__ID__', entryId)" class="hidden">
+                @csrf
+                @method('DELETE')
+                <input type="hidden" name="return_year" value="{{ $year }}">
+                <input type="hidden" name="return_month" value="{{ $month }}">
             </form>
         </x-modal>
     </div>

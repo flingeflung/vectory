@@ -68,6 +68,7 @@ class CalendarController extends Controller
             });
         }
         $ownPersonId = $request->user()?->person_id;
+        $canManageOthers = $request->user()?->can('calendar.entries.manage_others') ?? false;
 
         $minimumMonth = CarbonImmutable::create($firstYear, 1, 1);
         $maximumMonth = CarbonImmutable::create($lastYear, 12, 1);
@@ -77,7 +78,7 @@ class CalendarController extends Controller
         return view('calendar.index', compact(
             'years', 'year', 'month', 'monthStart', 'monthEnd', 'days',
             'weekSegments', 'holidaysByDate', 'previousMonth', 'nextMonth',
-            'personGroups', 'tenants', 'entriesByPersonAndDate', 'ownPersonId', 'groupPeopleByTenant'
+            'personGroups', 'tenants', 'entriesByPersonAndDate', 'ownPersonId', 'canManageOthers', 'groupPeopleByTenant'
         ));
     }
 
@@ -86,14 +87,7 @@ class CalendarController extends Controller
         $person = $request->user()?->person;
         abort_unless($person && $person->calendar_enabled, 403);
 
-        $data = $request->validate([
-            'type' => ['required', Rule::in(CalendarEntry::TYPES)],
-            'starts_on' => ['required', 'date'],
-            'ends_on' => ['required', 'date', 'after_or_equal:starts_on'],
-            'note' => ['nullable', 'string', 'max:255'],
-            'return_year' => ['required', 'integer', 'min:2026'],
-            'return_month' => ['required', 'integer', 'between:1,12'],
-        ]);
+        $data = $this->validatedEntryData($request);
 
         CalendarEntry::query()->create([
             'person_id' => $person->id,
@@ -104,10 +98,65 @@ class CalendarController extends Controller
             'note' => $data['type'] === CalendarEntry::TYPE_ABSENCE ? ($data['note'] ?? null) : null,
         ]);
 
+        return $this->redirectToCalendar($data)->with('status', 'calendar-entry-saved');
+    }
+
+    public function update(Request $request, CalendarEntry $calendarEntry): RedirectResponse
+    {
+        $this->authorizeEntryChange($request, $calendarEntry);
+        $data = $this->validatedEntryData($request);
+
+        $calendarEntry->update([
+            'type' => $data['type'],
+            'starts_on' => $data['starts_on'],
+            'ends_on' => $data['ends_on'],
+            'note' => $data['type'] === CalendarEntry::TYPE_ABSENCE ? ($data['note'] ?? null) : null,
+        ]);
+
+        return $this->redirectToCalendar($data)->with('status', 'calendar-entry-saved');
+    }
+
+    public function destroy(Request $request, CalendarEntry $calendarEntry): RedirectResponse
+    {
+        $this->authorizeEntryChange($request, $calendarEntry);
+        $data = $request->validate([
+            'return_year' => ['required', 'integer', 'min:2026'],
+            'return_month' => ['required', 'integer', 'between:1,12'],
+        ]);
+        $calendarEntry->delete();
+
+        return $this->redirectToCalendar($data)->with('status', 'calendar-entry-deleted');
+    }
+
+    private function authorizeEntryChange(Request $request, CalendarEntry $calendarEntry): void
+    {
+        $ownEntry = $calendarEntry->person_id === $request->user()?->person_id;
+        $mayManageOthers = $request->user()?->can('calendar.entries.manage_others') ?? false;
+        $personIsVisible = $this->visiblePeople($request)[0]->contains('id', $calendarEntry->person_id);
+
+        abort_unless($personIsVisible && ($ownEntry || $mayManageOthers), 403);
+    }
+
+    /** @return array{type: string, starts_on: string, ends_on: string, note?: string|null, return_year: int, return_month: int} */
+    private function validatedEntryData(Request $request): array
+    {
+        return $request->validate([
+            'type' => ['required', Rule::in(CalendarEntry::TYPES)],
+            'starts_on' => ['required', 'date'],
+            'ends_on' => ['required', 'date', 'after_or_equal:starts_on'],
+            'note' => ['nullable', 'string', 'max:255'],
+            'return_year' => ['required', 'integer', 'min:2026'],
+            'return_month' => ['required', 'integer', 'between:1,12'],
+        ]);
+    }
+
+    /** @param array{return_year: int, return_month: int} $data */
+    private function redirectToCalendar(array $data): RedirectResponse
+    {
         return redirect()->route('kalender', [
             'year' => $data['return_year'],
             'month' => $data['return_month'],
-        ])->with('status', 'calendar-entry-saved');
+        ]);
     }
 
     /** @return array{0: Collection<int, Person>, 1: bool} */

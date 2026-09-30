@@ -40,3 +40,11 @@ Arbeitskreis. Personen anderer Kunden sind nicht sichtbar.
 
 Die Kategorie Abwesenheit ist bewusst neutral. Medizinische oder andere
 sensible persönliche Angaben sind für den gemeinsamen Kalender nicht nötig.
+
+## Bearbeitungsrecht
+
+Jede Kalenderperson darf eigene Einträge anlegen, bearbeiten und löschen.
+Einträge anderer sichtbarer Personen dürfen nur mit dem Recht
+`calendar.entries.manage_others` (**Kalender: Einträge anderer Personen
+bearbeiten und löschen**) geändert oder gelöscht werden. Das Recht erweitert
+nicht den sichtbaren Personenkreis.
