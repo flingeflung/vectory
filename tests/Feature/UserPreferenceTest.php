@@ -31,6 +31,8 @@ class UserPreferenceTest extends TestCase
             ['email', 'name', 'department'],
             array_slice(array_column(PersonTableColumnCatalog::orderedFor($user, false), 'key'), 0, 3),
         );
+        $this->assertContains('resource_planning', $preference->config['column_order']);
+        $this->assertContains('calendar', $preference->config['column_order']);
 
         $this->get(route('admin.personen'))
             ->assertOk()

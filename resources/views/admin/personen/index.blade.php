@@ -231,6 +231,16 @@
                                     @case('type')
                                         <td class="whitespace-nowrap px-3 py-2 text-gray-600">{{ $person->user ? __('Login-User') : __('Kontaktperson') }}</td>
                                         @break
+                                    @case('resource_planning')
+                                        <td class="px-3 py-2 text-center">
+                                            <span class="{{ $person->resource_planning ? 'text-green-600' : 'text-gray-400' }}">{{ $person->resource_planning ? '✓' : '–' }}</span>
+                                        </td>
+                                        @break
+                                    @case('calendar')
+                                        <td class="px-3 py-2 text-center">
+                                            <span class="{{ $person->calendar_enabled ? 'text-green-600' : 'text-gray-400' }}">{{ $person->calendar_enabled ? '✓' : '–' }}</span>
+                                        </td>
+                                        @break
                                     @case('tenant')
                                         <td class="whitespace-nowrap px-3 py-2 text-gray-600" title="{{ $person->tenant?->name }}">{{ $person->tenant?->short_name ?? $person->tenant?->name ?? '–' }}</td>
                                         @break
