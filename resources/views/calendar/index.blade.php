@@ -233,7 +233,7 @@
             </table>
         </div>
 
-        <x-modal name="calendar-entry" max-width="md" :show="$errors->any()" :dirty-check="'calendarEntryIsDirty'" focusable>
+        <x-modal name="calendar-entry" max-width="md" :show="$errors->any()" :dirty-check="'calendarEntryIsDirty'" :draggable="true" focusable>
             <form id="calendar-entry-form" method="POST" :action="editing ? updateUrlTemplate.replace('__ID__', entryId) : createUrl" class="flex max-h-[85vh] flex-col">
                 @csrf
                 <input type="hidden" name="_method" value="PUT" :disabled="! editing">
@@ -242,7 +242,7 @@
                 <input type="hidden" name="return_year" value="{{ $year }}">
                 <input type="hidden" name="return_month" value="{{ $month }}">
 
-                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+                <div class="flex shrink-0 cursor-move select-none items-center justify-between rounded-t-lg border-b border-gray-200 bg-gray-100 px-4 py-3" data-drag-handle title="{{ __('Ziehen zum Verschieben') }}">
                     <div>
                         <h3 class="font-semibold text-gray-900" x-text="editing ? @js(__('Kalendereintrag bearbeiten')) : @js(__('Kalendereintrag anlegen'))"></h3>
                         <p x-show="personName" x-text="personName" class="text-xs text-gray-500"></p>
