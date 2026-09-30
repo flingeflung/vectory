@@ -99,7 +99,7 @@ class CalendarController extends Controller
             'type' => $data['type'],
             'starts_on' => $data['starts_on'],
             'ends_on' => $data['ends_on'],
-            'note' => $data['type'] === CalendarEntry::TYPE_ABSENCE ? ($data['note'] ?? null) : null,
+            'note' => $data['note'] ?? null,
         ]);
 
         return $this->redirectToCalendar($data)->with('status', 'calendar-entry-saved');
@@ -114,7 +114,7 @@ class CalendarController extends Controller
             'type' => $data['type'],
             'starts_on' => $data['starts_on'],
             'ends_on' => $data['ends_on'],
-            'note' => $data['type'] === CalendarEntry::TYPE_ABSENCE ? ($data['note'] ?? null) : null,
+            'note' => $data['note'] ?? null,
         ]);
 
         return $this->redirectToCalendar($data)->with('status', 'calendar-entry-saved');

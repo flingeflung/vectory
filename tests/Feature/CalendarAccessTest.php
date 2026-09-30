@@ -27,7 +27,7 @@ class CalendarAccessTest extends TestCase
             ->get(route('kalender'))
             ->assertOk()
             ->assertSee(__('Kalender'))
-            ->assertSee("x-show=\"type === 'absence'\"", false);
+            ->assertSee(__('Erläuterung (optional)'));
     }
 
     public function test_superadmin_can_create_a_tracked_entry_for_another_visible_person(): void
@@ -71,5 +71,37 @@ class CalendarAccessTest extends TestCase
         $this->get(route('kalender', ['year' => 2026, 'month' => 10]))
             ->assertOk()
             ->assertSee('Angelegt von '.$user->name, false);
+    }
+
+    public function test_explanation_is_stored_for_mobile_office_entries(): void
+    {
+        $tenant = Tenant::query()->firstOrFail();
+        $tenant->update(['is_home_tenant' => true]);
+        $person = Person::query()->create([
+            'tenant_id' => $tenant->id,
+            'first_name' => 'Mona',
+            'last_name' => 'Mobil',
+            'calendar_enabled' => true,
+        ]);
+        $user = User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'role' => 'super_admin',
+        ]);
+
+        $this->actingAs($user)->post(route('kalender.eintraege.store'), [
+            'person_id' => $person->id,
+            'type' => CalendarEntry::TYPE_MOBILE_OFFICE,
+            'starts_on' => '2026-10-06',
+            'ends_on' => '2026-10-06',
+            'note' => 'vormittags',
+            'return_year' => 2026,
+            'return_month' => 10,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('calendar_entries', [
+            'person_id' => $person->id,
+            'type' => CalendarEntry::TYPE_MOBILE_OFFICE,
+            'note' => 'vormittags',
+        ]);
     }
 }
