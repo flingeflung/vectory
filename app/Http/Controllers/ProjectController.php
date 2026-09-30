@@ -530,7 +530,7 @@ class ProjectController extends Controller
     {
         abort_unless($request->user()->can('project.view'), 403);
 
-        $project->loadMissing(['projectPeople.person', 'projectPeople.functionGroup']);
+        $project->loadMissing(['projectPeople.person', 'projectPeople.functionGroup', 'functionGroupHours', 'projectTemplate.functionGroups']);
 
         return view('projekte.partials.system-fields.project_people', [
             'project' => $project,
@@ -602,6 +602,9 @@ class ProjectController extends Controller
                 fn ($query) => $query->where('tenant_id', $project->tenant_id)
                     ->orWhereIn('id', DB::table('person_tenant')->where('tenant_id', $project->tenant_id)->pluck('person_id'))
             )],
+            'project_people_hours' => ['array'],
+            'project_people_hours.*' => ['array'],
+            'project_people_hours.*.*' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
             'project_people_primary' => ['array'],
             'project_people_primary.*' => ['nullable', 'integer'],
             'attributes' => ['array'],
@@ -650,8 +653,9 @@ class ProjectController extends Controller
         }
         $marketIds = $validated['markets'] ?? [];
         $projectPeopleInput = $validated['project_people'] ?? [];
+        $projectPeopleHoursInput = $validated['project_people_hours'] ?? [];
         $primaryInput = $validated['project_people_primary'] ?? [];
-        unset($validated['markets'], $validated['project_people'], $validated['project_people_primary']);
+        unset($validated['markets'], $validated['project_people'], $validated['project_people_hours'], $validated['project_people_primary']);
 
         // Nur die für dieses Projekt relevanten Attribute überschreiben (Typspezifisch nach
         // Projektart gefiltert + Stammdaten/Ablaufdaten immer dabei), Rest im JSON unangetastet lassen.
@@ -836,16 +840,31 @@ class ProjectController extends Controller
         // project.people.manage nur einfordern, wenn sich dabei wirklich
         // etwas ändert - wer nur den Titel o.ä. speichert, braucht dieses
         // Recht nicht extra (analog project.complete beim Statusfeld oben).
-        $currentPeopleByGroup = ProjectPerson::where('project_id', $project->id)->get()
+        $currentProjectPeople = ProjectPerson::where('project_id', $project->id)->get();
+        $currentPeopleByGroup = $currentProjectPeople
             ->groupBy('function_group_id')
             ->map(fn ($rows) => $rows->pluck('person_id')->sort()->values()->all())
             ->all();
         $incomingPeopleByGroup = collect($projectPeopleInput)
             ->map(fn ($personIds) => collect($personIds)->map(fn ($id) => (int) $id)->sort()->values()->all())
             ->all();
-        if ($currentPeopleByGroup !== $incomingPeopleByGroup) {
+        $currentHours = $currentProjectPeople->mapWithKeys(fn (ProjectPerson $row) => [
+            $row->function_group_id.'.'.$row->person_id => $row->planned_hours === null ? null : round((float) $row->planned_hours, 2),
+        ])->sortKeys();
+        $incomingHours = collect($projectPeopleInput)->flatMap(function ($personIds, $groupId) use ($projectPeopleHoursInput) {
+            return collect($personIds)->mapWithKeys(function ($personId) use ($groupId, $projectPeopleHoursInput) {
+                $value = data_get($projectPeopleHoursInput, $groupId.'.'.$personId);
+
+                return [$groupId.'.'.$personId => $value === null || $value === '' ? null : round((float) $value, 2)];
+            });
+        })->sortKeys();
+        if ($currentPeopleByGroup !== $incomingPeopleByGroup || $currentHours->all() !== $incomingHours->all()) {
             abort_unless($request->user()->can('project.people.manage'), 403);
         }
+
+        $effectiveGroupHours = $project->functionGroupHours->isNotEmpty()
+            ? $project->functionGroupHours->pluck('pivot.planned_hours', 'id')
+            : ($project->projectTemplate?->functionGroups?->pluck('pivot.planned_hours', 'id') ?? collect());
 
         // Einzeln statt per Bulk-delete() löschen - ein Bulk-Query löst keine
         // Model-Events aus, das würde den Aufgaben-Rebuild (ProjectPersonObserver)
@@ -854,6 +873,14 @@ class ProjectController extends Controller
         // einziges create() mehr an, das den Sync sonst mit anstößt).
         ProjectPerson::where('project_id', $project->id)->get()->each->delete();
         foreach ($projectPeopleInput as $groupId => $personIds) {
+            $explicit = collect($personIds)->mapWithKeys(function ($personId) use ($groupId, $projectPeopleHoursInput) {
+                $value = data_get($projectPeopleHoursInput, $groupId.'.'.$personId);
+
+                return [(int) $personId => $value === null || $value === '' ? null : (float) $value];
+            });
+            $missingIds = $explicit->filter(fn ($value) => $value === null)->keys();
+            $remaining = max(0, (float) ($effectiveGroupHours->get((int) $groupId) ?? 0) - (float) $explicit->filter(fn ($value) => $value !== null)->sum());
+            $suggestedHours = $missingIds->isNotEmpty() && $remaining > 0 ? round($remaining / $missingIds->count(), 2) : null;
             foreach ($personIds as $personId) {
                 ProjectPerson::create([
                     'tenant_id' => $project->tenant_id,
@@ -861,6 +888,7 @@ class ProjectController extends Controller
                     'function_group_id' => $groupId,
                     'person_id' => $personId,
                     'is_primary' => (int) ($primaryInput[$groupId] ?? null) === (int) $personId,
+                    'planned_hours' => $explicit->get((int) $personId) ?? $suggestedHours,
                 ]);
             }
         }
@@ -937,7 +965,7 @@ class ProjectController extends Controller
         $directoryOpenSv = $svStatus === 'found';
 
         return [
-            'project' => $project->loadMissing(['hauptprojekt', 'unterprojekte' => fn ($query) => $query->orderBy('source_pn'), 'markets', 'projectPeople.person', 'projectPeople.functionGroup', 'workflow', 'activities.user', 'projectWorkflowSteps.workflowStep.functionGroups', 'projectWorkflowSteps.people.functionGroup', 'projectWorkflowSteps.people.person', 'graphicOrders.initiatedBy', 'graphicOrders.illustrator', 'projectChecklists.checklist.sections.points', 'projectChecklists.activatedBy', 'projectChecklistPoints.doneBy', 'products.productGroup', 'products.projects:id,source_pn,title']),
+            'project' => $project->loadMissing(['hauptprojekt', 'unterprojekte' => fn ($query) => $query->orderBy('source_pn'), 'markets', 'projectPeople.person', 'projectPeople.functionGroup', 'functionGroupHours', 'projectTemplate.functionGroups', 'workflow', 'activities.user', 'projectWorkflowSteps.workflowStep.functionGroups', 'projectWorkflowSteps.people.functionGroup', 'projectWorkflowSteps.people.person', 'graphicOrders.initiatedBy', 'graphicOrders.illustrator', 'projectChecklists.checklist.sections.points', 'projectChecklists.activatedBy', 'projectChecklistPoints.doneBy', 'products.productGroup', 'products.projects:id,source_pn,title']),
             // Für den "Checklisten auswählen"-Dialog - der aktuell zugewiesene
             // Katalog, gleiches Prinzip wie bei availableWorkflows unten (auch
             // inaktive Checklisten bleiben sichtbar, wenn schon zugewiesen).

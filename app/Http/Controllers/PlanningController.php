@@ -8,10 +8,12 @@ use App\Models\PersonVacationDays;
 use App\Models\PersonWeeklyHours;
 use App\Models\PlanningBaseLoad;
 use App\Models\PlanningPersonBaseLoad;
+use App\Models\ProjectPerson;
 use App\Models\SystemSetting;
 use App\Models\Tenant;
 use App\Models\UserPreference;
 use App\Services\PlanningBaseLoadCalculator;
+use App\Services\ProjectPlanningCalculator;
 use App\Support\CurrentTenant;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -32,11 +34,12 @@ class PlanningController extends Controller
 {
     private const HOURS_SORTABLE_COLUMNS = ['name', 'department', 'annotation', 'wost', 'workdays', 'holidays', 'vacation_hours', 'annual_hours', 'base_load', 'project_hours'];
 
-    public function projektplanung(Request $request): View
+    public function projektplanung(Request $request, ProjectPlanningCalculator $calculator): View
     {
         abort_unless($request->user()->can('planning.view'), 403);
 
         $displayMode = $request->query('view') === 'year' ? 'year' : 'month';
+        $contentMode = $request->query('content') === 'utilization' ? 'utilization' : 'projects';
         $firstYear = 2026;
         $lastYear = (int) now()->year + 5;
         $years = range($firstYear, $lastYear);
@@ -95,6 +98,7 @@ class PlanningController extends Controller
             ->values();
         if ($request->has('person_filter') || ($hasSavedSelection && $selectedPersonIds->all() !== array_values($preference['person_ids']))) {
             UserPreference::persist($request->user()->id, UserPreference::PROJECT_PLANNING, [
+                ...$preference,
                 'person_ids' => $selectedPersonIds->all(),
             ]);
         }
@@ -103,15 +107,90 @@ class PlanningController extends Controller
             ->map(fn (Collection $people) => $people->filter(fn (Person $person) => $selectedPeople->has($person->id))->values())
             ->filter(fn (Collection $people) => $people->isNotEmpty());
 
+        $rangeStart = $displayMode === 'month' ? $monthStart : CarbonImmutable::create($year, 1, 1);
+        $rangeEnd = $displayMode === 'month' ? $monthStart->endOfMonth()->startOfDay() : CarbonImmutable::create($year, 12, 31);
+        $assignments = ProjectPerson::query()->withoutGlobalScope('tenant')
+            ->whereIn('person_id', $selectedPersonIds)
+            ->with(['person', 'functionGroup', 'project'])
+            ->whereHas('project', fn (Builder $query) => $query->whereIn('status', [0, 1])
+                ->where(function (Builder $query) use ($rangeStart, $rangeEnd) {
+                    $query->whereNull('start_date')->orWhereNull('end_date')
+                        ->orWhere(fn (Builder $dated) => $dated->whereDate('start_date', '<=', $rangeEnd)->whereDate('end_date', '>=', $rangeStart));
+                }))
+            ->get();
+        $projectTenantIds = $assignments->pluck('project.tenant_id')->filter()->unique();
+        $projectTenants = Tenant::query()->whereIn('id', $projectTenantIds)->get()->keyBy('id');
+        $tenantPalette = ['#bfdbfe', '#bbf7d0', '#fde68a', '#fecdd3', '#ddd6fe', '#bae6fd', '#fed7aa', '#d9f99d'];
+        $tenantColors = $projectTenantIds->values()->mapWithKeys(fn ($tenantId, $index) => [(int) $tenantId => $tenantPalette[$index % count($tenantPalette)]]);
+        $isHomeMember = Tenant::query()->where('is_home_tenant', true)->where('id', $request->user()->tenant_id)->exists();
+
+        $projectRowsByPerson = $assignments->groupBy('person_id')->map(function (Collection $personAssignments) use ($isHomeMember, $projectTenants, $tenantColors) {
+            return $personAssignments->groupBy('project_id')->map(function (Collection $rows) use ($isHomeMember, $projectTenants, $tenantColors) {
+                $project = $rows->first()->project;
+                $mayShowDetails = $isHomeMember || $project->tenant_id === CurrentTenant::id();
+
+                return [
+                    'project' => $project,
+                    'label' => $mayShowDetails ? $project->source_pn.' – '.$project->title : __('Andere Projekte'),
+                    'tenant' => $projectTenants->get($project->tenant_id),
+                    'color' => $tenantColors->get($project->tenant_id, '#bfdbfe'),
+                    'mayShowDetails' => $mayShowDetails,
+                    'canOpen' => $mayShowDetails && $project->tenant_id === CurrentTenant::id(),
+                    'functionGroups' => $rows->pluck('functionGroup.short_name')->filter()->unique()->join(', '),
+                    'plannedHours' => (float) $rows->sum('planned_hours'),
+                    'missingHours' => $rows->contains(fn (ProjectPerson $row) => $row->planned_hours === null),
+                ];
+            })->sortBy(fn (array $row) => $row['project']->start_date?->toDateString() ?? '9999-12-31')->values();
+        });
+
+        $planningByPersonAndDate = [];
+        $calculator->prime($selectedPeople->values(), $rangeStart, $rangeEnd);
+        foreach ($assignments as $assignment) {
+            foreach ($calculator->plannedHoursByDay($assignment, $rangeStart, $rangeEnd) as $date => $hours) {
+                $planningByPersonAndDate[$assignment->person_id][$date] = ($planningByPersonAndDate[$assignment->person_id][$date] ?? 0) + $hours;
+            }
+        }
+        $capacityByPerson = $selectedPeople->mapWithKeys(fn (Person $person) => [
+            $person->id => $calculator->capacityByDay($person, $rangeStart, $rangeEnd),
+        ]);
+        $utilizationByPerson = $selectedPeople->mapWithKeys(function (Person $person) use ($capacityByPerson, $displayMode, $planningByPersonAndDate, $weeks) {
+            $capacity = $capacityByPerson->get($person->id, collect());
+            $planned = collect($planningByPersonAndDate[$person->id] ?? []);
+            if ($displayMode === 'month') {
+                return [$person->id => $capacity->map(function (array $values, string $date) use ($planned) {
+                    $project = (float) $planned->get($date, 0);
+
+                    return [...$values, 'project' => $project, 'remaining' => $values['available'] - $project];
+                })];
+            }
+
+            return [$person->id => $weeks->mapWithKeys(function (array $week) use ($capacity, $planned) {
+                $weekEnd = $week['start']->addDays(6);
+                $values = $capacity->filter(fn ($value, $date) => CarbonImmutable::parse($date)->between($week['start'], $weekEnd));
+                $project = (float) $planned->filter(fn ($value, $date) => CarbonImmutable::parse($date)->between($week['start'], $weekEnd))->sum();
+                $available = (float) $values->sum('available');
+
+                return [$week['key'] => [
+                    'work' => (float) $values->sum('work'),
+                    'absence' => (float) $values->sum('absence'),
+                    'base_load' => (float) $values->sum('base_load'),
+                    'available' => $available,
+                    'project' => $project,
+                    'remaining' => $available - $project,
+                ]];
+            })];
+        });
+
         $minimumMonth = CarbonImmutable::create($firstYear, 1, 1);
         $maximumMonth = CarbonImmutable::create($lastYear, 12, 1);
         $previousMonth = $monthStart->greaterThan($minimumMonth) ? $monthStart->subMonth() : null;
         $nextMonth = $monthStart->lessThan($maximumMonth) ? $monthStart->addMonth() : null;
 
         return view('planning.projektplanung', compact(
-            'displayMode', 'years', 'year', 'month', 'monthStart', 'days', 'dayWeekSegments',
+            'displayMode', 'contentMode', 'years', 'year', 'month', 'monthStart', 'days', 'dayWeekSegments',
             'weeks', 'weekMonthSegments', 'personGroups', 'selectedPersonGroups', 'selectedPersonIds',
-            'tenants', 'previousMonth', 'nextMonth'
+            'tenants', 'previousMonth', 'nextMonth', 'projectRowsByPerson', 'utilizationByPerson',
+            'projectTenants', 'tenantColors', 'rangeStart', 'rangeEnd'
         ));
     }
 
@@ -129,6 +208,7 @@ class PlanningController extends Controller
             ->visibleToRole($user->role)
             ->where('active', true)
             ->where('resource_planning', true)
+            ->with(['weeklyHours', 'calendarEntries'])
             ->orderBy('last_name')
             ->orderBy('first_name');
 

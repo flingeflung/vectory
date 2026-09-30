@@ -1567,5 +1567,18 @@
     "Jahresansicht": "Year view",
     "Personen auswählen": "Select people",
     "Keine Personen ausgewählt.": "No people selected.",
-    "Keine Personen verfügbar.": "No people available."
+    "Keine Personen verfügbar.": "No people available.",
+    "Auslastung": "Utilization",
+    "Für Projekte verfügbar": "Available for projects",
+    "Geplante Projektstunden": "Planned project hours",
+    "Restkapazität": "Remaining capacity",
+    "Auslastung %": "Utilization %",
+    "Keine Projekte im Zeitraum": "No projects in this period",
+    "Zeitraum unvollständig": "Incomplete period",
+    "Geplante Stunden dieser Person": "Planned hours for this person",
+    "Verteilt: :distributed von :planned Stunden": "Allocated: :distributed of :planned hours",
+    "Planstunden noch nicht vollständig verteilt": "Planned hours have not yet been fully allocated",
+    ":hours geplante Stunden": ":hours planned hours",
+    "Std.": "hrs.",
+    "Planstunden": "Planned hours"
 }

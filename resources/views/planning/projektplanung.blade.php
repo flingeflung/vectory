@@ -3,6 +3,7 @@
         $personQuery = ['person_filter' => 1, 'people' => $selectedPersonIds->all()];
         $planningUrl = fn (array $overrides = []) => route('planung.projektplanung', array_merge([
             'view' => $displayMode,
+            'content' => $contentMode,
             'year' => $year,
             'month' => $month,
         ], $personQuery, $overrides));
@@ -15,8 +16,14 @@
             <a href="{{ $planningUrl(['view' => 'year']) }}" class="border-l border-gray-300 px-3 py-1.5 font-medium {{ $displayMode === 'year' ? 'bg-btn-primary text-white' : 'bg-btn-secondary text-gray-700 hover:bg-btn-secondary-hover' }}">{{ __('Jahresansicht') }}</a>
         </div>
 
+        <div class="inline-flex overflow-hidden rounded-md border border-gray-300 text-xs">
+            <a href="{{ $planningUrl(['content' => 'projects']) }}" class="px-3 py-1.5 font-medium {{ $contentMode === 'projects' ? 'bg-btn-primary text-white' : 'bg-btn-secondary text-gray-700 hover:bg-btn-secondary-hover' }}">{{ __('Projekte') }}</a>
+            <a href="{{ $planningUrl(['content' => 'utilization']) }}" class="border-l border-gray-300 px-3 py-1.5 font-medium {{ $contentMode === 'utilization' ? 'bg-btn-primary text-white' : 'bg-btn-secondary text-gray-700 hover:bg-btn-secondary-hover' }}">{{ __('Auslastung') }}</a>
+        </div>
+
         <form method="GET" action="{{ route('planung.projektplanung') }}" class="flex items-center gap-2">
             <input type="hidden" name="view" value="{{ $displayMode }}">
+            <input type="hidden" name="content" value="{{ $contentMode }}">
             <input type="hidden" name="month" value="{{ $month }}">
             <input type="hidden" name="person_filter" value="1">
             @foreach ($selectedPersonIds as $personId)
@@ -91,18 +98,81 @@
                         <tr><th colspan="{{ ($displayMode === 'month' ? $days->count() : $weeks->count()) + 1 }}" class="sticky left-0 border-y border-gray-300 bg-slate-100 px-2 py-1 text-left font-semibold text-slate-700">{{ $tenants->get($tenantId)?->name ?? __('Unbekannter Kunde') }}</th></tr>
                     @endif
                     @foreach ($people as $person)
-                        <tr class="border-b border-gray-100">
-                            <th scope="row" class="sticky left-0 z-[1] whitespace-nowrap border-r border-gray-200 bg-white px-2 py-1.5 text-left font-medium text-gray-700">{{ $person->last_name }}, {{ $person->first_name }}</th>
-                            @if ($displayMode === 'month')
-                                @foreach ($days as $day)
-                                    <td class="h-7 border-r border-gray-100 {{ $day->isToday() ? 'bg-[#eff6ff]' : ($day->isWeekend() ? 'bg-[#fffaeb]' : '') }}"></td>
-                                @endforeach
-                            @else
-                                @foreach ($weeks as $week)
-                                    <td class="h-7 border-r border-gray-100"></td>
-                                @endforeach
-                            @endif
+                        <tr class="border-b border-gray-200 bg-gray-50">
+                            <th scope="row" class="sticky left-0 z-[1] whitespace-nowrap border-r border-gray-200 bg-gray-50 px-2 py-1.5 text-left font-semibold text-gray-800">{{ $person->last_name }}, {{ $person->first_name }}</th>
+                            <td colspan="{{ $displayMode === 'month' ? $days->count() : $weeks->count() }}"></td>
                         </tr>
+
+                        @if ($contentMode === 'projects')
+                            @forelse ($projectRowsByPerson->get($person->id, collect()) as $projectRow)
+                                @php
+                                    $project = $projectRow['project'];
+                                    $hasPeriod = $project->start_date && $project->end_date && $project->start_date->lte($project->end_date);
+                                    $tooltip = collect([
+                                        $projectRow['label'],
+                                        $projectRow['tenant']?->name,
+                                        $projectRow['functionGroups'] ?: null,
+                                        $projectRow['missingHours'] ? __('Planstunden noch nicht vollständig verteilt') : __(':hours geplante Stunden', ['hours' => number_format($projectRow['plannedHours'], 2, ',', '.')]),
+                                    ])->filter()->join(' · ');
+                                @endphp
+                                <tr class="border-b border-gray-100">
+                                    <td class="sticky left-0 z-[1] max-w-72 border-r border-gray-200 bg-white py-1 pl-5 pr-2">
+                                        @if ($projectRow['canOpen'])
+                                            <a href="{{ route('projekte.show', $project) }}" class="block truncate text-blue-700 hover:underline" title="{{ $tooltip }}">{{ $projectRow['label'] }}</a>
+                                        @else
+                                            <span class="block truncate text-gray-600" title="{{ $tooltip }}">{{ $projectRow['label'] }}</span>
+                                        @endif
+                                        <span class="block truncate text-[10px] text-gray-400">{{ $projectRow['tenant']?->name }}@if (! $hasPeriod) · {{ __('Zeitraum unvollständig') }}@endif</span>
+                                    </td>
+                                    @if ($displayMode === 'month')
+                                        @foreach ($days as $day)
+                                            @php $inside = $hasPeriod && $day->between($project->start_date, $project->end_date); @endphp
+                                            <td class="h-6 border-r border-gray-100 p-0 {{ $day->isToday() ? 'bg-[#eff6ff]' : ($day->isWeekend() ? 'bg-[#fffaeb]' : '') }}" title="{{ $inside ? $tooltip : '' }}">
+                                                @if ($inside)<div class="mx-0 h-3 rounded-sm border border-black/10" style="background-color: {{ $projectRow['color'] }}"></div>@endif
+                                            </td>
+                                        @endforeach
+                                    @else
+                                        @foreach ($weeks as $week)
+                                            @php $inside = $hasPeriod && $project->start_date->lte($week['start']->addDays(6)) && $project->end_date->gte($week['start']); @endphp
+                                            <td class="h-6 border-r border-gray-100 p-0" title="{{ $inside ? $tooltip : '' }}">
+                                                @if ($inside)<div class="h-3 rounded-sm border border-black/10" style="background-color: {{ $projectRow['color'] }}"></div>@endif
+                                            </td>
+                                        @endforeach
+                                    @endif
+                                </tr>
+                            @empty
+                                <tr class="border-b border-gray-100"><td class="sticky left-0 bg-white py-1 pl-5 pr-2 text-gray-400">{{ __('Keine Projekte im Zeitraum') }}</td><td colspan="{{ $displayMode === 'month' ? $days->count() : $weeks->count() }}"></td></tr>
+                            @endforelse
+                        @else
+                            @php
+                                $metricLabels = [
+                                    'work' => __('Arbeitszeit'),
+                                    'absence' => __('Abwesenheit'),
+                                    'base_load' => __('Grundlast'),
+                                    'available' => __('Für Projekte verfügbar'),
+                                    'project' => __('Geplante Projektstunden'),
+                                    'remaining' => __('Restkapazität'),
+                                    'utilization' => __('Auslastung %'),
+                                ];
+                                $personValues = $utilizationByPerson->get($person->id, collect());
+                            @endphp
+                            @foreach ($metricLabels as $metric => $metricLabel)
+                                <tr class="border-b border-gray-100 {{ in_array($metric, ['available', 'remaining'], true) ? 'font-semibold' : '' }}">
+                                    <td class="sticky left-0 z-[1] whitespace-nowrap border-r border-gray-200 bg-white py-1 pl-5 pr-2 text-gray-600">{{ $metricLabel }}</td>
+                                    @foreach ($displayMode === 'month' ? $days : $weeks as $column)
+                                        @php
+                                            $key = $displayMode === 'month' ? $column->toDateString() : $column['key'];
+                                            $values = $personValues->get($key, []);
+                                            $value = $metric === 'utilization'
+                                                ? (((float) ($values['available'] ?? 0)) > 0 ? (float) ($values['project'] ?? 0) / (float) $values['available'] * 100 : 0)
+                                                : (float) ($values[$metric] ?? 0);
+                                            $overloaded = in_array($metric, ['remaining', 'utilization'], true) && (float) ($values['remaining'] ?? 0) < -0.005;
+                                        @endphp
+                                        <td class="h-6 border-r border-gray-100 px-1 text-right tabular-nums {{ $overloaded ? 'bg-red-50 text-red-700' : '' }}">{{ $metric === 'utilization' ? number_format($value, 0, ',', '.').' %' : number_format($value, 2, ',', '.') }}</td>
+                                    @endforeach
+                                </tr>
+                            @endforeach
+                        @endif
                     @endforeach
                 @empty
                     <tr><td colspan="{{ ($displayMode === 'month' ? $days->count() : $weeks->count()) + 1 }}" class="p-6 text-center text-gray-400">{{ __('Keine Personen ausgewählt.') }}</td></tr>
@@ -114,6 +184,7 @@
     <x-modal name="projektplanung-personen" max-width="md" :draggable="true">
         <form method="GET" action="{{ route('planung.projektplanung') }}" x-data x-on:open-modal.window="if ($event.detail === 'projektplanung-personen') $nextTick(() => $refs.firstPerson?.focus())">
             <input type="hidden" name="view" value="{{ $displayMode }}">
+            <input type="hidden" name="content" value="{{ $contentMode }}">
             <input type="hidden" name="year" value="{{ $year }}">
             <input type="hidden" name="month" value="{{ $month }}">
             <input type="hidden" name="person_filter" value="1">

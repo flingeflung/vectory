@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['tenant_id', 'project_id', 'function_group_id', 'person_id', 'is_primary'])]
+#[Fillable(['tenant_id', 'project_id', 'function_group_id', 'person_id', 'is_primary', 'planned_hours'])]
 #[ObservedBy(ProjectPersonObserver::class)]
 class ProjectPerson extends Model
 {
@@ -17,12 +17,12 @@ class ProjectPerson extends Model
 
     protected function casts(): array
     {
-        return ['is_primary' => 'boolean'];
+        return ['is_primary' => 'boolean', 'planned_hours' => 'decimal:2'];
     }
 
     public function project(): BelongsTo
     {
-        return $this->belongsTo(Project::class);
+        return $this->belongsTo(Project::class)->withoutGlobalScope('tenant');
     }
 
     /**
@@ -41,6 +41,6 @@ class ProjectPerson extends Model
 
     public function functionGroup(): BelongsTo
     {
-        return $this->belongsTo(FunctionGroup::class);
+        return $this->belongsTo(FunctionGroup::class)->withoutGlobalScope('tenant');
     }
 }

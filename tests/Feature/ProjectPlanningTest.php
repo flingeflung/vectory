@@ -15,6 +15,100 @@ class ProjectPlanningTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_project_and_utilization_views_use_person_planned_hours(): void
+    {
+        $tenant = Tenant::query()->firstOrFail();
+        $tenant->update(['is_home_tenant' => true]);
+        $person = $this->person($tenant, 'Planung');
+        $user = User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'person_id' => $person->id,
+            'role' => 'super_admin',
+        ]);
+        DB::table('person_weekly_hours')->insert([
+            'tenant_id' => $tenant->id,
+            'person_id' => $person->id,
+            'hours' => 40,
+            'valid_from' => null,
+            'valid_to' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('calendar_entries')->insert([
+            'person_id' => $person->id,
+            'created_by_user_id' => $user->id,
+            'type' => 'absence',
+            'starts_on' => '2026-10-02',
+            'ends_on' => '2026-10-02',
+            'note' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $groupId = DB::table('function_groups')->insertGetId([
+            'tenant_id' => $tenant->id,
+            'name' => 'Redaktion',
+            'short_name' => 'Red',
+            'sort' => 1,
+            'active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('function_group_member')->insert([
+            'tenant_id' => $tenant->id,
+            'function_group_id' => $groupId,
+            'person_id' => $person->id,
+        ]);
+        $projectId = DB::table('projects')->insertGetId([
+            'tenant_id' => $tenant->id,
+            'source_pn' => 'P-PLAN',
+            'title' => 'Planungsprojekt',
+            'status' => 1,
+            'start_date' => '2026-10-01',
+            'end_date' => '2026-10-05',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('project_people')->insert([
+            'tenant_id' => $tenant->id,
+            'project_id' => $projectId,
+            'function_group_id' => $groupId,
+            'person_id' => $person->id,
+            'is_primary' => false,
+            'planned_hours' => 9,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->actingAs($user)->get(route('planung.projektplanung', [
+            'year' => 2026,
+            'month' => 10,
+            'person_filter' => 1,
+            'people' => [$person->id],
+        ]))->assertOk()->assertSee('Planungsprojekt');
+
+        $this->assertSame(9.0, $response->viewData('projectRowsByPerson')->get($person->id)->first()['plannedHours']);
+        $octoberFirst = $response->viewData('utilizationByPerson')->get($person->id)->get('2026-10-01');
+        $this->assertEqualsWithDelta(8.0, $octoberFirst['work'], 0.001);
+        $this->assertEqualsWithDelta(3.0, $octoberFirst['project'], 0.001);
+        $this->assertEqualsWithDelta(5.0, $octoberFirst['remaining'], 0.001);
+        $octoberSecond = $response->viewData('utilizationByPerson')->get($person->id)->get('2026-10-02');
+        $this->assertEqualsWithDelta(8.0, $octoberSecond['absence'], 0.001);
+        $this->assertEqualsWithDelta(-3.0, $octoberSecond['remaining'], 0.001);
+
+        $this->get(route('planung.projektplanung', [
+            'content' => 'utilization',
+            'year' => 2026,
+            'month' => 10,
+            'person_filter' => 1,
+            'people' => [$person->id],
+        ]))->assertOk()->assertSee(__('Geplante Projektstunden'));
+
+        $this->get(route('projekte.show', $projectId))
+            ->assertOk()
+            ->assertSee('project_people_hours['.$groupId.']['.$person->id.']', false)
+            ->assertSee('value="9.00"', false);
+    }
+
     public function test_person_selection_is_remembered_and_limited_to_eligible_people(): void
     {
         $tenant = Tenant::query()->firstOrFail();
