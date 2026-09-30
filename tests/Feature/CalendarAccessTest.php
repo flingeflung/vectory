@@ -27,6 +27,7 @@ class CalendarAccessTest extends TestCase
         $this->actingAs($user)
             ->get(route('kalender'))
             ->assertOk()
-            ->assertSee(__('Kalender'));
+            ->assertSee(__('Kalender'))
+            ->assertSee("x-show=\"type === 'absence'\"", false);
     }
 }

@@ -158,7 +158,7 @@
                                         $date = $day->toDateString();
                                         $personEntries = $entriesByPersonAndDate->get($person->id.'|'.$date, collect());
                                         $isHoliday = $holidaysByDate->has($date);
-                                        $tooltip = $personEntries->map(fn ($entry) => $entry->typeLabel().($entry->note ? ': '.$entry->note : ''))->implode(' · ');
+                                        $tooltip = $personEntries->map(fn ($entry) => $entry->typeLabel().($entry->note ? ' ('.$entry->note.')' : ''))->implode(' · ');
                                         $canCreate = $person->id === $ownPersonId && $person->calendar_enabled;
                                         $firstEditableEntry = $personEntries->first(fn ($entry) => $entry->person_id === $ownPersonId || $canManageOthers);
                                         $firstEditData = $firstEditableEntry ? [
@@ -183,6 +183,7 @@
                                             @foreach ($personEntries as $entry)
                                                 @php
                                                     $mayEditEntry = $entry->person_id === $ownPersonId || $canManageOthers;
+                                                    $entryTooltip = $entry->typeLabel().($entry->note ? ' ('.$entry->note.')' : '');
                                                     $editData = [
                                                         'id' => $entry->id,
                                                         'person_name' => $person->fullName(),
@@ -193,11 +194,11 @@
                                                     ];
                                                 @endphp
                                                 @if ($mayEditEntry)
-                                                    <button type="button" x-on:click.stop="openEdit(@js($editData))" class="inline-flex h-4 w-3 items-center justify-center" title="{{ __('Kalendereintrag bearbeiten') }}">
+                                                    <button type="button" x-on:click.stop="openEdit(@js($editData))" class="inline-flex h-4 w-3 items-center justify-center" title="{{ $entryTooltip }}">
                                                         <span class="h-2 w-2 rounded-full {{ $entry->dotClass() }}"></span>
                                                     </button>
                                                 @else
-                                                    <span class="h-2 w-2 rounded-full {{ $entry->dotClass() }}"></span>
+                                                    <span class="h-2 w-2 rounded-full {{ $entry->dotClass() }}" title="{{ $entryTooltip }}"></span>
                                                 @endif
                                             @endforeach
                                         </span>
@@ -254,7 +255,7 @@
                         </div>
                     </div>
 
-                    <div x-show="type === @js(\App\Models\CalendarEntry::TYPE_ABSENCE)" x-cloak>
+                    <div x-show="type === 'absence'" x-cloak>
                         <label for="calendar-entry-note" class="mb-1 block text-xs text-gray-500">{{ __('Erläuterung (optional)') }}</label>
                         <input id="calendar-entry-note" type="text" name="note" maxlength="255" x-model="note" class="w-full rounded-md border-gray-300 text-sm">
                         <p class="mt-1 text-xs text-gray-400">{{ __('Die Erläuterung wird anderen Kalenderteilnehmern als Tooltip angezeigt.') }}</p>
