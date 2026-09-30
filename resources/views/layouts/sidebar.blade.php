@@ -177,6 +177,20 @@
         </a>
         <a
             onclick="return window.navigateOrConfirm(event)"
+            href="{{ route('illustrationen') }}"
+            class="flex items-center px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('illustrationen') ? 'bg-sidebar-active text-sidebar-active-content' : 'text-sidebar-content hover:bg-sidebar-hover hover:text-sidebar-content-hover' }}"
+        >
+            {{ __('Illustrationen') }}
+        </a>
+        <a
+            onclick="return window.navigateOrConfirm(event)"
+            href="{{ route('produkte') }}"
+            class="flex items-center px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('produkte') ? 'bg-sidebar-active text-sidebar-active-content' : 'text-sidebar-content hover:bg-sidebar-hover hover:text-sidebar-content-hover' }}"
+        >
+            {{ __('Produkte') }}
+        </a>
+        <a
+            onclick="return window.navigateOrConfirm(event)"
             href="{{ route('jobload') }}"
             class="flex items-center px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('jobload*') ? 'bg-sidebar-active text-sidebar-active-content' : 'text-sidebar-content hover:bg-sidebar-hover hover:text-sidebar-content-hover' }}"
         >
@@ -198,17 +212,10 @@
         @endif
         <a
             onclick="return window.navigateOrConfirm(event)"
-            href="{{ route('illustrationen') }}"
-            class="flex items-center px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('illustrationen') ? 'bg-sidebar-active text-sidebar-active-content' : 'text-sidebar-content hover:bg-sidebar-hover hover:text-sidebar-content-hover' }}"
+            href="{{ route('kalender') }}"
+            class="flex items-center px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('kalender') ? 'bg-sidebar-active text-sidebar-active-content' : 'text-sidebar-content hover:bg-sidebar-hover hover:text-sidebar-content-hover' }}"
         >
-            {{ __('Illustrationen') }}
-        </a>
-        <a
-            onclick="return window.navigateOrConfirm(event)"
-            href="{{ route('produkte') }}"
-            class="flex items-center px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('produkte') ? 'bg-sidebar-active text-sidebar-active-content' : 'text-sidebar-content hover:bg-sidebar-hover hover:text-sidebar-content-hover' }}"
-        >
-            {{ __('Produkte') }}
+            {{ __('Kalender') }}
         </a>
 
         {{-- Ralf, 2026-09-28: neuer Hauptnavigationspunkt "Planung" -

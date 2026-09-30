@@ -23,6 +23,7 @@ use App\Http\Controllers\Admin\ProjectTypeController;
 use App\Http\Controllers\Admin\SuperAdminController;
 use App\Http\Controllers\Admin\TenantController;
 use App\Http\Controllers\Admin\WorkflowController;
+use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DisplayFilterController;
 use App\Http\Controllers\FavoriteController;
@@ -72,6 +73,7 @@ Route::get('/', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/kalender', [CalendarController::class, 'index'])->name('kalender');
     Route::post('/dashboard/layout', [DashboardController::class, 'updateLayout'])->name('dashboard.layout');
     Route::delete('/dashboard/recent/{recentlyViewedProject}', [DashboardController::class, 'removeRecent'])->name('dashboard.recent.destroy');
 });
