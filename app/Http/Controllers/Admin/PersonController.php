@@ -182,6 +182,7 @@ class PersonController extends Controller
         $filters = $this->filtersFromRequest($request);
 
         $people = $this->filteredPeopleQuery($filters, $tenantId, $request->user()->role)
+            ->with('department')
             ->orderBy('last_name')
             ->orderBy('first_name')
             ->get();

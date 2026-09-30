@@ -30,6 +30,7 @@
                 <tr class="border-b border-gray-100 hover:bg-gray-50">
                     <th scope="row" class="sticky left-0 z-[1] whitespace-nowrap border-r border-gray-200 bg-white px-2 py-1 text-left font-normal {{ $person->active ? 'text-gray-800' : 'text-gray-400' }}">
                         {{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }}
+                        <x-department-tag :person="$person" />
                     </th>
                     @if ($homeTenant)
                         <td class="px-2 py-1 text-center">
