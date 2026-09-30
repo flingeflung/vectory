@@ -278,7 +278,6 @@
                     <div>
                         <label for="calendar-entry-note" class="mb-1 block text-xs text-gray-500">{{ __('Erläuterung (optional)') }}</label>
                         <input id="calendar-entry-note" type="text" name="note" maxlength="255" x-model="note" class="w-full rounded-md border-gray-300 text-sm">
-                        <p class="mt-1 text-xs text-gray-400">{{ __('Die Erläuterung wird anderen Kalenderteilnehmern als Tooltip angezeigt.') }}</p>
                         @error('note') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                     </div>
                 </div>
