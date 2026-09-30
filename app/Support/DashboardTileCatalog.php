@@ -2,8 +2,8 @@
 
 namespace App\Support;
 
-use App\Models\DashboardLayout;
 use App\Models\User;
+use App\Models\UserPreference;
 
 /**
  * Katalog aller verfügbaren Dashboard-Kacheln. Neue Kachel? Hier einen
@@ -42,9 +42,9 @@ class DashboardTileCatalog
      */
     public static function activeFor(User $user): array
     {
-        $layout = DashboardLayout::query()->where('user_id', $user->id)->first();
+        $layout = UserPreference::configFor($user->id, UserPreference::DASHBOARD);
         $available = array_column(self::available(), 'key');
-        $active = $layout->config['active_tiles'] ?? self::DEFAULT_ACTIVE;
+        $active = $layout['active_tiles'] ?? self::DEFAULT_ACTIVE;
 
         // Nur noch existierende Kachel-Keys durchlassen (falls eine Kachel
         // später aus dem Katalog entfernt wird, verschwindet sie damit auch
@@ -60,9 +60,6 @@ class DashboardTileCatalog
         $available = array_column(self::available(), 'key');
         $tileKeys = array_values(array_intersect(array_unique($tileKeys), $available));
 
-        DashboardLayout::updateOrCreate(
-            ['user_id' => $user->id],
-            ['config' => ['active_tiles' => $tileKeys]]
-        );
+        UserPreference::persist($user->id, UserPreference::DASHBOARD, ['active_tiles' => $tileKeys]);
     }
 }

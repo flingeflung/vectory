@@ -176,45 +176,91 @@
             </div>
             <table class="min-w-full divide-y divide-gray-100 text-sm">
                 <thead class="sticky top-0 bg-white text-xs text-gray-500">
-                    <tr>
-                        <th class="px-3 py-2 text-left">{{ __('Name') }}</th>
-                        <th class="px-3 py-2 text-left">{{ __('Kürzel') }}</th>
-                        <th class="px-3 py-2 text-left">{{ __('Typ') }}</th>
-                        @if ($multiTenantEnabled)
-                            <th class="px-3 py-2 text-left">{{ __('Kunde') }}</th>
-                        @endif
-                        <th class="px-3 py-2 text-left">{{ \App\Models\SystemSetting::companyLabel() }}</th>
-                        <th class="px-3 py-2 text-left">{{ __('Rolle') }}</th>
-                        <th class="px-3 py-2 text-left">{{ __('Abteilung') }}</th>
-                        <th class="px-3 py-2 text-left">{{ __('Geschäftsbereich') }}</th>
-                        <th class="px-3 py-2 text-left">{{ __('Rechte-Set') }}</th>
-                        <th class="px-3 py-2 text-left">{{ __('E-Mail') }}</th>
-                        <th class="px-3 py-2 text-left">{{ __('Letzter Login') }}</th>
+                    <tr
+                        x-data="{
+                            saving: false,
+                            async saveColumnOrder() {
+                                if (this.saving) return;
+                                this.saving = true;
+                                const columns = [...this.$el.querySelectorAll(':scope > [x-sort\\:item]')]
+                                    .map((cell) => cell.getAttribute('x-sort:item'));
+                                try {
+                                    const response = await fetch({{ \Illuminate\Support\Js::from(route('admin.personen.tabellenspalten.update')) }}, {
+                                        method: 'PUT',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'Accept': 'application/json',
+                                            'X-CSRF-TOKEN': {{ \Illuminate\Support\Js::from(csrf_token()) }},
+                                        },
+                                        body: JSON.stringify({ columns }),
+                                    });
+                                    if (!response.ok) throw new Error('save failed');
+                                    window.location.reload();
+                                } catch (error) {
+                                    this.saving = false;
+                                    await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Sortierung konnte nicht gespeichert werden.')) }});
+                                }
+                            },
+                        }"
+                        x-sort="saveColumnOrder()"
+                    >
+                        @foreach ($personColumns as $column)
+                            <th x-sort:item="{{ $column['key'] }}" class="whitespace-nowrap px-3 py-2 text-left font-medium">
+                                <span class="inline-flex items-center gap-1.5">
+                                    <span x-sort:handle class="cursor-move text-gray-300 hover:text-gray-500" title="{{ __('Verschieben') }}">⠿</span>
+                                    {{ $column['label'] }}
+                                </span>
+                            </th>
+                        @endforeach
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     @forelse ($people as $person)
                         <tr class="hover:bg-gray-50">
-                            <td class="px-3 py-2 {{ $person->active ? '' : 'text-gray-400' }}">
-                                <x-person-link :person="$person" :filters="$filters" />{{ ! $person->active ? ' [i]' : '' }}
-                                <x-absence-icon :person="$person" />
-                            </td>
-                            <td class="px-3 py-2 text-gray-600" title="{{ $person->fullName() }}">{{ $person->short_name ?? '–' }}</td>
-                            <td class="px-3 py-2 text-gray-600">{{ $person->user ? __('Login-User') : __('Kontaktperson') }}</td>
-                            @if ($multiTenantEnabled)
-                                <td class="px-3 py-2 text-gray-600" title="{{ $person->tenant?->name }}">{{ $person->tenant?->short_name ?? $person->tenant?->name ?? '–' }}</td>
-                            @endif
-                            <td class="px-3 py-2 text-gray-600">{{ $person->company?->name ?? '–' }}</td>
-                            <td class="px-3 py-2 text-gray-600">{{ $person->legacyRole?->name ?? '–' }}</td>
-                            <td class="px-3 py-2 text-gray-600">{{ $person->department?->name ?? '–' }}</td>
-                            <td class="px-3 py-2 text-gray-600">{{ $person->businessUnit?->name ?? '–' }}</td>
-                            <td class="px-3 py-2 text-gray-600">{{ $person->permissionTemplate?->name ?? '–' }}</td>
-                            <td class="px-3 py-2 text-gray-600">{{ $person->email ?? '–' }}</td>
-                            <td class="px-3 py-2 text-gray-600">{{ $person->last_login_at?->local()->format('d.m.Y H:i') ?? '–' }}</td>
+                            @foreach ($personColumns as $column)
+                                @switch($column['key'])
+                                    @case('name')
+                                        <td class="whitespace-nowrap px-3 py-2 {{ $person->active ? '' : 'text-gray-400' }}">
+                                            <x-person-link :person="$person" :filters="$filters" />{{ ! $person->active ? ' [i]' : '' }}
+                                            <x-absence-icon :person="$person" />
+                                        </td>
+                                        @break
+                                    @case('short_name')
+                                        <td class="whitespace-nowrap px-3 py-2 text-gray-600" title="{{ $person->fullName() }}">{{ $person->short_name ?? '–' }}</td>
+                                        @break
+                                    @case('type')
+                                        <td class="whitespace-nowrap px-3 py-2 text-gray-600">{{ $person->user ? __('Login-User') : __('Kontaktperson') }}</td>
+                                        @break
+                                    @case('tenant')
+                                        <td class="whitespace-nowrap px-3 py-2 text-gray-600" title="{{ $person->tenant?->name }}">{{ $person->tenant?->short_name ?? $person->tenant?->name ?? '–' }}</td>
+                                        @break
+                                    @case('company')
+                                        <td class="whitespace-nowrap px-3 py-2 text-gray-600">{{ $person->company?->name ?? '–' }}</td>
+                                        @break
+                                    @case('role')
+                                        <td class="whitespace-nowrap px-3 py-2 text-gray-600">{{ $person->legacyRole?->name ?? '–' }}</td>
+                                        @break
+                                    @case('department')
+                                        <td class="whitespace-nowrap px-3 py-2 text-gray-600">{{ $person->department?->name ?? '–' }}</td>
+                                        @break
+                                    @case('business_unit')
+                                        <td class="whitespace-nowrap px-3 py-2 text-gray-600">{{ $person->businessUnit?->name ?? '–' }}</td>
+                                        @break
+                                    @case('permission_set')
+                                        <td class="whitespace-nowrap px-3 py-2 text-gray-600">{{ $person->permissionTemplate?->name ?? '–' }}</td>
+                                        @break
+                                    @case('email')
+                                        <td class="whitespace-nowrap px-3 py-2 text-gray-600">{{ $person->email ?? '–' }}</td>
+                                        @break
+                                    @case('last_login')
+                                        <td class="whitespace-nowrap px-3 py-2 text-gray-600">{{ $person->last_login_at?->local()->format('d.m.Y H:i') ?? '–' }}</td>
+                                        @break
+                                @endswitch
+                            @endforeach
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ $multiTenantEnabled ? 11 : 10 }}" class="px-3 py-6 text-center text-gray-400">{{ __('Keine Personen gefunden.') }}</td>
+                            <td colspan="{{ count($personColumns) }}" class="px-3 py-6 text-center text-gray-400">{{ __('Keine Personen gefunden.') }}</td>
                         </tr>
                     @endforelse
                 </tbody>

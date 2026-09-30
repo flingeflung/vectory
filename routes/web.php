@@ -34,6 +34,7 @@ use App\Http\Controllers\JobloadController;
 use App\Http\Controllers\JobloadOverviewController;
 use App\Http\Controllers\LocaleSwitchController;
 use App\Http\Controllers\MultichangeController;
+use App\Http\Controllers\PersonTablePreferenceController;
 use App\Http\Controllers\PlanningBaseLoadController;
 use App\Http\Controllers\PlanningController;
 use App\Http\Controllers\PlanningPersonBaseLoadController;
@@ -223,6 +224,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage::class])->prefix('admin')->name('admin.')->group(function () {
+    Route::put('/personen/tabellenspalten', [PersonTablePreferenceController::class, 'update'])->name('personen.tabellenspalten.update');
     Route::get('/feiertage', [HolidayController::class, 'index'])->name('feiertage');
     Route::post('/feiertage', [HolidayController::class, 'store'])->name('feiertage.store');
     Route::post('/feiertage/uebernehmen', [HolidayController::class, 'importFromTenant'])->name('feiertage.uebernehmen');

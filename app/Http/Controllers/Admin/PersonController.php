@@ -16,6 +16,7 @@ use App\Models\SystemSetting;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Support\CurrentTenant;
+use App\Support\PersonTableColumnCatalog;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -144,6 +145,7 @@ class PersonController extends Controller
             'permissionTemplates' => PermissionTemplate::query()->withoutGlobalScope('tenant')->whereIn('tenant_id', $catalogTenantIds)->where('is_baustein', false)->orderBy('sort')->get(),
             'legacyRoles' => LegacyRole::query()->withoutGlobalScope('tenant')->whereIn('tenant_id', $catalogTenantIds)->orderBy('name')->get(),
             'multiTenantEnabled' => SystemSetting::multiTenantEnabled(),
+            'personColumns' => PersonTableColumnCatalog::orderedFor($request->user(), SystemSetting::multiTenantEnabled()),
             'canSearchAllTenants' => $canSearchAllTenants,
             'tenants' => $canSearchAllTenants ? Tenant::query()->orderBy('name')->get() : collect(),
             'filters' => $filters,
