@@ -245,8 +245,8 @@
                 <div class="flex shrink-0 cursor-move select-none items-center justify-between rounded-t-lg border-b border-gray-200 bg-gray-100 px-4 py-3" data-drag-handle title="{{ __('Ziehen zum Verschieben') }}">
                     <div>
                         <h3 class="font-semibold text-gray-900" x-text="editing ? @js(__('Kalendereintrag bearbeiten')) : @js(__('Kalendereintrag anlegen'))"></h3>
-                        <p x-show="personName" x-text="personName" class="text-xs text-gray-500"></p>
-                        <p x-show="editing && createdMeta" x-text="createdMeta" class="text-xs text-gray-400"></p>
+                        <p x-show="personName" x-text="personName" class="text-sm font-medium text-gray-700"></p>
+                        <p x-show="editing && createdMeta" x-text="createdMeta" class="text-[11px] text-gray-400"></p>
                     </div>
                     <button type="button" @click="$dispatch('close-modal', 'calendar-entry')" class="text-xl leading-none text-gray-400 hover:text-gray-700" aria-label="{{ __('Schließen') }}">×</button>
                 </div>
