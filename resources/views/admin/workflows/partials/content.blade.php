@@ -389,13 +389,13 @@
                                                 </div>
 
                                                 <div>
-                                                    <label class="block text-gray-500">{{ __('Kastenfarbe') }}</label>
+                                                    <label class="block text-gray-500">{{ __('Status') }}</label>
                                                     <select name="steps[{{ $step->id }}][lifecycle_status]" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
                                                         @php $lifecycleOld = (string) old("steps.{$step->id}.lifecycle_status", (string) $step->lifecycle_status); @endphp
-                                                        <option value="1" @selected($lifecycleOld === '1')>{{ __('Bevorstehend (hell)') }}</option>
-                                                        <option value="2" @selected($lifecycleOld === '2')>{{ __('Standard (grün)') }}</option>
-                                                        <option value="3" @selected($lifecycleOld === '3')>{{ __('Abgeschlossen (dunkelgrün)') }}</option>
-                                                        <option value="4" @selected($lifecycleOld === '4')>{{ __('Sonderfall (grau)') }}</option>
+                                                        <option value="1" @selected($lifecycleOld === '1')>{{ __('Geplant') }}</option>
+                                                        <option value="2" @selected($lifecycleOld === '2')>{{ __('In Bearbeitung') }}</option>
+                                                        <option value="3" @selected($lifecycleOld === '3')>{{ __('Beendet') }}</option>
+                                                        <option value="4" @selected($lifecycleOld === '4')>{{ __('Verworfen') }}</option>
                                                     </select>
                                                 </div>
                                                 <div>

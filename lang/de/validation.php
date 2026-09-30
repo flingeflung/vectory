@@ -181,7 +181,7 @@ return [
         'steps.*.milestone_title' => 'Meilenstein-Titel',
         'steps.*.duration_days' => 'Dauer (Tage)',
         'steps.*.js_function' => 'Sonderbutton',
-        'steps.*.lifecycle_status' => 'Kastenfarbe',
+        'steps.*.lifecycle_status' => 'Status',
         'steps.*.description' => 'Beschreibung',
         'steps.*.email_text' => 'E-Mail-Text',
     ],
