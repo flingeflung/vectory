@@ -225,6 +225,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage::class])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/feiertage', [HolidayController::class, 'index'])->name('feiertage');
     Route::post('/feiertage', [HolidayController::class, 'store'])->name('feiertage.store');
+    Route::post('/feiertage/uebernehmen', [HolidayController::class, 'importFromTenant'])->name('feiertage.uebernehmen');
     Route::post('/feiertage/{holiday}', [HolidayController::class, 'update'])->name('feiertage.update');
     Route::delete('/feiertage/{holiday}', [HolidayController::class, 'destroy'])->name('feiertage.destroy');
 

@@ -8,6 +8,13 @@
         <x-flash-message class="mb-3 shrink-0 px-3 py-2 text-sm">
             @switch(session('status'))
                 @case('holiday-deleted') {{ __('Feiertag gelöscht.') }} @break
+                @case('holidays-imported')
+                    {{ __('Von :name wurden :copied Feiertage importiert; :skipped bereits vorhandene Feiertage wurden übersprungen.', [
+                        'name' => session('import_source_name'),
+                        'copied' => session('holidays_copied'),
+                        'skipped' => session('holidays_skipped'),
+                    ]) }}
+                    @break
                 @default {{ __('Gespeichert.') }}
             @endswitch
         </x-flash-message>
@@ -42,6 +49,14 @@
                 @click="creating = true; $nextTick(() => $refs.newName.focus())"
                 class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
             >+ {{ __('Feiertag anlegen') }}</button>
+
+            @if ($otherTenants->isNotEmpty())
+                <button
+                    type="button"
+                    onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'feiertage-uebernehmen' }))"
+                    class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                >{{ __('Von anderem Kunden importieren') }}</button>
+            @endif
         </div>
 
         <form
@@ -74,6 +89,51 @@
             <button type="submit" x-show="createDirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
         </form>
     </div>
+
+    @if ($otherTenants->isNotEmpty())
+        <x-modal name="feiertage-uebernehmen" max-width="sm" :draggable="true">
+            <form
+                method="POST"
+                action="{{ route('admin.feiertage.uebernehmen') }}"
+                x-data="{ sourceTenantId: '' }"
+                x-on:open-modal.window="if ($event.detail === 'feiertage-uebernehmen') $nextTick(() => $refs.sourceTenant.focus())"
+            >
+                @csrf
+                <input type="hidden" name="year" value="{{ $year }}">
+                <div data-drag-handle class="flex cursor-move select-none items-center justify-between rounded-t-lg border-b border-gray-200 bg-gray-100 px-4 py-3">
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Feiertage importieren') }}</h3>
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'feiertage-uebernehmen' }))"
+                        class="text-gray-400 hover:text-gray-600"
+                        aria-label="{{ __('Schließen') }}"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div class="p-4 text-sm">
+                    <label class="block text-xs text-gray-500">{{ __('Kunde, von dem importiert werden soll') }}</label>
+                    <select x-ref="sourceTenant" x-model="sourceTenantId" name="source_tenant_id" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                        <option value="">{{ __('– bitte wählen –') }}</option>
+                        @foreach ($otherTenants as $tenant)
+                            <option value="{{ $tenant->id }}">{{ $tenant->name }}</option>
+                        @endforeach
+                    </select>
+                    <p class="mt-2 text-xs text-gray-400">{{ __('Alle Feiertage des gewählten Kunden werden kopiert. Feiertage mit gleichem Datum und gleicher Bezeichnung werden übersprungen; vorhandene Datensätze werden nicht verändert.') }}</p>
+                </div>
+                <div class="flex justify-end gap-2 border-t border-gray-100 p-3">
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'feiertage-uebernehmen' }))"
+                        class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                    >{{ __('Abbrechen') }}</button>
+                    <button type="submit" :disabled="!sourceTenantId" class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover disabled:cursor-not-allowed disabled:opacity-50">
+                        {{ __('Importieren') }}
+                    </button>
+                </div>
+            </form>
+        </x-modal>
+    @endif
 
     <p class="mb-1 shrink-0 text-xs text-gray-500">
         {{ trans_choice('{1} :count gespeicherter Feiertag für dieses Jahr, davon :active als aktiv markiert|[2,*] :count gespeicherte Feiertage für dieses Jahr, davon :active als aktiv markiert', $holidays->count(), ['count' => $holidays->count(), 'active' => $holidays->where('active', true)->count()]) }}
