@@ -805,7 +805,7 @@
     "Lösen fehlgeschlagen. Bitte erneut versuchen.": "",
     "Mail-Vorlagen": "Email templates",
     "Mandant": "Tenant",
-    "Mandant wechseln": "Switch tenant",
+    "Firma wechseln": "Switch company",
     "Mandantenfähigkeit aktiv": "Multi-tenancy active",
     "Markierte Attribute werden beim Kopieren von Projekten vom Quell- in das Zielprojekt übernommen. Änderungen in der Vorlage werden automatisch gespeichert.": "Selected attributes are copied from the source project to the target project when projects are copied. Changes to the template are saved automatically.",
     "Markt": "Market",
