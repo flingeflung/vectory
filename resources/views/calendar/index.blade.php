@@ -135,7 +135,7 @@
                             @php
                                 $isHoliday = $holidaysByDate->has($day->toDateString());
                             @endphp
-                            <th class="min-w-10 border-b border-r border-gray-200 px-1 py-1 text-center font-medium {{ $isHoliday ? 'bg-[#eff6ff]' : ($day->isWeekend() ? 'bg-[#fffaeb]' : '') }}" title="{{ $day->translatedFormat('l, d.m.Y') }}">
+                            <th class="min-w-10 border-b border-r border-gray-200 px-1 py-1 text-center font-medium {{ $day->isToday() ? 'bg-[#eff6ff]' : ($isHoliday ? 'bg-[#fdf2f8]' : ($day->isWeekend() ? 'bg-[#fffaeb]' : '')) }}" title="{{ $day->translatedFormat('l, d.m.Y') }}">
                                 <span class="block text-[10px] text-gray-400">{{ $day->translatedFormat('D') }}</span>
                                 <span class="block tabular-nums">{{ $day->format('d') }}</span>
                             </th>
@@ -149,9 +149,9 @@
                             @php
                                 $holidays = $holidaysByDate->get($day->toDateString(), collect());
                             @endphp
-                            <td class="border-r border-gray-100 px-1 py-1.5 text-center {{ $holidays->isNotEmpty() ? 'bg-[#eff6ff]' : ($day->isWeekend() ? 'bg-[#fffaeb]' : '') }}" @if ($holidays->isNotEmpty()) title="{{ $holidays->pluck('name')->implode(', ') }}" @endif>
+                            <td class="border-r border-gray-100 px-1 py-1.5 text-center {{ $day->isToday() ? 'bg-[#eff6ff]' : ($holidays->isNotEmpty() ? 'bg-[#fdf2f8]' : ($day->isWeekend() ? 'bg-[#fffaeb]' : '')) }}" @if ($holidays->isNotEmpty()) title="{{ $holidays->pluck('name')->implode(', ') }}" @endif>
                                 @if ($holidays->isNotEmpty())
-                                    <span class="inline-block h-2 w-2 rounded-full bg-blue-500"></span>
+                                    <span class="inline-block h-2 w-2 rounded-full bg-pink-500"></span>
                                 @endif
                             </td>
                         @endforeach
@@ -194,7 +194,7 @@
                                         ] : null;
                                     @endphp
                                     <td
-                                        class="h-7 border-r border-gray-100 p-0 text-center {{ $isHoliday ? 'bg-[#eff6ff]' : ($day->isWeekend() ? 'bg-[#fffaeb]' : '') }} {{ ($firstEditableEntry || $canCreate) ? 'cursor-pointer hover:bg-blue-50' : '' }}"
+                                        class="h-7 border-r border-gray-100 p-0 text-center {{ $day->isToday() ? 'bg-[#eff6ff]' : ($isHoliday ? 'bg-[#fdf2f8]' : ($day->isWeekend() ? 'bg-[#fffaeb]' : '')) }} {{ ($firstEditableEntry || $canCreate) ? 'cursor-pointer hover:bg-blue-50' : '' }}"
                                         @if ($tooltip) title="{{ $tooltip }}" @endif
                                         @if ($firstEditableEntry)
                                             x-on:click="openEdit(@js($firstEditData))"
