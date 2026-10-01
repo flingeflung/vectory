@@ -1591,6 +1591,8 @@
     "Differenz": "Difference",
     "Gebuchte Stunden": "Booked hours",
     "Geplante Stunden": "Planned hours",
+    "Projekt beginnt vor dem angezeigten Zeitraum": "Project starts before the displayed period",
+    "Projekt läuft nach dem angezeigten Zeitraum weiter": "Project continues beyond the displayed period",
     "Die Planstunden wurden von der Aufwandsschablone gelöst und gelten nur für dieses Projekt.": "The planned hours were detached from the effort template and apply only to this project.",
     "Grundlage: Aufwandsschablone „:name“": "Based on effort template “:name”",
     "Diesem Projekt ist keine Aufwandsschablone zugewiesen.": "No effort template is assigned to this project.",

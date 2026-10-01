@@ -144,16 +144,34 @@
                                     </td>
                                     @if ($displayMode === 'month')
                                         @foreach ($days as $day)
-                                            @php $inside = $hasPeriod && $day->between($project->start_date, $project->end_date); @endphp
+                                            @php
+                                                $inside = $hasPeriod && $day->between($project->start_date, $project->end_date);
+                                                $continuesBefore = $inside && $loop->first && $project->start_date->lt($rangeStart);
+                                                $continuesAfter = $inside && $loop->last && $project->end_date->gt($rangeEnd);
+                                            @endphp
                                             <td class="h-6 border-r border-gray-100 p-0 {{ $day->isToday() ? 'bg-[#eff6ff]' : ($day->isWeekend() ? 'bg-[#fffaeb]' : '') }}" title="{{ $inside ? $tooltip : '' }}">
-                                                @if ($inside)<div class="mx-0 h-3 rounded-sm border border-black/10" style="background-color: {{ $projectRow['color'] }}"></div>@endif
+                                                @if ($inside)
+                                                    <div class="relative mx-0 flex h-3 items-center rounded-sm border border-black/10" style="background-color: {{ $projectRow['color'] }}">
+                                                        @if ($continuesBefore)<span class="absolute left-0 text-[11px] font-bold leading-none text-gray-700" title="{{ __('Projekt beginnt vor dem angezeigten Zeitraum') }}">&lsaquo;</span>@endif
+                                                        @if ($continuesAfter)<span class="absolute right-0 text-[11px] font-bold leading-none text-gray-700" title="{{ __('Projekt läuft nach dem angezeigten Zeitraum weiter') }}">&rsaquo;</span>@endif
+                                                    </div>
+                                                @endif
                                             </td>
                                         @endforeach
                                     @else
                                         @foreach ($weeks as $week)
-                                            @php $inside = $hasPeriod && $project->start_date->lte($week['start']->addDays(6)) && $project->end_date->gte($week['start']); @endphp
+                                            @php
+                                                $inside = $hasPeriod && $project->start_date->lte($week['start']->addDays(6)) && $project->end_date->gte($week['start']);
+                                                $continuesBefore = $inside && $loop->first && $project->start_date->lt($rangeStart);
+                                                $continuesAfter = $inside && $loop->last && $project->end_date->gt($rangeEnd);
+                                            @endphp
                                             <td class="h-6 border-r border-gray-100 p-0" title="{{ $inside ? $tooltip : '' }}">
-                                                @if ($inside)<div class="h-3 rounded-sm border border-black/10" style="background-color: {{ $projectRow['color'] }}"></div>@endif
+                                                @if ($inside)
+                                                    <div class="relative flex h-3 items-center rounded-sm border border-black/10" style="background-color: {{ $projectRow['color'] }}">
+                                                        @if ($continuesBefore)<span class="absolute left-0 text-[11px] font-bold leading-none text-gray-700" title="{{ __('Projekt beginnt vor dem angezeigten Zeitraum') }}">&lsaquo;</span>@endif
+                                                        @if ($continuesAfter)<span class="absolute right-0 text-[11px] font-bold leading-none text-gray-700" title="{{ __('Projekt läuft nach dem angezeigten Zeitraum weiter') }}">&rsaquo;</span>@endif
+                                                    </div>
+                                                @endif
                                             </td>
                                         @endforeach
                                     @endif

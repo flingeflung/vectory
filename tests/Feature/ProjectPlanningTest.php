@@ -78,6 +78,26 @@ class ProjectPlanningTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+        $spanningProjectId = DB::table('projects')->insertGetId([
+            'tenant_id' => $tenant->id,
+            'source_pn' => 'P-SPAN',
+            'title' => 'Zeitraumübergreifend',
+            'status' => 1,
+            'start_date' => '2025-12-01',
+            'end_date' => '2027-01-31',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('project_people')->insert([
+            'tenant_id' => $tenant->id,
+            'project_id' => $spanningProjectId,
+            'function_group_id' => $groupId,
+            'person_id' => $person->id,
+            'is_primary' => false,
+            'planned_hours' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
         $personWithoutHours = $this->person($tenant, 'Ohne Stunden');
         DB::table('project_people')->insert([
             'tenant_id' => $tenant->id,
@@ -104,10 +124,14 @@ class ProjectPlanningTest extends TestCase
             ->assertSee("switchingView = 'projects'", false)
             ->assertSee("switchingView = 'utilization'", false)
             ->assertSee("switchingView === 'utilization'", false)
+            ->assertSee(__('Projekt beginnt vor dem angezeigten Zeitraum'))
+            ->assertSee(__('Projekt läuft nach dem angezeigten Zeitraum weiter'))
             ->assertSee('x-data="{ submitting: false }"', false)
             ->assertSee(':disabled="submitting"', false);
 
-        $this->assertSame(9.0, $response->viewData('projectRowsByPerson')->get($person->id)->first()['plannedHours']);
+        $plannedProjectRow = $response->viewData('projectRowsByPerson')->get($person->id)
+            ->first(fn (array $row) => $row['project']->id === $projectId);
+        $this->assertSame(9.0, $plannedProjectRow['plannedHours']);
         $octoberFirst = $response->viewData('utilizationByPerson')->get($person->id)->get('2026-10-01');
         $this->assertEqualsWithDelta(8.0, $octoberFirst['work'], 0.001);
         $this->assertEqualsWithDelta(3.0, $octoberFirst['project'], 0.001);
