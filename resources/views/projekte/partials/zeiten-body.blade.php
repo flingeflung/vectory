@@ -5,20 +5,9 @@
     (resources/views/jobload/overview.blade.php). Aggregiert über ALLE Personen
     (Projektleiter-Sicht), nicht nur die eigenen Buchungen wie im Zeiterfassung-Overlay.
 
-    Eigenes Partial (statt direkt in detail.blade.php), weil sich der Planstunden-Editor unten
-    per fetch() selbst neu lädt (Konvention wie project-hours-body etc.) - der Rest des
-    Projekt-Reiter-Systems bleibt inline/x-show, nur dieser eine Block tauscht sich per JS aus.
-
-    Planstunden (Ralf, 2026-09-27): solange mit der Aufwandsschablone verknüpft, gilt live
-    deren Summe - "Lösen" trennt die Verbindung EINWEG (keine Rückkehr) und kopiert den
-    aktuellen Schablonen-Stand JE FUNKTIONSGRUPPE hierher, ändert aber nie die Schablone
-    selbst. Korrektur (Ralf, 2026-09-27, nachdem die erste Fassung nur einen einzigen
-    Gesamt-Wert anbot): "dadurch habe ich keine Möglichkeit mehr, zu erkennen, aus welchen
-    Stundenpaketen es sich rekrutiert" - ab "Lösen" bleibt die Aufschlüsselung nach
-    Funktionsgruppe erhalten und unabhängig änderbar, gleiches Bearbeitungsmuster wie bei der
-    Schablone selbst (admin/project-templates/partials/content.blade.php). Jedes Projekt (auch
-    ein Unterprojekt) trägt seinen Plan unabhängig - im Verbund gilt implizit der Plan des
-    Hauptprojekts für alle, solange kein Unterprojekt einen eigenen hat.
+    Die Planstunden werden hier nur noch kompakt den gebuchten Stunden gegenübergestellt.
+    Bearbeitung, Aufschlüsselung und das Lösen von der Aufwandsschablone liegen im Reiter
+    "Planung" (planned-hours-editor.blade.php).
 --}}
 {{-- Ralf, 2026-09-28: "wenn ich oben blättere, soll der Sub-Reiter bestehen
      bleiben" - gleiches Muster wie window.projectOverlayActiveTab für den
@@ -48,141 +37,24 @@
     @endcan
 
     <div x-show="subTab === 'uebersicht'">
-    @if ($zeiten['ownPlanLinked'])
         <div
-            x-data="{
-                async loesen() {
-                    if (! await window.confirmDialog({
-                        title: {{ Illuminate\Support\Js::from(__('Verbindung zur Schablone lösen?')) }},
-                        message: {{ Illuminate\Support\Js::from(__('Die Verbindung zur Schablone wird für dieses Projekt endgültig gelöst - eine spätere Rückkehr zur Schablonen-Verknüpfung ist nicht mehr möglich. Die Schablone selbst bleibt unverändert. Die aktuelle Aufschlüsselung je Funktionsgruppe wird als Startpunkt übernommen und bleibt danach unabhängig änderbar.')) }},
-                        confirmLabel: {{ Illuminate\Support\Js::from(__('Lösen')) }},
-                        cancelLabel: {{ Illuminate\Support\Js::from(__('Abbrechen')) }},
-                    })) { return; }
-                    const response = await fetch({{ Illuminate\Support\Js::from(route('projekte.planstunden.loesen', $project)) }}, {
-                        method: 'POST',
-                        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'text/html' },
-                    });
-                    if (! response.ok) {
-                        await window.notifyDialog({{ Illuminate\Support\Js::from(__('Lösen fehlgeschlagen. Bitte erneut versuchen.')) }});
-                        return;
-                    }
-                    document.getElementById('project-zeiten-body').outerHTML = await response.text();
-                    // Ralf-Bug-Report, 2026-09-28: Details-Tab (Schloss am Schablonen-Feld)
-                    // bekam das Lösen sonst nicht mit, da nur dieser Block hier getauscht wird -
-                    // siehe project_template.blade.php.
-                    window.dispatchEvent(new CustomEvent('planstunden-linked-state-changed'));
-                },
-            }"
-            class="mb-4 rounded-md border border-gray-200 bg-gray-50 px-3 py-2"
+            x-data="{ plan: {{ Illuminate\Support\Js::from($zeiten['planTotal']) }} }"
+            @project-planned-hours-changed.window="plan = $event.detail"
+            class="mb-4 grid max-w-2xl grid-cols-3 gap-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs"
         >
-            <div class="flex flex-wrap items-center gap-2">
-                <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('Planstunden dieses Projekts') }}</span>
-                <span class="font-semibold tabular-nums">{{ $fmt($zeiten['ownPlan']) }} h</span>
-                <span class="text-gray-400">{{ __('(aus Schablone „:name")', ['name' => $zeiten['ownTemplateName']]) }}</span>
-                <button
-                    type="button"
-                    @click="loesen()"
-                    class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
-                >
-                    {{ __('Lösen') }}
-                </button>
+            <div>
+                <div class="text-gray-400">{{ __('Geplante Stunden') }}</div>
+                <div class="font-semibold tabular-nums text-gray-900" x-text="plan === null ? '–' : Number(plan).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' h'"></div>
             </div>
-
-            {{-- Ralf, 2026-09-27: die Aufschlüsselung je Funktionsgruppe auch schon SEHEN,
-                 solange die Verbindung zur Schablone noch besteht (nicht erst nach "Lösen") -
-                 rein lesend, gleiche Optik wie die bestehende Schablonen-Info-Anzeige
-                 (project-template-info.blade.php). --}}
-            @if ($project->projectTemplate->functionGroups->isNotEmpty())
-                <div class="mt-2 grid grid-cols-2 gap-2 border-t border-gray-200 pt-2 sm:grid-cols-3 lg:grid-cols-4">
-                    @foreach ($project->projectTemplate->functionGroups->sortBy('name') as $fg)
-                        <div class="flex items-center justify-between gap-1 rounded-md border border-gray-200 bg-white px-1.5 py-1 text-xs text-gray-600">
-                            <span class="min-w-0 truncate" title="{{ $fg->name }}">{{ $fg->short_name }}</span>
-                            <span class="shrink-0 font-medium text-gray-900">{{ rtrim(rtrim((string) $fg->pivot->planned_hours, '0'), '.') }} h</span>
-                        </div>
-                    @endforeach
-                </div>
-            @endif
+            <div>
+                <div class="text-gray-400">{{ __('Gebuchte Stunden') }}</div>
+                <div class="font-semibold tabular-nums text-gray-900">{{ $fmt($zeiten['total']) }} h</div>
+            </div>
+            <div>
+                <div class="text-gray-400">{{ __('Differenz') }}</div>
+                <div class="font-semibold tabular-nums text-gray-900" x-text="plan === null ? '–' : (Number(plan) - {{ Illuminate\Support\Js::from($zeiten['total']) }}).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' h'"></div>
+            </div>
         </div>
-    @elseif ($zeiten['ownRelevantFunctionGroups']->isNotEmpty() || $zeiten['ownBreakdown']->isNotEmpty())
-        <form
-            x-data="{
-                dirty: false,
-                hours: {{ Illuminate\Support\Js::from($zeiten['ownBreakdown']) }},
-                async save() {
-                    const params = new URLSearchParams();
-                    Object.entries(this.hours).forEach(([id, val]) => params.append('hours[' + id + ']', val ?? ''));
-                    const response = await fetch({{ Illuminate\Support\Js::from(route('projekte.planstunden', $project)) }}, {
-                        method: 'POST',
-                        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'text/html' },
-                        body: params,
-                    });
-                    if (! response.ok) {
-                        await window.notifyDialog({{ Illuminate\Support\Js::from(__('Speichern fehlgeschlagen. Bitte erneut versuchen.')) }});
-                        return;
-                    }
-                    document.getElementById('project-zeiten-body').outerHTML = await response.text();
-                },
-            }"
-            @input="dirty = window.formIsDirty($el)"
-            @submit.prevent.stop="save()"
-            class="mb-4 rounded-md border border-gray-200 bg-gray-50 px-3 py-2"
-        >
-            {{-- Ralf, 2026-09-27: dieselbe amber/grau-Unterscheidung wie in der "Je Projekt"-
-                 Tabelle auch hier auf der Kopfzeile selbst - "gelöst" (dieser Block) amber,
-                 noch verknüpft (Block oben) bleibt neutral grau. --}}
-            <div class="flex items-center justify-between">
-                <p class="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-amber-700" title="{{ __('Eigener Wert - nicht mehr mit der Schablone verbunden') }}">
-                    <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
-                    {{ __('Planstunden je Funktionsgruppe') }}
-                </p>
-                <p class="text-xs text-gray-400">
-                    {{ __('Summe') }}: <span x-text="Object.values(hours).reduce((sum, v) => sum + (parseFloat(v) || 0), 0).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })"></span> h
-                </p>
-            </div>
-            <div class="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-                @foreach ($zeiten['ownRelevantFunctionGroups'] as $fg)
-                    <label class="flex items-center justify-between gap-1 rounded-md border border-gray-200 bg-white px-1.5 py-1 text-xs text-gray-600">
-                        <span class="min-w-0 truncate" title="{{ $fg->name }}">{{ $fg->short_name }}</span>
-                        {{-- Ralf, 2026-09-27: "keine Slider mehr vorhanden" - die zuvor hier
-                             ausgeblendeten nativen Spinner-Pfeile werden gebraucht. Gleiches
-                             Feld-Pattern wie in der Schablonen-Verwaltung
-                             (admin/project-templates/partials/content.blade.php): w-20, kein
-                             Ausblenden der Spinner. --}}
-                        <input
-                            type="number"
-                            name="hours[{{ $fg->id }}]"
-                            x-model="hours['{{ $fg->id }}']"
-                            min="0"
-                            max="999"
-                            step="0.5"
-                            placeholder="–"
-                            class="w-20 shrink-0 rounded-md border-gray-300 py-0.5 text-xs tabular-nums"
-                        >
-                    </label>
-                @endforeach
-            </div>
-            <div class="mt-1 flex justify-end">
-                <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
-                    {{ __('Speichern') }}
-                </button>
-            </div>
-        </form>
-    @else
-        <div class="mb-4 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500">
-            {{ __('Kein Plan hinterlegt') }}
-        </div>
-    @endif
-
-    @if ($zeiten['planTotal'] !== null)
-        <p class="mb-4 text-xs text-gray-500">
-            {{ __(':ist h von :plan h geplant – :percent %', [
-                'ist' => $fmt($zeiten['total']),
-                'plan' => $fmt($zeiten['planTotal']),
-                'percent' => number_format($zeiten['planTotal'] > 0 ? $zeiten['total'] / $zeiten['planTotal'] * 100 : 0, 0, ',', '.'),
-            ]) }}
-        </p>
-    @endif
-
     @if ($zeiten['total'] <= 0)
         <p class="text-gray-500">{{ __('Für dieses Projekt sind noch keine Stunden gebucht.') }}</p>
     @else

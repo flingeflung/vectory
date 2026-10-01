@@ -10,7 +10,7 @@
     layouts/app.blade.php) - reagiert live auf die Auswahl, nicht erst nach
     dem Speichern.
 
-    Ralf, 2026-09-28: sobald die Planstunden-Verbindung im Zeiten-Tab
+    Ralf, 2026-09-28: sobald die Planstunden-Verbindung im Planung-Tab
     "gelöst" wurde (eigene Werte je Funktionsgruppe, siehe
     Project::functionGroupHours()), hätte eine Neuzuweisung hier bisher
     keine sichtbare Wirkung gehabt ("scheint keine Auswirkungen zu haben").
@@ -21,13 +21,13 @@
     ProjectController::update(), Feld "relink_template") - das Aufschließen
     selbst ändert noch nichts, erst das bestätigte Speichern danach.
 
-    Ralf-Bug-Report, 2026-09-28: "wenn ich bei Zeiten gelöst habe, wird
+    Ralf-Bug-Report, 2026-09-28: "wenn ich bei Planung gelöst habe, wird
     Details nicht aktualisiert" - das Schloss hier wird nur beim initialen
     Laden serverseitig gerendert (Blade @if), das Lösen im Zeiten-Tab tauscht
-    aber nur seinen eigenen Block (#project-zeiten-body) aus, ohne dass
+    aber nur seinen eigenen Block (#project-planned-hours-editor) aus, ohne dass
     Details davon erfährt. Fix: Schloss-Block immer im DOM (Alpine
     <template x-if>, nicht mehr Blade @if), reagiert per globalem Event
-    "planstunden-linked-state-changed" (ausgelöst von zeiten-body.blade.php
+    "planstunden-linked-state-changed" (ausgelöst von planned-hours-editor.blade.php
     nach erfolgreichem Lösen) - gleiches Live-Sync-Prinzip wie bei den
     anderen geteilten Fallback-Werten im Projekt-Overlay.
 --}}
@@ -66,7 +66,7 @@
             this.locked = false;
             await this.notifyFormChanged();
         },
-        // Ralf-Bug-Report, 2026-09-28: nach 'Lösen' im Zeiten-Tab (eigene SHA dort, bereits
+        // Ralf-Bug-Report, 2026-09-28: nach 'Lösen' im Planung-Tab (eigene SHA dort, bereits
         // serverseitig gespeichert) meldete 'Schließen'/Blättern dauerhaft 'ungespeicherte
         // Änderungen'. Ursache: dieses 'locked = true' hier ändert reaktiv den versteckten
         // relink_template-Wert zurück auf '0' - aber der Dirty-Snapshot (projectOverlayIsDirty,

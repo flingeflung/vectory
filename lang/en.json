@@ -1589,6 +1589,8 @@
     "Geplant": "Planned",
     "Verteilt": "Allocated",
     "Differenz": "Difference",
+    "Gebuchte Stunden": "Booked hours",
+    "Geplante Stunden": "Planned hours",
     "Die Planstunden wurden von der Aufwandsschablone gelöst und gelten nur für dieses Projekt.": "The planned hours were detached from the effort template and apply only to this project.",
     "Grundlage: Aufwandsschablone „:name“": "Based on effort template “:name”",
     "Diesem Projekt ist keine Aufwandsschablone zugewiesen.": "No effort template is assigned to this project.",

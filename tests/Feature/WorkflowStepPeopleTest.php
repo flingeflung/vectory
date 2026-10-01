@@ -132,6 +132,14 @@ class WorkflowStepPeopleTest extends TestCase
         $this->get(route('projekte.show', $projectId))
             ->assertOk()
             ->assertSee("activeTab = 'planung'", false)
+            ->assertSeeInOrder([
+                "x-show=\"activeTab === 'planung'\"",
+                'project-planned-hours-editor',
+                "x-show=\"activeTab === 'zeiten'\"",
+                __('Geplante Stunden'),
+                __('Gebuchte Stunden'),
+                __('Differenz'),
+            ], false)
             ->assertSee('project_people_hours['.$homeGroup->id.']['.$person->id.']', false)
             ->assertSee('value="5"', false);
     }

@@ -1144,7 +1144,7 @@ class ProjectController extends Controller
             // Unterreiter "Nach Person & Tag" (Ralf, 2026-09-28) - nur berechnet, wenn das
             // eigene, personenbezogene Recht vorliegt (sonst unnötige Query, das Fragment
             // wird im View ohnehin nicht gerendert). auth() statt eines durchgereichten
-            // Request, da zeitenData() auch aus zeitenBodyResponse() (kein Request-Param)
+            // Request, da zeitenData() auch aus plannedHoursEditorResponse() (kein Request-Param)
             // aufgerufen wird.
             'personBreakdownWeek' => CarbonImmutable::today()->startOfWeek(),
             'personBreakdownSort' => 'person',
@@ -1526,7 +1526,7 @@ class ProjectController extends Controller
             ['template' => $templateName, 'hours' => number_format($previous ?? 0, 2, ',', '.')]
         ));
 
-        return $this->zeitenBodyResponse($project->fresh());
+        return $this->plannedHoursEditorResponse($project->fresh());
     }
 
     /**
@@ -1563,12 +1563,12 @@ class ProjectController extends Controller
             ['previous' => number_format($previous ?? 0, 2, ',', '.'), 'new' => number_format($new ?? 0, 2, ',', '.')]
         ));
 
-        return $this->zeitenBodyResponse($project->fresh());
+        return $this->plannedHoursEditorResponse($project->fresh());
     }
 
-    private function zeitenBodyResponse(Project $project): Response
+    private function plannedHoursEditorResponse(Project $project): Response
     {
-        return response(view('projekte.partials.zeiten-body', [
+        return response(view('projekte.partials.planned-hours-editor', [
             'project' => $project,
             'zeiten' => $this->zeitenData($project),
         ])->render());
