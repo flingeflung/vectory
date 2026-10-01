@@ -263,7 +263,7 @@ class PersonController extends Controller
             // nicht nur durch die gefilterte Auswahlliste im Formular.
             'permission_template_id' => ['nullable', 'integer', Rule::exists('permission_templates', 'id')->where('tenant_id', $person->tenant_id)->where('is_baustein', false)],
             'function_group_ids' => ['array'],
-            'function_group_ids.*' => ['integer', Rule::exists('function_groups', 'id')->where('tenant_id', $person->tenant_id)],
+            'function_group_ids.*' => ['integer'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date'],
             'remarks' => ['nullable', 'string'],
@@ -286,7 +286,10 @@ class PersonController extends Controller
         $validated['active'] = $request->boolean('active');
         $validated['resource_planning'] = $request->boolean('resource_planning');
         $validated['calendar_enabled'] = $request->boolean('calendar_enabled');
-        $functionGroupIds = collect($validated['function_group_ids'] ?? []);
+        $functionGroupIds = FunctionGroup::query()
+            ->availableForTenant($person->tenant_id)
+            ->whereIn('id', collect($validated['function_group_ids'] ?? [])->map(fn ($id) => (int) $id))
+            ->pluck('id');
         unset($validated['function_group_ids']);
         $person->update($validated);
 
@@ -748,7 +751,7 @@ class PersonController extends Controller
             // bei den vier "klitzekleinen" Verwalten-Overlays) - sonst würde
             // ein Speichern eine bestehende Mitgliedschaft in einer
             // inzwischen deaktivierten Gruppe stillschweigend entfernen.
-            'functionGroups' => FunctionGroup::query()->withoutGlobalScope('tenant')->where('tenant_id', $personTenantId)
+            'functionGroups' => FunctionGroup::query()->availableForTenant($personTenantId)
                 ->where(fn ($query) => $query->where('active', true)->orWhereIn('id', $person->functionGroups->pluck('id')))
                 ->orderBy('name')->get(),
             'multiTenantEnabled' => $multiTenantEnabled,

@@ -88,7 +88,7 @@ class WorkflowController extends Controller
         // Alphabetisch statt nach sort - Funktionsgruppen werden überall
         // alphabetisch gelistet (siehe FunctionGroupController), sort ist
         // dort bewusst kein Sortierkriterium (kein D&D für diese Liste).
-        $functionGroups = FunctionGroup::query()->where('tenant_id', $tenantId)->where('active', true)->orderBy('name')->get(['id', 'name']);
+        $functionGroups = FunctionGroup::query()->availableForTenant($tenantId, false)->orderBy('name')->get(['id', 'name']);
 
         // "Zu anderem Kunden kopieren" bewusst nur für Heimat-Admin/
         // Super-Admin (Ralf, 2026-09-18: "das darf ja wieder nur vom
@@ -376,8 +376,10 @@ class WorkflowController extends Controller
             ->reject(fn (Tenant $t) => $t->id === $workflow->tenant_id)
             ->firstWhere('id', $request->integer('target_tenant_id'));
         abort_if($targetTenant === null, 404);
+        $workflow->loadMissing('steps.functionGroups');
+        $availableTargetGroupIds = FunctionGroup::query()->availableForTenant($targetTenant->id, false)->pluck('id');
 
-        DB::transaction(function () use ($workflow, $targetTenant) {
+        DB::transaction(function () use ($workflow, $targetTenant, $availableTargetGroupIds) {
             // withoutGlobalScope('tenant') nötig: der automatische Scope
             // filtert sonst zusätzlich auf CurrentTenant::id() (den QUELL-
             // Kunden) - "tenant_id = Ziel AND tenant_id = Quelle" ist nie
@@ -394,7 +396,7 @@ class WorkflowController extends Controller
             ]);
 
             $stepIdMap = [];
-            $workflow->steps->each(function (WorkflowStep $step) use ($targetTenant, $newWorkflow, &$stepIdMap) {
+            $workflow->steps->each(function (WorkflowStep $step) use ($targetTenant, $newWorkflow, $availableTargetGroupIds, &$stepIdMap) {
                 $newStep = WorkflowStep::query()->create([
                     'tenant_id' => $targetTenant->id,
                     'workflow_id' => $newWorkflow->id,
@@ -416,6 +418,9 @@ class WorkflowController extends Controller
                     'lifecycle_status' => $step->lifecycle_status,
                 ]);
                 $stepIdMap[$step->id] = $newStep->id;
+
+                $groupIds = $step->functionGroups->pluck('id')->intersect($availableTargetGroupIds);
+                $newStep->functionGroups()->sync($groupIds->mapWithKeys(fn ($id) => [$id => ['tenant_id' => $targetTenant->id]]));
             });
 
             $workflow->steps->whereNotNull('after_freigabe_workflow_step_id')->each(function (WorkflowStep $step) use ($stepIdMap) {
@@ -603,7 +608,7 @@ class WorkflowController extends Controller
                 // mitgeschickt - hier ist "leer" also ein echtes "keine
                 // Funktionsgruppe angehakt", kein fehlendes Feld.
                 $functionGroupIds = collect(array_keys($request->array("steps.$stepId.function_groups", [])))->map(fn ($id) => (int) $id);
-                $validIds = FunctionGroup::query()->where('tenant_id', $tenantId)->whereIn('id', $functionGroupIds)->pluck('id');
+                $validIds = FunctionGroup::query()->availableForTenant($tenantId, false)->whereIn('id', $functionGroupIds)->pluck('id');
                 $step->functionGroups()->sync($validIds->mapWithKeys(fn ($id) => [$id => ['tenant_id' => $tenantId]]));
             }
         });

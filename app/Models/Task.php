@@ -38,7 +38,7 @@ class Task extends Model
 
     public function functionGroup(): BelongsTo
     {
-        return $this->belongsTo(FunctionGroup::class);
+        return $this->belongsTo(FunctionGroup::class)->withoutGlobalScope('tenant');
     }
 
     public function projectWorkflowStep(): BelongsTo
@@ -129,7 +129,7 @@ class Task extends Model
         }
 
         $functionGroup = FunctionGroup::query()
-            ->where('tenant_id', $graphicOrder->tenant_id)
+            ->availableForTenant($graphicOrder->tenant_id, false)
             ->where('is_illustration_group', true)
             ->first();
 

@@ -18,6 +18,7 @@ use App\Models\Workflow;
 use App\Models\WorkflowStep;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Kopiert die STRUKTUR/Konfiguration eines bestehenden Kunden auf einen
@@ -98,7 +99,14 @@ class TenantConfigCloner
             $departmentMap = $this->copySimple(Department::class, $source->id, $target->id, ['name', 'short_name', 'sort', 'active']);
             $this->copySimple(LegacyRole::class, $source->id, $target->id, ['name', 'sort']);
             $this->copySimple(BusinessUnit::class, $source->id, $target->id, ['name', 'sort', 'active']);
-            $functionGroupMap = $this->copySimple(FunctionGroup::class, $source->id, $target->id, ['name', 'short_name', 'sort', 'active', 'is_illustration_group']);
+            $functionGroupIds = FunctionGroup::query()->availableForTenant($source->id)->pluck('id');
+            DB::table('function_group_tenant')->insert($functionGroupIds->map(fn ($id) => [
+                'function_group_id' => $id,
+                'tenant_id' => $target->id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ])->all());
+            $functionGroupMap = $functionGroupIds->mapWithKeys(fn ($id) => [$id => $id])->all();
             $marketMap = $this->copySimple(Market::class, $source->id, $target->id, [
                 'country_iso', 'country_name', 'country_short_name', 'language_code', 'language_name', 'no_translation', 'sort',
             ]);
@@ -133,7 +141,7 @@ class TenantConfigCloner
     private function hasAnyConfigData(Tenant $target): bool
     {
         $tables = [
-            'departments', 'legacy_roles', 'business_units', 'function_groups',
+            'departments', 'legacy_roles', 'business_units',
             'markets', 'attributes', 'project_type_mains', 'project_type_subs',
             'market_sets', 'workflows', 'workflow_steps', 'project_templates',
         ];
@@ -142,6 +150,10 @@ class TenantConfigCloner
             if (DB::table($table)->where('tenant_id', $target->id)->exists()) {
                 return true;
             }
+        }
+
+        if (Schema::hasTable('function_group_tenant') && DB::table('function_group_tenant')->where('tenant_id', $target->id)->exists()) {
+            return true;
         }
 
         return false;

@@ -50,11 +50,21 @@
             <div class="flex h-64 shrink-0 flex-col rounded-lg border border-gray-200 bg-white">
                 <div class="shrink-0 flex items-center justify-between border-b border-gray-100 p-2">
                     <span class="text-xs font-semibold text-gray-500">{{ __('Funktionsgruppen') }}</span>
+                    <div class="flex items-center gap-2">
+                    @if ($matrixTenants->isNotEmpty())
+                        <button type="button" @click="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'function-group-availability' }))" class="text-xs text-indigo-600 hover:text-indigo-800" title="{{ __('Verfügbarkeit der Funktionsgruppen bei den Kunden festlegen') }}">
+                            {{ __('Matrix') }}
+                        </button>
+                    @endif
+                    @if ($canManageCatalog)
                     <button type="button" @click="newGroup = !newGroup; if (newGroup) $nextTick(() => $refs.newGroupName.focus())" class="text-xs text-indigo-600 hover:text-indigo-800">
                         + {{ __('Neu') }}
                     </button>
+                    @endif
+                    </div>
                 </div>
                 <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => $el.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' }))">
+                    @if ($canManageCatalog)
                     <form x-show="newGroup" x-cloak method="POST" action="{{ route('admin.function-groups.store') }}" class="mb-2 flex gap-1.5 rounded border border-gray-200 p-2">
                         <input type="text" name="name" x-ref="newGroupName" placeholder="{{ __('Name') }}" class="w-full min-w-0 flex-1 rounded-md border-gray-300 text-xs" required>
                         <input type="text" name="short_name" placeholder="{{ __('Kürzel') }}" maxlength="20" class="w-16 shrink-0 rounded-md border-gray-300 text-xs" required>
@@ -63,6 +73,7 @@
                             {{ __('Speichern') }}
                         </button>
                     </form>
+                    @endif
 
                     @foreach ($groups as $group)
                         <a
@@ -159,6 +170,8 @@
                                     value="{{ $person->id }}"
                                     class="rounded border-gray-300"
                                     @checked($groupMemberIds->contains($person->id))
+                                    @disabled($person->tenant_id !== \App\Support\CurrentTenant::id())
+                                    @if ($person->tenant_id !== \App\Support\CurrentTenant::id()) title="{{ __('Die Funktionsgruppen dieser Person werden bei ihrer eigenen Organisation gepflegt.') }}" @endif
                                 >
                                 <a
                                     :href="navUrl({ person: {{ $person->id }} })"
@@ -205,12 +218,12 @@
                     @csrf
                     <div class="shrink-0 space-y-2 border-b border-gray-100 p-3">
                         <div class="flex items-center gap-2">
-                            <input type="text" name="name" value="{{ $selectedGroup->name }}" required class="flex-1 rounded-md border-gray-300 py-1 text-sm font-medium text-gray-900">
-                            <input type="text" name="short_name" value="{{ $selectedGroup->short_name }}" maxlength="20" required class="w-20 rounded-md border-gray-300 py-1 text-sm text-gray-900">
+                            <input type="text" name="name" value="{{ $selectedGroup->name }}" required @disabled(! $canManageCatalog) class="flex-1 rounded-md border-gray-300 py-1 text-sm font-medium text-gray-900 disabled:bg-gray-50">
+                            <input type="text" name="short_name" value="{{ $selectedGroup->short_name }}" maxlength="20" required @disabled(! $canManageCatalog) class="w-20 rounded-md border-gray-300 py-1 text-sm text-gray-900 disabled:bg-gray-50">
                         </div>
                         <div class="flex items-center justify-between">
                             <label class="flex items-center gap-1.5 text-xs text-gray-600">
-                                <input type="checkbox" name="active" value="1" @checked($selectedGroup->active) class="rounded border-gray-300">
+                                <input type="checkbox" name="active" value="1" @checked($selectedGroup->active) @disabled(! $canManageCatalog) class="rounded border-gray-300">
                                 {{ __('Aktiv') }}
                             </label>
                             <span class="text-xs text-gray-400">
@@ -218,7 +231,7 @@
                             </span>
                         </div>
                         <label class="flex items-center gap-1.5 text-xs text-gray-600" title="{{ __('Diese Gruppe wird bei Illustrationsaufträgen als Illustratoren-Auswahl verwendet. Nur eine Gruppe pro Kunde möglich - das Anhaken hier entfernt es bei jeder anderen Gruppe.') }}">
-                            <input type="checkbox" name="is_illustration_group" value="1" @checked($selectedGroup->is_illustration_group) class="rounded border-gray-300">
+                            <input type="checkbox" name="is_illustration_group" value="1" @checked($selectedGroup->is_illustration_group) @disabled(! $canManageCatalog) class="rounded border-gray-300">
                             {{ __('Illustrations-/Grafikerstellungs-Gruppe') }}
                         </label>
                     </div>
@@ -228,12 +241,13 @@
                     </div>
 
                     <div class="shrink-0 border-t border-gray-100 p-3">
-                        <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">
+                        <button type="submit" x-show="dirty" x-cloak @disabled(! $canManageCatalog) class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">
                             {{ __('Speichern') }}
                         </button>
                     </div>
                 </form>
 
+                @if ($canManageCatalog)
                 <div class="shrink-0 border-t border-gray-100 p-3">
                     @if ($inUse)
                         <div class="text-xs text-gray-400">
@@ -255,6 +269,7 @@
                         </div>
                     @endif
                 </div>
+                @endif
             @elseif ($selectedPerson)
                 <div class="shrink-0 border-b border-gray-100 p-3 text-sm font-medium text-gray-900">
                     {{ $selectedPerson->fullName() }}{{ ! $selectedPerson->active ? ' [i]' : '' }} <x-absence-icon :person="$selectedPerson" /> <x-department-tag :person="$selectedPerson" />
@@ -282,4 +297,53 @@
             @endif
         </div>
     </div>
+
+    @if ($matrixTenants->isNotEmpty())
+        <x-modal name="function-group-availability" max-width="5xl" :draggable="true">
+            <div class="flex max-h-[80vh] min-h-0 flex-col">
+                <div class="flex shrink-0 cursor-move items-center justify-between border-b border-gray-200 bg-gray-100 px-4 py-2" data-drag-handle>
+                    <div>
+                        <div class="text-sm font-semibold text-gray-900">{{ __('Funktionsgruppen je Kunde') }}</div>
+                        <div class="text-xs text-gray-500">{{ __('Der Heimatdienstleister legt die Taxonomie zentral fest. Hier wird nur die Verfügbarkeit bei den Kunden gesteuert.') }}</div>
+                    </div>
+                    <button type="button" onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'function-group-availability' }))" class="text-gray-400 hover:text-gray-600" aria-label="{{ __('Schließen') }}">&times;</button>
+                </div>
+                <form method="POST" action="{{ route('admin.function-groups.availability.update') }}" class="flex min-h-0 flex-1 flex-col">
+                    @csrf
+                    <div class="min-h-0 flex-1 overflow-auto p-3">
+                        <table class="w-full border-collapse text-xs">
+                            <thead class="sticky top-0 bg-white">
+                                <tr>
+                                    <th class="border-b border-gray-200 px-2 py-1.5 text-left font-medium text-gray-600">{{ __('Funktionsgruppe') }}</th>
+                                    @foreach ($matrixTenants as $tenant)
+                                        <th class="border-b border-gray-200 px-2 py-1.5 text-center font-medium text-gray-600">{{ $tenant->name }}</th>
+                                    @endforeach
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($groups as $group)
+                                    <tr class="border-b border-gray-100">
+                                        <td class="px-2 py-1.5 text-gray-700">{{ $group->name }} <span class="text-gray-400">({{ $group->short_name }})</span></td>
+                                        @foreach ($matrixTenants as $tenant)
+                                            @php($availabilityLocked = $matrixUsage->has($group->id.'.'.$tenant->id))
+                                            <td class="px-2 py-1.5 text-center">
+                                                @if ($availabilityLocked)
+                                                    <input type="hidden" name="availability[{{ $group->id }}][]" value="{{ $tenant->id }}">
+                                                @endif
+                                                <input type="checkbox" name="availability[{{ $group->id }}][]" value="{{ $tenant->id }}" @checked(($availability->get($group->id) ?? collect())->contains($tenant->id) || $availabilityLocked) @disabled($availabilityLocked) title="{{ $availabilityLocked ? __('Die Funktionsgruppe wird bei diesem Kunden bereits verwendet und kann nicht ausgeblendet werden.') : '' }}" class="rounded border-gray-300">
+                                            </td>
+                                        @endforeach
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="flex shrink-0 justify-end gap-2 border-t border-gray-200 px-4 py-2">
+                        <button type="button" onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'function-group-availability' }))" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Abbrechen') }}</button>
+                        <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
+                    </div>
+                </form>
+            </div>
+        </x-modal>
+    @endif
 </x-admin-layout>

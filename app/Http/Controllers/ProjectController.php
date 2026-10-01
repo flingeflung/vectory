@@ -1019,7 +1019,7 @@ class ProjectController extends Controller
         $currentPeopleByGroup = $project->projectPeople->groupBy('function_group_id');
 
         return FunctionGroup::query()
-            ->where('tenant_id', $project->tenant_id)
+            ->availableForTenant($project->tenant_id)
             ->orderBy('sort')
             ->get()
             ->each(fn (FunctionGroup $group) => $group->setRelation(

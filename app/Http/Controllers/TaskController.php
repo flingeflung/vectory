@@ -153,7 +153,7 @@ class TaskController extends Controller
             ->when(! $includeInactive, fn ($query) => $query->where('active', true))
             ->get()
             ->keyBy('id');
-        $groups = FunctionGroup::query()->whereIn('id', $pairs->pluck('function_group_id')->unique())->orderBy('sort')->get()->keyBy('id');
+        $groups = FunctionGroup::query()->withoutGlobalScope('tenant')->whereIn('id', $pairs->pluck('function_group_id')->unique())->orderBy('sort')->get()->keyBy('id');
 
         return $pairs
             ->groupBy('function_group_id')

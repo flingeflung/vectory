@@ -90,7 +90,7 @@ class WorkflowStep extends Model
 
     public function functionGroups(): BelongsToMany
     {
-        return $this->belongsToMany(FunctionGroup::class, 'workflow_step_function_group');
+        return $this->belongsToMany(FunctionGroup::class, 'workflow_step_function_group')->withoutGlobalScope('tenant');
     }
 
     public function isFreigabeStep(): bool

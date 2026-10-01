@@ -6,6 +6,7 @@ use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /**
@@ -25,9 +26,46 @@ class FunctionGroup extends Model
         ];
     }
 
+    public function resolveRouteBindingQuery($query, $value, $field = null)
+    {
+        return $query->withoutGlobalScope('tenant')->where($field ?? $this->getRouteKeyName(), $value);
+    }
+
     public function members(): BelongsToMany
     {
         return $this->belongsToMany(Person::class, 'function_group_member')->orderBy('sort');
+    }
+
+    public function availableTenants(): BelongsToMany
+    {
+        return $this->belongsToMany(Tenant::class, 'function_group_tenant')->withTimestamps();
+    }
+
+    public static function catalogTenantId(int $tenantId): int
+    {
+        if (! SystemSetting::multiTenantEnabled()) {
+            return $tenantId;
+        }
+
+        return (int) (Tenant::query()->where('is_home_tenant', true)->value('id') ?? $tenantId);
+    }
+
+    public function scopeAvailableForTenant(Builder $query, int $tenantId, bool $includeInactive = true): Builder
+    {
+        $catalogTenantId = self::catalogTenantId($tenantId);
+
+        return $query->withoutGlobalScope('tenant')
+            ->where('function_groups.tenant_id', $catalogTenantId)
+            ->when($catalogTenantId !== $tenantId, fn (Builder $query) => $query->whereHas(
+                'availableTenants',
+                fn (Builder $query) => $query->where('tenants.id', $tenantId),
+            ))
+            ->when(! $includeInactive, fn (Builder $query) => $query->where('function_groups.active', true));
+    }
+
+    public function isAvailableForTenant(int $tenantId): bool
+    {
+        return self::query()->availableForTenant($tenantId)->whereKey($this->id)->exists();
     }
 
     public function workflowSteps(): BelongsToMany
@@ -46,27 +84,11 @@ class FunctionGroup extends Model
      */
     public function eligibleMembersInTenant(int $tenantId, string $viewerRole): Collection
     {
-        $groupIds = collect([$this->id]);
-        $homeTenantId = Tenant::query()->where('is_home_tenant', true)->value('id');
-
-        if ($homeTenantId && (int) $homeTenantId !== $tenantId) {
-            $homeGroupId = self::query()
-                ->withoutGlobalScope('tenant')
-                ->where('tenant_id', $homeTenantId)
-                ->where('short_name', $this->short_name)
-                ->where('active', true)
-                ->value('id');
-
-            if ($homeGroupId) {
-                $groupIds->push((int) $homeGroupId);
-            }
-        }
-
         return Person::query()
             ->withoutGlobalScope('tenant')
             ->visibleInTenant($tenantId)
             ->visibleToRole($viewerRole)
-            ->whereHas('functionGroups', fn ($query) => $query->whereIn('function_groups.id', $groupIds))
+            ->whereHas('functionGroups', fn ($query) => $query->where('function_groups.id', $this->id))
             ->orderBy('sort')
             ->orderBy('last_name')
             ->orderBy('first_name')

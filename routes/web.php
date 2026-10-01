@@ -265,6 +265,7 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
 
     Route::get('/funktionsgruppen', [FunctionGroupController::class, 'index'])->name('function-groups');
     Route::post('/funktionsgruppen', [FunctionGroupController::class, 'store'])->name('function-groups.store');
+    Route::post('/funktionsgruppen/verfuegbarkeit', [FunctionGroupController::class, 'updateAvailability'])->name('function-groups.availability.update');
     Route::post('/funktionsgruppen/{group}', [FunctionGroupController::class, 'update'])->name('function-groups.update');
     Route::delete('/funktionsgruppen/{group}', [FunctionGroupController::class, 'destroy'])->name('function-groups.destroy');
     Route::post('/funktionsgruppen/{group}/mitglieder', [FunctionGroupController::class, 'updateMembers'])->name('function-groups.members.update');

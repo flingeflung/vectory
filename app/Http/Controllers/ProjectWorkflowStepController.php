@@ -292,7 +292,7 @@ class ProjectWorkflowStepController extends Controller
     public function peopleForm(Request $request, Project $project, ProjectWorkflowStep $projectWorkflowStep, FunctionGroup $functionGroup): View
     {
         abort_unless($projectWorkflowStep->project_id === $project->id, 404);
-        abort_unless($functionGroup->tenant_id === $project->tenant_id, 404);
+        abort_unless($functionGroup->isAvailableForTenant($project->tenant_id), 404);
 
         $projectWorkflowStep->loadMissing('workflowStep.functionGroups', 'people');
         abort_unless($projectWorkflowStep->workflowStep->functionGroups->contains('id', $functionGroup->id), 404);
@@ -331,7 +331,7 @@ class ProjectWorkflowStepController extends Controller
     public function updatePeople(Request $request, Project $project, ProjectWorkflowStep $projectWorkflowStep, FunctionGroup $functionGroup): Response
     {
         abort_unless($projectWorkflowStep->project_id === $project->id, 404);
-        abort_unless($functionGroup->tenant_id === $project->tenant_id, 404);
+        abort_unless($functionGroup->isAvailableForTenant($project->tenant_id), 404);
         abort_unless($request->user()->can('project.people.manage'), 403);
 
         $personIds = collect($request->array('person_ids'))->map(fn ($id) => (int) $id);

@@ -142,7 +142,7 @@
                                 async confirmAndSubmit(e) {
                                     if (await window.confirmDialog({
                                         title: {{ \Illuminate\Support\Js::from(__('Zu anderem Kunden kopieren')) }},
-                                        message: {{ \Illuminate\Support\Js::from(__('Legt eine eigenständige Kopie dieses Workflows (inkl. aller Schritte) beim gewählten Kunden an - ohne Funktionsgruppen-Zuordnung an den Schritten, da die Gruppen dort anders heißen/aufgeteilt sind. Bitte im Zielkunden neu zuweisen.')) }},
+                                        message: {{ \Illuminate\Support\Js::from(__('Legt eine eigenständige Kopie dieses Workflows inklusive aller Schritte beim gewählten Kunden an. Funktionsgruppen-Zuordnungen werden übernommen, soweit die Gruppen dort verfügbar sind.')) }},
                                         confirmLabel: {{ \Illuminate\Support\Js::from(__('Kopieren')) }},
                                     })) {
                                         e.target.submit();
@@ -515,7 +515,7 @@
                                         async confirmAndSubmit(e) {
                                             if (await window.confirmDialog({
                                                 title: {{ \Illuminate\Support\Js::from(__('Zu anderem Kunden kopieren')) }},
-                                                message: {{ \Illuminate\Support\Js::from(__('Legt eine eigenständige Kopie dieses Workflows (inkl. aller Schritte) beim gewählten Kunden an - ohne Funktionsgruppen-Zuordnung an den Schritten, da die Gruppen dort anders heißen/aufgeteilt sind. Bitte im Zielkunden neu zuweisen.')) }},
+                                                message: {{ \Illuminate\Support\Js::from(__('Legt eine eigenständige Kopie dieses Workflows inklusive aller Schritte beim gewählten Kunden an. Funktionsgruppen-Zuordnungen werden übernommen, soweit die Gruppen dort verfügbar sind.')) }},
                                                 confirmLabel: {{ \Illuminate\Support\Js::from(__('Kopieren')) }},
                                             })) {
                                                 e.target.submit();

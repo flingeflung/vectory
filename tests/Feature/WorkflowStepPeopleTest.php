@@ -15,7 +15,7 @@ class WorkflowStepPeopleTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_customer_workflow_offers_released_members_of_matching_home_function_group(): void
+    public function test_customer_workflow_uses_available_central_function_group(): void
     {
         $home = Tenant::query()->firstOrFail();
         $home->update(['is_home_tenant' => true]);
@@ -46,10 +46,11 @@ class WorkflowStepPeopleTest extends TestCase
             'name' => 'Technische Redaktion',
             'short_name' => 'TR',
         ]);
-        $customerGroup = FunctionGroup::query()->withoutGlobalScope('tenant')->create([
+        DB::table('function_group_tenant')->insert([
+            'function_group_id' => $homeGroup->id,
             'tenant_id' => $customer->id,
-            'name' => 'Technische Redaktion',
-            'short_name' => 'TR',
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
         DB::table('function_group_member')->insert([
             'tenant_id' => $home->id,
@@ -76,7 +77,7 @@ class WorkflowStepPeopleTest extends TestCase
         DB::table('workflow_step_function_group')->insert([
             'tenant_id' => $customer->id,
             'workflow_step_id' => $workflowStepId,
-            'function_group_id' => $customerGroup->id,
+            'function_group_id' => $homeGroup->id,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -98,7 +99,7 @@ class WorkflowStepPeopleTest extends TestCase
         DB::table('project_people')->insert([
             'tenant_id' => $customer->id,
             'project_id' => $projectId,
-            'function_group_id' => $customerGroup->id,
+            'function_group_id' => $homeGroup->id,
             'person_id' => $person->id,
             'planned_hours' => 5,
             'is_primary' => false,
@@ -108,7 +109,7 @@ class WorkflowStepPeopleTest extends TestCase
         DB::table('project_people')->insert([
             'tenant_id' => $customer->id,
             'project_id' => $projectId,
-            'function_group_id' => $customerGroup->id,
+            'function_group_id' => $homeGroup->id,
             'person_id' => $previouslyAssignedPerson->id,
             'planned_hours' => null,
             'is_primary' => false,
@@ -118,7 +119,7 @@ class WorkflowStepPeopleTest extends TestCase
 
         $this->actingAs($user)
             ->withSession(['active_tenant_id' => $customer->id])
-            ->get(route('projekte.workflow-steps.personen.form', [$projectId, $projectWorkflowStepId, $customerGroup->id]))
+            ->get(route('projekte.workflow-steps.personen.form', [$projectId, $projectWorkflowStepId, $homeGroup->id]))
             ->assertOk()
             ->assertSee('Redaktion, Tina')
             ->assertSee('Altzuordnung, Ralf');
@@ -131,7 +132,7 @@ class WorkflowStepPeopleTest extends TestCase
         $this->get(route('projekte.show', $projectId))
             ->assertOk()
             ->assertSee("activeTab = 'planung'", false)
-            ->assertSee('project_people_hours['.$customerGroup->id.']['.$person->id.']', false)
+            ->assertSee('project_people_hours['.$homeGroup->id.']['.$person->id.']', false)
             ->assertSee('value="5"', false);
     }
 }

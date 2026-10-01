@@ -389,7 +389,7 @@ class MultichangeFieldCatalog
         // freigegebene DL-Mitarbeiter zählen als Mitglied, gleiches Muster
         // wie FunctionGroupController::index() (Ralf dort: "Ich bin in der
         // Maschinen AG. Ich kann hier gar keine TR der Fktgrp zuweisen").
-        $functionGroups = FunctionGroup::query()->where('tenant_id', $tenantId)->where('active', true)
+        $functionGroups = FunctionGroup::query()->availableForTenant($tenantId, false)
             ->with(['members' => fn ($query) => $query->withoutGlobalScope('tenant')])
             ->orderBy('name')->get(['id', 'name']);
 

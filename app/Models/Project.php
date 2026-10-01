@@ -130,6 +130,7 @@ class Project extends Model
     public function functionGroupHours(): BelongsToMany
     {
         return $this->belongsToMany(FunctionGroup::class, 'project_function_group_hours')
+            ->withoutGlobalScope('tenant')
             ->withPivot('planned_hours')
             ->withTimestamps();
     }

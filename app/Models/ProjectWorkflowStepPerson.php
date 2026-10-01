@@ -22,7 +22,7 @@ class ProjectWorkflowStepPerson extends Model
 
     public function functionGroup(): BelongsTo
     {
-        return $this->belongsTo(FunctionGroup::class);
+        return $this->belongsTo(FunctionGroup::class)->withoutGlobalScope('tenant');
     }
 
     /**

@@ -1597,5 +1597,12 @@
     "Stunden werden pro Funktionsgruppe automatisch auf alle Personen gleichmäßig verteilt": "Hours are automatically distributed equally among all people in each function group",
     "Planstunden verteilen?": "Allocate planned hours?",
     "Bereits eingetragene Stunden werden dabei überschrieben. Möchten Sie die Planstunden trotzdem automatisch verteilen?": "Existing entered hours will be overwritten. Do you still want to allocate the planned hours automatically?",
-    "Verteilen": "Allocate"
+    "Verteilen": "Allocate",
+    "Matrix": "Matrix",
+    "Verfügbarkeit der Funktionsgruppen bei den Kunden festlegen": "Set function group availability for customers",
+    "Funktionsgruppen je Kunde": "Function groups by customer",
+    "Der Heimatdienstleister legt die Taxonomie zentral fest. Hier wird nur die Verfügbarkeit bei den Kunden gesteuert.": "The home service provider defines the taxonomy centrally. Only customer availability is controlled here.",
+    "Legt eine eigenständige Kopie dieses Workflows inklusive aller Schritte beim gewählten Kunden an. Funktionsgruppen-Zuordnungen werden übernommen, soweit die Gruppen dort verfügbar sind.": "Creates an independent copy of this workflow including all steps for the selected customer. Function group assignments are copied when the groups are available there.",
+    "Die Funktionsgruppen dieser Person werden bei ihrer eigenen Organisation gepflegt.": "This person's function groups are managed within their own organization.",
+    "Die Funktionsgruppe wird bei diesem Kunden bereits verwendet und kann nicht ausgeblendet werden.": "This function group is already in use by this customer and cannot be hidden."
 }

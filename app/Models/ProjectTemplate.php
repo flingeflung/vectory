@@ -71,6 +71,7 @@ class ProjectTemplate extends Model
     public function functionGroups(): BelongsToMany
     {
         return $this->belongsToMany(FunctionGroup::class, 'project_template_function_group')
+            ->withoutGlobalScope('tenant')
             ->withPivot('planned_hours')
             ->withTimestamps();
     }
@@ -94,7 +95,7 @@ class ProjectTemplate extends Model
     public function relevantFunctionGroups(): \Illuminate\Support\Collection
     {
         if ($this->unrestricted_function_groups) {
-            return FunctionGroup::query()->where('tenant_id', $this->tenant_id)->orderBy('name')->get();
+            return FunctionGroup::query()->availableForTenant($this->tenant_id, false)->orderBy('name')->get();
         }
 
         if (! $this->workflow) {
