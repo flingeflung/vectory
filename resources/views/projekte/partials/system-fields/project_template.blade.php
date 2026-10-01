@@ -153,7 +153,7 @@
     <template x-if="hasOwnHours">
         <p class="mt-0.5 flex items-center gap-1 text-[11px] text-gray-400" x-show="locked">
             <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
-            {{ __('Verbindung gelöst - Planstunden sind unabhängig (siehe Reiter „Zeiten").') }}
+            {{ __('Verbindung gelöst - Planstunden sind unabhängig (siehe Reiter „Planung").') }}
         </p>
     </template>
 </div>
