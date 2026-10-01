@@ -22,7 +22,14 @@
         groupDifference(groupId) { return this.number(this.planned[groupId]) - this.groupSum(groupId); },
         totalPlanned() { return Object.values(this.planned).reduce((sum, value) => sum + this.number(value), 0); },
         totalDistributed() { return Object.keys(this.planned).reduce((sum, groupId) => sum + this.groupSum(groupId), 0); },
-        distributeHours() {
+        async distributeHours() {
+            if (! await window.confirmDialog({
+                title: {{ \Illuminate\Support\Js::from(__('Planstunden verteilen?')) }},
+                message: {{ \Illuminate\Support\Js::from(__('Bereits eingetragene Stunden werden dabei überschrieben. Möchten Sie die Planstunden trotzdem automatisch verteilen?')) }},
+                confirmLabel: {{ \Illuminate\Support\Js::from(__('Verteilen')) }},
+                cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
+            })) return;
+
             Object.keys(this.planned).forEach((groupId) => {
                 const personIds = Object.keys(this.values[groupId] || {});
                 if (personIds.length === 0) return;

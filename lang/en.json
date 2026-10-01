@@ -1594,5 +1594,8 @@
     "Mehr als geplant verteilt": "Allocated above plan",
     "Keine Planstunden oder Projektbeteiligten vorhanden.": "No planned hours or project participants available.",
     "Std. verteilen": "Allocate hours",
-    "Stunden werden pro Funktionsgruppe automatisch auf alle Personen gleichmäßig verteilt": "Hours are automatically distributed equally among all people in each function group"
+    "Stunden werden pro Funktionsgruppe automatisch auf alle Personen gleichmäßig verteilt": "Hours are automatically distributed equally among all people in each function group",
+    "Planstunden verteilen?": "Allocate planned hours?",
+    "Bereits eingetragene Stunden werden dabei überschrieben. Möchten Sie die Planstunden trotzdem automatisch verteilen?": "Existing entered hours will be overwritten. Do you still want to allocate the planned hours automatically?",
+    "Verteilen": "Allocate"
 }
