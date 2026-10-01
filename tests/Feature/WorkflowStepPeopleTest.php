@@ -95,5 +95,9 @@ class WorkflowStepPeopleTest extends TestCase
             ->get(route('projekte.workflow-steps.personen.form', [$projectId, $projectWorkflowStepId, $customerGroup->id]))
             ->assertOk()
             ->assertSee('Redaktion, Tina');
+
+        $this->get(route('projekte.projektbeteiligte.show', $projectId))
+            ->assertOk()
+            ->assertSee('Redaktion, Tina');
     }
 }

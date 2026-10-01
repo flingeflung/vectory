@@ -534,9 +534,7 @@ class ProjectController extends Controller
 
         return view('projekte.partials.system-fields.project_people', [
             'project' => $project,
-            'allFunctionGroups' => FunctionGroup::query()->where('tenant_id', $project->tenant_id)->with(['members' => fn ($query) => $query->withoutGlobalScope('tenant')
-                ->visibleInTenant($project->tenant_id)
-                ->visibleToRole($request->user()->role)])->orderBy('sort')->get(),
+            'allFunctionGroups' => $this->functionGroupsWithEligibleMembers($project, $request),
             'secondaryBtn' => 'inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover',
         ]);
     }
@@ -978,9 +976,7 @@ class ProjectController extends Controller
             'projectTypeCategories' => ProjectTypeMain::query()->where('tenant_id', $project->tenant_id)->orderBy('sort')->with(['subs' => fn ($query) => $query->orderBy('sort')])->get(),
             'allMarkets' => Market::query()->where('tenant_id', $project->tenant_id)->orderBy('sort')->get(),
             'marketSets' => MarketSet::query()->where('tenant_id', $project->tenant_id)->with('markets:id')->orderBy('sort')->get(),
-            'allFunctionGroups' => FunctionGroup::query()->where('tenant_id', $project->tenant_id)->with(['members' => fn ($query) => $query->withoutGlobalScope('tenant')
-                ->visibleInTenant($project->tenant_id)
-                ->visibleToRole($request->user()->role)])->orderBy('sort')->get(),
+            'allFunctionGroups' => $this->functionGroupsWithEligibleMembers($project, $request),
             // Der aktuell zugewiesene Workflow muss immer in der Liste auftauchen, auch wenn er
             // inzwischen inaktiv/ersetzt ist - sonst würde ein Speichern ohne bewusste Auswahl
             // den Workflow fälschlich entfernen, weil kein <option> mehr dazu passt.
@@ -1009,6 +1005,25 @@ class ProjectController extends Controller
             'directorySuggestedFolderName' => $this->directoryLocator->suggestedFolderName($project),
             'zeiten' => $this->zeitenData($project),
         ];
+    }
+
+    /**
+     * Funktionsgruppen des Projekts mit allen dort auswählbaren Personen.
+     * Beim Kunden schließt das freigegebene Mitglieder der entsprechenden
+     * Heimat-Funktionsgruppe ein, genau wie der Workflow-Personen-Picker.
+     *
+     * @return Collection<int, FunctionGroup>
+     */
+    private function functionGroupsWithEligibleMembers(Project $project, Request $request): Collection
+    {
+        return FunctionGroup::query()
+            ->where('tenant_id', $project->tenant_id)
+            ->orderBy('sort')
+            ->get()
+            ->each(fn (FunctionGroup $group) => $group->setRelation(
+                'members',
+                $group->eligibleMembersInTenant($project->tenant_id, $request->user()->role),
+            ));
     }
 
     /**
