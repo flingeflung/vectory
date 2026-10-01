@@ -11,15 +11,27 @@
         $showTenantGroups = $personGroups->count() > 1;
     @endphp
 
-    <div class="mb-3 flex shrink-0 flex-wrap items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm">
-        <div class="inline-flex overflow-hidden rounded-md border border-gray-300 text-xs">
-            <a href="{{ $planningUrl(['view' => 'month']) }}" class="px-3 py-1.5 font-medium {{ $displayMode === 'month' ? 'bg-btn-primary text-white' : 'bg-btn-secondary text-gray-700 hover:bg-btn-secondary-hover' }}">{{ __('Monatsansicht') }}</a>
-            <a href="{{ $planningUrl(['view' => 'year']) }}" class="border-l border-gray-300 px-3 py-1.5 font-medium {{ $displayMode === 'year' ? 'bg-btn-primary text-white' : 'bg-btn-secondary text-gray-700 hover:bg-btn-secondary-hover' }}">{{ __('Jahresansicht') }}</a>
+    <div x-data="{ switchingView: null }" class="mb-3 flex shrink-0 flex-wrap items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm">
+        <div :class="{ 'pointer-events-none opacity-60': switchingView !== null }" :aria-busy="switchingView !== null" class="inline-flex overflow-hidden rounded-md border border-gray-300 text-xs">
+            <a href="{{ $planningUrl(['view' => 'month']) }}" @click="if (switchingView !== null) { $event.preventDefault() } else { switchingView = 'month' }" class="inline-flex items-center gap-1.5 px-3 py-1.5 font-medium {{ $displayMode === 'month' ? 'bg-btn-primary text-white' : 'bg-btn-secondary text-gray-700 hover:bg-btn-secondary-hover' }}">
+                <span x-show="switchingView === 'month'" x-cloak><x-loading-spinner class="h-3.5 w-3.5" /></span>
+                {{ __('Monatsansicht') }}
+            </a>
+            <a href="{{ $planningUrl(['view' => 'year']) }}" @click="if (switchingView !== null) { $event.preventDefault() } else { switchingView = 'year' }" class="inline-flex items-center gap-1.5 border-l border-gray-300 px-3 py-1.5 font-medium {{ $displayMode === 'year' ? 'bg-btn-primary text-white' : 'bg-btn-secondary text-gray-700 hover:bg-btn-secondary-hover' }}">
+                <span x-show="switchingView === 'year'" x-cloak><x-loading-spinner class="h-3.5 w-3.5" /></span>
+                {{ __('Jahresansicht') }}
+            </a>
         </div>
 
-        <div class="inline-flex overflow-hidden rounded-md border border-gray-300 text-xs">
-            <a href="{{ $planningUrl(['content' => 'projects']) }}" class="px-3 py-1.5 font-medium {{ $contentMode === 'projects' ? 'bg-btn-primary text-white' : 'bg-btn-secondary text-gray-700 hover:bg-btn-secondary-hover' }}">{{ __('Projekte') }}</a>
-            <a href="{{ $planningUrl(['content' => 'utilization']) }}" class="border-l border-gray-300 px-3 py-1.5 font-medium {{ $contentMode === 'utilization' ? 'bg-btn-primary text-white' : 'bg-btn-secondary text-gray-700 hover:bg-btn-secondary-hover' }}">{{ __('Auslastung') }}</a>
+        <div :class="{ 'pointer-events-none opacity-60': switchingView !== null }" :aria-busy="switchingView !== null" class="inline-flex overflow-hidden rounded-md border border-gray-300 text-xs">
+            <a href="{{ $planningUrl(['content' => 'projects']) }}" @click="if (switchingView !== null) { $event.preventDefault() } else { switchingView = 'projects' }" class="inline-flex items-center gap-1.5 px-3 py-1.5 font-medium {{ $contentMode === 'projects' ? 'bg-btn-primary text-white' : 'bg-btn-secondary text-gray-700 hover:bg-btn-secondary-hover' }}">
+                <span x-show="switchingView === 'projects'" x-cloak><x-loading-spinner class="h-3.5 w-3.5" /></span>
+                {{ __('Projekte') }}
+            </a>
+            <a href="{{ $planningUrl(['content' => 'utilization']) }}" @click="if (switchingView !== null) { $event.preventDefault() } else { switchingView = 'utilization' }" class="inline-flex items-center gap-1.5 border-l border-gray-300 px-3 py-1.5 font-medium {{ $contentMode === 'utilization' ? 'bg-btn-primary text-white' : 'bg-btn-secondary text-gray-700 hover:bg-btn-secondary-hover' }}">
+                <span x-show="switchingView === 'utilization'" x-cloak><x-loading-spinner class="h-3.5 w-3.5" /></span>
+                {{ __('Auslastung') }}
+            </a>
         </div>
 
         <form method="GET" action="{{ route('planung.projektplanung') }}" class="flex items-center gap-2">

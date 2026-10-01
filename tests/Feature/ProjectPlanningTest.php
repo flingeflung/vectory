@@ -98,6 +98,12 @@ class ProjectPlanningTest extends TestCase
         ]))->assertOk()
             ->assertSee('Planungsprojekt')
             ->assertSee("window.dispatchEvent(new CustomEvent('open-project', { detail: { id: {$projectId} } }))", false)
+            ->assertSee('x-data="{ switchingView: null }"', false)
+            ->assertSee("switchingView = 'month'", false)
+            ->assertSee("switchingView = 'year'", false)
+            ->assertSee("switchingView = 'projects'", false)
+            ->assertSee("switchingView = 'utilization'", false)
+            ->assertSee("switchingView === 'utilization'", false)
             ->assertSee('x-data="{ submitting: false }"', false)
             ->assertSee(':disabled="submitting"', false);
 
