@@ -48,6 +48,8 @@ class TenantIconUploadTest extends TestCase
             ->assertOk()
             ->assertSee(__('Organisationen'))
             ->assertSee(__('Logo auswählen'))
+            ->assertSee('dataset.dirtyBaseline = window.formSnapshot($el.form)', false)
+            ->assertSee('dirty = window.formIsDirty($el.form, window.__tenantsDirtyForms)', false)
             ->assertSee(rawurlencode($filename), false);
 
         File::delete(public_path('images/company-icons/'.$filename));

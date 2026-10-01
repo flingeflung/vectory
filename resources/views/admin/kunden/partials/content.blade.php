@@ -28,7 +28,7 @@
                         <div class="flex items-center gap-2">
                             <label class="cursor-pointer rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                                 {{ __('Logo auswählen') }}
-                                <input type="file" name="company_icon" accept=".svg,.png,.jpg,.jpeg,.webp,image/svg+xml,image/png,image/jpeg,image/webp" class="sr-only" @change="const file = $event.target.files[0]; logoName = file?.name || ''; logoPreview = file ? URL.createObjectURL(file) : null">
+                                <input type="file" name="company_icon" accept=".svg,.png,.jpg,.jpeg,.webp,image/svg+xml,image/png,image/jpeg,image/webp" class="sr-only" @click="if ($el.form.dataset.dirtyBaseline === undefined) $el.form.dataset.dirtyBaseline = window.formSnapshot($el.form)" @change="const file = $event.target.files[0]; logoName = file?.name || ''; logoPreview = file ? URL.createObjectURL(file) : null">
                             </label>
                             <span class="min-w-0 truncate text-xs text-gray-400" x-text="logoName"></span>
                         </div>
@@ -123,7 +123,7 @@
                         <div class="flex items-center gap-2">
                             <label class="cursor-pointer rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                                 {{ __('Logo auswählen') }}
-                                <input type="file" name="company_icon" accept=".svg,.png,.jpg,.jpeg,.webp,image/svg+xml,image/png,image/jpeg,image/webp" class="sr-only" @change="const file = $event.target.files[0]; logoName = file?.name || ''; logoPreview = file ? URL.createObjectURL(file) : logoPreview">
+                                <input type="file" name="company_icon" accept=".svg,.png,.jpg,.jpeg,.webp,image/svg+xml,image/png,image/jpeg,image/webp" class="sr-only" @click="if ($el.form.dataset.dirtyBaseline === undefined) $el.form.dataset.dirtyBaseline = window.formSnapshot($el.form)" @change="const file = $event.target.files[0]; logoName = file?.name || ''; logoPreview = file ? URL.createObjectURL(file) : logoPreview; dirty = window.formIsDirty($el.form, window.__tenantsDirtyForms)">
                             </label>
                             <span class="min-w-0 truncate text-xs text-gray-400" x-text="logoName"></span>
                         </div>
