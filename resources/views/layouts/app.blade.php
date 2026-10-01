@@ -3035,12 +3035,19 @@
 
                 window.reloadProjectSchedule = async (url, params) => {
                     const body = new URLSearchParams(params);
-                    scheduleBody().innerHTML = await fetch(url, {
+                    const response = await fetch(url, {
                         method: 'POST',
                         headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/x-www-form-urlencoded' },
                         body: body.toString(),
-                    }).then((r) => r.text());
+                    });
+                    if (!response.ok) {
+                        const data = await response.json().catch(() => ({}));
+                        await window.notifyDialog(data.message || {{ \Illuminate\Support\Js::from(__('Berechnung fehlgeschlagen. Bitte Eingaben prüfen und erneut versuchen.')) }});
+                        return false;
+                    }
+                    scheduleBody().innerHTML = await response.text();
                     await window.refreshUnderlyingProject(currentProjectId);
+                    return true;
                 };
             })();
         </script>

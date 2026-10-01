@@ -5,9 +5,40 @@
 <div
     x-data="{
         reference: {{ \Illuminate\Support\Js::from($referenceStepId) }},
+        pendingSaves: [],
+        busy: false,
+        saveField(url, payload) {
+            const request = fetch(url, {
+                method: 'PATCH',
+                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            }).then(async (response) => {
+                if (!response.ok) {
+                    const data = await response.json().catch(() => ({}));
+                    throw new Error(data.message || {{ \Illuminate\Support\Js::from(__('Speichern fehlgeschlagen. Bitte erneut versuchen.')) }});
+                }
+                return true;
+            }).catch(async (error) => {
+                await window.notifyDialog(error.message);
+                return false;
+            });
+            this.pendingSaves.push(request);
+            request.finally(() => {
+                this.pendingSaves = this.pendingSaves.filter((pending) => pending !== request);
+            });
+            return request;
+        },
+        async finishPendingSaves() {
+            const results = await Promise.all([...this.pendingSaves]);
+            return results.every(Boolean);
+        },
         async recalculate() {
-            if (!this.reference) { return; }
-            await window.reloadProjectSchedule({{ \Illuminate\Support\Js::from(route('projekte.termine.recalculate', $project)) }}, { reference_step_id: this.reference });
+            if (!this.reference || this.busy) { return; }
+            this.busy = true;
+            if (await this.finishPendingSaves()) {
+                await window.reloadProjectSchedule({{ \Illuminate\Support\Js::from(route('projekte.termine.recalculate', $project)) }}, { reference_step_id: this.reference });
+            }
+            this.busy = false;
         },
         async apply(stepId) {
             await window.reloadProjectSchedule({{ \Illuminate\Support\Js::from(route('projekte.termine.apply', $project)) }}, { reference_step_id: this.reference, apply_step_id: stepId });
@@ -55,11 +86,7 @@
                                 placeholder="{{ __('– kein Termin-Name –') }}"
                                 class="w-full rounded border-gray-300 text-xs"
                                 @change="
-                                    fetch({{ \Illuminate\Support\Js::from(route('projekte.termine.update-field', [$project, $pws])) }}, {
-                                        method: 'PATCH',
-                                        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ milestone_title: $event.target.value }),
-                                    });
+                                    saveField({{ \Illuminate\Support\Js::from(route('projekte.termine.update-field', [$project, $pws])) }}, { milestone_title: $event.target.value });
                                 "
                             >
                         </td>
@@ -70,11 +97,7 @@
                                 value="{{ $pws->effectiveDurationDays() }}"
                                 class="w-16 rounded border-gray-300 text-xs"
                                 @change="
-                                    fetch({{ \Illuminate\Support\Js::from(route('projekte.termine.update-field', [$project, $pws])) }}, {
-                                        method: 'PATCH',
-                                        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ duration_days: $event.target.value }),
-                                    });
+                                    saveField({{ \Illuminate\Support\Js::from(route('projekte.termine.update-field', [$project, $pws])) }}, { duration_days: $event.target.value });
                                 "
                             >
                         </td>
@@ -84,11 +107,7 @@
                                 value="{{ $pws->due_date?->format('Y-m-d') }}"
                                 class="rounded border-gray-300 text-xs"
                                 @change="
-                                    fetch({{ \Illuminate\Support\Js::from(route('projekte.termine.update-field', [$project, $pws])) }}, {
-                                        method: 'PATCH',
-                                        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ due_date: $event.target.value }),
-                                    });
+                                    saveField({{ \Illuminate\Support\Js::from(route('projekte.termine.update-field', [$project, $pws])) }}, { due_date: $event.target.value });
                                 "
                             >
                         </td>
@@ -113,11 +132,7 @@
                                 name="is_start"
                                 @checked($pws->effectiveIsStart())
                                 @click="
-                                    fetch({{ \Illuminate\Support\Js::from(route('projekte.termine.start-end', [$project, $pws])) }}, {
-                                        method: 'PATCH',
-                                        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ type: 'start' }),
-                                    });
+                                    saveField({{ \Illuminate\Support\Js::from(route('projekte.termine.start-end', [$project, $pws])) }}, { type: 'start' });
                                 "
                             >
                         </td>
@@ -127,11 +142,7 @@
                                 name="is_end"
                                 @checked($pws->effectiveIsEnd())
                                 @click="
-                                    fetch({{ \Illuminate\Support\Js::from(route('projekte.termine.start-end', [$project, $pws])) }}, {
-                                        method: 'PATCH',
-                                        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ type: 'end' }),
-                                    });
+                                    saveField({{ \Illuminate\Support\Js::from(route('projekte.termine.start-end', [$project, $pws])) }}, { type: 'end' });
                                 "
                             >
                         </td>
@@ -146,12 +157,16 @@
         <div class="mt-3 flex items-center justify-between border-t border-gray-200 pt-3">
             <button
                 type="button"
-                :disabled="!reference"
-                :class="reference ? 'border-btn-secondary-border bg-btn-secondary text-gray-700 hover:bg-btn-secondary-hover' : 'cursor-not-allowed border-gray-200 text-gray-300'"
+                :disabled="!reference || busy"
+                :class="reference && !busy ? 'border-btn-secondary-border bg-btn-secondary text-gray-700 hover:bg-btn-secondary-hover' : 'cursor-not-allowed border-gray-200 text-gray-300'"
                 @click="recalculate()"
                 class="rounded border px-3 py-1.5 text-xs font-medium"
             >
-                {{ __('Neu berechnen') }}
+                <span x-show="!busy">{{ __('Neu berechnen') }}</span>
+                <span x-show="busy" x-cloak class="inline-flex items-center gap-1">
+                    <svg class="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
+                    {{ __('Bitte warten…') }}
+                </span>
             </button>
             <p x-show="!reference" class="text-xs text-gray-400">{{ __('Referenz-Schritt (mit gültigem Termin und Dauer) markieren, um die Berechnung zu starten.') }}</p>
 
