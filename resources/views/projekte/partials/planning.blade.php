@@ -7,7 +7,7 @@
     $plannedValues = $planningGroups->mapWithKeys(fn ($group) => [(string) $group->id => (float) ($effectiveGroupHours->get($group->id) ?? 0)]);
     $personValues = $planningGroups->mapWithKeys(fn ($group) => [
         (string) $group->id => ($entriesByGroup->get($group->id) ?? collect())->mapWithKeys(fn ($entry) => [
-            (string) $entry->person_id => $entry->planned_hours === null ? '' : (float) $entry->planned_hours,
+            (string) $entry->person_id => (float) ($entry->planned_hours ?? 0),
         ]),
     ]);
 @endphp
@@ -85,7 +85,7 @@
                             name="project_people_hours[{{ $group->id }}][{{ $entry->person_id }}]"
                             form="project-detail-form"
                             x-model="values['{{ $group->id }}']['{{ $entry->person_id }}']"
-                            value="{{ $entry->planned_hours === null ? '' : (float) $entry->planned_hours }}"
+                            value="{{ (float) ($entry->planned_hours ?? 0) }}"
                             @input="notifyChanged()"
                             min="0"
                             step="0.25"

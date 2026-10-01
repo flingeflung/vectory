@@ -78,6 +78,17 @@ class ProjectPlanningTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+        $personWithoutHours = $this->person($tenant, 'Ohne Stunden');
+        DB::table('project_people')->insert([
+            'tenant_id' => $tenant->id,
+            'project_id' => $projectId,
+            'function_group_id' => $groupId,
+            'person_id' => $personWithoutHours->id,
+            'is_primary' => false,
+            'planned_hours' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
         $response = $this->actingAs($user)->get(route('planung.projektplanung', [
             'year' => 2026,
@@ -106,7 +117,9 @@ class ProjectPlanningTest extends TestCase
         $this->get(route('projekte.show', $projectId))
             ->assertOk()
             ->assertSee('project_people_hours['.$groupId.']['.$person->id.']', false)
-            ->assertSee('value="9"', false);
+            ->assertSee('value="9"', false)
+            ->assertSee('project_people_hours['.$groupId.']['.$personWithoutHours->id.']', false)
+            ->assertSee('value="0"', false);
     }
 
     public function test_person_selection_is_remembered_and_limited_to_eligible_people(): void
