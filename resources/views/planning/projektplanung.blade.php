@@ -84,19 +84,19 @@
     </div>
 
     <div class="min-h-0 flex-1 overflow-auto rounded-lg border border-gray-200 bg-white">
-        <table class="min-w-max border-collapse text-xs">
-            <thead class="sticky top-0 z-10 bg-gray-50 text-gray-700">
+        <table class="min-w-max border-separate border-spacing-0 text-xs">
+            <thead class="sticky top-0 z-10 isolate bg-gray-50 text-gray-700">
                 @if ($displayMode === 'month')
                     <tr>
                         <th class="sticky left-0 z-20 min-w-52 border-b border-r border-gray-200 bg-gray-50"></th>
                         @foreach ($dayWeekSegments as $segment)
-                            <th colspan="{{ $segment['count'] }}" class="border-b border-r border-gray-200 px-1 py-0.5 text-center font-semibold">{{ __('KW') }} {{ $segment['week'] }}</th>
+                            <th colspan="{{ $segment['count'] }}" class="border-b border-r border-gray-200 bg-gray-50 px-1 py-0.5 text-center font-semibold">{{ __('KW') }} {{ $segment['week'] }}</th>
                         @endforeach
                     </tr>
                     <tr>
                         <th class="sticky left-0 z-20 min-w-52 border-b border-r border-gray-200 bg-gray-50 px-2 py-1 text-left font-medium">{{ __('Person') }}</th>
                         @foreach ($days as $day)
-                            <th class="min-w-10 border-b border-r border-gray-200 px-1 py-1 text-center font-medium {{ $day->isToday() ? 'bg-[#eff6ff]' : ($day->isWeekend() ? 'bg-[#fffaeb]' : '') }}" title="{{ $day->translatedFormat('l, d.m.Y') }}">
+                            <th class="min-w-10 border-b border-r border-gray-200 px-1 py-1 text-center font-medium {{ $day->isToday() ? 'bg-[#eff6ff]' : ($day->isWeekend() ? 'bg-[#fffaeb]' : 'bg-gray-50') }}" title="{{ $day->translatedFormat('l, d.m.Y') }}">
                                 <span class="block text-[10px] text-gray-400">{{ $day->translatedFormat('D') }}</span>
                                 <span class="block tabular-nums">{{ $day->format('d') }}</span>
                             </th>
@@ -106,13 +106,13 @@
                     <tr>
                         <th class="sticky left-0 z-20 min-w-52 border-b border-r border-gray-200 bg-gray-50"></th>
                         @foreach ($weekMonthSegments as $segment)
-                            <th colspan="{{ $segment['count'] }}" class="border-b border-r border-gray-200 px-1 py-0.5 text-center font-semibold">{{ $segment['label'] }}</th>
+                            <th colspan="{{ $segment['count'] }}" class="border-b border-r border-gray-200 bg-gray-50 px-1 py-0.5 text-center font-semibold">{{ $segment['label'] }}</th>
                         @endforeach
                     </tr>
                     <tr>
                         <th class="sticky left-0 z-20 min-w-52 border-b border-r border-gray-200 bg-gray-50 px-2 py-1 text-left font-medium">{{ __('Person') }}</th>
                         @foreach ($weeks as $week)
-                            <th class="min-w-12 border-b border-r border-gray-200 px-1 py-1 text-center font-medium" title="{{ $week['start']->format('d.m.Y') }}">{{ __('KW') }} {{ $week['number'] }}</th>
+                            <th class="min-w-12 border-b border-r border-gray-200 bg-gray-50 px-1 py-1 text-center font-medium" title="{{ $week['start']->format('d.m.Y') }}">{{ __('KW') }} {{ $week['number'] }}</th>
                         @endforeach
                     </tr>
                 @endif
