@@ -409,7 +409,19 @@
             dass jedes Formular-Template das einzeln anstoßen müsste.
         --}}
         <script>
-            window.formSnapshot = (el) => new URLSearchParams(new FormData(el)).toString();
+            window.formSnapshot = (el) => {
+                const params = new URLSearchParams();
+                for (const [key, value] of new FormData(el).entries()) {
+                    // URLSearchParams(new FormData(...)) macht aus jedem Dateifeld nur
+                    // "[object File]". Eine ausgewählte Datei wäre damit nicht von einem
+                    // leeren Dateifeld unterscheidbar und aktivierte keinen Speichern-Button.
+                    params.append(key, value instanceof File
+                        ? JSON.stringify([value.name, value.size, value.type, value.lastModified])
+                        : value);
+                }
+
+                return params.toString();
+            };
 
             document.addEventListener('focusin', (event) => {
                 const form = event.target.closest('form');
