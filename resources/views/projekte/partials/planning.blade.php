@@ -78,7 +78,7 @@
     @forelse ($planningGroups as $group)
         @php($entries = $entriesByGroup->get($group->id) ?? collect())
         <section class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-            <div class="grid grid-cols-[minmax(0,1fr)_6.5rem_6.5rem_6.5rem] items-center gap-2 bg-gray-50 px-2.5 py-1.5">
+            <div class="grid grid-cols-[minmax(0,1fr)_7rem_7rem_7rem] items-center gap-2 bg-gray-50 px-2.5 py-1.5">
                 <div class="min-w-0">
                     <div class="truncate font-semibold text-gray-800" title="{{ $group->name }}">{{ $group->name }}</div>
                     <div class="text-xs text-gray-400">{{ $group->short_name }}</div>
@@ -98,7 +98,7 @@
             </div>
             <div class="divide-y divide-gray-100 px-2.5">
                 @forelse ($entries as $entry)
-                    <label class="grid grid-cols-[minmax(0,1fr)_6.5rem] items-center gap-2 py-1">
+                    <label class="grid grid-cols-[minmax(0,1fr)_7rem] items-center gap-2 py-1">
                         <span class="truncate {{ $entry->person->active ? 'text-gray-700' : 'text-gray-400' }}">
                             {{ $entry->person->fullName() }}{{ ! $entry->person->active ? ' [i]' : '' }} <x-absence-icon :person="$entry->person" />
                         </span>
@@ -127,7 +127,7 @@
     </div>
 
     @if ($planningGroups->isNotEmpty())
-        <div class="shrink-0 grid grid-cols-[minmax(0,1fr)_6.5rem_6.5rem_6.5rem] items-center gap-2 border-t-2 border-gray-500 px-2.5 pt-2">
+        <div class="shrink-0 grid grid-cols-[minmax(0,1fr)_7rem_7rem_7rem] items-center gap-2 border-t-2 border-gray-500 px-2.5 pt-2">
             <div class="font-semibold text-gray-900">{{ __('Summe') }}</div>
             <div class="text-right font-semibold tabular-nums text-gray-900" x-text="format(totalPlanned()) + ' h'"></div>
             <div class="text-right font-semibold tabular-nums text-gray-900" x-text="format(totalDistributed()) + ' h'"></div>
