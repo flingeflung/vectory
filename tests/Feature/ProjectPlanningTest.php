@@ -126,6 +126,8 @@ class ProjectPlanningTest extends TestCase
             ->assertSee("switchingView === 'utilization'", false)
             ->assertSee('<select name="month"', false)
             ->assertSee('<option value="10" selected>Oktober</option>', false)
+            ->assertSee('2 angezeigte Projekte')
+            ->assertSee('(2)', false)
             ->assertSee('border-separate border-spacing-0', false)
             ->assertSee('sticky top-0 z-10 isolate bg-gray-50', false)
             ->assertSee(__('Projekt beginnt vor dem angezeigten Zeitraum'))

@@ -124,7 +124,12 @@
                     @endif
                     @foreach ($people as $person)
                         <tr class="border-b border-gray-200 bg-gray-50">
-                            <th scope="row" class="sticky left-0 z-[1] whitespace-nowrap border-r border-gray-200 bg-gray-50 px-2 py-1.5 text-left font-semibold text-gray-800">{{ $person->last_name }}, {{ $person->first_name }}</th>
+                            <th scope="row" class="sticky left-0 z-[1] whitespace-nowrap border-r border-gray-200 bg-gray-50 px-2 py-1.5 text-left font-semibold text-gray-800">
+                                {{ $person->last_name }}, {{ $person->first_name }}
+                                @if ($contentMode === 'projects')
+                                    <span class="ml-1 font-normal text-gray-400" title="{{ __(':count angezeigte Projekte', ['count' => $projectRowsByPerson->get($person->id, collect())->count()]) }}">({{ $projectRowsByPerson->get($person->id, collect())->count() }})</span>
+                                @endif
+                            </th>
                             <td colspan="{{ $displayMode === 'month' ? $days->count() : $weeks->count() }}"></td>
                         </tr>
 
