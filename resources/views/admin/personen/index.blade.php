@@ -30,7 +30,9 @@
                             <option value="user" @selected(request('access_level') === 'user')>{{ __('User') }}</option>
                             <option value="organization_admin" @selected(request('access_level') === 'organization_admin')>{{ __('Organisations-Admin') }}</option>
                             <option value="central_admin" @selected(request('access_level') === 'central_admin')>{{ __('Zentral-Admin') }}</option>
-                            <option value="super_admin" @selected(request('access_level') === 'super_admin')>{{ __('Super-Admin') }}</option>
+                            @if (auth()->user()->isSuperAdmin())
+                                <option value="super_admin" @selected(request('access_level') === 'super_admin')>{{ __('Super-Admin') }}</option>
+                            @endif
                         </select>
                     </div>
                 </div>

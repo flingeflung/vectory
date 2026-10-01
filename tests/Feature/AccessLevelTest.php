@@ -129,7 +129,8 @@ class AccessLevelTest extends TestCase
             ->withSession(['active_tenant_id' => $customer->id])
             ->get(route('admin.personen', ['access_level' => AccessLevel::SUPER_ADMIN]))
             ->assertOk()
-            ->assertSee('Superkollege');
+            ->assertSee('Superkollege')
+            ->assertSee('value="super_admin" selected', false);
 
         $centralAdmin = User::factory()->create([
             'tenant_id' => $home->id,
@@ -139,6 +140,7 @@ class AccessLevelTest extends TestCase
             ->withSession(['active_tenant_id' => $customer->id])
             ->get(route('admin.personen', ['access_level' => AccessLevel::SUPER_ADMIN]))
             ->assertOk()
-            ->assertDontSee('Superkollege');
+            ->assertDontSee('Superkollege')
+            ->assertDontSee('value="super_admin"', false);
     }
 }
