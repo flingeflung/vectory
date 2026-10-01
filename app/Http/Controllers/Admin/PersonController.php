@@ -866,7 +866,19 @@ class PersonController extends Controller
                     ->orWhere(function (Builder $query) use ($operator, $current) {
                         $query->where('last_name', $current->last_name)
                             ->where(function (Builder $query) use ($operator, $current) {
+                                if ($current->first_name === null) {
+                                    if ($operator === '>') {
+                                        $query->whereNotNull('first_name')
+                                            ->orWhere(fn (Builder $query) => $query->whereNull('first_name')->where('id', '>', $current->id));
+                                    } else {
+                                        $query->whereNull('first_name')->where('id', '<', $current->id);
+                                    }
+
+                                    return;
+                                }
+
                                 $query->where('first_name', $operator, $current->first_name)
+                                    ->when($operator === '<', fn (Builder $query) => $query->orWhereNull('first_name'))
                                     ->orWhere(function (Builder $query) use ($operator, $current) {
                                         $query->where('first_name', $current->first_name)->where('id', $operator, $current->id);
                                     });

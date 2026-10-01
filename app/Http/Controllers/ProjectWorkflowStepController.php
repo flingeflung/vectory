@@ -301,7 +301,7 @@ class ProjectWorkflowStepController extends Controller
         $members = $functionGroup->eligibleMembersInTenant($project->tenant_id, $request->user()->role)
             ->concat($currentPeople)
             ->unique('id')
-            ->sortBy(fn ($person) => [$person->sort, mb_strtolower($person->last_name), mb_strtolower($person->first_name)])
+            ->sortBy(fn ($person) => [$person->sort, mb_strtolower((string) $person->last_name), mb_strtolower((string) $person->first_name)])
             ->values();
 
         return view('projekte.partials.workflow-step-people-picker', [

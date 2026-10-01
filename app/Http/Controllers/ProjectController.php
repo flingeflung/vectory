@@ -1027,7 +1027,7 @@ class ProjectController extends Controller
                 $group->eligibleMembersInTenant($project->tenant_id, $request->user()->role)
                     ->concat(($currentPeopleByGroup->get($group->id) ?? collect())->pluck('person'))
                     ->unique('id')
-                    ->sortBy(fn ($person) => [$person->sort, mb_strtolower($person->last_name), mb_strtolower($person->first_name)])
+                    ->sortBy(fn ($person) => [$person->sort, mb_strtolower((string) $person->last_name), mb_strtolower((string) $person->first_name)])
                     ->values(),
             ));
     }

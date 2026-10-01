@@ -1443,7 +1443,9 @@
                     // ein Sicherheitsnetz.
                     if (!response.ok) {
                         window.dispatchEvent(new CustomEvent('close-modal', { detail: 'person-overlay' }));
-                        await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Kein Zugriff auf diese Person.')) }});
+                        await window.notifyDialog(response.status === 403 || response.status === 404
+                            ? {{ \Illuminate\Support\Js::from(__('Kein Zugriff auf diese Person.')) }}
+                            : {{ \Illuminate\Support\Js::from(__('Die Person konnte nicht geladen werden.')) }});
                         hideLoading();
                         return;
                     }
