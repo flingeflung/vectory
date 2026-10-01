@@ -116,13 +116,9 @@ class PlanningController extends Controller
             ->map(fn (Collection $people) => $people->filter(fn (Person $person) => $selectedPeople->has($person->id))->values())
             ->filter(fn (Collection $people) => $people->isNotEmpty());
 
-        $eligibleOrganizationIds = DB::table('project_people')
-            ->join('projects', 'projects.id', '=', 'project_people.project_id')
-            ->whereIn('project_people.person_id', $eligiblePersonIds)
-            ->whereIn('projects.status', [0, 1])
-            ->distinct()
-            ->pluck('projects.tenant_id');
-        $organizations = Tenant::query()->whereIn('id', $eligibleOrganizationIds)->orderBy('name')->get();
+        $organizations = SystemSetting::multiTenantEnabled()
+            ? CurrentTenant::availableTenants()
+            : Tenant::query()->whereKey(CurrentTenant::id())->get();
         $eligibleOrganizationIds = $organizations->pluck('id');
         $hasSavedOrganizationSelection = array_key_exists('organization_ids', $preference);
         $requestedOrganizationIds = $request->has('organization_filter')

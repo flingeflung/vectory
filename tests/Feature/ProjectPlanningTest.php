@@ -168,9 +168,11 @@ class ProjectPlanningTest extends TestCase
 
     public function test_organization_selection_filters_projects_and_is_remembered(): void
     {
+        SystemSetting::set(SystemSetting::MULTI_TENANT_ENABLED, '1');
         $home = Tenant::query()->firstOrFail();
         $home->update(['is_home_tenant' => true, 'name' => 'Heimat']);
         $customer = Tenant::query()->create(['name' => 'Kundenorganisation']);
+        $organizationWithoutProjects = Tenant::query()->create(['name' => 'Organisation ohne Projekte']);
         $person = $this->person($home, 'Organisationsfilter');
         $user = User::factory()->create([
             'tenant_id' => $home->id,
@@ -222,7 +224,9 @@ class ProjectPlanningTest extends TestCase
             ->assertOk()
             ->assertSee('Heimatprojekt')
             ->assertDontSee('Kundenprojekt')
-            ->assertSee(__('Organisationen auswählen'));
+            ->assertSee(__('Organisationen auswählen'))
+            ->assertSee($organizationWithoutProjects->name)
+            ->assertViewHas('organizations', fn ($organizations) => $organizations->pluck('id')->contains($organizationWithoutProjects->id));
 
         $this->assertEqualsWithDelta(
             10,
