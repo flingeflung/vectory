@@ -68,6 +68,31 @@ class ProjectPlanningTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+        $workflowId = DB::table('workflows')->insertGetId([
+            'tenant_id' => $tenant->id,
+            'short_name' => 'PLAN',
+            'name' => 'Planungsworkflow',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('projects')->where('id', $projectId)->update(['workflow_id' => $workflowId]);
+        $workflowStepId = DB::table('workflow_steps')->insertGetId([
+            'tenant_id' => $tenant->id,
+            'workflow_id' => $workflowId,
+            'title' => 'Freigabe',
+            'milestone_title' => 'Redaktionsschluss',
+            'has_due_date' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('project_workflow_steps')->insert([
+            'tenant_id' => $tenant->id,
+            'project_id' => $projectId,
+            'workflow_step_id' => $workflowStepId,
+            'due_date' => '2026-10-02',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
         DB::table('project_people')->insert([
             'tenant_id' => $tenant->id,
             'project_id' => $projectId,
@@ -117,6 +142,9 @@ class ProjectPlanningTest extends TestCase
             'people' => [$person->id],
         ]))->assertOk()
             ->assertSee('Planungsprojekt')
+            ->assertSee('9,00 h')
+            ->assertSee('Meilenstein: Redaktionsschluss (02.10.2026)')
+            ->assertSee('rotate-45 border border-white bg-fuchsia-600', false)
             ->assertSee('images/company-icons/planung-test.svg', false)
             ->assertSee('h-4 w-4 shrink-0 object-contain', false)
             ->assertSee("window.dispatchEvent(new CustomEvent('open-project', { detail: { id: {$projectId} } }))", false)

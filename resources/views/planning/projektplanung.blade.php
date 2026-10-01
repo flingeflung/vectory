@@ -152,11 +152,19 @@
                                                 <img src="{{ $projectRow['tenant']->iconUrl() }}" alt="{{ $projectRow['tenant']->name }}" title="{{ $projectRow['tenant']->name }}" class="mt-0.5 h-4 w-4 shrink-0 object-contain">
                                             @endif
                                             <div class="min-w-0 flex-1">
-                                                @if ($projectRow['canOpen'])
-                                                    <a href="{{ route('projekte.show', $project) }}" onclick="event.preventDefault(); window.dispatchEvent(new CustomEvent('open-project', { detail: { id: {{ $project->id }} } }))" class="block truncate text-blue-700 hover:underline" title="{{ $tooltip }}">{{ $projectRow['label'] }}</a>
-                                                @else
-                                                    <span class="block truncate text-gray-600" title="{{ $tooltip }}">{{ $projectRow['label'] }}</span>
-                                                @endif
+                                                <div class="flex min-w-0 items-center gap-1.5">
+                                                    @if ($projectRow['canOpen'])
+                                                        <a href="{{ route('projekte.show', $project) }}" onclick="event.preventDefault(); window.dispatchEvent(new CustomEvent('open-project', { detail: { id: {{ $project->id }} } }))" class="min-w-0 flex-1 truncate text-blue-700 hover:underline" title="{{ $tooltip }}">{{ $projectRow['label'] }}</a>
+                                                    @else
+                                                        <span class="min-w-0 flex-1 truncate text-gray-600" title="{{ $tooltip }}">{{ $projectRow['label'] }}</span>
+                                                    @endif
+                                                    <span class="shrink-0 rounded bg-slate-100 px-1 py-px text-[10px] font-medium tabular-nums text-slate-600" title="{{ __('Für :name geplante Stunden', ['name' => $person->fullName()]) }}">
+                                                        {{ number_format($projectRow['plannedHours'], 2, ',', '.') }} h
+                                                        @if ($projectRow['missingHours'])
+                                                            <span class="text-amber-600">+ {{ __('offen') }}</span>
+                                                        @endif
+                                                    </span>
+                                                </div>
                                                 <span class="block truncate text-[10px] text-gray-400">{{ $projectRow['tenant']?->name }}@if (! $hasPeriod) · {{ __('Zeitraum unvollständig') }}@endif</span>
                                             </div>
                                         </div>
@@ -167,12 +175,21 @@
                                                 $inside = $hasPeriod && $day->between($project->start_date, $project->end_date);
                                                 $continuesBefore = $inside && $loop->first && $project->start_date->lt($rangeStart);
                                                 $continuesAfter = $inside && $loop->last && $project->end_date->gt($rangeEnd);
+                                                $cellMilestones = $projectRow['milestones']->where('date', $day->toDateString());
+                                                $milestoneTooltip = $cellMilestones->map(fn ($milestone) => __('Meilenstein: :name (:date)', ['name' => $milestone['label'], 'date' => $day->format('d.m.Y')]))->join(' · ');
                                             @endphp
-                                            <td class="h-6 border-r border-gray-100 p-0 {{ $day->isToday() ? 'bg-[#eff6ff]' : ($day->isWeekend() ? 'bg-[#fffaeb]' : '') }}" title="{{ $inside ? $tooltip : '' }}">
+                                            <td class="relative h-6 border-r border-gray-100 p-0 {{ $day->isToday() ? 'bg-[#eff6ff]' : ($day->isWeekend() ? 'bg-[#fffaeb]' : '') }}" title="{{ $milestoneTooltip ?: ($inside ? $tooltip : '') }}">
                                                 @if ($inside)
                                                     <div class="relative mx-0 flex h-3 items-center rounded-sm border border-black/10" style="background-color: {{ $projectRow['color'] }}">
                                                         @if ($continuesBefore)<span class="absolute left-0 text-[11px] font-bold leading-none text-gray-700" title="{{ __('Projekt beginnt vor dem angezeigten Zeitraum') }}">&lsaquo;</span>@endif
                                                         @if ($continuesAfter)<span class="absolute right-0 text-[11px] font-bold leading-none text-gray-700" title="{{ __('Projekt läuft nach dem angezeigten Zeitraum weiter') }}">&rsaquo;</span>@endif
+                                                    </div>
+                                                @endif
+                                                @if ($cellMilestones->isNotEmpty())
+                                                    <div class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center gap-0.5">
+                                                        @foreach ($cellMilestones as $milestone)
+                                                            <span class="pointer-events-auto block h-2 w-2 rotate-45 border border-white bg-fuchsia-600 shadow-sm" title="{{ __('Meilenstein: :name (:date)', ['name' => $milestone['label'], 'date' => $day->format('d.m.Y')]) }}"></span>
+                                                        @endforeach
                                                     </div>
                                                 @endif
                                             </td>
@@ -183,14 +200,21 @@
                                                 $inside = $hasPeriod && $project->start_date->lte($week['start']->addDays(6)) && $project->end_date->gte($week['start']);
                                                 $continuesBefore = $inside && $loop->first && $project->start_date->lt($rangeStart);
                                                 $continuesAfter = $inside && $loop->last && $project->end_date->gt($rangeEnd);
+                                                $weekEnd = $week['start']->addDays(6);
+                                                $cellMilestones = $projectRow['milestones']->filter(fn ($milestone) => \Carbon\CarbonImmutable::parse($milestone['date'])->between($week['start'], $weekEnd));
+                                                $milestoneTooltip = $cellMilestones->map(fn ($milestone) => __('Meilenstein: :name (:date)', ['name' => $milestone['label'], 'date' => \Carbon\CarbonImmutable::parse($milestone['date'])->format('d.m.Y')]))->join(' · ');
                                             @endphp
-                                            <td class="h-6 border-r border-gray-100 p-0" title="{{ $inside ? $tooltip : '' }}">
+                                            <td class="relative h-6 border-r border-gray-100 p-0" title="{{ $milestoneTooltip ?: ($inside ? $tooltip : '') }}">
                                                 @if ($inside)
                                                     <div class="relative flex h-3 items-center rounded-sm border border-black/10" style="background-color: {{ $projectRow['color'] }}">
                                                         @if ($continuesBefore)<span class="absolute left-0 text-[11px] font-bold leading-none text-gray-700" title="{{ __('Projekt beginnt vor dem angezeigten Zeitraum') }}">&lsaquo;</span>@endif
                                                         @if ($continuesAfter)<span class="absolute right-0 text-[11px] font-bold leading-none text-gray-700" title="{{ __('Projekt läuft nach dem angezeigten Zeitraum weiter') }}">&rsaquo;</span>@endif
                                                     </div>
                                                 @endif
+                                                @foreach ($cellMilestones as $milestone)
+                                                    @php $milestoneDate = \Carbon\CarbonImmutable::parse($milestone['date']); @endphp
+                                                    <span class="absolute top-1/2 z-10 block h-2 w-2 -translate-x-1/2 -translate-y-1/2 rotate-45 border border-white bg-fuchsia-600 shadow-sm" style="left: {{ (($milestoneDate->isoWeekday() - 0.5) / 7) * 100 }}%" title="{{ __('Meilenstein: :name (:date)', ['name' => $milestone['label'], 'date' => $milestoneDate->format('d.m.Y')]) }}"></span>
+                                                @endforeach
                                             </td>
                                         @endforeach
                                     @endif
