@@ -166,6 +166,81 @@ class ProjectPlanningTest extends TestCase
         );
     }
 
+    public function test_organization_selection_filters_projects_and_is_remembered(): void
+    {
+        $home = Tenant::query()->firstOrFail();
+        $home->update(['is_home_tenant' => true, 'name' => 'Heimat']);
+        $customer = Tenant::query()->create(['name' => 'Kundenorganisation']);
+        $person = $this->person($home, 'Organisationsfilter');
+        $user = User::factory()->create([
+            'tenant_id' => $home->id,
+            'person_id' => $person->id,
+            'role' => 'super_admin',
+        ]);
+        $groupId = DB::table('function_groups')->insertGetId([
+            'tenant_id' => $home->id,
+            'name' => 'Planung',
+            'short_name' => 'PL',
+            'sort' => 1,
+            'active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        foreach ([[$home, 'PROJ-H', 'Heimatprojekt'], [$customer, 'PROJ-K', 'Kundenprojekt']] as [$tenant, $number, $title]) {
+            $projectId = DB::table('projects')->insertGetId([
+                'tenant_id' => $tenant->id,
+                'source_pn' => $number,
+                'title' => $title,
+                'status' => 1,
+                'start_date' => '2026-10-01',
+                'end_date' => '2026-10-31',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            DB::table('project_people')->insert([
+                'tenant_id' => $tenant->id,
+                'project_id' => $projectId,
+                'function_group_id' => $groupId,
+                'person_id' => $person->id,
+                'is_primary' => false,
+                'planned_hours' => 10,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        $response = $this->actingAs($user)
+            ->get(route('planung.projektplanung', [
+                'year' => 2026,
+                'month' => 10,
+                'person_filter' => 1,
+                'people' => [$person->id],
+                'organization_filter' => 1,
+                'organizations' => [$home->id],
+            ]))
+            ->assertOk()
+            ->assertSee('Heimatprojekt')
+            ->assertDontSee('Kundenprojekt')
+            ->assertSee(__('Organisationen auswählen'));
+
+        $this->assertEqualsWithDelta(
+            10,
+            $response->viewData('utilizationByPerson')->get($person->id)->sum('project'),
+            0.001,
+        );
+
+        $this->assertSame(
+            ['person_ids' => [$person->id], 'organization_ids' => [$home->id]],
+            UserPreference::configFor($user->id, UserPreference::PROJECT_PLANNING),
+        );
+
+        $this->get(route('planung.projektplanung', ['year' => 2026, 'month' => 10]))
+            ->assertOk()
+            ->assertSee('Heimatprojekt')
+            ->assertDontSee('Kundenprojekt');
+    }
+
     public function test_home_member_sees_qualified_home_and_selected_customer_people(): void
     {
         SystemSetting::set(SystemSetting::MULTI_TENANT_ENABLED, '1');

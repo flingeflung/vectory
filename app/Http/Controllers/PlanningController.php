@@ -106,23 +106,48 @@ class PlanningController extends Controller
             ->intersect($eligiblePersonIds)
             ->unique()
             ->values();
+        $preferenceChanged = false;
         if ($request->has('person_filter') || ($hasSavedSelection && $selectedPersonIds->all() !== array_values($preference['person_ids']))) {
-            UserPreference::persist($request->user()->id, UserPreference::PROJECT_PLANNING, [
-                ...$preference,
-                'person_ids' => $selectedPersonIds->all(),
-            ]);
+            $preference['person_ids'] = $selectedPersonIds->all();
+            $preferenceChanged = true;
         }
         $selectedPeople = $eligiblePeople->whereIn('id', $selectedPersonIds)->keyBy('id');
         $selectedPersonGroups = $personGroups
             ->map(fn (Collection $people) => $people->filter(fn (Person $person) => $selectedPeople->has($person->id))->values())
             ->filter(fn (Collection $people) => $people->isNotEmpty());
 
+        $eligibleOrganizationIds = DB::table('project_people')
+            ->join('projects', 'projects.id', '=', 'project_people.project_id')
+            ->whereIn('project_people.person_id', $eligiblePersonIds)
+            ->whereIn('projects.status', [0, 1])
+            ->distinct()
+            ->pluck('projects.tenant_id');
+        $organizations = Tenant::query()->whereIn('id', $eligibleOrganizationIds)->orderBy('name')->get();
+        $eligibleOrganizationIds = $organizations->pluck('id');
+        $hasSavedOrganizationSelection = array_key_exists('organization_ids', $preference);
+        $requestedOrganizationIds = $request->has('organization_filter')
+            ? collect($request->input('organizations', []))
+            : collect($preference['organization_ids'] ?? $eligibleOrganizationIds);
+        $selectedOrganizationIds = $requestedOrganizationIds
+            ->map(fn ($id) => (int) $id)
+            ->intersect($eligibleOrganizationIds)
+            ->unique()
+            ->values();
+        if ($request->has('organization_filter') || ($hasSavedOrganizationSelection && $selectedOrganizationIds->all() !== array_values($preference['organization_ids']))) {
+            $preference['organization_ids'] = $selectedOrganizationIds->all();
+            $preferenceChanged = true;
+        }
+        if ($preferenceChanged) {
+            UserPreference::persist($request->user()->id, UserPreference::PROJECT_PLANNING, $preference);
+        }
+
         $rangeStart = $displayMode === 'month' ? $monthStart : CarbonImmutable::create($year, 1, 1);
         $rangeEnd = $displayMode === 'month' ? $monthStart->endOfMonth()->startOfDay() : CarbonImmutable::create($year, 12, 31);
         $assignments = ProjectPerson::query()->withoutGlobalScope('tenant')
             ->whereIn('person_id', $selectedPersonIds)
             ->with(['person', 'functionGroup', 'project'])
-            ->whereHas('project', fn (Builder $query) => $query->whereIn('status', [0, 1])
+            ->whereHas('project', fn (Builder $query) => $query->whereIn('tenant_id', $selectedOrganizationIds)
+                ->whereIn('status', [0, 1])
                 ->where(function (Builder $query) use ($rangeStart, $rangeEnd) {
                     $query->whereNull('start_date')->orWhereNull('end_date')
                         ->orWhere(fn (Builder $dated) => $dated->whereDate('start_date', '<=', $rangeEnd)->whereDate('end_date', '>=', $rangeStart));
@@ -199,6 +224,7 @@ class PlanningController extends Controller
         return view('planning.projektplanung', compact(
             'displayMode', 'contentMode', 'years', 'year', 'month', 'monthStart', 'days', 'dayWeekSegments',
             'weeks', 'weekMonthSegments', 'personGroups', 'selectedPersonGroups', 'selectedPersonIds',
+            'organizations', 'selectedOrganizationIds',
             'tenants', 'previousMonth', 'nextMonth', 'projectRowsByPerson', 'utilizationByPerson',
             'projectTenants', 'tenantColors', 'rangeStart', 'rangeEnd'
         ));
