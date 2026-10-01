@@ -6,9 +6,16 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
-#[Fillable(['name', 'short_name', 'project_path', 'arbeitsverzeichnis_path', 'notification_email', 'max_project_copies', 'gantt_max_projects', 'jobload_time_grid', 'default_weekly_hours', 'default_vacation_days', 'is_home_tenant'])]
+#[Fillable(['name', 'short_name', 'icon_filename', 'project_path', 'arbeitsverzeichnis_path', 'notification_email', 'max_project_copies', 'gantt_max_projects', 'jobload_time_grid', 'default_weekly_hours', 'default_vacation_days', 'is_home_tenant'])]
 class Tenant extends Model
 {
+    public function iconUrl(): ?string
+    {
+        return $this->icon_filename
+            ? asset('images/company-icons/'.rawurlencode($this->icon_filename))
+            : null;
+    }
+
     /**
      * Ob für diesen Mandanten schon "echte" Daten angelegt wurden (Personen
      * oder Projekte) - entscheidet, ob er noch gefahrlos gelöscht werden

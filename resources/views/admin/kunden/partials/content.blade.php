@@ -12,14 +12,28 @@
     >
         <div class="flex flex-1 min-h-0 flex-col rounded-lg border border-gray-200 bg-white" x-data="{ newTenant: false }">
             <div class="shrink-0 flex items-center justify-between border-b border-gray-100 p-2">
-                <span class="text-xs font-semibold text-gray-500">{{ __('Kunden') }}</span>
+                <span class="text-xs font-semibold text-gray-500">{{ __('Organisationen') }}</span>
                 <button type="button" @click="newTenant = !newTenant; if (newTenant) $nextTick(() => $refs.newTenantName.focus())" class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                     + {{ __('Neu') }}
                 </button>
             </div>
             <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => $el.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' }))">
-                <form x-show="newTenant" x-cloak method="POST" action="{{ route('admin.kunden.store') }}" class="mb-2 space-y-2 rounded border border-gray-200 p-2" @input="window.__tenantsDirtyForms.add($el)" @submit="window.__tenantsDirtyForms.delete($el)">
+                <form x-show="newTenant" x-cloak method="POST" action="{{ route('admin.kunden.store') }}" enctype="multipart/form-data" x-data="{ logoPreview: null, logoName: '' }" class="mb-2 space-y-2 rounded border border-gray-200 p-2" @input="window.__tenantsDirtyForms.add($el)" @submit="window.__tenantsDirtyForms.delete($el)">
                     @csrf
+                    <div class="rounded-md border border-gray-200 bg-gray-50 p-2">
+                        <div class="mb-2 flex h-16 items-center justify-center rounded bg-white">
+                            <img x-show="logoPreview" x-cloak :src="logoPreview" alt="" class="max-h-14 max-w-full object-contain">
+                            <span x-show="! logoPreview" class="text-xs text-gray-400">{{ __('Kein Logo ausgewählt') }}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="cursor-pointer rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
+                                {{ __('Logo auswählen') }}
+                                <input type="file" name="company_icon" accept=".svg,.png,.jpg,.jpeg,.webp,image/svg+xml,image/png,image/jpeg,image/webp" class="sr-only" @change="const file = $event.target.files[0]; logoName = file?.name || ''; logoPreview = file ? URL.createObjectURL(file) : null">
+                            </label>
+                            <span class="min-w-0 truncate text-xs text-gray-400" x-text="logoName"></span>
+                        </div>
+                        <x-input-error :messages="$errors->get('company_icon')" />
+                    </div>
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('Name') }}</label>
                         <input type="text" name="name" x-ref="newTenantName" required class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
@@ -66,7 +80,7 @@
                 </form>
 
                 @if ($tenants->isEmpty())
-                    <div class="px-2 py-1 text-gray-400">{{ __('Noch keine Kunden angelegt.') }}</div>
+                    <div class="px-2 py-1 text-gray-400">{{ __('Noch keine Organisationen angelegt.') }}</div>
                 @else
                     @foreach ($tenants as $tenant)
                         <a
@@ -86,7 +100,7 @@
     {{-- Rechts: der gewählte Kunde zum Bearbeiten, oder ein Hinweis, wenn keiner ausgewählt ist. --}}
     <div class="flex flex-1 min-h-0 flex-col rounded-lg border border-gray-200 bg-white">
         @if ($selectedTenant)
-            <div class="flex min-h-0 flex-1 flex-col" x-data="{ dirty: false }">
+            <div class="flex min-h-0 flex-1 flex-col" x-data="{ dirty: false, logoPreview: {{ \Illuminate\Support\Js::from($selectedTenant->iconUrl()) }}, logoName: {{ \Illuminate\Support\Js::from($selectedTenant->icon_filename ?? '') }} }">
                 {{-- Speichern- und Lösch-Formular als Geschwister, nicht
                      verschachtelt (siehe Mail-Vorlagen: ein <form> im
                      <form> zieht das versteckte "_method=DELETE"-Feld ins
@@ -95,11 +109,26 @@
                     id="tenant-form-{{ $selectedTenant->id }}"
                     method="POST"
                     action="{{ route('admin.kunden.update', $selectedTenant) }}"
+                    enctype="multipart/form-data"
                     class="min-h-0 flex-1 space-y-3 overflow-y-auto p-3"
                     @input="dirty = window.formIsDirty($el, window.__tenantsDirtyForms)"
                     @submit="dirty = false; window.__tenantsDirtyForms.delete($el)"
                 >
                     @csrf
+                    <div class="rounded-md border border-gray-200 bg-gray-50 p-3">
+                        <div class="mb-2 flex h-20 items-center justify-center rounded bg-white">
+                            <img x-show="logoPreview" x-cloak :src="logoPreview" alt="" class="max-h-16 max-w-full object-contain">
+                            <span x-show="! logoPreview" class="text-xs text-gray-400">{{ __('Kein Logo ausgewählt') }}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="cursor-pointer rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
+                                {{ __('Logo auswählen') }}
+                                <input type="file" name="company_icon" accept=".svg,.png,.jpg,.jpeg,.webp,image/svg+xml,image/png,image/jpeg,image/webp" class="sr-only" @change="const file = $event.target.files[0]; logoName = file?.name || ''; logoPreview = file ? URL.createObjectURL(file) : logoPreview">
+                            </label>
+                            <span class="min-w-0 truncate text-xs text-gray-400" x-text="logoName"></span>
+                        </div>
+                        <x-input-error :messages="$errors->get('company_icon')" />
+                    </div>
                     <div class="flex gap-2">
                         <div class="flex-1">
                             <label class="block text-xs text-gray-500">{{ __('Name') }}</label>
@@ -183,7 +212,7 @@
             </div>
         @else
             <div class="flex flex-1 items-center justify-center p-4 text-sm text-gray-400">
-                {{ __('Wähle links einen Kunden aus, um ihn zu bearbeiten.') }}
+                {{ __('Wähle links eine Organisation aus, um sie zu bearbeiten.') }}
             </div>
         @endif
     </div>

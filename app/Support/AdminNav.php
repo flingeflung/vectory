@@ -42,7 +42,7 @@ class AdminNav
             ],
             __('Mandant') => [
                 ['route' => 'admin.config', 'match' => 'admin.config', 'label' => __('Stammdaten')],
-                ['route' => 'admin.kunden', 'match' => 'admin.kunden*', 'label' => __('Kunden'), 'if' => SystemSetting::multiTenantEnabled()],
+                ['route' => 'admin.kunden', 'match' => 'admin.kunden*', 'label' => __('Organisationen'), 'if' => SystemSetting::multiTenantEnabled()],
                 ['route' => 'admin.superadmin', 'match' => 'admin.superadmin', 'label' => __('Superadmin'), 'gate' => 'access-superadmin'],
             ],
             __('Planung') => [

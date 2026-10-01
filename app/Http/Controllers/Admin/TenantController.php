@@ -11,6 +11,9 @@ use App\Services\TenantConfigCloner;
 use App\Support\CurrentTenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class TenantController extends Controller
@@ -41,6 +44,8 @@ class TenantController extends Controller
     {
         abort_unless(SystemSetting::multiTenantEnabled(), 403);
 
+        $this->validateIcon($request);
+
         $name = trim((string) $request->string('name'));
         abort_if($name === '', 422);
 
@@ -55,6 +60,10 @@ class TenantController extends Controller
             'arbeitsverzeichnis_path' => $this->normalizedPath($request, 'arbeitsverzeichnis_path'),
             'notification_email' => $this->normalizedNotificationEmail($request),
         ]);
+
+        if ($request->hasFile('company_icon')) {
+            $tenant->update(['icon_filename' => $this->storeIcon($request->file('company_icon'), $tenant)]);
+        }
 
         if ($sourceTenant) {
             // Ralf: "für den TR-DL brauchen wir eine Funktion, um Dinge von
@@ -95,6 +104,7 @@ class TenantController extends Controller
     {
         abort_unless(SystemSetting::multiTenantEnabled() || $tenant->id === CurrentTenant::id(), 403);
 
+        $this->validateIcon($request);
         $settings = $request->validate([
             'gantt_max_projects' => ['required', 'integer', 'between:1,200'],
             'jobload_time_grid' => ['required', 'integer', 'in:60,30,15'],
@@ -112,6 +122,11 @@ class TenantController extends Controller
             Tenant::query()->where('id', '!=', $tenant->id)->update(['is_home_tenant' => false]);
         }
 
+        $previousIcon = $tenant->icon_filename;
+        $newIcon = $request->hasFile('company_icon')
+            ? $this->storeIcon($request->file('company_icon'), $tenant)
+            : $previousIcon;
+
         $tenant->update([
             'name' => $name,
             'short_name' => $this->normalizedShortName($request, $name),
@@ -119,8 +134,13 @@ class TenantController extends Controller
             'arbeitsverzeichnis_path' => $this->normalizedPath($request, 'arbeitsverzeichnis_path'),
             'notification_email' => $this->normalizedNotificationEmail($request),
             'is_home_tenant' => $isHomeTenant,
+            'icon_filename' => $newIcon,
             ...$settings,
         ]);
+
+        if ($newIcon !== $previousIcon) {
+            $this->deleteManagedIcon($tenant, $previousIcon);
+        }
 
         return redirect()->back()->with('status', 'tenant-updated');
     }
@@ -136,6 +156,7 @@ class TenantController extends Controller
         abort_unless(SystemSetting::multiTenantEnabled(), 403);
         abort_if($tenant->hasData(), 422, 'Dieser Kunde hat bereits Daten und kann nicht gelöscht werden.');
 
+        $this->deleteManagedIcon($tenant, $tenant->icon_filename);
         $tenant->delete();
 
         return redirect()->route('admin.kunden');
@@ -146,6 +167,30 @@ class TenantController extends Controller
         $path = trim((string) $request->string($field));
 
         return $path === '' ? null : $path;
+    }
+
+    private function validateIcon(Request $request): void
+    {
+        $request->validate([
+            'company_icon' => ['nullable', 'file', 'max:2048', 'mimes:svg,png,jpg,jpeg,webp'],
+        ]);
+    }
+
+    private function storeIcon(UploadedFile $file, Tenant $tenant): string
+    {
+        $directory = public_path('images/company-icons');
+        File::ensureDirectoryExists($directory);
+        $filename = 'tenant-'.$tenant->id.'-'.Str::uuid().'.'.strtolower($file->getClientOriginalExtension());
+        $file->move($directory, $filename);
+
+        return $filename;
+    }
+
+    private function deleteManagedIcon(Tenant $tenant, ?string $filename): void
+    {
+        if ($filename && str_starts_with($filename, 'tenant-'.$tenant->id.'-')) {
+            File::delete(public_path('images/company-icons/'.$filename));
+        }
     }
 
     /**
