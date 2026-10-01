@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Enums\ActivityType;
 use App\Models\Activity;
 use App\Models\FunctionGroup;
-use App\Models\Person;
 use App\Models\Project;
 use App\Models\ProjectPerson;
 use App\Models\ProjectWorkflowStep;
@@ -297,15 +296,7 @@ class ProjectWorkflowStepController extends Controller
         $projectWorkflowStep->loadMissing('workflowStep.functionGroups', 'people');
         abort_unless($projectWorkflowStep->workflowStep->functionGroups->contains('id', $functionGroup->id), 404);
 
-        // withoutGlobalScope('tenant') + visibleInTenant(): sonst wären per
-        // Kundenzugriff freigegebene Mitglieder (anderer Heimat-Mandant)
-        // unsichtbar - gleiches Muster wie ProjectController::detailData()
-        // (allFunctionGroups), sonst identischer Bug an zweiter Stelle.
-        $members = $functionGroup->members()
-            ->withoutGlobalScope('tenant')
-            ->visibleInTenant($project->tenant_id)
-            ->visibleToRole($request->user()->role)
-            ->get();
+        $members = $functionGroup->eligibleMembersInTenant($project->tenant_id, $request->user()->role);
 
         return view('projekte.partials.workflow-step-people-picker', [
             'project' => $project,
@@ -338,11 +329,13 @@ class ProjectWorkflowStepController extends Controller
         abort_unless($request->user()->can('project.people.manage'), 403);
 
         $personIds = collect($request->array('person_ids'))->map(fn ($id) => (int) $id);
-        // withoutGlobalScope + visibleInTenant: sonst würden per
-        // Kundenzugriff freigegebene Personen beim Speichern stillschweigend
-        // wieder rausfallen (angehakt, aber nicht übernommen) - gleicher
-        // Bug wie bei FunctionGroupController::updateMembers() vorher.
-        $validIds = Person::query()->withoutGlobalScope('tenant')->visibleInTenant($project->tenant_id)->whereIn('id', $personIds)->pluck('id');
+        // Nur Personen übernehmen, die auch in der Auswahlliste dieser
+        // Funktionsgruppe stehen. Das umfasst beim Kunden die freigegebenen
+        // Mitglieder der korrespondierenden Heimat-Funktionsgruppe.
+        $validIds = $functionGroup
+            ->eligibleMembersInTenant($project->tenant_id, $request->user()->role)
+            ->whereIn('id', $personIds)
+            ->pluck('id');
 
         // Vor der Änderung merken, wer HIER effektiv zuständig war (Override
         // ODER Fallback) - Ralf, 2026-09-12: "wenn ich bei 260001 die beiden

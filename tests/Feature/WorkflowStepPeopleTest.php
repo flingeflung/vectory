@@ -1,0 +1,99 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\FunctionGroup;
+use App\Models\Person;
+use App\Models\SystemSetting;
+use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
+
+class WorkflowStepPeopleTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_customer_workflow_offers_released_members_of_matching_home_function_group(): void
+    {
+        $home = Tenant::query()->firstOrFail();
+        $home->update(['is_home_tenant' => true]);
+        SystemSetting::set(SystemSetting::MULTI_TENANT_ENABLED, '1');
+        $customer = Tenant::query()->create(['name' => 'Kunde']);
+        $user = User::factory()->create(['tenant_id' => $home->id, 'role' => 'super_admin']);
+        $person = Person::query()->withoutGlobalScope('tenant')->create([
+            'tenant_id' => $home->id,
+            'first_name' => 'Tina',
+            'last_name' => 'Redaktion',
+            'active' => true,
+        ]);
+        DB::table('person_tenant')->insert([
+            'person_id' => $person->id,
+            'tenant_id' => $customer->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $homeGroup = FunctionGroup::query()->withoutGlobalScope('tenant')->create([
+            'tenant_id' => $home->id,
+            'name' => 'Technische Redaktion',
+            'short_name' => 'TR',
+        ]);
+        $customerGroup = FunctionGroup::query()->withoutGlobalScope('tenant')->create([
+            'tenant_id' => $customer->id,
+            'name' => 'Technische Redaktion',
+            'short_name' => 'TR',
+        ]);
+        DB::table('function_group_member')->insert([
+            'tenant_id' => $home->id,
+            'function_group_id' => $homeGroup->id,
+            'person_id' => $person->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $workflowId = DB::table('workflows')->insertGetId([
+            'tenant_id' => $customer->id,
+            'short_name' => 'TEST',
+            'name' => 'Testworkflow',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $workflowStepId = DB::table('workflow_steps')->insertGetId([
+            'tenant_id' => $customer->id,
+            'workflow_id' => $workflowId,
+            'title' => 'Redaktion',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('workflow_step_function_group')->insert([
+            'tenant_id' => $customer->id,
+            'workflow_step_id' => $workflowStepId,
+            'function_group_id' => $customerGroup->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $projectId = DB::table('projects')->insertGetId([
+            'tenant_id' => $customer->id,
+            'source_pn' => '260026',
+            'title' => 'Testprojekt',
+            'workflow_id' => $workflowId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $projectWorkflowStepId = DB::table('project_workflow_steps')->insertGetId([
+            'tenant_id' => $customer->id,
+            'project_id' => $projectId,
+            'workflow_step_id' => $workflowStepId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['active_tenant_id' => $customer->id])
+            ->get(route('projekte.workflow-steps.personen.form', [$projectId, $projectWorkflowStepId, $customerGroup->id]))
+            ->assertOk()
+            ->assertSee('Redaktion, Tina');
+    }
+}
