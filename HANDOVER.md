@@ -146,6 +146,16 @@ nachgezogen (Tooltip-Texte, Kommentare, `lang/en.json`).
   können (z.B. bei ausscheidenden Mitarbeitenden). Nur Diskussionspunkt.
 - **Termine-Dialog aktualisiert den Rest des Overlays nicht live** (bekannter,
   akzeptierter Randfall, kein akuter Fix nötig).
+- **Performance der Projektplanung optimieren**: Die Projektansicht benötigt
+  bei einem Praxistest mit 14 Personen bereits ungefähr 20–30 Sekunden.
+  Vor einem Einsatz mit z. B. 30 Organisationen und 20 Personen müssen
+  Datenbankabfragen, tagesweise Stunden-/Kapazitätsberechnung, erzeugte
+  Tabellenzellen und HTML-Datenmenge gemessen und reduziert werden. Denkbare
+  Ansätze sind vorberechnete bzw. aggregierte Planungsdaten und ein gezieltes
+  Nachladen der Projektzeilen pro Person. Das PHP-Timeout nicht lediglich
+  erhöhen, weil dies die Ursache nur verschiebt. Auslastung, Reststunden und
+  weitere geplante Kennzahlen bei der Optimierung bereits berücksichtigen,
+  aber noch nicht umsetzen.
 
 ## Wichtige technische Fallstricke (in dieser Session gefunden)
 
