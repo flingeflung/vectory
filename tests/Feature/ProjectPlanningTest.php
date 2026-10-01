@@ -95,7 +95,11 @@ class ProjectPlanningTest extends TestCase
             'month' => 10,
             'person_filter' => 1,
             'people' => [$person->id],
-        ]))->assertOk()->assertSee('Planungsprojekt');
+        ]))->assertOk()
+            ->assertSee('Planungsprojekt')
+            ->assertSee("window.dispatchEvent(new CustomEvent('open-project', { detail: { id: {$projectId} } }))", false)
+            ->assertSee('x-data="{ submitting: false }"', false)
+            ->assertSee(':disabled="submitting"', false);
 
         $this->assertSame(9.0, $response->viewData('projectRowsByPerson')->get($person->id)->first()['plannedHours']);
         $octoberFirst = $response->viewData('utilizationByPerson')->get($person->id)->get('2026-10-01');

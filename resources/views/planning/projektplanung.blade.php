@@ -124,7 +124,7 @@
                                 <tr class="border-b border-gray-100">
                                     <td class="sticky left-0 z-[1] max-w-72 border-r border-gray-200 bg-white py-1 pl-5 pr-2">
                                         @if ($projectRow['canOpen'])
-                                            <a href="{{ route('projekte.show', $project) }}" class="block truncate text-blue-700 hover:underline" title="{{ $tooltip }}">{{ $projectRow['label'] }}</a>
+                                            <a href="{{ route('projekte.show', $project) }}" onclick="event.preventDefault(); window.dispatchEvent(new CustomEvent('open-project', { detail: { id: {{ $project->id }} } }))" class="block truncate text-blue-700 hover:underline" title="{{ $tooltip }}">{{ $projectRow['label'] }}</a>
                                         @else
                                             <span class="block truncate text-gray-600" title="{{ $tooltip }}">{{ $projectRow['label'] }}</span>
                                         @endif
@@ -188,7 +188,7 @@
     </div>
 
     <x-modal name="projektplanung-personen" max-width="md" :draggable="true">
-        <form method="GET" action="{{ route('planung.projektplanung') }}" x-data x-on:open-modal.window="if ($event.detail === 'projektplanung-personen') $nextTick(() => $refs.firstPerson?.focus())">
+        <form method="GET" action="{{ route('planung.projektplanung') }}" x-data="{ submitting: false }" @submit="submitting = true" :class="{ 'cursor-wait': submitting }" x-on:open-modal.window="if ($event.detail === 'projektplanung-personen') $nextTick(() => $refs.firstPerson?.focus())">
             <input type="hidden" name="view" value="{{ $displayMode }}">
             <input type="hidden" name="content" value="{{ $contentMode }}">
             <input type="hidden" name="year" value="{{ $year }}">
@@ -225,13 +225,16 @@
             </div>
             <div class="flex justify-end gap-2 border-t border-gray-100 p-3">
                 <button type="button" onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'projektplanung-personen' }))" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Abbrechen') }}</button>
-                <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">{{ __('Anwenden') }}</button>
+                <button type="submit" :disabled="submitting" class="inline-flex items-center gap-1.5 rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover disabled:cursor-wait disabled:opacity-50">
+                    <span x-show="submitting" x-cloak><x-loading-spinner class="h-3.5 w-3.5 text-white" /></span>
+                    {{ __('Anwenden') }}
+                </button>
             </div>
         </form>
     </x-modal>
 
     <x-modal name="projektplanung-organisationen" max-width="md" :draggable="true">
-        <form method="GET" action="{{ route('planung.projektplanung') }}" x-data x-on:open-modal.window="if ($event.detail === 'projektplanung-organisationen') $nextTick(() => $refs.firstOrganization?.focus())">
+        <form method="GET" action="{{ route('planung.projektplanung') }}" x-data="{ submitting: false }" @submit="submitting = true" :class="{ 'cursor-wait': submitting }" x-on:open-modal.window="if ($event.detail === 'projektplanung-organisationen') $nextTick(() => $refs.firstOrganization?.focus())">
             <input type="hidden" name="view" value="{{ $displayMode }}">
             <input type="hidden" name="content" value="{{ $contentMode }}">
             <input type="hidden" name="year" value="{{ $year }}">
@@ -261,7 +264,10 @@
             </div>
             <div class="flex justify-end gap-2 border-t border-gray-100 p-3">
                 <button type="button" onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'projektplanung-organisationen' }))" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Abbrechen') }}</button>
-                <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">{{ __('Anwenden') }}</button>
+                <button type="submit" :disabled="submitting" class="inline-flex items-center gap-1.5 rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover disabled:cursor-wait disabled:opacity-50">
+                    <span x-show="submitting" x-cloak><x-loading-spinner class="h-3.5 w-3.5 text-white" /></span>
+                    {{ __('Anwenden') }}
+                </button>
             </div>
         </form>
     </x-modal>
