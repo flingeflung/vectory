@@ -9,6 +9,11 @@
     id="project-people-field-{{ $project->id }}"
     x-data="{
         editingPeople: false,
+        selectedWorkflowId: {{ \Illuminate\Support\Js::from((string) ($project->workflow_id ?? '')) }},
+        workflowGroups: {{ \Illuminate\Support\Js::from($availableWorkflows->mapWithKeys(fn ($workflow) => [(string) $workflow->id => $workflow->steps->flatMap->functionGroups->pluck('id')->unique()->values()->all()])) }},
+        isWorkflowRelevant(groupId) {
+            return (this.workflowGroups[this.selectedWorkflowId] || []).includes(groupId);
+        },
         init() {
             this.onChanged = (e) => {
                 if (e.detail.projectId === {{ $project->id }} && ! this.editingPeople) {
@@ -16,9 +21,12 @@
                 }
             };
             window.addEventListener('project-people-changed', this.onChanged);
+            this.onWorkflowSelectionChanged = (e) => this.selectedWorkflowId = String(e.detail.workflowId || '');
+            window.addEventListener('project-workflow-selection-changed', this.onWorkflowSelectionChanged);
         },
         destroy() {
             window.removeEventListener('project-people-changed', this.onChanged);
+            window.removeEventListener('project-workflow-selection-changed', this.onWorkflowSelectionChanged);
         },
         async refresh() {
             const response = await fetch({{ \Illuminate\Support\Js::from(route('projekte.projektbeteiligte.show', $project)) }});
@@ -88,6 +96,10 @@
     </div>
 
     <div x-show="editingPeople" x-cloak class="mt-0.5 max-h-56 overflow-y-auto rounded border border-gray-300 bg-white p-2 text-xs space-y-2">
+        <div class="sticky top-0 z-[1] flex flex-wrap gap-3 border-b border-gray-100 bg-white pb-1 text-[10px] text-gray-500">
+            <span class="inline-flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-blue-400"></span>{{ __('Im Workflow relevant') }}</span>
+            <span class="inline-flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-amber-400"></span>{{ __('Person fehlt') }}</span>
+        </div>
         @if (! $hasAssignablePeople)
             <div class="text-amber-700">{{ __('Für diese Organisation sind noch keine Funktionsgruppen mit Personen angelegt. Bitte zuerst unter Admin > Personen & Rechte > Funktionsgruppen entsprechende Gruppen anlegen und Personen zuordnen.') }}</div>
         @endif
@@ -112,8 +124,15 @@
                  stillschweigend entfernen (ihre Checkboxen kämen ja
                  gar nicht mehr im Formular vor). --}}
             @if ($visibleMembers->isNotEmpty() && ($group->active || $currentEntries->isNotEmpty()))
-                <div>
-                    <div class="mb-0.5 font-medium text-gray-600">{{ $group->name }}</div>
+                <div
+                    x-data="{ assignedCount: {{ count($currentPersonIds) }} }"
+                    :class="isWorkflowRelevant({{ $group->id }}) ? (assignedCount > 0 ? 'border-blue-400 bg-blue-50' : 'border-amber-400 bg-amber-50') : 'border-transparent bg-white'"
+                    class="rounded border-l-2 px-2 py-1"
+                >
+                    <div class="mb-0.5 flex items-center justify-between gap-2 font-medium text-gray-600">
+                        <span>{{ $group->name }}</span>
+                        <span x-show="isWorkflowRelevant({{ $group->id }})" x-cloak :class="assignedCount > 0 ? 'text-blue-600' : 'text-amber-700'" class="shrink-0 text-[10px]" x-text="assignedCount > 0 ? {{ \Illuminate\Support\Js::from(__('Im Workflow')) }} : {{ \Illuminate\Support\Js::from(__('Person fehlt')) }}"></span>
+                    </div>
                     <div class="grid grid-cols-2 gap-x-3 gap-y-0.5">
                         @foreach ($visibleMembers as $person)
                             <label class="grid grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-1 {{ $person->active ? 'text-gray-600' : 'text-gray-400' }}">
@@ -122,6 +141,7 @@
                                     name="project_people[{{ $group->id }}][]"
                                     value="{{ $person->id }}"
                                     class="shrink-0 rounded border-gray-300"
+                                    @change="assignedCount += $event.target.checked ? 1 : -1"
                                     @checked(in_array($person->id, $currentPersonIds, true))
                                 >
                                 <input
@@ -130,7 +150,7 @@
                                     value="{{ $person->id }}"
                                     class="shrink-0"
                                     title="{{ __('Als Erstansprechpartner markieren') }}"
-                                    onclick="this.previousElementSibling.checked = true"
+                                    onclick="if (! this.previousElementSibling.checked) { this.previousElementSibling.checked = true; this.previousElementSibling.dispatchEvent(new Event('change', { bubbles: true })); }"
                                     @checked($currentPrimaryId === $person->id)
                                 >
                                 <span class="min-w-0 truncate">{{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }} <x-absence-icon :person="$person" /></span>

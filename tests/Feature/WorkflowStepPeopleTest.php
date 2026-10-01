@@ -127,7 +127,13 @@ class WorkflowStepPeopleTest extends TestCase
         $this->get(route('projekte.projektbeteiligte.show', $projectId))
             ->assertOk()
             ->assertSee('Redaktion, Tina')
-            ->assertSee('Altzuordnung, Ralf');
+            ->assertSee('Altzuordnung, Ralf')
+            ->assertSee(__('Im Workflow relevant'))
+            ->assertSee(__('Person fehlt'))
+            ->assertSee("selectedWorkflowId: '{$workflowId}'", false)
+            ->assertSee('project-workflow-selection-changed', false)
+            ->assertSee('border-blue-400 bg-blue-50', false)
+            ->assertSee('border-amber-400 bg-amber-50', false);
 
         $this->get(route('projekte.show', $projectId))
             ->assertOk()

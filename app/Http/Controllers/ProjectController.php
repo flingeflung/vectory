@@ -535,6 +535,7 @@ class ProjectController extends Controller
         return view('projekte.partials.system-fields.project_people', [
             'project' => $project,
             'allFunctionGroups' => $this->functionGroupsWithEligibleMembers($project, $request),
+            'availableWorkflows' => $this->availableWorkflows($project),
             'secondaryBtn' => 'inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover',
         ]);
     }
@@ -980,12 +981,7 @@ class ProjectController extends Controller
             // Der aktuell zugewiesene Workflow muss immer in der Liste auftauchen, auch wenn er
             // inzwischen inaktiv/ersetzt ist - sonst würde ein Speichern ohne bewusste Auswahl
             // den Workflow fälschlich entfernen, weil kein <option> mehr dazu passt.
-            'availableWorkflows' => Workflow::query()
-                ->where('tenant_id', $project->tenant_id)
-                ->where(fn (Builder $query) => $query->where('active', true)->orWhere('id', $project->workflow_id))
-                ->orderBy('sort')
-                ->orderBy('name')
-                ->get(),
+            'availableWorkflows' => $this->availableWorkflows($project),
             // Gleiches Prinzip wie bei availableWorkflows oben - die aktuell
             // zugewiesene Schablone muss auch inaktiv in der Liste bleiben.
             'availableProjectTemplates' => ProjectTemplate::query()
@@ -1030,6 +1026,17 @@ class ProjectController extends Controller
                     ->sortBy(fn ($person) => [$person->sort, mb_strtolower((string) $person->last_name), mb_strtolower((string) $person->first_name)])
                     ->values(),
             ));
+    }
+
+    private function availableWorkflows(Project $project): Collection
+    {
+        return Workflow::query()
+            ->where('tenant_id', $project->tenant_id)
+            ->where(fn (Builder $query) => $query->where('active', true)->orWhere('id', $project->workflow_id))
+            ->with('steps.functionGroups')
+            ->orderBy('sort')
+            ->orderBy('name')
+            ->get();
     }
 
     /**

@@ -12,7 +12,7 @@
     </div>
 
     <div x-show="editingWorkflow" x-cloak class="mt-0.5">
-        <select name="workflow_id" class="w-full max-w-sm rounded border-gray-300 py-1 text-sm">
+        <select name="workflow_id" @change="window.dispatchEvent(new CustomEvent('project-workflow-selection-changed', { detail: { workflowId: $event.target.value } }))" class="w-full max-w-sm rounded border-gray-300 py-1 text-sm">
             <option value="">{{ __('– kein Workflow zugewiesen –') }}</option>
             @foreach ($availableWorkflows as $availableWorkflow)
                 <option
