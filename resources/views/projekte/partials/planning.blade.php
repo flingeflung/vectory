@@ -17,6 +17,7 @@
     x-data="{
         planned: {{ \Illuminate\Support\Js::from($plannedValues) }},
         values: {{ \Illuminate\Support\Js::from($personValues) }},
+        distributing: false,
         number(value) { return value === '' || value === null || Number.isNaN(Number(value)) ? 0 : Number(value); },
         groupSum(groupId) { return Object.values(this.values[groupId] || {}).reduce((sum, value) => sum + this.number(value), 0); },
         groupDifference(groupId) { return this.number(this.planned[groupId]) - this.groupSum(groupId); },
@@ -29,6 +30,8 @@
                 confirmLabel: {{ \Illuminate\Support\Js::from(__('Verteilen')) }},
                 cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
             })) return;
+
+            this.distributing = true;
 
             Object.keys(this.planned).forEach((groupId) => {
                 const personIds = Object.keys(this.values[groupId] || {});
@@ -43,6 +46,8 @@
                 });
             });
             this.notifyChanged();
+            await Alpine.nextTick();
+            document.getElementById('project-detail-form')?.requestSubmit();
         },
         format(value) { return this.number(value).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); },
         differenceClass(value) {
@@ -69,9 +74,10 @@
             </p>
             <button
                 type="button"
-                class="mt-1.5 rounded-md border border-btn-secondary-border bg-btn-secondary px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
                 title="{{ __('Stunden werden pro Funktionsgruppe automatisch auf alle Personen gleichmäßig verteilt') }}"
+                :disabled="distributing"
                 @click="distributeHours()"
+                class="mt-1.5 rounded-md border border-btn-secondary-border bg-btn-secondary px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:cursor-wait disabled:opacity-50"
             >{{ __('Std. verteilen') }}</button>
         </div>
         <div class="flex shrink-0 gap-2.5 text-xs text-gray-500">
