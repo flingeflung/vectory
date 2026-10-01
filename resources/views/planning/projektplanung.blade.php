@@ -147,12 +147,19 @@
                                 @endphp
                                 <tr class="border-b border-gray-100">
                                     <td class="sticky left-0 z-[1] max-w-72 border-r border-gray-200 bg-white py-1 pl-5 pr-2">
-                                        @if ($projectRow['canOpen'])
-                                            <a href="{{ route('projekte.show', $project) }}" onclick="event.preventDefault(); window.dispatchEvent(new CustomEvent('open-project', { detail: { id: {{ $project->id }} } }))" class="block truncate text-blue-700 hover:underline" title="{{ $tooltip }}">{{ $projectRow['label'] }}</a>
-                                        @else
-                                            <span class="block truncate text-gray-600" title="{{ $tooltip }}">{{ $projectRow['label'] }}</span>
-                                        @endif
-                                        <span class="block truncate text-[10px] text-gray-400">{{ $projectRow['tenant']?->name }}@if (! $hasPeriod) · {{ __('Zeitraum unvollständig') }}@endif</span>
+                                        <div class="flex min-w-0 items-start gap-1.5">
+                                            @if ($projectRow['tenant']?->icon_filename)
+                                                <img src="{{ $projectRow['tenant']->iconUrl() }}" alt="{{ $projectRow['tenant']->name }}" title="{{ $projectRow['tenant']->name }}" class="mt-0.5 h-4 w-4 shrink-0 object-contain">
+                                            @endif
+                                            <div class="min-w-0 flex-1">
+                                                @if ($projectRow['canOpen'])
+                                                    <a href="{{ route('projekte.show', $project) }}" onclick="event.preventDefault(); window.dispatchEvent(new CustomEvent('open-project', { detail: { id: {{ $project->id }} } }))" class="block truncate text-blue-700 hover:underline" title="{{ $tooltip }}">{{ $projectRow['label'] }}</a>
+                                                @else
+                                                    <span class="block truncate text-gray-600" title="{{ $tooltip }}">{{ $projectRow['label'] }}</span>
+                                                @endif
+                                                <span class="block truncate text-[10px] text-gray-400">{{ $projectRow['tenant']?->name }}@if (! $hasPeriod) · {{ __('Zeitraum unvollständig') }}@endif</span>
+                                            </div>
+                                        </div>
                                     </td>
                                     @if ($displayMode === 'month')
                                         @foreach ($days as $day)

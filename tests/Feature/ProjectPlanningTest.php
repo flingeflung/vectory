@@ -18,7 +18,7 @@ class ProjectPlanningTest extends TestCase
     public function test_project_and_utilization_views_use_person_planned_hours(): void
     {
         $tenant = Tenant::query()->firstOrFail();
-        $tenant->update(['is_home_tenant' => true]);
+        $tenant->update(['is_home_tenant' => true, 'icon_filename' => 'planung-test.svg']);
         $person = $this->person($tenant, 'Planung');
         $user = User::factory()->create([
             'tenant_id' => $tenant->id,
@@ -117,6 +117,8 @@ class ProjectPlanningTest extends TestCase
             'people' => [$person->id],
         ]))->assertOk()
             ->assertSee('Planungsprojekt')
+            ->assertSee('images/company-icons/planung-test.svg', false)
+            ->assertSee('h-4 w-4 shrink-0 object-contain', false)
             ->assertSee("window.dispatchEvent(new CustomEvent('open-project', { detail: { id: {$projectId} } }))", false)
             ->assertSee('x-data="{ switchingView: null }"', false)
             ->assertSee("switchingView = 'month'", false)
