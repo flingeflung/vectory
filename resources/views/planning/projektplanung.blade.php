@@ -37,7 +37,9 @@
         <form method="GET" action="{{ route('planung.projektplanung') }}" class="flex items-center gap-2">
             <input type="hidden" name="view" value="{{ $displayMode }}">
             <input type="hidden" name="content" value="{{ $contentMode }}">
-            <input type="hidden" name="month" value="{{ $month }}">
+            @if ($displayMode !== 'month')
+                <input type="hidden" name="month" value="{{ $month }}">
+            @endif
             <input type="hidden" name="person_filter" value="1">
             @foreach ($selectedPersonIds as $personId)
                 <input type="hidden" name="people[]" value="{{ $personId }}">
@@ -53,24 +55,29 @@
                     @endforeach
                 </select>
             </label>
-        </form>
-
-        @if ($displayMode === 'month')
-            <div class="flex items-center gap-3">
+            @if ($displayMode === 'month')
+                <div class="flex items-center gap-1">
                 @if ($previousMonth)
                     <a href="{{ $planningUrl(['year' => $previousMonth->year, 'month' => $previousMonth->month]) }}" class="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800" title="{{ __('Voriger Monat') }}" aria-label="{{ __('Voriger Monat') }}">‹</a>
                 @else
                     <span class="p-1 text-gray-300">‹</span>
                 @endif
-                <span class="min-w-36 text-center font-semibold text-gray-800">{{ $monthStart->translatedFormat('F Y') }}</span>
+                <label class="flex items-center gap-2 text-gray-700">{{ __('Monat') }}
+                    <select name="month" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 text-sm">
+                        @foreach (range(1, 12) as $itemMonth)
+                            <option value="{{ $itemMonth }}" @selected($month === $itemMonth)>{{ \Carbon\CarbonImmutable::create(2000, $itemMonth, 1)->translatedFormat('F') }}</option>
+                        @endforeach
+                    </select>
+                </label>
                 @if ($nextMonth)
                     <a href="{{ $planningUrl(['year' => $nextMonth->year, 'month' => $nextMonth->month]) }}" class="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800" title="{{ __('Nächster Monat') }}" aria-label="{{ __('Nächster Monat') }}">›</a>
                 @else
                     <span class="p-1 text-gray-300">›</span>
                 @endif
                 <a href="{{ $planningUrl(['year' => now()->year, 'month' => now()->month]) }}" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('heute') }}</a>
-            </div>
-        @endif
+                </div>
+            @endif
+        </form>
 
         <button type="button" onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'projektplanung-personen' }))" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Personen') }} ({{ $selectedPersonIds->count() }})</button>
         <button type="button" onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'projektplanung-organisationen' }))" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Organisationen') }} ({{ $selectedOrganizationIds->count() }})</button>
