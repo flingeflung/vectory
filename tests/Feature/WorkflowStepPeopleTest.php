@@ -28,6 +28,12 @@ class WorkflowStepPeopleTest extends TestCase
             'last_name' => 'Redaktion',
             'active' => true,
         ]);
+        $previouslyAssignedPerson = Person::query()->withoutGlobalScope('tenant')->create([
+            'tenant_id' => $customer->id,
+            'first_name' => 'Ralf',
+            'last_name' => 'Altzuordnung',
+            'active' => true,
+        ]);
         DB::table('person_tenant')->insert([
             'person_id' => $person->id,
             'tenant_id' => $customer->id,
@@ -99,16 +105,28 @@ class WorkflowStepPeopleTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+        DB::table('project_people')->insert([
+            'tenant_id' => $customer->id,
+            'project_id' => $projectId,
+            'function_group_id' => $customerGroup->id,
+            'person_id' => $previouslyAssignedPerson->id,
+            'planned_hours' => null,
+            'is_primary' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
         $this->actingAs($user)
             ->withSession(['active_tenant_id' => $customer->id])
             ->get(route('projekte.workflow-steps.personen.form', [$projectId, $projectWorkflowStepId, $customerGroup->id]))
             ->assertOk()
-            ->assertSee('Redaktion, Tina');
+            ->assertSee('Redaktion, Tina')
+            ->assertSee('Altzuordnung, Ralf');
 
         $this->get(route('projekte.projektbeteiligte.show', $projectId))
             ->assertOk()
-            ->assertSee('Redaktion, Tina');
+            ->assertSee('Redaktion, Tina')
+            ->assertSee('Altzuordnung, Ralf');
 
         $this->get(route('projekte.show', $projectId))
             ->assertOk()

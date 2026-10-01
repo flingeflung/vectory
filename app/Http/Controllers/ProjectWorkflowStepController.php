@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\ActivityType;
 use App\Models\Activity;
 use App\Models\FunctionGroup;
+use App\Models\Person;
 use App\Models\Project;
 use App\Models\ProjectPerson;
 use App\Models\ProjectWorkflowStep;
@@ -296,14 +297,19 @@ class ProjectWorkflowStepController extends Controller
         $projectWorkflowStep->loadMissing('workflowStep.functionGroups', 'people');
         abort_unless($projectWorkflowStep->workflowStep->functionGroups->contains('id', $functionGroup->id), 404);
 
-        $members = $functionGroup->eligibleMembersInTenant($project->tenant_id, $request->user()->role);
+        $currentPeople = Task::assignedPeopleFor($projectWorkflowStep, $functionGroup);
+        $members = $functionGroup->eligibleMembersInTenant($project->tenant_id, $request->user()->role)
+            ->concat($currentPeople)
+            ->unique('id')
+            ->sortBy(fn ($person) => [$person->sort, mb_strtolower($person->last_name), mb_strtolower($person->first_name)])
+            ->values();
 
         return view('projekte.partials.workflow-step-people-picker', [
             'project' => $project,
             'pws' => $projectWorkflowStep,
             'group' => $functionGroup,
             'members' => $members,
-            'currentPersonIds' => Task::assignedPeopleFor($projectWorkflowStep, $functionGroup)->pluck('id'),
+            'currentPersonIds' => $currentPeople->pluck('id'),
             // Erstansprechpartner (★) ist ein projektweites Konzept
             // (project_people.is_primary) - auch hier zeigen, damit beim
             // Zuweisen sichtbar ist, wer das aktuell ist (Ralf, 2026-09-12).
@@ -332,8 +338,10 @@ class ProjectWorkflowStepController extends Controller
         // Nur Personen übernehmen, die auch in der Auswahlliste dieser
         // Funktionsgruppe stehen. Das umfasst beim Kunden die freigegebenen
         // Mitglieder der korrespondierenden Heimat-Funktionsgruppe.
-        $validIds = $functionGroup
-            ->eligibleMembersInTenant($project->tenant_id, $request->user()->role)
+        $previouslyEffectiveIds = Task::assignedPeopleFor($projectWorkflowStep, $functionGroup)->pluck('id');
+        $validIds = $functionGroup->eligibleMembersInTenant($project->tenant_id, $request->user()->role)
+            ->concat(Person::query()->withoutGlobalScope('tenant')->whereIn('id', $previouslyEffectiveIds)->get())
+            ->unique('id')
             ->whereIn('id', $personIds)
             ->pluck('id');
 
@@ -343,8 +351,6 @@ class ProjectWorkflowStepController extends Controller
         // Projektbeteiligte Personen]". Ursache: waren nur über den Fallback
         // zuständig (kein eigener Override), ihr Rausnehmen hier löschte
         // also gar keine Override-Zeile - project_people blieb unberührt.
-        $previouslyEffectiveIds = Task::assignedPeopleFor($projectWorkflowStep, $functionGroup)->pluck('id');
-
         ProjectWorkflowStepPerson::query()
             ->where('project_workflow_step_id', $projectWorkflowStep->id)
             ->where('function_group_id', $functionGroup->id)

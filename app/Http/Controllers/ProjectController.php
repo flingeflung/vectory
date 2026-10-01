@@ -1016,13 +1016,19 @@ class ProjectController extends Controller
      */
     private function functionGroupsWithEligibleMembers(Project $project, Request $request): Collection
     {
+        $currentPeopleByGroup = $project->projectPeople->groupBy('function_group_id');
+
         return FunctionGroup::query()
             ->where('tenant_id', $project->tenant_id)
             ->orderBy('sort')
             ->get()
             ->each(fn (FunctionGroup $group) => $group->setRelation(
                 'members',
-                $group->eligibleMembersInTenant($project->tenant_id, $request->user()->role),
+                $group->eligibleMembersInTenant($project->tenant_id, $request->user()->role)
+                    ->concat(($currentPeopleByGroup->get($group->id) ?? collect())->pluck('person'))
+                    ->unique('id')
+                    ->sortBy(fn ($person) => [$person->sort, mb_strtolower($person->last_name), mb_strtolower($person->first_name)])
+                    ->values(),
             ));
     }
 
