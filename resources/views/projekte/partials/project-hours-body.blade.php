@@ -71,7 +71,7 @@
         <p class="text-gray-500">
             {{ __('Für dieses Projekt sind noch keine Jobs verknüpft.') }}
             @if ($canManageJobload)
-                {{ __('Über den Reiter „Verknüpfte Jobs" lässt sich das festlegen.') }}
+                {{ __('Über den Tab „Verknüpfte Jobs" lässt sich das festlegen.') }}
             @else
                 {{ __('Bitte jemanden mit der entsprechenden Berechtigung bitten, das nachzutragen.') }}
             @endif
