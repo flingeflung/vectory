@@ -103,4 +103,42 @@ class AccessLevelTest extends TestCase
         $response->assertDontSee('Nichttreffer');
         $response->assertSee('value="organization_admin" selected', false);
     }
+
+    public function test_only_super_admin_can_find_super_admin_people_across_the_active_organization(): void
+    {
+        $home = Tenant::query()->firstOrFail();
+        $home->update(['is_home_tenant' => true]);
+        $customer = Tenant::query()->create(['name' => 'Kunde', 'active' => true]);
+        $superAdminPerson = Person::query()->create([
+            'tenant_id' => $home->id,
+            'last_name' => 'Superkollege',
+            'short_name' => 'SK',
+            'active' => true,
+        ]);
+        User::factory()->create([
+            'tenant_id' => $home->id,
+            'person_id' => $superAdminPerson->id,
+            'role' => AccessLevel::SUPER_ADMIN,
+        ]);
+
+        $superAdmin = User::factory()->create([
+            'tenant_id' => $home->id,
+            'role' => AccessLevel::SUPER_ADMIN,
+        ]);
+        $this->actingAs($superAdmin)
+            ->withSession(['active_tenant_id' => $customer->id])
+            ->get(route('admin.personen', ['access_level' => AccessLevel::SUPER_ADMIN]))
+            ->assertOk()
+            ->assertSee('Superkollege');
+
+        $centralAdmin = User::factory()->create([
+            'tenant_id' => $home->id,
+            'role' => AccessLevel::CENTRAL_ADMIN,
+        ]);
+        $this->actingAs($centralAdmin)
+            ->withSession(['active_tenant_id' => $customer->id])
+            ->get(route('admin.personen', ['access_level' => AccessLevel::SUPER_ADMIN]))
+            ->assertOk()
+            ->assertDontSee('Superkollege');
+    }
 }

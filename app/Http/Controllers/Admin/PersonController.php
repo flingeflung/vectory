@@ -786,7 +786,7 @@ class PersonController extends Controller
             // keine Einschränkung
         } elseif ($tenantFilter !== null) {
             $query->where('tenant_id', (int) $tenantFilter);
-        } else {
+        } elseif ($viewerRole !== AccessLevel::SUPER_ADMIN || ($filters['access_level'] ?? null) !== AccessLevel::SUPER_ADMIN) {
             $query->visibleInTenant($tenantId);
         }
 
