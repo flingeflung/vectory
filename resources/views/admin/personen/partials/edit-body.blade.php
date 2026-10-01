@@ -427,34 +427,33 @@
                 @endif
             </div>
 
-            @if ($actingUserIsSuperAdmin && $person->user)
+            @if ($actingUserCanManageAccessLevel && $person->user)
                 <div class="rounded-lg border border-gray-200 bg-white p-4">
-                    <div class="mb-2 text-xs font-semibold text-gray-500">{{ __('Systemrolle') }}</div>
-                    <p class="mb-2 text-xs text-gray-400">{{ __('Nicht zu verwechseln mit der fachlichen "Rolle" oben (TR/PM-PT/...) - hier geht es um Admin-/Super-Admin-Zugriff auf Vectory selbst.') }}</p>
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm text-gray-700">
-                            {{ __('Aktuell') }}:
-                            <span class="font-medium">{{ $person->user->role === 'super_admin' ? __('Super-Admin') : ($person->user->role === 'admin' ? __('Admin') : __('User')) }}</span>
-                        </span>
+                    <div class="mb-2 text-xs font-semibold text-gray-500">{{ __('Zugriffsstufe') }}</div>
+                    <p class="mb-2 text-xs text-gray-400">{{ __('Die Zugriffsstufe legt den administrativen Bereich fest und ist unabhängig von der fachlichen Rolle und dem Rechte-Set.') }}</p>
+                    <div class="flex items-end justify-between gap-3">
                         <form
                             method="POST"
                             action="{{ route('admin.personen.role.update', $person) }}"
-                            x-data="{ async confirmAndSubmit(e) { if (await window.confirmDialog({
-                                title: {{ \Illuminate\Support\Js::from(__('Rolle ändern')) }},
-                                message: {{ \Illuminate\Support\Js::from($person->user->role === 'super_admin' ? __('Super-Admin-Rechte wirklich entziehen?') : __('Diese Person wirklich zum Super-Admin machen?')) }},
-                                confirmLabel: {{ \Illuminate\Support\Js::from($person->user->role === 'super_admin' ? __('Rechte entziehen') : __('Zum Super-Admin machen')) }},
-                                cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
-                            })) { e.target.submit(); } } }"
-                            @submit.prevent="confirmAndSubmit($event)"
+                            class="flex flex-1 items-end gap-2"
+                            x-data="{ dirty: false, async save(e) { if (await window.confirmDialog({ title: {{ \Illuminate\Support\Js::from(__('Zugriffsstufe ändern?')) }}, message: {{ \Illuminate\Support\Js::from(__('Die neue Zugriffsstufe verändert den administrativen Zugriff dieser Person.')) }}, confirmLabel: {{ \Illuminate\Support\Js::from(__('Speichern')) }}, cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }} })) e.target.submit(); } }"
+                            @change="dirty = true"
+                            @submit.prevent="save($event)"
                         >
                             @csrf
-                            <input type="hidden" name="super_admin" value="{{ $person->user->role === 'super_admin' ? '0' : '1' }}">
-                            <button
-                                type="submit"
-                                class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
-                            >
-                                {{ $person->user->role === 'super_admin' ? __('Super-Admin-Rechte entziehen') : __('Zum Super-Admin machen') }}
-                            </button>
+                            <select name="access_level" class="min-w-48 rounded-md border-gray-300 text-sm">
+                                <option value="user" @selected($person->user->role === 'user')>{{ __('User') }}</option>
+                                @if (! $person->tenant?->is_home_tenant)
+                                    <option value="organization_admin" @selected($person->user->role === 'organization_admin')>{{ __('Organisations-Admin') }}</option>
+                                @endif
+                                @if ($actingUserIsSuperAdmin && $person->tenant?->is_home_tenant)
+                                    <option value="central_admin" @selected($person->user->role === 'central_admin')>{{ __('Zentral-Admin') }}</option>
+                                @endif
+                                @if ($actingUserIsSuperAdmin)
+                                    <option value="super_admin" @selected($person->user->role === 'super_admin')>{{ __('Super-Admin') }}</option>
+                                @endif
+                            </select>
+                            <button x-show="dirty" x-cloak type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
                         </form>
                     </div>
                 </div>

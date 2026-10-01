@@ -59,7 +59,7 @@ class HelpController extends Controller
             // (Routennamen)" in der Hilfeseiten-Verwaltung einträgt - sonst
             // müsste er dafür jedes Mal fragen, welche Route das gerade ist.
             'routeName' => $routeName,
-            'canManageHelp' => $request->user()?->role === 'super_admin',
+            'canManageHelp' => $request->user()?->isSuperAdmin(),
         ]);
     }
 

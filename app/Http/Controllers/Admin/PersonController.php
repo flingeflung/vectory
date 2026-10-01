@@ -15,6 +15,7 @@ use App\Models\PersonWeeklyHours;
 use App\Models\SystemSetting;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Support\AccessLevel;
 use App\Support\CurrentTenant;
 use App\Support\PersonTableColumnCatalog;
 use Carbon\CarbonImmutable;
@@ -62,10 +63,10 @@ class PersonController extends Controller
         $filters = $this->filtersFromRequest($request);
 
         // Kunden-Filter (Wert "all" = alle Kunden, eine konkrete ID = genau
-        // dieser Kunde) nur für Heimat-Admin/Super-Admin bei aktiver
+        // dieser Kunde) nur für Zentral-Admin/Super-Admin bei aktiver
         // Mandantenfähigkeit (Ralf: Kollege ruft an, "Herr XY hat
         // angerufen" - ohne das müsste man jeden Kunden einzeln
-        // durchklicken, um eine Person wiederzufinden). Ein Kundekunde-Admin
+        // durchklicken, um eine Person wiederzufinden). Ein Organisations-Admin
         // bekommt das NICHT (Ralf, 2026-09-18: "das darf er natürlich
         // nicht: Alle sehen!") - er würde sonst über dieses Dropdown auch
         // fremde Kunden/deren Kataloge durchsuchen können (siehe unten,
@@ -73,7 +74,7 @@ class PersonController extends Controller
         // Missbrauch über die Query-String abgesichert, nicht nur in der
         // Oberfläche versteckt.
         $canSearchAllTenants = SystemSetting::multiTenantEnabled()
-            && ($request->user()->role === 'super_admin' || CurrentTenant::isHomeTenantAdmin($request->user()));
+            && $request->user()->canAccessAllOrganizations();
         if (! $canSearchAllTenants) {
             unset($filters['tenant_id']);
         }
@@ -112,7 +113,7 @@ class PersonController extends Controller
         // Freigabe-Zuschlag, gleiche "reine Mitgliedschaft"-Bedeutung wie
         // bei der Personenliste selbst, siehe filteredPeopleQuery()),
         // "Kunde"=Alle -> alle sichtbaren Kunden, sonst (Standard) wie
-        // gehabt der aktive Mandant + Freigaben. Für einen Kundekunde-Admin
+        // gehabt der aktive Mandant + Freigaben. Für einen Organisations-Admin
         // ist der "Kunde"-Filter oben gar nicht erst verfügbar
         // (canSearchAllTenants), er landet also immer im Standardfall -
         // sieht dadurch automatisch nur die eigenen Kataloge.
@@ -171,13 +172,13 @@ class PersonController extends Controller
      * Heimat-Mandant zuerst, dann alle anderen Kunden alphabetisch. Erst
      * mal nur zum Anschauen (Ralf: "erst mal nur anzeigen") - keine
      * Bearbeitung hier, dafür bleibt die einzelne Person zuständig. Nur
-     * Heimat-Admin/Super-Admin erreichbar - Kundekunde-Admin hat ohnehin
+     * Zentral-Admin/Super-Admin erreichbar - Organisations-Admin hat ohnehin
      * keine eigenen Leute mit Kundenzugriff zu verwalten.
      */
     public function accessMatrix(Request $request): View
     {
         $canAccess = SystemSetting::multiTenantEnabled()
-            && ($request->user()->role === 'super_admin' || CurrentTenant::isHomeTenantAdmin($request->user()));
+            && $request->user()->canAccessAllOrganizations();
         abort_unless($canAccess, 403);
 
         $tenantId = CurrentTenant::id();
@@ -292,30 +293,6 @@ class PersonController extends Controller
             ->pluck('id');
         unset($validated['function_group_ids']);
         $person->update($validated);
-
-        // Rolle (users.role) folgt dem Rechte-Set, wenn die Person einen
-        // Login hat - gleiche Logik wie PermissionController::
-        // assignTemplate(), hier dupliziert statt extrahiert, weil beide
-        // Stellen bewusst unabhängige, kleine Aufrufer bleiben sollen.
-        // withoutGlobalScope('tenant'): das Rechte-Set gehört dem Heimat-
-        // Mandanten DER PERSON, nicht zwingend dem gerade aktiven Mandanten
-        // - Ralf-Bug-Report 2026-09-18: eigene Person gespeichert, während
-        // ein ANDERER Kunde aktiv war, PermissionTemplate::find() lieferte
-        // dadurch null (Scope filterte das Set des eigenen Mandanten weg),
-        // die Rolle fiel fälschlich auf "user" zurück - Heimat-Admin
-        // stillschweigend zum einfachen User degradiert.
-        if ($person->user) {
-            // effectiveRole() statt role: ein Set kann die grobe Rolle jetzt
-            // ueber eine Basis (siehe PermissionTemplate::basis()) live
-            // erben statt sie selbst zu tragen. "– nicht zugewiesen –" (kein
-            // Set) faellt bewusst auch hier auf 'user' zurueck, sonst
-            // bliebe ein frueherer access-admin-Zugriff trotz entzogenem
-            // Set bestehen (gleiche Ueberlegung wie in
-            // PermissionController::assignTemplate()).
-            $person->user->update(['role' => $person->permission_template_id
-                ? (PermissionTemplate::query()->withoutGlobalScope('tenant')->find($person->permission_template_id)?->effectiveRole() ?? 'user')
-                : 'user']);
-        }
 
         // function_group_member.tenant_id ist NOT NULL ohne Default - sync()
         // füllt Pivot-Spalten sonst nicht automatisch, deshalb explizit je
@@ -643,32 +620,32 @@ class PersonController extends Controller
     }
 
     /**
-     * Nur ein Super-Admin darf einer anderen Person Super-Admin-Rechte
-     * geben oder wieder entziehen (Ralf: "als Superadmin sollte ich
-     * weitere Personen in diesen erhabenen Stand erheben können"). Beim
-     * Zurückstufen fällt die Rolle auf das zugewiesene Rechte-Set zurück
-     * (oder "user", falls keins zugewiesen ist) - nie blind auf "admin",
-     * das wäre eine unbeabsichtigte Rechteausweitung ohne passendes Set
-     * (siehe Ralfs eigenes alte Konto, das genau in dieser Falle war).
-     * Der letzte verbliebene Super-Admin kann nicht zurückgestuft werden.
+     * Zugriffsstufe unabhängig vom Rechte-Set pflegen. Zentral-Admins dürfen
+     * Organisations-Admins ernennen; Super-Admins verwalten alle Stufen.
      */
     public function updateRole(Request $request, Person $person): RedirectResponse|Response
     {
         abort_unless($this->personVisibleInCurrentTenant($request, $person), 404);
-        abort_unless($request->user()->role === 'super_admin', 403);
+        abort_unless($request->user()->isSuperAdmin() || $request->user()->isCentralAdmin(), 403);
         abort_unless($person->user, 404);
 
-        $makeSuperAdmin = $request->boolean('super_admin');
+        $allowedLevels = $request->user()->isSuperAdmin()
+            ? [AccessLevel::USER, AccessLevel::ORGANIZATION_ADMIN, AccessLevel::CENTRAL_ADMIN, AccessLevel::SUPER_ADMIN]
+            : [AccessLevel::USER, AccessLevel::ORGANIZATION_ADMIN];
+        $accessLevel = $request->validate(['access_level' => ['required', Rule::in($allowedLevels)]])['access_level'];
+        $personIsInHomeOrganization = Tenant::query()->whereKey($person->tenant_id)->value('is_home_tenant');
+        abort_if($accessLevel === AccessLevel::CENTRAL_ADMIN && ! $personIsInHomeOrganization, 422, __('Ein Zentral-Admin muss zur zentralen Organisation gehören.'));
+        abort_if($accessLevel === AccessLevel::ORGANIZATION_ADMIN && $personIsInHomeOrganization, 422, __('Ein Organisations-Admin muss zu einer Kundenorganisation gehören.'));
+        abort_if($person->user->isSuperAdmin() && ! $request->user()->isSuperAdmin(), 403);
 
-        if (! $makeSuperAdmin && $person->user->role === 'super_admin') {
-            $remainingSuperAdmins = User::query()->where('role', 'super_admin')->where('id', '!=', $person->user->id)->exists();
+        if ($accessLevel !== AccessLevel::SUPER_ADMIN && $person->user->isSuperAdmin()) {
+            $remainingSuperAdmins = User::query()->where('role', AccessLevel::SUPER_ADMIN)->where('id', '!=', $person->user->id)->exists();
             abort_unless($remainingSuperAdmins, 422, __('Der letzte verbliebene Super-Admin kann nicht zurückgestuft werden.'));
         }
 
         // withoutGlobalScope('tenant'): siehe update() oben - dieselbe
         // Scope-Falle gilt auch hier.
-        $fallbackRole = PermissionTemplate::query()->withoutGlobalScope('tenant')->find($person->permission_template_id)?->effectiveRole() ?? 'user';
-        $person->user->update(['role' => $makeSuperAdmin ? 'super_admin' : $fallbackRole]);
+        $person->user->update(['role' => $accessLevel]);
 
         $isOverlay = $this->isOverlayRequest($request);
 
@@ -694,7 +671,7 @@ class PersonController extends Controller
     private function abortIfProtectedFromEditing(Request $request, Person $person): void
     {
         abort_if(
-            $person->user?->role === 'super_admin' && $request->user()->role !== 'super_admin',
+            $person->user?->isSuperAdmin() && ! $request->user()->isSuperAdmin(),
             403
         );
     }
@@ -756,7 +733,8 @@ class PersonController extends Controller
                 ->orderBy('name')->get(),
             'multiTenantEnabled' => $multiTenantEnabled,
             'otherTenants' => $multiTenantEnabled ? Tenant::query()->where('id', '!=', $personTenantId)->orderBy('name')->get() : collect(),
-            'actingUserIsSuperAdmin' => $request->user()->role === 'super_admin',
+            'actingUserIsSuperAdmin' => $request->user()->isSuperAdmin(),
+            'actingUserCanManageAccessLevel' => $request->user()->isSuperAdmin() || $request->user()->isCentralAdmin(),
             'canFullyEdit' => $this->personFullyEditableByCurrentUser($request, $person),
             'filters' => $filters,
             'previousPerson' => $this->adjacentPerson($request, $filters, $person, 'previous', $tenantId),
@@ -907,7 +885,7 @@ class PersonController extends Controller
      */
     private function personVisibleInCurrentTenant(Request $request, Person $person): bool
     {
-        if ($request->user()->role === 'super_admin' || CurrentTenant::isHomeTenantAdmin($request->user())) {
+        if ($request->user()->canAccessAllOrganizations()) {
             return true;
         }
 
@@ -918,7 +896,7 @@ class PersonController extends Controller
      * Bewusst eine EIGENE, strengere Prüfung als personVisibleInCurrentTenant()
      * - "sichtbar/zuweisbar, weil ausgeliehen" ist etwas grundsätzlich
      * anderes als "volle Bearbeitung inkl. Ausleih-Verwaltung" (Ralf,
-     * 2026-09-18: Kundekunde-Admin darf eine ausgeliehene Heimat-Person
+     * 2026-09-18: Organisations-Admin darf eine ausgeliehene Heimat-Person
      * sehen und im eigenen Mandanten zuweisen, aber nicht ihre Stammdaten
      * ändern oder gar steuern, an welche anderen Kunden sie sonst noch
      * verliehen ist). Bewusst hart im Code, nicht über das Rechte-System -
@@ -930,9 +908,8 @@ class PersonController extends Controller
     {
         $user = $request->user();
 
-        return $user->role === 'super_admin'
-            || $person->tenant_id === CurrentTenant::id()
-            || CurrentTenant::isHomeTenantAdmin($user);
+        return $user->canAccessAllOrganizations()
+            || $person->tenant_id === CurrentTenant::id();
     }
 
     private function isOverlayRequest(Request $request): bool

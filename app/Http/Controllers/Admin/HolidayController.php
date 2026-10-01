@@ -38,7 +38,7 @@ class HolidayController extends Controller
             ->get();
 
         $user = $request->user();
-        $otherTenants = SystemSetting::multiTenantEnabled() && (CurrentTenant::isHomeTenantAdmin($user) || $user->role === 'super_admin')
+        $otherTenants = SystemSetting::multiTenantEnabled() && $user->canAccessAllOrganizations()
             ? CurrentTenant::availableTenants()->reject(fn (Tenant $tenant) => $tenant->id === $tenantId)->values()
             : collect();
 
@@ -50,7 +50,7 @@ class HolidayController extends Controller
         abort_unless(SystemSetting::multiTenantEnabled(), 403);
 
         $user = $request->user();
-        abort_unless(CurrentTenant::isHomeTenantAdmin($user) || $user->role === 'super_admin', 403);
+        abort_unless($user->canAccessAllOrganizations(), 403);
 
         $targetTenantId = CurrentTenant::id();
         $sourceTenant = CurrentTenant::availableTenants()

@@ -12,6 +12,7 @@ use App\Support\CurrentTenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -37,7 +38,7 @@ class ChecklistController extends Controller
     }
 
     /**
-     * @return array{checklists: \Illuminate\Support\Collection, selectedChecklist: ?Checklist, otherTenants: \Illuminate\Support\Collection}
+     * @return array{checklists: Collection, selectedChecklist: ?Checklist, otherTenants: Collection}
      */
     private function buildIndexData(Request $request, ?int $checklistId): array
     {
@@ -49,12 +50,12 @@ class ChecklistController extends Controller
 
         $selectedChecklist = $checklistId ? $checklists->firstWhere('id', $checklistId) : null;
 
-        // "Zu anderem Kunden kopieren" bewusst nur für Heimat-Admin/
+        // "Zu anderem Kunden kopieren" bewusst nur für Zentral-Admin/
         // Super-Admin (Ralf, 2026-09-18: "das darf ja wieder nur vom
         // H-Admin aus möglich sein", gleiche Mandanten-Grenzen-Lücke wie
         // bei Workflows/Projektschablonen entdeckt und hier nachgezogen).
         $user = $request->user();
-        $otherTenants = SystemSetting::multiTenantEnabled() && (CurrentTenant::isHomeTenantAdmin($user) || $user->role === 'super_admin')
+        $otherTenants = SystemSetting::multiTenantEnabled() && $user->canAccessAllOrganizations()
             ? CurrentTenant::availableTenants()->reject(fn (Tenant $t) => $t->id === $tenantId)->values()
             : collect();
 
@@ -234,11 +235,11 @@ class ChecklistController extends Controller
         abort_unless($checklist->tenant_id === CurrentTenant::id(), 404);
         abort_unless(SystemSetting::multiTenantEnabled(), 403);
 
-        // Bewusst nur für Heimat-Admin/Super-Admin (Ralf, 2026-09-18) - siehe
+        // Bewusst nur für Zentral-Admin/Super-Admin (Ralf, 2026-09-18) - siehe
         // buildIndexData() oben, gleiche Begründung wie bei
         // WorkflowController::copyToTenant().
         $user = $request->user();
-        abort_unless(CurrentTenant::isHomeTenantAdmin($user) || $user->role === 'super_admin', 403);
+        abort_unless($user->canAccessAllOrganizations(), 403);
 
         $targetTenant = CurrentTenant::availableTenants()
             ->reject(fn (Tenant $t) => $t->id === $checklist->tenant_id)

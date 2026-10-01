@@ -9,6 +9,7 @@ zuerst lesen, dann archivieren, sobald sie nicht mehr aktuell ist.
 2. `CLAUDE.md` (Projekt-Root) - alle UI-Konventionen (Speichern-Button-Regeln, Overlay-Muster, Sicherheitsabfragen, Sortierung, Formulierungsstil usw.). Bitte konsequent einhalten, Ralf achtet stark auf Konsistenz.
 3. `docs/kalender-sichtbarkeit.md` - verbindliche Sichtbarkeitsregeln des neuen Kalenders bei ein- und ausgeschalteter Mandantenfähigkeit.
 4. `docs/funktionsgruppen-taxonomie.md` - zentraler Funktionsgruppen-Katalog des Heimatdienstleisters und Kunden-Verfügbarkeitsmatrix.
+5. `docs/zugriffsstufen-und-rechte.md` - verbindliche Trennung von Zugriffsstufen, Organisationsgrenzen, Rechte-Sets und fachlichen Rollen.
 
 ## Wer ist Ralf, wie arbeitet er
 

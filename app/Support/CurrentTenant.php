@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\SystemSetting;
 use App\Models\Tenant;
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -69,8 +70,15 @@ class CurrentTenant
      */
     public static function userCanAccess(User $user, int $tenantId): bool
     {
-        if ($user->tenant_id === $tenantId || $user->role === 'super_admin' || self::isHomeTenantAdmin($user)) {
+        if ($user->tenant_id === $tenantId || AccessLevel::canAccessAllOrganizations($user)) {
             return true;
+        }
+
+        // Organisations-Admins bleiben verbindlich auf ihre eigene
+        // Organisation begrenzt. Eine person_tenant-Freigabe kann diese
+        // administrative Sicherheitsgrenze nicht erweitern.
+        if (AccessLevel::isOrganizationAdmin($user)) {
+            return false;
         }
 
         if (! $user->person_id) {
@@ -84,7 +92,7 @@ class CurrentTenant
     }
 
     /**
-     * Heimat-Admin (Ralf, 2026-09-18): Admin des einen Mandanten, der den
+     * Zentral-Admin (Ralf, 2026-09-18): Admin des einen Mandanten, der den
      * Dienstleister selbst repräsentiert (tenants.is_home_tenant), bekommt
      * Vollzugriff auf ALLE Mandanten - anders als ein Admin jedes anderen
      * (Kundekunden-)Mandanten, der auf seinen eigenen beschränkt bleibt
@@ -92,10 +100,9 @@ class CurrentTenant
      * ausgeliehenen Personen). Bewusst NICHT mehr "jeder admin darf alles"
      * wie vorher - das war die eigentliche Berechtigungslücke.
      */
-    public static function isHomeTenantAdmin(User $user): bool
+    public static function isCentralAdmin(User $user): bool
     {
-        return $user->role === 'admin'
-            && Tenant::query()->whereKey($user->tenant_id)->value('is_home_tenant');
+        return AccessLevel::isCentralAdmin($user);
     }
 
     /**
@@ -112,7 +119,7 @@ class CurrentTenant
      */
     public static function canManageTenantCatalog(User $user, int $tenantId): bool
     {
-        return $tenantId === self::id() || $user->role === 'super_admin' || self::isHomeTenantAdmin($user);
+        return $tenantId === self::id() || AccessLevel::canAccessAllOrganizations($user);
     }
 
     public static function switchTo(int $tenantId): void
@@ -142,18 +149,18 @@ class CurrentTenant
      * importieren"-Funktionen (Papierformate, Projektschablonen): eigener
      * Heimat-Mandant + alle zusätzlich gewährten Kunden (siehe
      * person_tenant). Volle Sicht auf ALLE Mandanten nur für Super-Admin
-     * und den Heimat-Admin (Ralf, 2026-09-18: "das darf ja wieder nur vom
+     * und den Zentral-Admin (Ralf, 2026-09-18: "das darf ja wieder nur vom
      * H-Admin aus möglich sein") - ein Admin eines Kundekunden-Mandanten
      * bleibt auf seinen eigenen Mandanten (+ Ausleihen) beschränkt, gleiche
-     * Mandanten-Grenze wie bei isHomeTenantAdmin()/userCanAccess() oben.
+     * Mandanten-Grenze wie bei AccessLevel::canAccessAllOrganizations()/userCanAccess() oben.
      * Bewusst NICHT mehr "jeder admin sieht alles" (Doku-Stand vor der
-     * Heimat-/Kundekunde-Admin-Trennung, hier nachgezogen). Leer, wenn
+     * Heimat-/Organisations-Admin-Trennung, hier nachgezogen). Leer, wenn
      * Mandantenfähigkeit aus ist - der Umschalter bleibt dann komplett
      * unsichtbar.
      *
-     * @return \Illuminate\Support\Collection<int, Tenant>
+     * @return Collection<int, Tenant>
      */
-    public static function availableTenants(): \Illuminate\Support\Collection
+    public static function availableTenants(): Collection
     {
         $user = Auth::user();
 
@@ -161,7 +168,7 @@ class CurrentTenant
             return collect();
         }
 
-        if ($user->role === 'super_admin' || self::isHomeTenantAdmin($user)) {
+        if (AccessLevel::canAccessAllOrganizations($user)) {
             return Tenant::query()->orderBy('name')->get();
         }
 

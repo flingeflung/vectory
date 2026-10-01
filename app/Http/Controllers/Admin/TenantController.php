@@ -106,7 +106,7 @@ class TenantController extends Controller
 
         $isHomeTenant = $request->boolean('is_home_tenant');
         // Höchstens ein Heimat-Mandant gleichzeitig (Ralf, 2026-09-18:
-        // Heimat-Admin bekommt Vollzugriff auf alle Mandanten - bei zwei
+        // Zentral-Admin bekommt Vollzugriff auf alle Mandanten - bei zwei
         // gleichzeitig markierten wäre nicht mehr eindeutig, wer das ist).
         if ($isHomeTenant) {
             Tenant::query()->where('id', '!=', $tenant->id)->update(['is_home_tenant' => false]);
@@ -200,10 +200,10 @@ class TenantController extends Controller
      */
     private function seedDefaultPermissionTemplates(Tenant $tenant, ?Tenant $preferredSource = null): void
     {
-        foreach (['admin', 'user'] as $role) {
+        foreach ([__('Alle Benutzerrechte') => true, __('User') => false] as $name => $allPermissions) {
             $reference = PermissionTemplate::query()
                 ->withoutGlobalScope('tenant')
-                ->where('role', $role)
+                ->where('name', $name)
                 ->when(
                     $preferredSource,
                     fn ($query) => $query->where('tenant_id', $preferredSource->id),
@@ -215,13 +215,12 @@ class TenantController extends Controller
 
             $template = PermissionTemplate::query()->create([
                 'tenant_id' => $tenant->id,
-                'role' => $role,
-                'name' => $role === 'admin' ? __('Admin') : __('User'),
+                'name' => $name,
             ]);
 
             $permissionIds = $reference
                 ? $reference->permissions()->pluck('permissions.id')
-                : ($role === 'admin' ? Permission::query()->pluck('id') : collect());
+                : ($allPermissions ? Permission::query()->pluck('id') : collect());
 
             $template->permissions()->sync($permissionIds);
         }

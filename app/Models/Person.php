@@ -169,9 +169,8 @@ class Person extends Model
      * Jede Person hat genau EIN Rechte-Set, das ihre Rechte vollständig
      * bestimmt - keine individuellen Ausnahmen mehr (die führten zu nicht
      * mehr nachvollziehbarem "Permission Sprawl", siehe Rechtekonzept-
-     * Diskussion). Admin 2 kann sich in der Rechte-Verwaltung beliebig
-     * viele eigene Sets anlegen (z.B. "PM", "Lektorat") und Personen frei
-     * zuordnen. Super-Admin braucht kein Set, siehe Gate::before().
+     * Diskussion). Rechte-Sets steuern ausschließlich fachliche Rechte von
+     * Standard-Usern; Admin-Zugriffsstufen sind davon unabhängig.
      */
     /**
      * withoutGlobalScope('tenant'): das eigene Rechte-Set einer Person

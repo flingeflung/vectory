@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\AccessLevel;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -18,6 +19,31 @@ class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
+
+    public function isSuperAdmin(): bool
+    {
+        return AccessLevel::isSuperAdmin($this);
+    }
+
+    public function isCentralAdmin(): bool
+    {
+        return AccessLevel::isCentralAdmin($this);
+    }
+
+    public function isOrganizationAdmin(): bool
+    {
+        return AccessLevel::isOrganizationAdmin($this);
+    }
+
+    public function isAdmin(): bool
+    {
+        return AccessLevel::isAdmin($this);
+    }
+
+    public function canAccessAllOrganizations(): bool
+    {
+        return AccessLevel::canAccessAllOrganizations($this);
+    }
 
     public function tenant(): BelongsTo
     {

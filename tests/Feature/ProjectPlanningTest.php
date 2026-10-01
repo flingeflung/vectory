@@ -173,7 +173,7 @@ class ProjectPlanningTest extends TestCase
         $home->update(['is_home_tenant' => true, 'name' => 'Heimat']);
         $customer = Tenant::query()->create(['name' => 'Kunde']);
         $otherCustomer = Tenant::query()->create(['name' => 'Anderer Kunde']);
-        $user = User::factory()->create(['tenant_id' => $home->id, 'role' => 'super_admin']);
+        $user = User::factory()->create(['tenant_id' => $home->id, 'role' => 'central_admin']);
         $homePerson = $this->person($home, 'Heimat');
         $customerPerson = $this->person($customer, 'Kunde');
         $this->person($otherCustomer, 'Fremd');
@@ -208,7 +208,7 @@ class ProjectPlanningTest extends TestCase
         $user = User::factory()->create([
             'tenant_id' => $customer->id,
             'person_id' => $ownPerson->id,
-            'role' => 'super_admin',
+            'role' => 'organization_admin',
         ]);
 
         $response = $this->actingAs($user)

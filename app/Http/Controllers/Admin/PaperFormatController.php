@@ -34,7 +34,7 @@ class PaperFormatController extends Controller
             ])
             ->values();
 
-        // "Von anderem Kunden importieren" bewusst nur für Heimat-Admin/
+        // "Von anderem Kunden importieren" bewusst nur für Zentral-Admin/
         // Super-Admin (Ralf, 2026-09-18: "das darf ja wieder nur vom H-Admin
         // aus möglich sein", gleiche Mandanten-Grenze wie bei Projekt-
         // schablonen) - eigener Check statt sich allein auf
@@ -42,7 +42,7 @@ class PaperFormatController extends Controller
         // einzelnen ausgeliehenen Personen Zugriff geben kann, was hier
         // NICHT reichen soll (Katalog-Import ist keine Personen-Ausleihe).
         $user = Auth::user();
-        $otherTenants = CurrentTenant::isHomeTenantAdmin($user) || $user->role === 'super_admin'
+        $otherTenants = $user->canAccessAllOrganizations()
             ? CurrentTenant::availableTenants()->reject(fn (Tenant $t) => $t->id === CurrentTenant::id())->values()
             : collect();
 
@@ -143,7 +143,7 @@ class PaperFormatController extends Controller
     public function importFromTenant(Request $request, PaperFormatCatalogImporter $importer): RedirectResponse
     {
         $user = $request->user();
-        abort_unless(CurrentTenant::isHomeTenantAdmin($user) || $user->role === 'super_admin', 403);
+        abort_unless($user->canAccessAllOrganizations(), 403);
 
         $target = Tenant::query()->findOrFail(CurrentTenant::id());
         $sourceId = $request->integer('source_tenant_id');

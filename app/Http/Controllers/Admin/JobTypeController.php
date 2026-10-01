@@ -27,10 +27,10 @@ class JobTypeController extends Controller
             ? $groups->firstWhere('id', $request->integer('gruppe'))
             : $groups->first();
 
-        // Import nur für Heimat-Admin/Super-Admin, gleiche Mandanten-Grenze
+        // Import nur für Zentral-Admin/Super-Admin, gleiche Mandanten-Grenze
         // wie bei Papierformaten/Projektschablonen (Ralf, 2026-09-18).
         $user = Auth::user();
-        $otherTenants = CurrentTenant::isHomeTenantAdmin($user) || $user->role === 'super_admin'
+        $otherTenants = $user->canAccessAllOrganizations()
             ? CurrentTenant::availableTenants()->reject(fn (Tenant $t) => $t->id === CurrentTenant::id())->values()
             : collect();
 
@@ -39,12 +39,12 @@ class JobTypeController extends Controller
 
     /**
      * Übernimmt Jobgruppen + Jobtypen eines anderen Kunden (siehe
-     * JobTypeCatalogImporter) - pull-basiert, nur Heimat-Admin/Super-Admin.
+     * JobTypeCatalogImporter) - pull-basiert, nur Zentral-Admin/Super-Admin.
      */
     public function importFromTenant(Request $request, JobTypeCatalogImporter $importer): RedirectResponse
     {
         $user = $request->user();
-        abort_unless(CurrentTenant::isHomeTenantAdmin($user) || $user->role === 'super_admin', 403);
+        abort_unless($user->canAccessAllOrganizations(), 403);
 
         $target = Tenant::query()->findOrFail(CurrentTenant::id());
         $source = CurrentTenant::availableTenants()->firstWhere('id', $request->integer('source_tenant_id'));

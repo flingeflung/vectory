@@ -23,7 +23,7 @@ class CalendarController extends Controller
     public function index(Request $request): View
     {
         abort_unless(
-            $request->user()?->role === 'super_admin' || $request->user()?->person?->calendar_enabled,
+            $request->user()?->isSuperAdmin() || $request->user()?->person?->calendar_enabled,
             403
         );
 

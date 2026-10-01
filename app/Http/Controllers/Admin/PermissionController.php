@@ -179,7 +179,6 @@ class PermissionController extends Controller
         $nextSort = 1 + (int) PermissionTemplate::query()->where('tenant_id', $tenantId)->max('sort');
         $template = PermissionTemplate::query()->create([
             'tenant_id' => $tenantId,
-            'role' => $base?->role ?? 'user',
             'name' => $name,
             'sort' => $nextSort,
             'is_baustein' => $isBaustein,
@@ -355,25 +354,9 @@ class PermissionController extends Controller
         return redirect()->route('admin.rechte');
     }
 
-    /**
-     * Wer Admin wird, entscheidet jeder Admin innerhalb des eigenen
-     * Mandanten selbst - kein Super-Admin-Vorbehalt mehr (Ralf: als DL-
-     * Admin will er nicht bei jeder Rechtevergabe an eigenes Personal den
-     * Super-Admin fragen müssen, und wer bei ihm Admin-Rechte hat, geht
-     * den Software-Anbieter nichts an). Die Route selbst bleibt ohnehin
-     * hinter access-admin - nur echte Admins/Super-Admins kommen überhaupt
-     * hierher.
-     */
+    /** Das Rechte-Set ändern, ohne die unabhängige Zugriffsstufe anzutasten. */
     private function assignTemplate(Person $person, ?PermissionTemplate $template): void
     {
         $person->update(['permission_template_id' => $template?->id]);
-
-        // Kein Set (Recht komplett entzogen) -> User-Rolle auf die
-        // rechtloseste Stufe zurück, sonst bliebe z.B. ein früherer
-        // access-admin-Zugriff (der an der groben User-Rolle hängt, nicht
-        // am Set) trotz "kein Set" bestehen.
-        if ($person->user) {
-            $person->user->update(['role' => $template?->effectiveRole() ?? 'user']);
-        }
     }
 }

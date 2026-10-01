@@ -158,7 +158,7 @@
                                     // Super-Admin (Szenario: gekündigter Admin, Zugang noch nicht
                                     // gesperrt) - serverseitig zusätzlich in AttributeController::
                                     // destroy() durchgesetzt, hier nur die Anzeige/UI-Sperre.
-                                    $deletionLocked = $valueCount > 0 && auth()->user()->role !== 'super_admin';
+                                    $deletionLocked = $valueCount > 0 && ! auth()->user()->isSuperAdmin();
                                 @endphp
                                 <div x-sort:item="{{ $attribute->id }}" class="rounded-md border border-gray-200 px-2 py-0.5">
                                     @if ($attribute->system && ! $attribute->label_editable)

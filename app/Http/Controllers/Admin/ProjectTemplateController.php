@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -47,7 +48,7 @@ class ProjectTemplateController extends Controller
     }
 
     /**
-     * @return array{templates: \Illuminate\Support\Collection, selectedTemplate: ?ProjectTemplate, workflows: \Illuminate\Support\Collection, creating: bool}
+     * @return array{templates: Collection, selectedTemplate: ?ProjectTemplate, workflows: Collection, creating: bool}
      */
     private function buildIndexData(Request $request, ?int $templateId): array
     {
@@ -89,7 +90,7 @@ class ProjectTemplateController extends Controller
         // verlassen, das über person_tenant auch einzelnen ausgeliehenen
         // Personen Zugriff auf einen fremden Mandanten geben kann, was hier
         // NICHT reichen soll (Katalog-Import ist keine Personen-Ausleihe).
-        $otherTenants = CurrentTenant::isHomeTenantAdmin($request->user()) || $request->user()->role === 'super_admin'
+        $otherTenants = $request->user()->canAccessAllOrganizations()
             ? CurrentTenant::availableTenants()->reject(fn ($t) => $t->id === $tenantId)->values()
             : collect();
 
@@ -251,7 +252,7 @@ class ProjectTemplateController extends Controller
     public function catalogFromTenant(Request $request): JsonResponse
     {
         $user = $request->user();
-        abort_unless(CurrentTenant::isHomeTenantAdmin($user) || $user->role === 'super_admin', 403);
+        abort_unless($user->canAccessAllOrganizations(), 403);
 
         $source = CurrentTenant::availableTenants()->firstWhere('id', $request->integer('tenant_id'));
         abort_if($source === null || $source->id === CurrentTenant::id(), 422);
@@ -278,7 +279,7 @@ class ProjectTemplateController extends Controller
     public function importFromTenant(Request $request): RedirectResponse
     {
         $user = $request->user();
-        abort_unless(CurrentTenant::isHomeTenantAdmin($user) || $user->role === 'super_admin', 403);
+        abort_unless($user->canAccessAllOrganizations(), 403);
 
         $tenantId = CurrentTenant::id();
         $source = CurrentTenant::availableTenants()->firstWhere('id', $request->integer('source_tenant_id'));

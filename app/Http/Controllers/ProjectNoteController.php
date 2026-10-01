@@ -72,7 +72,7 @@ class ProjectNoteController extends Controller
         abort_unless($project->tenant_id === CurrentTenant::id(), 404);
         abort_unless($note->project_id === $project->id, 404);
         abort_unless(
-            $note->created_by_user_id === $request->user()->id || in_array($request->user()->role, ['admin', 'super_admin'], true),
+            $note->created_by_user_id === $request->user()->id || $request->user()->isAdmin(),
             403
         );
 

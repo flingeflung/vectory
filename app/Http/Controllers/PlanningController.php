@@ -122,12 +122,12 @@ class PlanningController extends Controller
         $projectTenants = Tenant::query()->whereIn('id', $projectTenantIds)->get()->keyBy('id');
         $tenantPalette = ['#bfdbfe', '#bbf7d0', '#fde68a', '#fecdd3', '#ddd6fe', '#bae6fd', '#fed7aa', '#d9f99d'];
         $tenantColors = $projectTenantIds->values()->mapWithKeys(fn ($tenantId, $index) => [(int) $tenantId => $tenantPalette[$index % count($tenantPalette)]]);
-        $isHomeMember = Tenant::query()->where('is_home_tenant', true)->where('id', $request->user()->tenant_id)->exists();
+        $maySeeAllProjectDetails = $request->user()->canAccessAllOrganizations();
 
-        $projectRowsByPerson = $assignments->groupBy('person_id')->map(function (Collection $personAssignments) use ($isHomeMember, $projectTenants, $tenantColors) {
-            return $personAssignments->groupBy('project_id')->map(function (Collection $rows) use ($isHomeMember, $projectTenants, $tenantColors) {
+        $projectRowsByPerson = $assignments->groupBy('person_id')->map(function (Collection $personAssignments) use ($maySeeAllProjectDetails, $projectTenants, $tenantColors) {
+            return $personAssignments->groupBy('project_id')->map(function (Collection $rows) use ($maySeeAllProjectDetails, $projectTenants, $tenantColors) {
                 $project = $rows->first()->project;
-                $mayShowDetails = $isHomeMember || $project->tenant_id === CurrentTenant::id();
+                $mayShowDetails = $maySeeAllProjectDetails || $project->tenant_id === CurrentTenant::id();
 
                 return [
                     'project' => $project,
@@ -201,7 +201,7 @@ class PlanningController extends Controller
         $activeTenantId = CurrentTenant::id();
         $homeTenant = Tenant::query()->where('is_home_tenant', true)->first();
         $homeTenantId = $homeTenant?->id;
-        $isHomeMember = $homeTenantId !== null && $user->tenant_id === $homeTenantId;
+        $hasCentralScope = $user->canAccessAllOrganizations();
 
         $query = Person::query()
             ->withoutGlobalScope('tenant')
@@ -214,7 +214,7 @@ class PlanningController extends Controller
 
         if (! SystemSetting::multiTenantEnabled() || $homeTenantId === null) {
             $people = $query->where('people.tenant_id', $activeTenantId)->get();
-        } elseif ($isHomeMember) {
+        } elseif ($hasCentralScope) {
             $tenantIds = collect([$homeTenantId]);
             if ($activeTenantId !== $homeTenantId) {
                 $tenantIds->push($activeTenantId);

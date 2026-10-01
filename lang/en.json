@@ -1606,5 +1606,14 @@
     "Die Funktionsgruppen dieser Person werden bei ihrer eigenen Organisation gepflegt.": "This person's function groups are managed within their own organization.",
     "Die Funktionsgruppe wird bei diesem Kunden bereits verwendet und kann nicht ausgeblendet werden.": "This function group is already in use by this customer and cannot be hidden.",
     "Gültig für Organisation: :home": "Valid for organization: :home",
-    "Gültig für Organisation :home & :tenant, Konfiguration bei :home im Admin-Bereich": "Valid for organizations :home & :tenant; configured under :home in the admin area"
+    "Gültig für Organisation :home & :tenant, Konfiguration bei :home im Admin-Bereich": "Valid for organizations :home & :tenant; configured under :home in the admin area",
+    "Zentral-Admin": "Central admin",
+    "Organisations-Admin": "Organization admin",
+    "Zugriffsstufe": "Access level",
+    "Die Zugriffsstufe legt den administrativen Bereich fest und ist unabhängig von der fachlichen Rolle und dem Rechte-Set.": "The access level defines the administrative scope and is independent of the functional role and permission set.",
+    "Ein Zentral-Admin muss zur zentralen Organisation gehören.": "A central admin must belong to the central organization.",
+    "Ein Organisations-Admin muss zu einer Kundenorganisation gehören.": "An organization admin must belong to a customer organization.",
+    "Zugriffsstufe ändern?": "Change access level?",
+    "Die neue Zugriffsstufe verändert den administrativen Zugriff dieser Person.": "The new access level changes this person's administrative access.",
+    "Alle Benutzerrechte": "All user permissions"
 }

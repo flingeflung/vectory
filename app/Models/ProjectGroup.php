@@ -64,7 +64,7 @@ class ProjectGroup extends Model
         // Gate::before-Eintrag) - ohne diese Zeile darf ein Super-Admin hier trotz
         // "immer alles dürfen" nicht mitmachen, wenn er nicht selbst eingetragener
         // Betrachter ist. Inkonsequent zum Rest des Tools, deshalb hier nachgezogen.
-        if (Auth::user()?->role === 'super_admin') {
+        if (Auth::user()?->isSuperAdmin()) {
             return;
         }
 

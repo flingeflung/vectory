@@ -19,13 +19,16 @@
 - Langfristziel: marktfähiges Produkt für zwei Zielgruppen – (1) interne TR-Abteilungen in Unternehmen (keine Mandantenfähigkeit nötig) und (2) Dienstleister für TR mit vielen Kunden (Mandantenfähigkeit nötig).
 - Entscheidung: Mandantenfähigkeit von Anfang an im Datenmodell verankern (Single-DB-Ansatz: `tenant_id`-Spalte + globaler Eloquent-Scope), aber Mandanten-Verwaltungs-UI/Umschalten erst später bauen. Ein Default-Mandant reicht für Step 1.
 
-## Rollenmodell
-1. Super-Admin – verwaltet auch die Mandantenfähigkeit
-2. Admin – Admin-Tätigkeiten pro Mandant/Unternehmen
-3. User – loggt sich ein, arbeitet im Tool
-4. Kontaktperson – kein Login, nur Stammdaten (z. B. für E-Mail-Benachrichtigungen zu Projektfortschritt), kann später auf Rolle 3 hochgestuft werden
+## Zugriffsstufenmodell
+1. Super-Admin – installationsweiter Vollzugriff einschließlich technischer Funktionen
+2. Zentral-Admin – organisationsübergreifende fachliche Administration
+3. Organisations-Admin – vollständige Administration ausschließlich innerhalb der eigenen Organisation
+4. User – loggt sich ein; konkrete Funktionen kommen aus genau einem Rechte-Set
+5. Kontaktperson – kein Login, nur Stammdaten (z. B. für E-Mail-Benachrichtigungen zu Projektfortschritt), kann später auf Stufe 4 hochgestuft werden
 
-Umsetzungsidee: Rolle 4 als eigene `person`-Entität modellieren, `user` referenziert optional eine `person`. Upgrade auf Rolle 3 = zusätzlicher `user`-Datensatz, keine Datenmigration nötig.
+Zugriffsstufe, Organisationsbereich, Rechte-Set und fachliche Rolle sind strikt getrennt; verbindliche Regeln siehe `docs/zugriffsstufen-und-rechte.md`.
+
+Kontaktpersonen sind als eigene `person`-Entität modelliert; `user` referenziert optional eine `person`. Upgrade zum User = zusätzlicher `user`-Datensatz, keine Datenmigration nötig.
 
 ## Erkenntnisse aus Vietto-Analyse (nur Referenz, nicht unkritisch übernehmen)
 - `personen.intTyp` unterscheidet bereits 1=Login-User, 2=E-Mail-Kontakt, 99=automatischer Prozess – bestätigt die Trennung Rolle 3/4.

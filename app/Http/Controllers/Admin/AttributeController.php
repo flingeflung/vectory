@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Attribute;
 use App\Models\AttributeOption;
 use App\Models\ProjectTypeMain;
+use App\Models\ProjectTypeSub;
 use App\Services\AttributeColumnManager;
 use App\Support\CurrentTenant;
 use Illuminate\Http\RedirectResponse;
@@ -172,7 +173,7 @@ class AttributeController extends Controller
         // gekündigter Mitarbeiter mit Admin-Rechten, dessen Zugang noch nicht
         // gesperrt ist) - serverseitig durchgesetzt, nicht nur im UI versteckt.
         if ($this->valueCount($attribute) > 0) {
-            abort_unless($request->user()->role === 'super_admin', 403);
+            abort_unless($request->user()->isSuperAdmin(), 403);
         }
 
         // Kein DB::transaction() hier: $attribute->delete() löst über
@@ -333,7 +334,7 @@ class AttributeController extends Controller
         $attribute->update(['applies_to_all_types' => $appliesToAll]);
 
         if (! $appliesToAll) {
-            $subIds = \App\Models\ProjectTypeSub::query()->where('tenant_id', $attribute->tenant_id)->pluck('id');
+            $subIds = ProjectTypeSub::query()->where('tenant_id', $attribute->tenant_id)->pluck('id');
             foreach ($subIds as $subId) {
                 DB::table('attribute_project_type')->updateOrInsert(
                     ['attribute_id' => $attribute->id, 'project_type_sub_id' => $subId],

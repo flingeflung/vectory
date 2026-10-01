@@ -116,13 +116,7 @@
             <button @click="open = !open" class="flex items-center gap-2 text-sm font-medium hover:text-white/80 focus:outline-none">
                 <span class="flex flex-col items-end leading-tight">
                     <span>{{ Auth::user()->person?->fullName() ?? Auth::user()->name }}</span>
-                    <span class="text-[10px] font-normal text-white/60">
-                        {{ __(match (Auth::user()->role) {
-                            'super_admin' => 'Super-Admin',
-                            'admin' => 'Admin',
-                            default => 'User',
-                        }) }}
-                    </span>
+                    <span class="text-[10px] font-normal text-white/60">{{ \App\Support\AccessLevel::label(Auth::user()) }}</span>
                 </span>
                 @if (Auth::user()->person)
                     <x-absence-icon :person="Auth::user()->person" />

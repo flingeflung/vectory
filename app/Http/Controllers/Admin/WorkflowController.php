@@ -12,8 +12,11 @@ use App\Support\CurrentTenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\MessageBag;
+use Illuminate\Support\ViewErrorBag;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -58,7 +61,7 @@ class WorkflowController extends Controller
     }
 
     /**
-     * @return array{workflows: \Illuminate\Support\Collection, selectedWorkflow: ?Workflow, steps: \Illuminate\Support\Collection, isPublished: bool, functionGroups: \Illuminate\Support\Collection, specialButtons: array, lifecycleColors: array, lifecycleStatusLabels: array, missingLifecycleStatuses: \Illuminate\Support\Collection}
+     * @return array{workflows: Collection, selectedWorkflow: ?Workflow, steps: Collection, isPublished: bool, functionGroups: Collection, specialButtons: array, lifecycleColors: array, lifecycleStatusLabels: array, missingLifecycleStatuses: Collection}
      */
     private function buildIndexData(Request $request, ?int $workflowId): array
     {
@@ -90,14 +93,14 @@ class WorkflowController extends Controller
         // dort bewusst kein Sortierkriterium (kein D&D für diese Liste).
         $functionGroups = FunctionGroup::query()->availableForTenant($tenantId, false)->orderBy('name')->get(['id', 'name']);
 
-        // "Zu anderem Kunden kopieren" bewusst nur für Heimat-Admin/
+        // "Zu anderem Kunden kopieren" bewusst nur für Zentral-Admin/
         // Super-Admin (Ralf, 2026-09-18: "das darf ja wieder nur vom
         // H-Admin aus möglich sein", beim Projektschablonen-Import-Feature
         // entdeckte Mandanten-Grenzen-Lücke, hier nachgezogen - vorher
         // konnte JEDER Admin, auch der eines einzelnen Kundekunden-
         // Mandanten, in JEDEN anderen Mandanten hineinkopieren).
         $user = $request->user();
-        $otherTenants = SystemSetting::multiTenantEnabled() && (CurrentTenant::isHomeTenantAdmin($user) || $user->role === 'super_admin')
+        $otherTenants = SystemSetting::multiTenantEnabled() && $user->canAccessAllOrganizations()
             ? CurrentTenant::availableTenants()->reject(fn (Tenant $t) => $t->id === $tenantId)->values()
             : collect();
 
@@ -364,13 +367,13 @@ class WorkflowController extends Controller
         abort_unless($workflow->tenant_id === CurrentTenant::id(), 404);
         abort_unless(SystemSetting::multiTenantEnabled(), 403);
 
-        // Bewusst nur für Heimat-Admin/Super-Admin (Ralf, 2026-09-18) - siehe
+        // Bewusst nur für Zentral-Admin/Super-Admin (Ralf, 2026-09-18) - siehe
         // buildIndexData() oben. Ohne diesen Check hätte vorher jeder Admin
         // eines beliebigen Kundekunden-Mandanten hier per direktem POST in
         // JEDEN anderen Mandanten hineinkopieren können, unabhängig von der
         // (nur clientseitigen) Sichtbarkeit der Auswahlliste.
         $user = $request->user();
-        abort_unless(CurrentTenant::isHomeTenantAdmin($user) || $user->role === 'super_admin', 403);
+        abort_unless($user->canAccessAllOrganizations(), 403);
 
         $targetTenant = CurrentTenant::availableTenants()
             ->reject(fn (Tenant $t) => $t->id === $workflow->tenant_id)
@@ -520,7 +523,7 @@ class WorkflowController extends Controller
                     // MessageBag von validator->errors()) - @error/$errors->has()
                     // im Blade erwarten intern getBag('default'), das eine
                     // reine MessageBag nicht hat.
-                    'errors' => (new \Illuminate\Support\ViewErrorBag())->put('default', $validator->errors()),
+                    'errors' => (new ViewErrorBag)->put('default', $validator->errors()),
                 ])
                 ->setStatusCode(422);
         }
@@ -552,7 +555,7 @@ class WorkflowController extends Controller
 
             return response()
                 ->view('admin.workflows.partials.content', $this->buildIndexData($request, $workflow->id) + [
-                    'errors' => (new \Illuminate\Support\ViewErrorBag())->put('default', new \Illuminate\Support\MessageBag($orderErrors)),
+                    'errors' => (new ViewErrorBag)->put('default', new MessageBag($orderErrors)),
                 ])
                 ->setStatusCode(422);
         }

@@ -8,13 +8,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
 /**
  * "Rechte-Set" (Ralfs Begriff) / "Schablone" - entspricht dem in großer
  * Business-Software verbreiteten "Profile"-Muster (z.B. Salesforce): jede
- * Person hat genau EIN Set, das ihre Rechte vollständig bestimmt. Admin 2
- * kann eigene Sets anlegen (i.d.R. durch Klonen eines vorhandenen), Rechte
- * werden ausschließlich über das zugewiesene Set vererbt, nie individuell.
+ * Ein Standard-User hat genau EIN Set, das seine fachlichen Rechte vollständig
+ * bestimmt. Zugriffsstufen und Organisationsgrenzen bleiben davon getrennt.
  *
  * Ralf, 2026-09-28 (Datenschutz-Konflikt, siehe Migration): zwei Arten
  * dieses einen Modells, unterschieden über is_baustein.
@@ -39,6 +39,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * Basis - genau wie er nie selbst Bausteine einbindet, bleibt er ein
  * reines Blatt.
  */
+// `role` remains fillable solely because an historical migration uses this
+// model while rebuilding a database. The current schema removes the column.
 #[Fillable(['tenant_id', 'role', 'name', 'sort', 'is_baustein', 'basis_id'])]
 class PermissionTemplate extends Model
 {
@@ -115,7 +117,7 @@ class PermissionTemplate extends Model
      * eigenen, da bausteine()/basis() dort immer leer sind - keine Gefahr
      * einer Endlosschleife, ein Baustein bricht die Rekursion immer sofort ab.
      */
-    public function effectivePermissions(): \Illuminate\Support\Collection
+    public function effectivePermissions(): Collection
     {
         return $this->permissions
             ->concat($this->bausteine->flatMap->permissions)
@@ -135,8 +137,4 @@ class PermissionTemplate extends Model
      * Feld. Ein frisch angelegtes, leeres "TR + PL" braucht also keine
      * eigene korrekte role-Pflege - sie ergibt sich automatisch aus TR.
      */
-    public function effectiveRole(): string
-    {
-        return $this->basis?->effectiveRole() ?? $this->role;
-    }
 }

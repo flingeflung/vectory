@@ -6,6 +6,7 @@ use App\Mail\Transport\FileLogTransport;
 use App\Models\Permission;
 use App\Models\Person;
 use App\Models\User;
+use App\Support\AccessLevel;
 use App\Support\CurrentAbsenceLookup;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -65,7 +66,7 @@ class AppServiceProvider extends ServiceProvider
         // ein neues Recht muss nur eine Katalog-Zeile ergänzt werden, kein
         // neues Gate::define() hier.
         Gate::before(function (User $user, string $ability) {
-            if ($user->role === 'super_admin') {
+            if (AccessLevel::isSuperAdmin($user)) {
                 return true;
             }
 
@@ -73,14 +74,19 @@ class AppServiceProvider extends ServiceProvider
                 return null;
             }
 
+            if (AccessLevel::isAdmin($user)) {
+                return true;
+            }
+
             return $user->person?->hasPermission($ability) ?? false;
         });
 
-        Gate::define('access-admin', fn (User $user) => in_array($user->role, ['admin', 'super_admin'], true));
+        Gate::define('access-admin', fn (User $user) => AccessLevel::isAdmin($user));
+        Gate::define('access-central-admin', fn (User $user) => AccessLevel::canAccessAllOrganizations($user));
 
         // Installationsweite Einstellungen (Superadmin-Reiter) - bewusst
         // strenger als access-admin, normale Admins sehen den Reiter nicht.
-        Gate::define('access-superadmin', fn (User $user) => $user->role === 'super_admin');
+        Gate::define('access-superadmin', fn (User $user) => AccessLevel::isSuperAdmin($user));
 
         // {person}-Routenbindung ohne den automatischen Tenant-Scope: eine
         // per Kundenzugriff freigegebene Person (siehe person_tenant) gehört

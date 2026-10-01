@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\User;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -42,6 +41,7 @@ class HelpArticle extends Model
      * Admin\HelpArticleController::indent()).
      */
     public const MAX_DEPTH = 3;
+
     /**
      * Sprachen, für die die Verwaltung Reiter anbietet - "de" ist die
      * Quellsprache (Ralf schreibt sie selbst), weitere folgen bei Bedarf,
@@ -158,8 +158,8 @@ class HelpArticle extends Model
     public function isVisibleTo(?User $user): bool
     {
         return match ($this->visible_role) {
-            self::VISIBLE_SUPER_ADMIN => $user?->role === 'super_admin',
-            self::VISIBLE_ADMIN => in_array($user?->role, ['admin', 'super_admin'], true),
+            self::VISIBLE_SUPER_ADMIN => $user?->isSuperAdmin() ?? false,
+            self::VISIBLE_ADMIN => $user?->isAdmin() ?? false,
             default => true,
         };
     }
