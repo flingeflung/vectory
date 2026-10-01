@@ -89,6 +89,16 @@ class WorkflowStepPeopleTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+        DB::table('project_people')->insert([
+            'tenant_id' => $customer->id,
+            'project_id' => $projectId,
+            'function_group_id' => $customerGroup->id,
+            'person_id' => $person->id,
+            'planned_hours' => 5,
+            'is_primary' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
         $this->actingAs($user)
             ->withSession(['active_tenant_id' => $customer->id])
@@ -102,6 +112,8 @@ class WorkflowStepPeopleTest extends TestCase
 
         $this->get(route('projekte.show', $projectId))
             ->assertOk()
-            ->assertSee('openProjectPlanningOverview', false);
+            ->assertSee("activeTab = 'planung'", false)
+            ->assertSee('project_people_hours['.$customerGroup->id.']['.$person->id.']', false)
+            ->assertSee('value="5"', false);
     }
 }

@@ -200,10 +200,11 @@
                     @if ($project->fieldApplies('workflow_id'))
                     <button type="button" @click="activeTab = 'workflow_steps'" :class="activeTab === 'workflow_steps' ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700'" class="pb-2">{{ __('Workflow') }}</button>
                     @endif
-                    <button type="button" @click="activeTab = 'checklisten'" :class="activeTab === 'checklisten' ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700'" class="pb-2">{{ __('Checklisten') }}</button>
+                    <button type="button" @click="activeTab = 'planung'" :class="activeTab === 'planung' ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700'" class="pb-2">{{ __('Planung') }}</button>
                     {{-- Ralf, 2026-09-27, siehe Roadmap-Backlog: Überblick über die gebuchten
                          Stunden - am Hauptprojekt inkl. Aufschlüsselung je Unterprojekt. --}}
                     <button type="button" @click="activeTab = 'zeiten'" :class="activeTab === 'zeiten' ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700'" class="pb-2">{{ __('Zeiten') }}</button>
+                    <button type="button" @click="activeTab = 'checklisten'" :class="activeTab === 'checklisten' ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700'" class="pb-2">{{ __('Checklisten') }}</button>
                 </div>
 
                 <div class="mb-2 flex flex-wrap items-center gap-2">
@@ -666,12 +667,16 @@
             @endif
         </div>
 
-        <div x-show="activeTab === 'checklisten'" x-cloak class="text-sm">
-            @include('projekte.partials.checklisten')
+        <div x-show="activeTab === 'planung'" x-cloak>
+            @include('projekte.partials.planning')
         </div>
 
         <div x-show="activeTab === 'zeiten'" x-cloak>
             @include('projekte.partials.zeiten-body')
+        </div>
+
+        <div x-show="activeTab === 'checklisten'" x-cloak class="text-sm">
+            @include('projekte.partials.checklisten')
         </div>
         </div>
     </div>

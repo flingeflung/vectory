@@ -106,7 +106,7 @@ class ProjectPlanningTest extends TestCase
         $this->get(route('projekte.show', $projectId))
             ->assertOk()
             ->assertSee('project_people_hours['.$groupId.']['.$person->id.']', false)
-            ->assertSee('value="9.00"', false);
+            ->assertSee('value="9"', false);
     }
 
     public function test_person_selection_is_remembered_and_limited_to_eligible_people(): void
