@@ -85,7 +85,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     // Neuer Hauptnavigationspunkt "Planung" (Ralf, 2026-09-28) - rechtegesteuert
     // (planning.view), siehe PlanningController.
-    Route::redirect('/planung', '/planung/stunden');
+    Route::get('/planung', [PlanningController::class, 'index'])->name('planung.index');
     Route::get('/planung/stunden', [PlanningController::class, 'stunden'])->name('planung.stunden');
     Route::get('/planung/projektplanung', [PlanningController::class, 'projektplanung'])->name('planung.projektplanung');
     Route::get('/planung/grundlast', [PlanningController::class, 'grundlast'])->name('planung.grundlast');

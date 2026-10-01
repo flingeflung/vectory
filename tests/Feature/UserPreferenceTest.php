@@ -2,16 +2,40 @@
 
 namespace Tests\Feature;
 
+use App\Models\Tenant;
 use App\Models\User;
 use App\Models\UserPreference;
 use App\Support\DashboardTileCatalog;
 use App\Support\PersonTableColumnCatalog;
+use App\Support\PlanningNav;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class UserPreferenceTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_planning_remembers_the_last_tab_for_each_user(): void
+    {
+        $tenant = Tenant::query()->firstOrFail();
+        $user = User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'role' => 'super_admin',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('planung.grundlast'))
+            ->assertOk()
+            ->assertSee('href="'.route('planung.grundlast').'"', false);
+
+        $this->assertSame(
+            ['tab' => 'planung.grundlast'],
+            UserPreference::configFor($user->id, UserPreference::PLANNING),
+        );
+
+        $this->get(route('planung.index'))
+            ->assertRedirect(route(PlanningNav::preferredRoute($user)));
+    }
 
     public function test_person_column_order_is_stored_centrally_and_completed_with_new_columns(): void
     {

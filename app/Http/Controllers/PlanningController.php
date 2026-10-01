@@ -15,8 +15,10 @@ use App\Models\UserPreference;
 use App\Services\PlanningBaseLoadCalculator;
 use App\Services\ProjectPlanningCalculator;
 use App\Support\CurrentTenant;
+use App\Support\PlanningNav;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -34,9 +36,17 @@ class PlanningController extends Controller
 {
     private const HOURS_SORTABLE_COLUMNS = ['name', 'department', 'annotation', 'wost', 'workdays', 'holidays', 'vacation_hours', 'annual_hours', 'base_load', 'project_hours'];
 
+    public function index(Request $request): RedirectResponse
+    {
+        abort_unless($request->user()->can('planning.view'), 403);
+
+        return redirect()->route(PlanningNav::preferredRoute($request->user()));
+    }
+
     public function projektplanung(Request $request, ProjectPlanningCalculator $calculator): View
     {
         abort_unless($request->user()->can('planning.view'), 403);
+        PlanningNav::remember($request->user(), 'planung.projektplanung');
 
         $displayMode = $request->query('view') === 'year' ? 'year' : 'month';
         $contentMode = $request->query('content') === 'utilization' ? 'utilization' : 'projects';
@@ -241,6 +251,7 @@ class PlanningController extends Controller
     public function grundlast(Request $request, PlanningBaseLoadCalculator $calculator): View
     {
         abort_unless($request->user()->can('planning.view'), 403);
+        PlanningNav::remember($request->user(), 'planung.grundlast');
 
         $tenantId = CurrentTenant::id();
         $currentYear = (int) now()->year;
@@ -279,6 +290,7 @@ class PlanningController extends Controller
     public function grundlastPerson(Request $request, PlanningBaseLoadCalculator $calculator): View
     {
         abort_unless($request->user()->can('planning.view'), 403);
+        PlanningNav::remember($request->user(), 'planung.grundlast-person');
 
         $tenantId = CurrentTenant::id();
         $currentYear = (int) now()->year;
@@ -323,6 +335,7 @@ class PlanningController extends Controller
     public function arbeitszeit(Request $request): View
     {
         abort_unless($request->user()->can('planning.view'), 403);
+        PlanningNav::remember($request->user(), 'planung.arbeitszeit');
 
         $tenantId = CurrentTenant::id();
         $peopleQuery = Person::query()->withoutGlobalScope('tenant')
@@ -396,6 +409,7 @@ class PlanningController extends Controller
     public function stunden(Request $request, PlanningBaseLoadCalculator $baseLoadCalculator): View
     {
         abort_unless($request->user()->can('planning.view'), 403);
+        PlanningNav::remember($request->user(), 'planung.stunden');
 
         $tenantId = CurrentTenant::id();
         $viewerRole = $request->user()->role;

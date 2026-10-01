@@ -2,6 +2,9 @@
 
 namespace App\Support;
 
+use App\Models\User;
+use App\Models\UserPreference;
+
 /**
  * Reiter-Definition für den neuen Hauptnavigationspunkt "Planung" (Ralf,
  * 2026-09-28) - gleiches Reiter-oben/Inhalt-darunter-Design wie der
@@ -13,6 +16,8 @@ namespace App\Support;
  */
 class PlanningNav
 {
+    private const DEFAULT_ROUTE = 'planung.stunden';
+
     public static function tabs(): array
     {
         return [
@@ -22,5 +27,33 @@ class PlanningNav
             ['route' => 'planung.grundlast-person', 'match' => 'planung.grundlast-person', 'label' => __('Grundlast/Person')],
             ['route' => 'planung.arbeitszeit', 'match' => 'planung.arbeitszeit', 'label' => __('Arbeitszeit')],
         ];
+    }
+
+    public static function remember(User $user, string $route): void
+    {
+        if (! in_array($route, self::routes(), true)) {
+            return;
+        }
+
+        if (self::preferredRoute($user) === $route) {
+            return;
+        }
+
+        UserPreference::persist($user->id, UserPreference::PLANNING, ['tab' => $route]);
+    }
+
+    public static function preferredRoute(User $user): string
+    {
+        $route = UserPreference::configFor($user->id, UserPreference::PLANNING)['tab'] ?? null;
+
+        return in_array($route, self::routes(), true) ? $route : self::DEFAULT_ROUTE;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function routes(): array
+    {
+        return array_column(self::tabs(), 'route');
     }
 }
