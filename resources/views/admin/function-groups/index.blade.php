@@ -50,14 +50,14 @@
             <div class="flex h-64 shrink-0 flex-col rounded-lg border border-gray-200 bg-white">
                 <div class="shrink-0 flex items-center justify-between border-b border-gray-100 p-2">
                     <span class="text-xs font-semibold text-gray-500">{{ __('Funktionsgruppen') }}</span>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-1.5">
                     @if ($matrixTenants->isNotEmpty())
-                        <button type="button" @click="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'function-group-availability' }))" class="text-xs text-indigo-600 hover:text-indigo-800" title="{{ __('Verfügbarkeit der Funktionsgruppen bei den Kunden festlegen') }}">
+                        <button type="button" @click="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'function-group-availability' }))" class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover" title="{{ __('Verfügbarkeit der Funktionsgruppen bei den Kunden festlegen') }}">
                             {{ __('Matrix') }}
                         </button>
                     @endif
                     @if ($canManageCatalog)
-                    <button type="button" @click="newGroup = !newGroup; if (newGroup) $nextTick(() => $refs.newGroupName.focus())" class="text-xs text-indigo-600 hover:text-indigo-800">
+                    <button type="button" @click="newGroup = !newGroup; if (newGroup) $nextTick(() => $refs.newGroupName.focus())" class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                         + {{ __('Neu') }}
                     </button>
                     @endif
