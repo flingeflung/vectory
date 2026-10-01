@@ -10,6 +10,11 @@
     // die Inhaltsbereiche"). Siehe App\Support\AdminNav für die gemeinsame
     // Gruppen-Definition.
     $currentGroupItems = \App\Support\AdminNav::visibleGroups()->get(\App\Support\AdminNav::currentGroupLabel(), collect());
+    $currentTenant = \App\Support\CurrentTenant::current();
+    $homeTenant = \App\Models\SystemSetting::multiTenantEnabled()
+        ? \App\Models\Tenant::query()->where('is_home_tenant', true)->first()
+        : null;
+    $tenantLabel = fn ($tenant) => $tenant?->short_name ?? $tenant?->name ?? '?';
 @endphp
 
 <x-app-layout>
@@ -35,7 +40,15 @@
 
             @if (\App\Models\SystemSetting::multiTenantEnabled() && ! request()->routeIs('admin.personen*', 'admin.kunden*', 'admin.superadmin', 'admin.hilfeseiten*'))
                 <div class="mb-2 shrink-0 text-xs text-gray-400">
-                    {{ __('Gültig für Kunde: :tenant', ['tenant' => \App\Support\CurrentTenant::current()?->short_name ?? \App\Support\CurrentTenant::current()?->name ?? '?']) }}
+                    @if (request()->routeIs('admin.function-groups*'))
+                        @if ($currentTenant?->id === $homeTenant?->id)
+                            {{ __('Gültig für Organisation: :home', ['home' => $tenantLabel($homeTenant)]) }}
+                        @else
+                            {{ __('Gültig für Organisation :home & :tenant, Konfiguration bei :home im Admin-Bereich', ['home' => $tenantLabel($homeTenant), 'tenant' => $tenantLabel($currentTenant)]) }}
+                        @endif
+                    @else
+                        {{ __('Gültig für Kunde: :tenant', ['tenant' => $tenantLabel($currentTenant)]) }}
+                    @endif
                 </div>
             @endif
 

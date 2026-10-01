@@ -54,7 +54,11 @@ class FunctionGroupCentralizationTest extends TestCase
 
         $this->actingAs($user)
             ->withSession(['active_tenant_id' => $home->id])
-            ->post(route('admin.function-groups.availability.update'), [
+            ->get(route('admin.function-groups'))
+            ->assertOk()
+            ->assertSee(__('Gültig für Organisation: :home', ['home' => $home->short_name ?? $home->name]));
+
+        $this->post(route('admin.function-groups.availability.update'), [
                 'availability' => [$available->id => [$customer->id]],
             ])
             ->assertRedirect(route('admin.function-groups'));
@@ -63,7 +67,11 @@ class FunctionGroupCentralizationTest extends TestCase
             ->get(route('admin.function-groups'))
             ->assertOk()
             ->assertSee('Technische Redaktion')
-            ->assertDontSee('Technische Illustration');
+            ->assertDontSee('Technische Illustration')
+            ->assertSee(__('Gültig für Organisation :home & :tenant, Konfiguration bei :home im Admin-Bereich', [
+                'home' => $home->short_name ?? $home->name,
+                'tenant' => $customer->short_name ?? $customer->name,
+            ]));
 
         $this->post(route('admin.function-groups.members.update', $available), [
             'person_ids' => [$customerPerson->id],
