@@ -5,8 +5,8 @@
     // wirkungslos (der nächste Termin am WFS überschreibt es wieder) und
     // damit irreführend. Also nur editierbar, solange es keinen WFS gibt,
     // der diese Rolle trägt (Ralf-Feedback).
-    $startStep = $project->projectWorkflowSteps->first(fn ($pws) => $pws->effectiveIsStart());
-    $endStep = $project->projectWorkflowSteps->first(fn ($pws) => $pws->effectiveIsEnd());
+    $startStep = $project->projectWorkflowSteps->first(fn ($pws) => $pws->isScheduleStepForCurrentWorkflow() && $pws->effectiveIsStart());
+    $endStep = $project->projectWorkflowSteps->first(fn ($pws) => $pws->isScheduleStepForCurrentWorkflow() && $pws->effectiveIsEnd());
     $stepLabel = fn ($pws) => $pws->effectiveMilestoneTitle() ?: $pws->workflowStep->title;
 @endphp
 {{-- Ralf: "Warum nicht 'Start/Ende' ... als je eine Zeile" - beide Felder

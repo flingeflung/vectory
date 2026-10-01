@@ -33,12 +33,17 @@ class ProjectWorkflowStepObserver
      */
     private function syncProjectStartEndDate(ProjectWorkflowStep $projectWorkflowStep): void
     {
-        if (! $projectWorkflowStep->wasChanged(['due_date', 'is_start', 'is_end'])) {
+        if (! $projectWorkflowStep->wasRecentlyCreated
+            && ! $projectWorkflowStep->wasChanged(['due_date', 'is_start', 'is_end'])) {
             return;
         }
 
         $project = $projectWorkflowStep->project;
         if (! $project) {
+            return;
+        }
+
+        if (! $projectWorkflowStep->isScheduleStepForCurrentWorkflow()) {
             return;
         }
 

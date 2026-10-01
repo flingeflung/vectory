@@ -697,10 +697,10 @@ class ProjectController extends Controller
         // manipulierten Request (gleiches Muster wie beim Publikationsdatum
         // oben). Einfach unsetten statt abzulehnen: es gibt hier kein
         // fehlendes Recht, das Feld ist schlicht nicht die Datenquelle.
-        if ($project->projectWorkflowSteps->contains(fn ($pws) => $pws->effectiveIsStart())) {
+        if ($project->projectWorkflowSteps->contains(fn ($pws) => $pws->isScheduleStepForCurrentWorkflow() && $pws->effectiveIsStart())) {
             unset($validated['start_date']);
         }
-        if ($project->projectWorkflowSteps->contains(fn ($pws) => $pws->effectiveIsEnd())) {
+        if ($project->projectWorkflowSteps->contains(fn ($pws) => $pws->isScheduleStepForCurrentWorkflow() && $pws->effectiveIsEnd())) {
             unset($validated['end_date']);
         }
 

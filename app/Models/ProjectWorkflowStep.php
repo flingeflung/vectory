@@ -59,6 +59,18 @@ class ProjectWorkflowStep extends Model
         return $this->is_end ?? $this->workflowStep->is_end;
     }
 
+    /**
+     * Nur sichtbare Termin-Schritte des aktuell zugewiesenen Workflows
+     * dürfen Start/Ende des Projekts steuern. Lifecycle-Schritte ohne
+     * Termin erscheinen nicht in der Terminverwaltung und wären als
+     * Datumsquelle deshalb irreführend.
+     */
+    public function isScheduleStepForCurrentWorkflow(): bool
+    {
+        return (bool) $this->workflowStep?->has_due_date
+            && $this->workflowStep->workflow_id === $this->project?->workflow_id;
+    }
+
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
