@@ -106,6 +106,16 @@
                     </select>
                 </div>
                 <div>
+                    <label class="block text-xs text-gray-500">{{ __('Zugriffsstufe') }}</label>
+                    <select name="access_level" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-xs">
+                        <option value="">{{ __('– Alle –') }}</option>
+                        <option value="user" @selected(request('access_level') === 'user')>{{ __('User') }}</option>
+                        <option value="organization_admin" @selected(request('access_level') === 'organization_admin')>{{ __('Organisations-Admin') }}</option>
+                        <option value="central_admin" @selected(request('access_level') === 'central_admin')>{{ __('Zentral-Admin') }}</option>
+                        <option value="super_admin" @selected(request('access_level') === 'super_admin')>{{ __('Super-Admin') }}</option>
+                    </select>
+                </div>
+                <div>
                     <label class="block text-xs text-gray-500">{{ __('Ressourcenplanung') }}</label>
                     <select name="resource_planning" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-xs">
                         <option value="">{{ __('– Alle –') }}</option>
@@ -117,7 +127,7 @@
                     <input type="checkbox" name="show_inactive" value="1" @checked(request()->boolean('show_inactive')) onchange="this.form.submit()" class="rounded border-gray-300">
                     {{ __('Inaktive zeigen') }}
                 </label>
-                @if (request()->anyFilled(['search', 'company_id', 'department_id', 'business_unit_id', 'permission_template_id', 'legacy_role_id', 'typ', 'tenant_id', 'resource_planning']) || request()->boolean('show_inactive'))
+                @if (request()->anyFilled(['search', 'company_id', 'department_id', 'business_unit_id', 'permission_template_id', 'legacy_role_id', 'typ', 'access_level', 'tenant_id', 'resource_planning']) || request()->boolean('show_inactive'))
                     <a href="{{ route('admin.personen') }}" class="mb-1.5 inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Filter zurücksetzen') }}</a>
                 @endif
                 </div>

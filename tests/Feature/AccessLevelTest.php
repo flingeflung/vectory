@@ -64,4 +64,43 @@ class AccessLevelTest extends TestCase
 
         $this->assertSame(AccessLevel::USER, $user->fresh()->role);
     }
+
+    public function test_people_overview_can_be_filtered_by_access_level(): void
+    {
+        $tenant = Tenant::query()->firstOrFail();
+        $viewer = User::factory()->create(['tenant_id' => $tenant->id, 'role' => AccessLevel::SUPER_ADMIN]);
+
+        $organizationAdmin = Person::query()->create([
+            'tenant_id' => $tenant->id,
+            'last_name' => 'Filtertreffer',
+            'short_name' => 'FT',
+            'active' => true,
+        ]);
+        User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'person_id' => $organizationAdmin->id,
+            'role' => AccessLevel::ORGANIZATION_ADMIN,
+        ]);
+
+        $standardUser = Person::query()->create([
+            'tenant_id' => $tenant->id,
+            'last_name' => 'Nichttreffer',
+            'short_name' => 'NT',
+            'active' => true,
+        ]);
+        User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'person_id' => $standardUser->id,
+            'role' => AccessLevel::USER,
+        ]);
+
+        $response = $this->actingAs($viewer)->get(route('admin.personen', [
+            'access_level' => AccessLevel::ORGANIZATION_ADMIN,
+        ]));
+
+        $response->assertOk();
+        $response->assertSee('Filtertreffer');
+        $response->assertDontSee('Nichttreffer');
+        $response->assertSee('value="organization_admin" selected', false);
+    }
 }

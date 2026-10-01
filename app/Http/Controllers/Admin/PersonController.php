@@ -55,7 +55,7 @@ class PersonController extends Controller
     /**
      * @var list<string>
      */
-    private const FILTER_KEYS = ['search', 'company_id', 'department_id', 'business_unit_id', 'permission_template_id', 'legacy_role_id', 'typ', 'show_inactive', 'tenant_id', 'resource_planning'];
+    private const FILTER_KEYS = ['search', 'company_id', 'department_id', 'business_unit_id', 'permission_template_id', 'legacy_role_id', 'typ', 'access_level', 'show_inactive', 'tenant_id', 'resource_planning'];
 
     public function index(Request $request): View
     {
@@ -815,6 +815,14 @@ class PersonController extends Controller
             // User-Accounts (Login-User vs. Kontaktperson) - kein eigenes
             // Feld, damit es nie mit der Realität auseinanderlaufen kann.
             $filters['typ'] === 'login' ? $query->has('user') : $query->doesntHave('user');
+        }
+        if (in_array($filters['access_level'] ?? null, [
+            AccessLevel::USER,
+            AccessLevel::ORGANIZATION_ADMIN,
+            AccessLevel::CENTRAL_ADMIN,
+            AccessLevel::SUPER_ADMIN,
+        ], true)) {
+            $query->whereHas('user', fn (Builder $userQuery) => $userQuery->where('role', $filters['access_level']));
         }
         // Ralf, 2026-09-29: Filter fürs neue Ressourcenplanung-Häkchen, um es
         // bequem massenhaft durchsehen/prüfen zu können (statt jede Person
