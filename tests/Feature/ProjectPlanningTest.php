@@ -119,7 +119,9 @@ class ProjectPlanningTest extends TestCase
             ->assertSee('project_people_hours['.$groupId.']['.$person->id.']', false)
             ->assertSee('value="9"', false)
             ->assertSee('project_people_hours['.$groupId.']['.$personWithoutHours->id.']', false)
-            ->assertSee('value="0"', false);
+            ->assertSee('value="0"', false)
+            ->assertSee(__('Std. verteilen'))
+            ->assertSee(__('Stunden werden pro Funktionsgruppe automatisch auf alle Personen gleichmäßig verteilt'));
     }
 
     public function test_person_selection_is_remembered_and_limited_to_eligible_people(): void

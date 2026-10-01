@@ -252,7 +252,10 @@
             @include('projekte.partials.project-group-modal', ['project' => $project])
         </div>
 
-        <div class="{{ $isOverlay ? 'min-h-0 flex-1 overflow-y-auto px-4 pt-1 pb-3' : '' }}">
+        <div
+            class="{{ $isOverlay ? 'min-h-0 flex-1 px-4 pt-1 pb-3' : '' }}"
+            @if ($isOverlay) :class="activeTab === 'planung' ? 'overflow-hidden' : 'overflow-y-auto'" @endif
+        >
         <div x-show="activeTab === 'details'">
         <form id="project-detail-form" method="POST" action="{{ route('projekte.update', $project) }}" class="space-y-4 text-sm">
         <div>
@@ -667,7 +670,7 @@
             @endif
         </div>
 
-        <div x-show="activeTab === 'planung'" x-cloak>
+        <div x-show="activeTab === 'planung'" x-cloak class="h-full min-h-0">
             @include('projekte.partials.planning')
         </div>
 

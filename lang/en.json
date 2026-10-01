@@ -1592,5 +1592,7 @@
     "Noch zu verteilen": "Remaining to allocate",
     "Vollständig verteilt": "Fully allocated",
     "Mehr als geplant verteilt": "Allocated above plan",
-    "Keine Planstunden oder Projektbeteiligten vorhanden.": "No planned hours or project participants available."
+    "Keine Planstunden oder Projektbeteiligten vorhanden.": "No planned hours or project participants available.",
+    "Std. verteilen": "Allocate hours",
+    "Stunden werden pro Funktionsgruppe automatisch auf alle Personen gleichmäßig verteilt": "Hours are automatically distributed equally among all people in each function group"
 }
