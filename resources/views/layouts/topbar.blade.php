@@ -16,7 +16,7 @@
                 <button
                     @click="open = !open"
                     class="flex items-center gap-1.5 rounded-md border border-white/20 px-2.5 py-1 text-sm font-medium hover:bg-white/10 focus:outline-none"
-                    title="{{ __('Firma wechseln') }}"
+                    title="{{ __('Organisation wechseln') }}"
                 >
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21" />
@@ -33,7 +33,7 @@
                     class="absolute right-0 z-50 mt-2 w-56 rounded-md bg-white py-1 text-sm text-gray-700 shadow-lg"
                     style="display: none;"
                 >
-                    <div class="border-b border-gray-100 px-4 py-1.5 text-xs font-semibold text-gray-400">{{ __('Firma wechseln') }}</div>
+                    <div class="border-b border-gray-100 px-4 py-1.5 text-xs font-semibold text-gray-400">{{ __('Organisation wechseln') }}</div>
                     @foreach ($availableTenants as $tenant)
                         <form method="POST" action="{{ route('mandant.wechseln') }}">
                             @csrf
