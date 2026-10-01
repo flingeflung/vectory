@@ -99,5 +99,9 @@ class WorkflowStepPeopleTest extends TestCase
         $this->get(route('projekte.projektbeteiligte.show', $projectId))
             ->assertOk()
             ->assertSee('Redaktion, Tina');
+
+        $this->get(route('projekte.show', $projectId))
+            ->assertOk()
+            ->assertSee('openProjectPlanningOverview', false);
     }
 }

@@ -36,6 +36,9 @@
         templateId: {{ \Illuminate\Support\Js::from((string) old('project_template_id', $project->project_template_id ?? '')) }},
         hasOwnHours: {{ \Illuminate\Support\Js::from($project->functionGroupHours->isNotEmpty()) }},
         locked: {{ \Illuminate\Support\Js::from($project->functionGroupHours->isNotEmpty()) }},
+        ownHours: {{ \Illuminate\Support\Js::from($project->functionGroupHours->mapWithKeys(fn ($group) => [(string) $group->id => (float) $group->pivot->planned_hours])) }},
+        templateHours: {{ \Illuminate\Support\Js::from($availableProjectTemplates->mapWithKeys(fn ($template) => [(string) $template->id => $template->functionGroups->mapWithKeys(fn ($group) => [(string) $group->id => (float) $group->pivot->planned_hours])])) }},
+        groupCatalog: {{ \Illuminate\Support\Js::from($allFunctionGroups->mapWithKeys(fn ($group) => [(string) $group->id => ['name' => $group->name, 'shortName' => $group->short_name]])) }},
         // Ralf-Bug-Report, 2026-09-28: der Speichern-Button kommt nicht mehr, wenn das Dropdown
         // entsperrt wird - das Schloss ändert 'locked' rein per Alpine, ohne ein echtes
         // input/change-Event auf #project-detail-form. Der Footer-Speichern-Button (siehe
@@ -130,12 +133,13 @@
          komplett in der FormData (siehe project-percentage-body.blade.php, dieselbe Lektion) -
          ohne statischen @disabled-Fallback stand project_template_id im zu frühen Dirty-Snapshot
          noch drin (Alpines :disabled war noch nicht ausgewertet), fehlte aber danach. --}}
+    <div class="mt-0.5 flex items-center gap-2">
     <select
         name="project_template_id"
         x-model="templateId"
         @disabled($project->functionGroupHours->isNotEmpty())
         :disabled="locked"
-        class="mt-0.5 w-full max-w-sm rounded border-gray-300 py-1 text-sm"
+        class="w-full max-w-sm rounded border-gray-300 py-1 text-sm"
         :class="locked ? 'bg-gray-100 text-gray-400' : ''"
     >
         <option value="">{{ __('– nicht zugewiesen –') }}</option>
@@ -150,6 +154,12 @@
             >{{ $template->name }}{{ ! $template->active ? ' [i]' : '' }}</option>
         @endforeach
     </select>
+        <button
+            type="button"
+            class="rounded-md border border-gray-300 bg-btn-secondary px-3 py-1 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
+            @click="window.openProjectPlanningOverview({ templateId, locked, ownHours, templateHours, groupCatalog })"
+        >{{ __('Planung') }}</button>
+    </div>
     <template x-if="hasOwnHours">
         <p class="mt-0.5 flex items-center gap-1 text-[11px] text-gray-400" x-show="locked">
             <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>

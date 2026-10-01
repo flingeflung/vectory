@@ -130,7 +130,7 @@
                  stillschweigend entfernen (ihre Checkboxen kämen ja
                  gar nicht mehr im Formular vor). --}}
             @if ($visibleMembers->isNotEmpty() && ($group->active || $currentEntries->isNotEmpty()))
-                <div>
+                <div data-project-planning-group data-group-id="{{ $group->id }}" data-group-name="{{ $group->name }}" data-group-short-name="{{ $group->short_name }}">
                     <div class="mb-0.5 flex items-center justify-between font-medium text-gray-600">
                         <span>{{ $group->name }}</span>
                         <span class="font-normal text-gray-400">{{ __('Planstunden') }}</span>
@@ -143,6 +143,7 @@
                                     type="checkbox"
                                     name="project_people[{{ $group->id }}][]"
                                     value="{{ $person->id }}"
+                                    data-person-name="{{ $person->fullName() }}"
                                     class="shrink-0 rounded border-gray-300"
                                     @checked(in_array($person->id, $currentPersonIds, true))
                                 >
