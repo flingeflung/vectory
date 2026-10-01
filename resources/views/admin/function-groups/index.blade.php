@@ -304,7 +304,7 @@
                 <div class="flex shrink-0 cursor-move items-center justify-between border-b border-gray-200 bg-gray-100 px-4 py-2" data-drag-handle>
                     <div>
                         <div class="text-sm font-semibold text-gray-900">{{ __('Funktionsgruppen je Kunde') }}</div>
-                        <div class="text-xs text-gray-500">{{ __('Der Heimatdienstleister legt die Taxonomie zentral fest. Hier wird nur die Verfügbarkeit bei den Kunden gesteuert.') }}</div>
+                        <div class="text-xs text-gray-500">{{ __('Hier legen Sie die Funktionsgruppen zentral fest und steuern die Verfügbarkeit.') }}</div>
                     </div>
                     <button type="button" onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'function-group-availability' }))" class="text-gray-400 hover:text-gray-600" aria-label="{{ __('Schließen') }}">&times;</button>
                 </div>
