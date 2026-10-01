@@ -165,7 +165,13 @@
                                                         @endif
                                                     </span>
                                                 </div>
-                                                <span class="block truncate text-[10px] text-gray-400">{{ $projectRow['tenant']?->name }}@if (! $hasPeriod) · {{ __('Zeitraum unvollständig') }}@endif</span>
+                                                <span class="block truncate text-[10px] text-gray-400">
+                                                    {{ $projectRow['tenant']?->name }}
+                                                    @if (! $project->workflow_id)
+                                                        · <span title="{{ __('Für dieses Projekt ist kein Workflow festgelegt.') }}">{{ __('Kein Workflow') }}</span>
+                                                    @endif
+                                                    @if (! $hasPeriod) · {{ __('Zeitraum unvollständig') }}@endif
+                                                </span>
                                             </div>
                                         </div>
                                     </td>

@@ -145,6 +145,8 @@ class ProjectPlanningTest extends TestCase
             ->assertSee('9,00 h')
             ->assertSee('Meilenstein: Redaktionsschluss (02.10.2026)')
             ->assertSee('rotate-45 border border-white bg-fuchsia-600', false)
+            ->assertSee('title="Für dieses Projekt ist kein Workflow festgelegt."', false)
+            ->assertSee(__('Kein Workflow'))
             ->assertSee('images/company-icons/planung-test.svg', false)
             ->assertSee('h-4 w-4 shrink-0 object-contain', false)
             ->assertSee("window.dispatchEvent(new CustomEvent('open-project', { detail: { id: {$projectId} } }))", false)
