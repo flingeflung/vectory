@@ -95,11 +95,12 @@
         @endif
     </div>
 
-    <div x-show="editingPeople" x-cloak class="mt-0.5 max-h-56 overflow-y-auto rounded border border-gray-300 bg-white p-2 text-xs space-y-2">
-        <div class="sticky top-0 z-[1] flex flex-wrap gap-3 border-b border-gray-100 bg-white pb-1 text-[10px] text-gray-500">
+    <div x-show="editingPeople" x-cloak class="mt-0.5 max-h-56 overflow-y-auto rounded border border-gray-300 bg-white text-xs">
+        <div class="sticky top-0 z-20 flex flex-wrap gap-3 border-b border-gray-200 bg-white px-2 py-1.5 text-[10px] text-gray-500">
             <span class="inline-flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-blue-400"></span>{{ __('Im Workflow relevant') }}</span>
             <span class="inline-flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-amber-400"></span>{{ __('Person fehlt') }}</span>
         </div>
+        <div class="space-y-2 p-2">
         @if (! $hasAssignablePeople)
             <div class="text-amber-700">{{ __('Für diese Organisation sind noch keine Funktionsgruppen mit Personen angelegt. Bitte zuerst unter Admin > Personen & Rechte > Funktionsgruppen entsprechende Gruppen anlegen und Personen zuordnen.') }}</div>
         @endif
@@ -160,5 +161,6 @@
                 </div>
             @endif
         @endforeach
+        </div>
     </div>
 </div>
