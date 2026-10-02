@@ -124,8 +124,10 @@
                  ist - sonst würde ein Speichern diese Zuordnung
                  stillschweigend entfernen (ihre Checkboxen kämen ja
                  gar nicht mehr im Formular vor). --}}
-            @if ($visibleMembers->isNotEmpty() && ($group->active || $currentEntries->isNotEmpty()))
+            @if ($group->active || $currentEntries->isNotEmpty())
                 <div
+                    x-show="{{ $visibleMembers->isNotEmpty() ? 'true' : 'isWorkflowRelevant('.$group->id.')' }}"
+                    x-cloak
                     x-data="{ assignedCount: {{ count($currentPersonIds) }} }"
                     :class="isWorkflowRelevant({{ $group->id }}) ? (assignedCount > 0 ? 'border-blue-400 bg-blue-50' : 'border-amber-400 bg-amber-50') : 'border-transparent bg-white'"
                     class="rounded border-l-2 px-2 py-1"
@@ -134,8 +136,11 @@
                         <span>{{ $group->name }}</span>
                         <span x-show="isWorkflowRelevant({{ $group->id }})" x-cloak :class="assignedCount > 0 ? 'text-blue-600' : 'text-amber-700'" class="shrink-0 text-[10px]" x-text="assignedCount > 0 ? {{ \Illuminate\Support\Js::from(__('Im Workflow')) }} : {{ \Illuminate\Support\Js::from(__('Person fehlt')) }}"></span>
                     </div>
-                    <div class="grid grid-cols-2 gap-x-3 gap-y-0.5">
-                        @foreach ($visibleMembers as $person)
+                    @if ($visibleMembers->isEmpty())
+                        <div class="text-[11px] text-amber-700">{{ __('Keine zuweisbare Person verfügbar.') }}</div>
+                    @else
+                        <div class="grid grid-cols-2 gap-x-3 gap-y-0.5">
+                            @foreach ($visibleMembers as $person)
                             <label class="grid grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-1 {{ $person->active ? 'text-gray-600' : 'text-gray-400' }}">
                                 <input
                                     type="checkbox"
@@ -156,8 +161,9 @@
                                 >
                                 <span class="min-w-0 truncate">{{ $person->fullName() }}{{ ! $person->active ? ' [i]' : '' }} <x-absence-icon :person="$person" /></span>
                             </label>
-                        @endforeach
-                    </div>
+                            @endforeach
+                        </div>
+                    @endif
                 </div>
             @endif
         @endforeach
