@@ -146,6 +146,7 @@ class WorkflowStepPeopleTest extends TestCase
                 __('Gebuchte Stunden'),
                 __('Differenz'),
             ], false)
+            ->assertSee(__('Bezieht sich auf Projekt „:project“.', ['project' => '260026 – Testprojekt']))
             ->assertSee('project_people_hours['.$homeGroup->id.']['.$person->id.']', false)
             ->assertSee('value="5"', false);
     }

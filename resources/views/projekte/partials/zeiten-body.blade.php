@@ -37,6 +37,13 @@
     @endcan
 
     <div x-show="subTab === 'uebersicht'">
+        <p class="mb-1 text-[11px] text-gray-400">
+            @if ($project->verbund_rolle === 1)
+                {{ __('Bezieht sich auf das Hauptprojekt „:project“ und alle zugehörigen Unterprojekte.', ['project' => $project->source_pn.' – '.$project->title]) }}
+            @else
+                {{ __('Bezieht sich auf Projekt „:project“.', ['project' => $project->source_pn.' – '.$project->title]) }}
+            @endif
+        </p>
         <div
             x-data="{ plan: {{ Illuminate\Support\Js::from($zeiten['planTotal']) }} }"
             @project-planned-hours-changed.window="plan = $event.detail"
