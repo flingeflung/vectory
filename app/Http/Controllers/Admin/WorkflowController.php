@@ -543,7 +543,7 @@ class WorkflowController extends Controller
 
             $isStartOrEnd = $request->boolean("steps.$stepId.is_start") || $request->boolean("steps.$stepId.is_end");
             if ($isStartOrEnd && ! $request->boolean("steps.$stepId.has_due_date")) {
-                $stepErrors["steps.$stepId.has_due_date"] = [__('Ein Schritt für Projektstart oder Projektende muss einen Termin haben.')];
+                $stepErrors["steps.$stepId.has_due_date"] = [__('Ein Schritt für Projektstart oder Projektende muss einen Termin haben. Checkbox „Hat Termin“ markieren!')];
             }
         }
 

@@ -27,7 +27,7 @@ class WorkflowScheduleValidationTest extends TestCase
                 ],
             ],
         ])->assertStatus(422)
-            ->assertSee('Ein Schritt für Projektstart oder Projektende muss einen Termin haben.');
+            ->assertSee('Ein Schritt für Projektstart oder Projektende muss einen Termin haben. Checkbox „Hat Termin“ markieren!');
 
         $this->assertFalse($step->fresh()->is_end);
         $this->assertFalse($step->fresh()->has_due_date);
