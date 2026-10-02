@@ -145,6 +145,37 @@ class CriticalProjectsTest extends TestCase
         $this->assertDatabaseCount('critical_project_finding_states', 0);
     }
 
+    public function test_user_can_acknowledge_and_hide_all_findings_of_one_project(): void
+    {
+        $tenant = Tenant::query()->firstOrFail();
+        $user = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'super_admin']);
+        $project = Project::query()->create([
+            'tenant_id' => $tenant->id,
+            'source_pn' => '269910',
+            'title' => 'Sammelaktion',
+            'status' => 0,
+        ]);
+        $findings = collect(['rule.one:project', 'rule.two:project'])->map(fn ($key) => CriticalProjectFinding::query()->create([
+            'project_id' => $project->id,
+            'finding_key' => $key,
+            'rule_code' => str($key)->before(':')->toString(),
+        ]));
+
+        $this->actingAs($user)->patch(route('critical-projects.findings.bulk-update'), [
+            'action' => 'acknowledge',
+            'finding_ids' => $findings->pluck('id')->all(),
+        ])->assertRedirect();
+        $this->assertSame(2, CriticalProjectFindingState::query()->whereNotNull('acknowledged_at')->count());
+
+        $hiddenUntil = today()->addWeek()->format('Y-m-d');
+        $this->patch(route('critical-projects.findings.bulk-update'), [
+            'action' => 'hide',
+            'hidden_until' => $hiddenUntil,
+            'finding_ids' => $findings->pluck('id')->all(),
+        ])->assertRedirect();
+        $this->assertSame(2, CriticalProjectFindingState::query()->whereDate('hidden_until', $hiddenUntil)->count());
+    }
+
     public function test_finishing_project_deletes_findings_and_personal_states(): void
     {
         $tenant = Tenant::query()->firstOrFail();
@@ -273,5 +304,10 @@ class CriticalProjectsTest extends TestCase
         $this->assertSame('blocked', $findings->first(fn ($finding) => str_contains($finding['detail'], 'Projektstart'))['severity']);
         $this->assertSame('watch', $findings->first(fn ($finding) => str_contains($finding['detail'], 'Zwischentermin'))['severity']);
         $this->assertSame('critical', $findings->first(fn ($finding) => str_contains($finding['detail'], 'Projektende'))['severity']);
+
+        $user = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'super_admin']);
+        $this->actingAs($user)->get(route('critical-projects.index'))
+            ->assertOk()
+            ->assertSee('1 Punkt zum');
     }
 }

@@ -1632,6 +1632,8 @@
     "Zugriffsstufe ändern?": "Change access level?",
     "Die neue Zugriffsstufe verändert den administrativen Zugriff dieser Person.": "The new access level changes this person's administrative access.",
     "Alle Benutzerrechte": "All user permissions",
+    "Alle bis": "All until",
+    "Alle zur Kenntnis nehmen": "Acknowledge all",
     "Ausblenden": "Hide",
     "Ausblenden bis": "Hide until",
     "Ausgeblendet bis :date": "Hidden until :date",
@@ -1640,5 +1642,6 @@
     "Wieder einblenden": "Show again",
     "Zur Kenntnis genommen": "Acknowledged",
     "Zur Kenntnis nehmen": "Acknowledge",
+    ":count Punkt zum|:count Punkte zum": ":count finding to|:count findings to",
     "Kritische Punkte": "Critical findings"
 }

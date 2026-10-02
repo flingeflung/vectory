@@ -77,6 +77,7 @@ Route::get('/', function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/kritische-projekte', CriticalProjectController::class)->name('critical-projects.index');
+    Route::patch('/kritische-projekte/befunde', [CriticalProjectFindingStateController::class, 'bulkUpdate'])->name('critical-projects.findings.bulk-update');
     Route::patch('/kritische-projekte/befunde/{criticalProjectFinding}', [CriticalProjectFindingStateController::class, 'update'])->name('critical-projects.findings.update');
     Route::get('/kalender', [CalendarController::class, 'index'])->name('kalender');
     Route::post('/kalender/eintraege', [CalendarController::class, 'store'])->name('kalender.eintraege.store');

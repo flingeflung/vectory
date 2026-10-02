@@ -94,7 +94,7 @@
                                 </td>
                                 <td class="min-w-96 px-4 py-3">
                                     <div class="space-y-3">
-                                        @foreach ($row['findings'] as $finding)
+                                        @foreach ($row['findings']->where('severity', '!=', 'watch') as $finding)
                                             <div>
                                                 <div class="flex flex-wrap items-center gap-1.5">
                                                     <span class="rounded border px-1.5 py-0.5 text-[11px] font-semibold {{ $severityClasses[$finding['severity']] }}">{{ $finding['severity_label'] }}</span>
@@ -103,6 +103,13 @@
                                                 <div class="mt-0.5 text-xs text-gray-600">{{ $finding['detail'] }}</div>
                                             </div>
                                         @endforeach
+                                        @php($watchCount = $row['findings']->where('severity', 'watch')->count())
+                                        @if ($watchCount > 0)
+                                            <div class="flex flex-wrap items-center gap-1.5">
+                                                <span class="font-medium text-gray-800">{{ trans_choice(':count Punkt zum|:count Punkte zum', $watchCount, ['count' => $watchCount]) }}</span>
+                                                <span class="rounded border px-1.5 py-0.5 text-[11px] font-semibold {{ $severityClasses['watch'] }}">{{ __('Beobachten') }}</span>
+                                            </div>
+                                        @endif
                                         <button type="button" onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'critical-project-details-{{ $project->id }}' }))" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Details') }}</button>
                                     </div>
                                 </td>
@@ -127,6 +134,22 @@
                 <button type="button" @click="$dispatch('close-modal', 'critical-project-details-{{ $project->id }}')" class="text-xl text-gray-400">×</button>
             </div>
             <div class="max-h-[70vh] space-y-3 overflow-y-auto p-4 text-sm">
+                <div class="flex flex-wrap items-center gap-2 rounded-md border border-gray-200 bg-gray-50 p-3">
+                    <form method="POST" action="{{ route('critical-projects.findings.bulk-update') }}">
+                        @csrf @method('PATCH')
+                        <input type="hidden" name="action" value="acknowledge">
+                        @foreach ($row['findings'] as $finding)<input type="hidden" name="finding_ids[]" value="{{ $finding['occurrence']->id }}">@endforeach
+                        <button class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100">{{ __('Alle zur Kenntnis nehmen') }}</button>
+                    </form>
+                    <form method="POST" action="{{ route('critical-projects.findings.bulk-update') }}" class="flex flex-wrap items-center gap-1.5">
+                        @csrf @method('PATCH')
+                        <input type="hidden" name="action" value="hide">
+                        @foreach ($row['findings'] as $finding)<input type="hidden" name="finding_ids[]" value="{{ $finding['occurrence']->id }}">@endforeach
+                        <label class="text-xs text-gray-500" for="hide-all-until-{{ $project->id }}">{{ __('Alle bis') }}</label>
+                        <input id="hide-all-until-{{ $project->id }}" type="date" name="hidden_until" min="{{ today()->format('Y-m-d') }}" required class="rounded border-gray-300 px-2 py-1 text-xs">
+                        <button class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100">{{ __('Ausblenden') }}</button>
+                    </form>
+                </div>
                 @foreach ($row['findings'] as $finding)
                     <section @class([
                         'rounded-md border border-gray-200 p-3',
