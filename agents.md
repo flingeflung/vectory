@@ -45,7 +45,8 @@ Setze ausschließlich den beschriebenen Auftrag um.
 
 - Arbeit erfolgt direkt auf Branch `main` (kein Team, keine Feature-Branches nötig).
 - Vor Beginn einer neuen Aufgabe: `git pull origin main`, damit nichts überschrieben wird.
-- Nach jeder abgeschlossenen Änderung automatisch: `git add`, `git commit` mit aussagekräftiger Nachricht, `git push origin main`. GitHub ist damit laufend der aktuelle Stand – falls diese Instanz/Session mal nicht erreichbar ist, kann eine andere Instanz nahtlos auf `main` weiterarbeiten, ohne Rückfrage.
+- Nach jeder abgeschlossenen Änderung automatisch: `git add`, `git commit` mit aussagekräftiger Nachricht. Ein `git push` erfolgt ausschließlich nach ausdrücklichem OK von Ralf (Stand 03.10.2026): Wenn eine Änderung committet ist, dann weise im Abschlussbericht auf die ungepushten Commits hin und warte auf die Freigabe.
+- Wenn Ralf das OK zum Pushen gibt, dann führe `git pull origin main` und danach `git push origin main` aus.
 - Branch, Merge, Rebase oder Tag ausschließlich nach ausdrücklicher Anweisung.
 
 ## Composer / Frontend
