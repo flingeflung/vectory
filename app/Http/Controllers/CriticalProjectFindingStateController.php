@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CriticalProjectFinding;
 use App\Models\CriticalProjectFindingState;
 use App\Models\SystemSetting;
-use App\Support\CurrentTenant;
+use App\Support\CriticalProjectAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -17,12 +17,9 @@ class CriticalProjectFindingStateController extends Controller
     public function update(Request $request, CriticalProjectFinding $criticalProjectFinding): RedirectResponse
     {
         abort_unless($request->user()->can('project.view'), 403);
-        $allowedTenantIds = SystemSetting::multiTenantEnabled()
-            ? CurrentTenant::availableTenants()->pluck('id')
-            : collect([CurrentTenant::id()]);
         $criticalProjectFinding->load('project');
         abort_unless($criticalProjectFinding->project
-            && $allowedTenantIds->map(fn ($id) => (int) $id)->contains((int) $criticalProjectFinding->project->tenant_id), 403);
+            && CriticalProjectAccess::canViewProject($request->user(), $criticalProjectFinding->project), 403);
 
         $validated = $this->validateAction($request);
 
@@ -89,13 +86,8 @@ class CriticalProjectFindingStateController extends Controller
     /** @param Collection<int, CriticalProjectFinding> $findings */
     private function authorizeFindings(Request $request, Collection $findings): void
     {
-        $allowedTenantIds = SystemSetting::multiTenantEnabled()
-            ? CurrentTenant::availableTenants()->pluck('id')
-            : collect([CurrentTenant::id()]);
-        $allowedTenantIds = $allowedTenantIds->map(fn ($id) => (int) $id);
-
         abort_unless($findings->every(fn ($finding) => $finding->project
-            && $allowedTenantIds->contains((int) $finding->project->tenant_id)), 403);
+            && CriticalProjectAccess::canViewProject($request->user(), $finding->project)), 403);
     }
 
     /** @param array<string, mixed> $validated */

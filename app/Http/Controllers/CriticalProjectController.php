@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use App\Models\SystemSetting;
-use App\Models\Tenant;
 use App\Services\CriticalProjects\CriticalProjectEvaluator;
 use App\Services\CriticalProjects\CriticalProjectFindingTracker;
+use App\Support\CriticalProjectAccess;
 use App\Support\CurrentTenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,13 +21,12 @@ class CriticalProjectController extends Controller
     {
         abort_unless($request->user()->can('project.view'), 403);
 
-        $allowedTenantIds = SystemSetting::multiTenantEnabled()
-            ? CurrentTenant::availableTenants()->pluck('id')
-            : collect([CurrentTenant::id()]);
+        $allowedTenantIds = CriticalProjectAccess::organizations($request->user())->pluck('id');
         $target = Project::withoutGlobalScope('tenant')
             ->whereIn('tenant_id', $allowedTenantIds)
             ->whereIn('status', [0, 1])
             ->findOrFail($project);
+        abort_unless(CriticalProjectAccess::canViewProject($request->user(), $target), 404);
 
         if (SystemSetting::multiTenantEnabled() && CurrentTenant::id() !== (int) $target->tenant_id) {
             CurrentTenant::switchTo((int) $target->tenant_id);
@@ -41,9 +40,7 @@ class CriticalProjectController extends Controller
     {
         abort_unless($request->user()->can('project.view'), 403);
 
-        $organizations = SystemSetting::multiTenantEnabled()
-            ? CurrentTenant::availableTenants()
-            : Tenant::query()->whereKey(CurrentTenant::id())->get();
+        $organizations = CriticalProjectAccess::organizations($request->user());
         $allowedIds = $organizations->pluck('id')->map(fn ($id) => (int) $id);
         $organizationSessionKey = self::ORGANIZATION_SESSION_KEY.$request->user()->id;
         if (! SystemSetting::multiTenantEnabled()) {
@@ -60,7 +57,7 @@ class CriticalProjectController extends Controller
         }
 
         $projects = Project::withoutGlobalScope('tenant')
-            ->whereIn('tenant_id', $allowedIds)
+            ->tap(fn ($query) => CriticalProjectAccess::scopeProjects($query, $request->user(), $allowedIds))
             ->whereIn('status', [0, 1])
             ->with([
                 'tenant',

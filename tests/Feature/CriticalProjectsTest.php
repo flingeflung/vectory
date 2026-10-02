@@ -4,7 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\CriticalProjectFinding;
 use App\Models\CriticalProjectFindingState;
+use App\Models\FunctionGroup;
+use App\Models\Permission;
+use App\Models\PermissionTemplate;
+use App\Models\Person;
 use App\Models\Project;
+use App\Models\ProjectPerson;
 use App\Models\ProjectTemplate;
 use App\Models\ProjectWorkflowStep;
 use App\Models\SystemSetting;
@@ -13,6 +18,7 @@ use App\Models\User;
 use App\Models\Workflow;
 use App\Models\WorkflowStep;
 use App\Services\CriticalProjects\CriticalProjectEvaluator;
+use App\Support\AccessLevel;
 use App\Support\CurrentTenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -200,6 +206,105 @@ class CriticalProjectsTest extends TestCase
             ->assertOk()
             ->assertDontSee($homeProject->source_pn)
             ->assertDontSee($otherProject->source_pn);
+    }
+
+    public function test_standard_user_sees_own_projects_and_view_all_permission_expands_the_scope(): void
+    {
+        $tenant = Tenant::query()->firstOrFail();
+        $rights = PermissionTemplate::query()->create(['tenant_id' => $tenant->id, 'name' => 'KPr-Test']);
+        $rights->permissions()->attach(Permission::query()->where('key', 'project.view')->firstOrFail());
+        $person = Person::query()->create([
+            'tenant_id' => $tenant->id,
+            'last_name' => 'Redakteur',
+            'short_name' => 'RE',
+            'active' => true,
+            'permission_template_id' => $rights->id,
+        ]);
+        $user = User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'person_id' => $person->id,
+            'role' => AccessLevel::USER,
+        ]);
+        $ownProject = Project::query()->create([
+            'tenant_id' => $tenant->id,
+            'source_pn' => '269915',
+            'title' => 'Eigenes kritisches Projekt',
+            'status' => 0,
+            'start_date' => today()->subDay(),
+        ]);
+        $otherProject = Project::query()->create([
+            'tenant_id' => $tenant->id,
+            'source_pn' => '269916',
+            'title' => 'Fremdes kritisches Projekt',
+            'status' => 0,
+            'start_date' => today()->subDay(),
+        ]);
+        $functionGroup = FunctionGroup::query()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Technische Redaktion',
+            'short_name' => 'TR',
+            'sort' => 1,
+            'active' => true,
+        ]);
+        ProjectPerson::query()->create([
+            'tenant_id' => $tenant->id,
+            'project_id' => $ownProject->id,
+            'function_group_id' => $functionGroup->id,
+            'person_id' => $person->id,
+        ]);
+
+        $this->actingAs($user)->get(route('critical-projects.index'))
+            ->assertOk()
+            ->assertSee($ownProject->source_pn)
+            ->assertDontSee($otherProject->source_pn);
+        $this->get(route('critical-projects.projects.open', $otherProject))->assertNotFound();
+
+        $rights->permissions()->attach(Permission::query()->where('key', 'critical_projects.view_all')->firstOrFail());
+        $user->unsetRelation('person');
+
+        $this->get(route('critical-projects.index'))
+            ->assertOk()
+            ->assertSee($ownProject->source_pn)
+            ->assertSee($otherProject->source_pn);
+    }
+
+    public function test_admin_access_levels_receive_the_defined_organization_scope(): void
+    {
+        SystemSetting::set(SystemSetting::MULTI_TENANT_ENABLED, '1');
+        $home = Tenant::query()->firstOrFail();
+        $customer = Tenant::query()->create(['name' => 'KPr-Kunde', 'short_name' => 'KPR', 'active' => true]);
+        $homeProject = Project::query()->create([
+            'tenant_id' => $home->id,
+            'source_pn' => '269917',
+            'title' => 'Kritisch bei Heimat',
+            'status' => 0,
+            'start_date' => today()->subDay(),
+        ]);
+        $customerProject = Project::withoutGlobalScope('tenant')->create([
+            'tenant_id' => $customer->id,
+            'source_pn' => '269918',
+            'title' => 'Kritisch beim Kunden',
+            'status' => 0,
+            'start_date' => today()->subDay(),
+        ]);
+
+        $organizationAdmin = User::factory()->create([
+            'tenant_id' => $home->id,
+            'role' => AccessLevel::ORGANIZATION_ADMIN,
+        ]);
+        $this->actingAs($organizationAdmin)->get(route('critical-projects.index'))
+            ->assertOk()
+            ->assertSee($homeProject->source_pn)
+            ->assertDontSee($customerProject->source_pn);
+
+        $centralAdmin = User::factory()->create([
+            'tenant_id' => $home->id,
+            'role' => AccessLevel::CENTRAL_ADMIN,
+        ]);
+        $this->actingAs($centralAdmin)->get(route('critical-projects.index'))
+            ->assertOk()
+            ->assertSee($homeProject->source_pn)
+            ->assertSee($customerProject->source_pn);
     }
 
     public function test_user_can_acknowledge_hide_and_restore_a_finding(): void

@@ -7,6 +7,15 @@ Die Seite bündelt aktive Projekte, bei denen ein konkret behebbares Problem den
 Direkt vor der Ergebnistabelle steht gemäß den [GUI-Grundsätzen](gui-grundsaetze.md) die Anzahl der aktuell angezeigten kritischen Projekte.
 Jede Projektzeile zeigt außerdem das Symbol und den Namen der zugehörigen Organisation.
 
+## Sichtbarkeit
+
+- Super-Admin und Zentral-Admin sehen alle Projekte aller Organisationen der Installation.
+- Organisations-Admins sehen alle Projekte ihrer eigenen Organisation.
+- Standard-User sehen ohne besonderes Recht nur Projekte, denen ihre Person als Projektbeteiligter zugeordnet ist.
+- Das Recht `critical_projects.view_all` erweitert die Sicht eines Standard-Users auf alle Projekte seiner freigegebenen Organisationen. Es erweitert nicht dessen Organisationsgrenzen.
+
+Personenbezogene Befunde zeigen nur die für die Projektsteuerung erforderliche Aussage. Abwesenheitsgründe, Krankheitsdaten und andere nicht benötigte Personaldetails gehören nicht in KPr.
+
 ## Dringlichkeitsstufen
 
 - **Handlungsbedarf:** Eine unmittelbar benötigte Voraussetzung fehlt. Der aktuelle Projektschritt kann nicht zuverlässig weitergeführt werden und verlangt sofortige Klärung.
@@ -41,7 +50,6 @@ Die Datensätze werden erst angelegt, wenn KPr ein aktives Projekt tatsächlich 
 
 ## Spätere Schritte
 
-- Rollen und Sichtbarkeit fachlich abschließend festlegen
 - Abwesenheit, Beschäftigungsende und ausdrücklich benannte sowie benachrichtigte Vertretung
 - Einen täglichen Bereinigungslauf als zusätzliches Sicherheitsnetz vorsehen. Er entfernt verbliebene KPr-Datensätze abgeschlossener, verworfener oder gelöschter Projekte einschließlich der abhängigen Nutzerkennzeichnungen. Der Lauf wird über den Laravel Scheduler definiert; dessen Betrieb ist Bestandteil der [Checkliste für neue Zielsysteme](installation-zielsystem.md).
 - tägliche oder wöchentliche E-Mail-Berichte

@@ -138,6 +138,7 @@ Direkte, über einzelne Controller und Ansichten verstreute Rollenvergleiche sin
 - `planning.view` schaltet die Tabs **Stunden**, **Grundlastbasis**, **Grundlast/Person** und **Arbeitszeit** sowie die vollständige Personenansicht innerhalb der zulässigen Organisationssicht frei.
 - Im Planungstab eines Projekts sehen User ohne `planning.view` nur die Planstunden je Funktionsgruppe. Das Lösen einer Schablonenverknüpfung, die Bearbeitung der Funktionsgruppenstunden und die Verteilung auf Projektpersonen erfordern `planning.view`.
 - Im Zeiten-Tab eines Projekts sind die aggregierten Ansichten **Projektstunden** und **Zeitverlauf** für alle Projektberechtigten sichtbar. **Personen & Tage** sowie personenbezogene Modi und Aufschlüsselungen im Zeitverlauf erfordern `planning.view`.
+- **Kritische Projekte** ist für Standard-User auf die Projekte begrenzt, denen ihre Person als Projektbeteiligter zugeordnet ist. `critical_projects.view_all` erweitert die Sicht auf alle Projekte der freigegebenen Organisationen. Organisations-Admins sehen alle Projekte ihrer Organisation; Zentral- und Super-Admins sehen alle Projekte aller Organisationen der Installation.
 - Die Attribute **Ressourcenplanung** und **Kalender** bestimmen nur, ob eine Person fachlich in diesen Modulen teilnimmt.
 
 ## 9. Begriffe
