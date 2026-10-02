@@ -5,7 +5,7 @@ zum Reset. Diese Datei ist ein Schnappschuss des aktuellen Stands - bitte
 zuerst lesen, dann archivieren, sobald sie nicht mehr aktuell ist.
 
 **Zuerst lesen, in dieser Reihenfolge:**
-1. `agents.md` (Projekt-Root) - regelt die Arbeitsweise/Git-Workflow für dich als Implementierer. Wichtig: dort steht "nach jeder Änderung automatisch commit+push" - das ist dein Standardverhalten, nicht das von Claude (siehe unten).
+1. `agents.md` (Projekt-Root) - regelt die Arbeitsweise/Git-Workflow für dich als Implementierer. Wichtig: dort steht (Stand 03.10.2026): nach jeder Änderung automatisch committen, pushen aber erst nach ausdrücklichem OK von Ralf. Das gilt für Codex und Claude gleichermaßen.
 2. `CLAUDE.md` (Projekt-Root) - alle UI-Konventionen (Speichern-Button-Regeln, Overlay-Muster, Sicherheitsabfragen, Sortierung, Formulierungsstil usw.). Bitte konsequent einhalten, Ralf achtet stark auf Konsistenz.
 3. `docs/kalender-sichtbarkeit.md` - verbindliche Sichtbarkeitsregeln des neuen Kalenders bei ein- und ausgeschalteter Mandantenfähigkeit.
 4. `docs/funktionsgruppen-taxonomie.md` - zentraler Funktionsgruppen-Katalog des Heimatdienstleisters und Kunden-Verfügbarkeitsmatrix.
@@ -182,8 +182,7 @@ nachgezogen (Tooltip-Texte, Kommentare, `lang/en.json`).
 
 - Branch `main`, aktueller HEAD: `d3499cb`.
 - Alles bis `d3499cb` ist auf `origin/main` gepusht - kein lokaler Rückstand.
-  Bitte laut `agents.md` ab jetzt wieder normal nach jeder Änderung
-  committen UND pushen.
+  (Historischer Stand. Seit 03.10.2026 gilt laut `agents.md`: committen ja, pushen nur nach Freigabe.)
 - Migrationen sind bereits lokal ausgeführt (`php artisan migrate`), Backfill
   ist erfolgt - keine offenen Migrationen.
 - Es gibt zusätzlich eine Backlog-Übersichtsseite, aber die ist an Claudes
