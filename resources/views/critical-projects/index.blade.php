@@ -19,7 +19,7 @@
                     <span class="text-xs text-gray-500">{{ __('Schweregrad') }}</span>
                     <select name="severity" @change="applyFilter($event)" :class="{ 'pointer-events-none opacity-60': submitting }" class="rounded-md border-gray-300 py-1.5 text-sm">
                         <option value="">{{ __('Alle') }}</option>
-                        <option value="blocked" @selected($severity === 'blocked')>{{ __('Blockiert') }}</option>
+                        <option value="blocked" @selected($severity === 'blocked')>{{ __('Handlungsbedarf') }}</option>
                         <option value="critical" @selected($severity === 'critical')>{{ __('Kritisch') }}</option>
                         <option value="watch" @selected($severity === 'watch')>{{ __('Beobachten') }}</option>
                     </select>
@@ -137,7 +137,7 @@
                 <h4 class="mb-2 font-semibold text-gray-900">{{ __('Bedeutung der Signale') }}</h4>
                 <div class="grid gap-2 md:grid-cols-3">
                     <div class="rounded-md bg-white p-2.5 shadow-sm">
-                        <span class="rounded border px-1.5 py-0.5 text-[11px] font-semibold {{ $severityClasses['blocked'] }}">{{ __('Blockiert') }}</span>
+                        <span class="rounded border px-1.5 py-0.5 text-[11px] font-semibold {{ $severityClasses['blocked'] }}">{{ __('Handlungsbedarf') }}</span>
                         <p class="mt-1.5 text-xs text-gray-600">{{ __('Eine unmittelbar benötigte Voraussetzung fehlt. Der aktuelle Projektschritt kann nicht zuverlässig weitergeführt werden und verlangt sofortige Klärung.') }}</p>
                     </div>
                     <div class="rounded-md bg-white p-2.5 shadow-sm">

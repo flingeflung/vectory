@@ -80,7 +80,7 @@ class CriticalProjectEvaluator
             'title' => $rule['title'],
             'severity' => $severity,
             'severity_label' => match ($severity) {
-                'blocked' => __('Blockiert'),
+                'blocked' => __('Handlungsbedarf'),
                 'critical' => __('Kritisch'),
                 default => __('Beobachten'),
             },
