@@ -10,6 +10,31 @@
     </button>
 
     <div class="flex items-center gap-4">
+        <div class="mr-1 flex items-center overflow-hidden rounded-md border border-white/20">
+            <button
+                type="button"
+                onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'favorites' }))"
+                class="flex h-7 w-8 items-center justify-center hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white/50"
+                title="{{ __('Favoriten') }}"
+                aria-label="{{ __('Favoriten') }}"
+            >
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.5a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.563.563 0 00-.182-.557l-4.204-3.602a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                </svg>
+            </button>
+            <button
+                type="button"
+                onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'recent-projects' }))"
+                class="flex h-7 w-8 items-center justify-center border-l border-white/20 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white/50"
+                title="{{ __('Zuletzt geöffnete Projekte') }}"
+                aria-label="{{ __('Zuletzt geöffnete Projekte') }}"
+            >
+                <svg class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9V4.5m0 0h4.5m-4.5 0 3.18 3.18A7.5 7.5 0 112.58 13.5" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 7.5V12l3 1.75" />
+                </svg>
+            </button>
+        </div>
         @php($availableTenants = \App\Support\CurrentTenant::availableTenants())
         @if ($availableTenants->count() > 1)
             <div x-data="{ open: false }" @click.outside="open = false" class="relative">

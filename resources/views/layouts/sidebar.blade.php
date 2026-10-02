@@ -169,14 +169,6 @@
                 {{ __('Kritische Projekte') }}
             </a>
         @endcan
-        <button
-            type="button"
-            x-data
-            @click="$dispatch('open-modal', 'favorites')"
-            class="flex w-full items-center px-3 py-2 rounded-md text-sm font-medium text-sidebar-content hover:bg-sidebar-hover hover:text-sidebar-content-hover"
-        >
-            {{ __('Favoriten') }}
-        </button>
         <a
             onclick="return window.navigateOrConfirm(event)"
             href="{{ route('aufgaben') }}"

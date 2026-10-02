@@ -59,6 +59,7 @@ use App\Http\Controllers\ProjectPercentageSplitController;
 use App\Http\Controllers\ProjectProductController;
 use App\Http\Controllers\ProjectScheduleController;
 use App\Http\Controllers\ProjectWorkflowStepController;
+use App\Http\Controllers\RecentProjectController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StammIdController;
 use App\Http\Controllers\TaskController;
@@ -217,6 +218,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/projekte/{project}/notizen/{note}', [ProjectNoteController::class, 'destroy'])->name('projekte.notizen.destroy');
 
     Route::get('/favoriten', [FavoriteController::class, 'index'])->name('favoriten');
+    Route::get('/zuletzt-geoeffnete-projekte', [RecentProjectController::class, 'index'])->name('recent-projects.index');
 
     Route::get('/illustrationen', [IllustrationOverviewController::class, 'index'])->name('illustrationen');
 

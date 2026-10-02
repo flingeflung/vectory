@@ -2222,7 +2222,7 @@
             })();
         </script>
 
-        {{-- Global Favoriten-Overlay: über den Sidebar-Button erreichbar. --}}
+        {{-- Globale Schnelllisten aus der Topbar. --}}
         <x-modal name="favorites" max-width="md">
             <div class="p-4">
                 <div class="mb-3 flex items-center justify-between">
@@ -2255,6 +2255,42 @@
 
                     favoritesBody().innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
                     favoritesBody().innerHTML = await fetch({{ \Illuminate\Support\Js::from(route('favoriten')) }}).then((r) => r.text());
+                });
+            })();
+        </script>
+
+        <x-modal name="recent-projects" max-width="md">
+            <div class="p-4">
+                <div class="mb-3 flex items-center justify-between">
+                    <h2 class="text-lg font-medium text-gray-900">{{ __('Zuletzt geöffnete Projekte') }}</h2>
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'recent-projects' }))"
+                        class="text-gray-400 hover:text-gray-600"
+                        aria-label="{{ __('Schließen') }}"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="recent-projects-body" class="max-h-96 overflow-y-auto text-sm text-gray-500">
+                    {{ __('Lädt…') }}
+                </div>
+            </div>
+        </x-modal>
+
+        <script>
+            (function () {
+                const recentProjectsBody = () => document.getElementById('recent-projects-body');
+
+                window.addEventListener('open-modal', async (event) => {
+                    if (event.detail !== 'recent-projects') {
+                        return;
+                    }
+
+                    recentProjectsBody().innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
+                    recentProjectsBody().innerHTML = await fetch({{ \Illuminate\Support\Js::from(route('recent-projects.index')) }}).then((response) => response.text());
                 });
             })();
         </script>
