@@ -75,6 +75,8 @@ Er darf nicht:
 
 Eine Kundenfreigabe oder Personenzuordnung darf diese Grenze nicht erweitern.
 
+**Bewusste Entscheidung (Ralf, 2026-10-03):** Organisations- und Zentral-Admins erhalten automatisch alle Benutzerrechte des Katalogs, auch die personenbezogenen Planungs- und Stundenauswertungen. Ein bewusst kleines Rechte-Set schränkt einen Admin nicht ein. Begründung: Admins sind ausgewählte Personen aus der Redaktionsleitung und keine IT-Administratoren. Kunden müssen bei der Einführung entsprechend geschult werden. Sollte sich das als nicht akzeptabel erweisen, wird nachgebessert, beispielsweise durch ein eigenes Recht für personenbezogene Auswertungen.
+
 ## 4. Was Rechte-Sets leisten
 
 Rechte-Sets sind ausschließlich für User bestimmt. Sie bündeln konkrete fachliche Fähigkeiten, beispielsweise:

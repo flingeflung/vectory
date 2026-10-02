@@ -68,46 +68,94 @@ return new class extends Migration
         });
     }
 
+    /**
+     * Hängt alle Referenzen einer Kunden-Funktionsgruppe auf die zentrale um.
+     * Zeilen werden per UPDATE umgehängt (IDs bleiben, damit abhängige Daten
+     * wie task_visibilities nicht per Löschkaskade verloren gehen). Nur bei
+     * einer Kollision mit bereits vorhandenen Zielzeilen wird zusammengeführt:
+     * Planstunden werden addiert, Hauptzuständigkeit und Aufgaben-Sichtbarkeiten
+     * bleiben erhalten; reine Zuordnungstabellen haben nichts weiter zu retten.
+     */
     private function moveReferences(int $oldId, int $newId): void
     {
-        $definitions = [
-            'function_group_member' => ['function_group_id', 'person_id'],
-            'workflow_step_function_group' => ['workflow_step_id', 'function_group_id'],
-            'project_people' => ['project_id', 'function_group_id', 'person_id'],
-            'project_workflow_step_people' => ['project_workflow_step_id', 'function_group_id', 'person_id'],
-            'project_template_function_group' => ['project_template_id', 'function_group_id'],
-            'project_function_group_hours' => ['project_id', 'function_group_id'],
-            'tasks' => ['project_workflow_step_id', 'function_group_id', 'person_id'],
+        $identities = [
+            'function_group_member' => ['person_id'],
+            'workflow_step_function_group' => ['workflow_step_id'],
+            'project_people' => ['project_id', 'person_id'],
+            'project_workflow_step_people' => ['project_workflow_step_id', 'person_id'],
+            'project_template_function_group' => ['project_template_id'],
+            'project_function_group_hours' => ['project_id'],
+            'tasks' => ['project_workflow_step_id', 'person_id'],
         ];
 
-        foreach ($definitions as $table => $uniqueColumns) {
+        foreach ($identities as $table => $columns) {
             if (! Schema::hasTable($table)) {
                 continue;
             }
 
-            foreach (DB::table($table)->where('function_group_id', $oldId)->get() as $row) {
-                $data = (array) $row;
-                unset($data['id']);
-                $data['function_group_id'] = $newId;
-                $identityColumns = $table === 'tasks' && $data['graphic_order_id'] !== null
-                    ? ['graphic_order_id', 'person_id']
-                    : $uniqueColumns;
-                $identity = collect($identityColumns)->mapWithKeys(fn ($column) => [$column => $data[$column]])->all();
+            foreach (DB::table($table)->where('function_group_id', $oldId)->orderBy('id')->get() as $row) {
+                $existing = null;
 
-                if (! DB::table($table)->where($identity)->exists()) {
-                    DB::table($table)->insert($data);
-                } elseif ($table === 'project_people') {
-                    DB::table($table)->where($identity)->update([
-                        'is_primary' => DB::raw('GREATEST(is_primary, '.((int) $row->is_primary).')'),
-                        'planned_hours' => DB::raw('COALESCE(planned_hours, '.($row->planned_hours === null ? 'NULL' : (float) $row->planned_hours).')'),
-                    ]);
+                // Aufgaben ohne Workflow-Schritt (z. B. aus Illustrationsaufträgen) sind
+                // über eigene eindeutige Schlüssel abgesichert und kollidieren hier nie.
+                $hasNullIdentity = collect($columns)->contains(fn ($column) => $row->{$column} === null);
+                if (! $hasNullIdentity) {
+                    $existing = DB::table($table)
+                        ->where('function_group_id', $newId)
+                        ->where('id', '!=', $row->id)
+                        ->where(collect($columns)->mapWithKeys(fn ($column) => [$column => $row->{$column}])->all())
+                        ->first();
                 }
-            }
 
-            DB::table($table)->where('function_group_id', $oldId)->delete();
+                if (! $existing) {
+                    DB::table($table)->where('id', $row->id)->update(['function_group_id' => $newId]);
+
+                    continue;
+                }
+
+                $this->mergeDuplicate($table, $row, $existing);
+                DB::table($table)->where('id', $row->id)->delete();
+            }
         }
     }
 
+    private function mergeDuplicate(string $table, object $dropped, object $kept): void
+    {
+        if ($table === 'project_people') {
+            DB::table($table)->where('id', $kept->id)->update([
+                'is_primary' => (int) $kept->is_primary || (int) $dropped->is_primary,
+                'planned_hours' => $kept->planned_hours === null && $dropped->planned_hours === null
+                    ? null
+                    : (float) $kept->planned_hours + (float) $dropped->planned_hours,
+            ]);
+        }
+
+        if (in_array($table, ['project_function_group_hours', 'project_template_function_group'], true)) {
+            DB::table($table)->where('id', $kept->id)->update([
+                'planned_hours' => (float) $kept->planned_hours + (float) $dropped->planned_hours,
+            ]);
+        }
+
+        if ($table === 'tasks') {
+            foreach (DB::table('task_visibilities')->where('task_id', $dropped->id)->get() as $visibility) {
+                DB::table('task_visibilities')->insertOrIgnore([
+                    'tenant_id' => $visibility->tenant_id,
+                    'user_id' => $visibility->user_id,
+                    'task_id' => $kept->id,
+                    'created_at' => $visibility->created_at,
+                    'updated_at' => $visibility->updated_at,
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Nicht umkehrbar: Die Zusammenführung der Kunden-Funktionsgruppen in die
+     * zentralen lässt sich nicht rückgängig machen (die ursprüngliche
+     * Zuordnung ist nach dem Umhängen nicht mehr gespeichert). Nicht auf
+     * Daten mit echten, kundeneigenen Funktionsgruppen ohne vorherige Sicherung
+     * ausführen.
+     */
     public function down(): void
     {
         Schema::dropIfExists('function_group_tenant');
