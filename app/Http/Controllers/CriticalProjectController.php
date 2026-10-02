@@ -14,6 +14,8 @@ use Illuminate\View\View;
 
 class CriticalProjectController extends Controller
 {
+    private const ORGANIZATION_SESSION_KEY = 'critical_projects.organization_ids.';
+
     public function __invoke(Request $request, CriticalProjectEvaluator $evaluator, CriticalProjectFindingTracker $tracker): View
     {
         abort_unless($request->user()->can('project.view'), 403);
@@ -22,10 +24,18 @@ class CriticalProjectController extends Controller
             ? CurrentTenant::availableTenants()
             : Tenant::query()->whereKey(CurrentTenant::id())->get();
         $allowedIds = $organizations->pluck('id')->map(fn ($id) => (int) $id);
-        $selectedIds = collect($request->input('organizations', [CurrentTenant::id()]))
-            ->map(fn ($id) => (int) $id)->intersect($allowedIds)->unique()->values();
-        if ($selectedIds->isEmpty()) {
-            $selectedIds = collect([(int) CurrentTenant::id()])->intersect($allowedIds)->values();
+        $organizationSessionKey = self::ORGANIZATION_SESSION_KEY.$request->user()->id;
+        if (! SystemSetting::multiTenantEnabled()) {
+            $selectedIds = $allowedIds->values();
+        } elseif ($request->has('organization_filter_submitted')) {
+            $selectedIds = collect($request->input('organizations', []))
+                ->map(fn ($id) => (int) $id)->intersect($allowedIds)->unique()->values();
+            $request->session()->put($organizationSessionKey, $selectedIds->all());
+        } elseif ($request->session()->has($organizationSessionKey)) {
+            $selectedIds = collect($request->session()->get($organizationSessionKey, []))
+                ->map(fn ($id) => (int) $id)->intersect($allowedIds)->unique()->values();
+        } else {
+            $selectedIds = $allowedIds->values();
         }
 
         $projects = Project::withoutGlobalScope('tenant')

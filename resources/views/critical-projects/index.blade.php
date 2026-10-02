@@ -14,6 +14,7 @@
     <div class="flex h-full flex-col p-4 sm:p-6 lg:p-8">
         <div class="mx-auto flex min-h-0 w-full max-w-[100rem] flex-1 flex-col">
             <form method="GET" action="{{ route('critical-projects.index') }}" x-data="{ submitting: false, applyFilter(event) { if (this.submitting) return; this.submitting = true; this.$nextTick(() => event.target.form.requestSubmit()); } }" @submit="submitting = true" :class="{ 'cursor-wait': submitting }" class="mb-3 flex shrink-0 flex-wrap items-end gap-3 rounded-lg border border-gray-200 bg-white p-3 text-sm">
+                <input type="hidden" name="organization_filter_submitted" value="1">
                 @foreach ($selectedIds as $id)<input type="hidden" name="organizations[]" value="{{ $id }}">@endforeach
                 <label class="grid gap-1">
                     <span class="text-xs text-gray-500">{{ __('Dringlichkeit') }}</span>
@@ -37,7 +38,7 @@
                     <input type="checkbox" name="show_hidden" value="1" @checked($showHidden) @change="applyFilter($event)" :disabled="submitting" class="rounded border-gray-300 text-blue-600">
                     <span>{{ __('Ausgeblendete anzeigen') }}</span>
                 </label>
-                <a href="{{ route('critical-projects.index', ['organizations' => $selectedIds->all()]) }}" @click="submitting = true" :class="{ 'pointer-events-none opacity-60': submitting }" class="inline-flex items-center gap-1.5 rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
+                <a href="{{ route('critical-projects.index', ['organization_filter_submitted' => 1, 'organizations' => $selectedIds->all()]) }}" @click="submitting = true" :class="{ 'pointer-events-none opacity-60': submitting }" class="inline-flex items-center gap-1.5 rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                     {{ __('Filter zurücksetzen') }}
                 </a>
                 <span x-show="submitting" x-cloak class="self-center text-gray-500"><x-loading-spinner class="h-4 w-4" /></span>
@@ -208,6 +209,7 @@
 
     <x-modal name="critical-project-organizations" max-width="md" :draggable="true">
         <form method="GET" action="{{ route('critical-projects.index') }}" x-data="{ submitting: false }" @submit="submitting = true" :class="{ 'cursor-wait': submitting }">
+            <input type="hidden" name="organization_filter_submitted" value="1">
             <input type="hidden" name="severity" value="{{ $severity }}"><input type="hidden" name="reason" value="{{ $reason }}">@if($showHidden)<input type="hidden" name="show_hidden" value="1">@endif
             <div data-drag-handle class="flex cursor-move items-center justify-between rounded-t-lg border-b border-gray-200 bg-gray-100 px-4 py-3">
                 <h3 class="text-sm font-semibold">{{ __('Organisationen auswählen') }}</h3>

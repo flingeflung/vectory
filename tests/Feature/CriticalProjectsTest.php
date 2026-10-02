@@ -7,6 +7,7 @@ use App\Models\CriticalProjectFindingState;
 use App\Models\Project;
 use App\Models\ProjectTemplate;
 use App\Models\ProjectWorkflowStep;
+use App\Models\SystemSetting;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\Workflow;
@@ -71,6 +72,51 @@ class CriticalProjectsTest extends TestCase
             ->assertOk()
             ->assertSee('keine kritischen Projekte gefunden')
             ->assertDontSee('269903');
+    }
+
+    public function test_project_organization_filter_is_independent_from_global_organization_switch(): void
+    {
+        SystemSetting::set(SystemSetting::MULTI_TENANT_ENABLED, '1');
+        $home = Tenant::query()->firstOrFail();
+        $other = Tenant::query()->create(['name' => 'Andere Organisation', 'short_name' => 'AND']);
+        $user = User::factory()->create(['tenant_id' => $home->id, 'role' => 'super_admin']);
+        $homeProject = Project::query()->create([
+            'tenant_id' => $home->id,
+            'source_pn' => '269911',
+            'title' => 'Kritisch bei Heimat',
+            'status' => 0,
+            'start_date' => today()->subDay(),
+        ]);
+        $otherProject = Project::withoutGlobalScope('tenant')->create([
+            'tenant_id' => $other->id,
+            'source_pn' => '269912',
+            'title' => 'Kritisch bei anderer Organisation',
+            'status' => 0,
+            'start_date' => today()->subDay(),
+        ]);
+
+        $this->actingAs($user)->get(route('critical-projects.index'))
+            ->assertOk()
+            ->assertSee($homeProject->source_pn)
+            ->assertSee($otherProject->source_pn);
+
+        $this->get(route('critical-projects.index', [
+            'organization_filter_submitted' => 1,
+            'organizations' => [$home->id],
+        ]))->assertOk()
+            ->assertSee($homeProject->source_pn)
+            ->assertDontSee($otherProject->source_pn);
+
+        $this->post(route('mandant.wechseln'), ['tenant_id' => $other->id])->assertRedirect();
+        $this->get(route('critical-projects.index'))
+            ->assertOk()
+            ->assertSee($homeProject->source_pn)
+            ->assertDontSee($otherProject->source_pn);
+
+        $this->get(route('critical-projects.index', ['organization_filter_submitted' => 1]))
+            ->assertOk()
+            ->assertDontSee($homeProject->source_pn)
+            ->assertDontSee($otherProject->source_pn);
     }
 
     public function test_user_can_acknowledge_hide_and_restore_a_finding(): void
