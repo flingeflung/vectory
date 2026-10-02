@@ -85,6 +85,13 @@ class CriticalProjectController extends Controller
             });
         }
 
+        $rows = $rows->map(function ($row) {
+            $row['findings'] = $row['findings']->sortByDesc('rank')->values();
+            $row['all_findings'] = $row['findings'];
+
+            return $row;
+        });
+
         $showHidden = $request->boolean('show_hidden');
         if (! $showHidden) {
             $rows = $rows->filter(function ($row) {
@@ -94,12 +101,6 @@ class CriticalProjectController extends Controller
                 return $row['findings']->isNotEmpty();
             });
         }
-
-        $rows = $rows->map(function ($row) {
-            $row['findings'] = $row['findings']->sortByDesc('rank')->values();
-
-            return $row;
-        });
 
         $hiddenOtherCount = $rows->reject(fn ($row) => $selectedIds->contains((int) $row['project']->tenant_id))->count();
         $rows = $rows->filter(fn ($row) => $selectedIds->contains((int) $row['project']->tenant_id));

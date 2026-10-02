@@ -127,35 +127,40 @@
     @foreach ($rows as $row)
         @php($project = $row['project'])
         <x-modal name="critical-project-details-{{ $project->id }}" max-width="3xl" :draggable="true">
-            <div data-drag-handle class="flex cursor-move items-center justify-between rounded-t-lg border-b border-gray-200 bg-gray-100 px-4 py-3">
-                <div>
-                    <h3 class="font-semibold text-gray-900">{{ __('Kritische Punkte') }}</h3>
-                    <p class="text-xs text-gray-500">{{ $project->source_pn }} – {{ $project->title }}</p>
+            <div x-data="{ showHidden: @js($showHidden) }">
+                <div data-drag-handle class="flex cursor-move items-center justify-between rounded-t-lg border-b border-gray-200 bg-gray-100 px-4 py-3">
+                    <div>
+                        <h3 class="font-semibold text-gray-900">{{ __('Kritische Punkte') }}</h3>
+                        <p class="text-xs text-gray-500">{{ $project->source_pn }} – {{ $project->title }}</p>
+                    </div>
+                    <button type="button" @click="$dispatch('close-modal', 'critical-project-details-{{ $project->id }}')" class="text-xl text-gray-400">×</button>
                 </div>
-                <button type="button" @click="$dispatch('close-modal', 'critical-project-details-{{ $project->id }}')" class="text-xl text-gray-400">×</button>
-            </div>
-            <div class="max-h-[70vh] space-y-3 overflow-y-auto p-4 text-sm">
-                <div class="flex flex-wrap items-center gap-2 rounded-md border border-gray-200 bg-gray-50 p-3">
-                    <form method="POST" action="{{ route('critical-projects.findings.bulk-update') }}">
-                        @csrf @method('PATCH')
-                        <input type="hidden" name="action" value="acknowledge">
-                        @foreach ($row['findings'] as $finding)<input type="hidden" name="finding_ids[]" value="{{ $finding['occurrence']->id }}">@endforeach
-                        <button class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100">{{ __('Alle zur Kenntnis nehmen') }}</button>
-                    </form>
-                    <form method="POST" action="{{ route('critical-projects.findings.bulk-update') }}" class="flex flex-wrap items-center gap-1.5">
-                        @csrf @method('PATCH')
-                        <input type="hidden" name="action" value="hide">
-                        @foreach ($row['findings'] as $finding)<input type="hidden" name="finding_ids[]" value="{{ $finding['occurrence']->id }}">@endforeach
-                        <label class="text-xs text-gray-500" for="hide-all-until-{{ $project->id }}">{{ __('Alle bis') }}</label>
-                        <input id="hide-all-until-{{ $project->id }}" type="date" name="hidden_until" min="{{ today()->format('Y-m-d') }}" required class="rounded border-gray-300 px-2 py-1 text-xs">
-                        <button class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100">{{ __('Ausblenden') }}</button>
-                    </form>
-                </div>
-                @foreach ($row['findings'] as $finding)
-                    <section @class([
-                        'rounded-md border border-gray-200 p-3',
-                        'bg-gray-50' => $finding['state']?->acknowledged_at || $finding['is_hidden'],
-                    ])>
+                <div class="max-h-[70vh] space-y-3 overflow-y-auto p-4 text-sm">
+                    <div class="flex flex-wrap items-center gap-2 rounded-md border border-gray-200 bg-gray-50 p-3">
+                        <form method="POST" action="{{ route('critical-projects.findings.bulk-update') }}">
+                            @csrf @method('PATCH')
+                            <input type="hidden" name="action" value="acknowledge">
+                            @foreach ($row['all_findings'] as $finding)<input type="hidden" name="finding_ids[]" value="{{ $finding['occurrence']->id }}">@endforeach
+                            <button class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100">{{ __('Alle zur Kenntnis nehmen') }}</button>
+                        </form>
+                        <form method="POST" action="{{ route('critical-projects.findings.bulk-update') }}" class="flex flex-wrap items-center gap-1.5">
+                            @csrf @method('PATCH')
+                            <input type="hidden" name="action" value="hide">
+                            @foreach ($row['all_findings'] as $finding)<input type="hidden" name="finding_ids[]" value="{{ $finding['occurrence']->id }}">@endforeach
+                            <label class="text-xs text-gray-500" for="hide-all-until-{{ $project->id }}">{{ __('Alle bis') }}</label>
+                            <input id="hide-all-until-{{ $project->id }}" type="date" name="hidden_until" min="{{ today()->format('Y-m-d') }}" required class="rounded border-gray-300 px-2 py-1 text-xs">
+                            <button class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100">{{ __('Ausblenden') }}</button>
+                        </form>
+                        <label class="ml-auto flex items-center gap-2 text-xs text-gray-600">
+                            <input type="checkbox" x-model="showHidden" class="rounded border-gray-300 text-blue-600">
+                            <span>{{ __('Ausgeblendete anzeigen') }} ({{ $row['all_findings']->where('is_hidden', true)->count() }})</span>
+                        </label>
+                    </div>
+                    @foreach ($row['all_findings'] as $finding)
+                    <section x-show="showHidden || {{ $finding['is_hidden'] ? 'false' : 'true' }}" @class([
+                            'rounded-md border border-gray-200 p-3',
+                            'bg-gray-50' => $finding['state']?->acknowledged_at || $finding['is_hidden'],
+                        ])>
                         <div class="flex flex-wrap items-center gap-1.5">
                             <span class="rounded border px-1.5 py-0.5 text-[11px] font-semibold {{ $severityClasses[$finding['severity']] }}">{{ $finding['severity_label'] }}</span>
                             <span class="font-medium text-gray-900">{{ $finding['title'] }}</span>
@@ -198,11 +203,12 @@
                                 </form>
                             @endif
                         </div>
-                    </section>
-                @endforeach
-            </div>
-            <div class="flex justify-end border-t border-gray-200 p-3">
-                <button type="button" @click="$dispatch('close-modal', 'critical-project-details-{{ $project->id }}')" class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50">{{ __('Schließen') }}</button>
+                        </section>
+                    @endforeach
+                </div>
+                <div class="flex justify-end border-t border-gray-200 p-3">
+                    <button type="button" @click="$dispatch('close-modal', 'critical-project-details-{{ $project->id }}')" class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50">{{ __('Schließen') }}</button>
+                </div>
             </div>
         </x-modal>
     @endforeach
