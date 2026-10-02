@@ -1101,12 +1101,15 @@ class ProjectController extends Controller
 
         $perProject = $orderedIds->map(function ($id) use ($participants, $project, $hoursByProject) {
             $p = $participants[$id];
+            $hours = (float) ($hoursByProject[$p->id] ?? 0);
+            $plan = $p->effectivePlannedHours();
 
             return [
                 'id' => $p->id, 'label' => $p->source_pn, 'title' => $p->title,
                 'isHauptprojekt' => $p->id === $project->id && $project->verbund_rolle === 1,
-                'hours' => (float) ($hoursByProject[$p->id] ?? 0),
-                'plan' => $p->effectivePlannedHours(),
+                'hours' => $hours,
+                'plan' => $plan,
+                'isOverbooked' => $plan !== null && $hours > (float) $plan,
                 // Ralf, 2026-09-27: "da ist farblich wenig Unterschied zu erkennen zwischen den
                 // Stunden, die noch nach Schablone sind und denen, die schon gelöst sind" -
                 // je Zeile mitgeben, damit die "Je Projekt"-Tabelle das kennzeichnen kann.
@@ -1155,6 +1158,7 @@ class ProjectController extends Controller
             'planTotal' => $planTotal,
             'projectHoursChartMax' => $projectHoursChartMax,
             'hasDetachedProjectPlan' => $perProject->contains(fn ($row) => $row['plan'] !== null && ! $row['planLinked']),
+            'hasOverbookedProject' => $perProject->contains('isOverbooked', true),
             'ownPlan' => $project->effectivePlannedHours(),
             'ownPlanLinked' => $project->plannedHoursLinkedToTemplate(),
             'ownTemplateName' => $project->projectTemplate?->name,

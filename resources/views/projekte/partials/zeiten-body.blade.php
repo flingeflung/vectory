@@ -105,7 +105,10 @@
                                 @endif
                                 {{ $row['plan'] !== null ? $fmt($row['plan']) : '–' }}
                             </td>
-                            <td class="py-1 pl-3 whitespace-nowrap text-right tabular-nums">{{ $fmt($row['hours']) }}</td>
+                            <td
+                                class="py-1 pl-3 whitespace-nowrap text-right tabular-nums {{ $row['isOverbooked'] ? 'font-semibold text-red-600' : '' }}"
+                                @if ($row['isOverbooked']) title="{{ __('Ist über Plan') }}" @endif
+                            >{{ $fmt($row['hours']) }}</td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -130,6 +133,9 @@
                     <div class="flex items-center gap-3 text-[11px] text-gray-500" aria-label="{{ __('Legende') }}">
                         <span class="flex items-center gap-1"><span class="h-2 w-3 rounded-sm bg-indigo-300"></span>{{ __('Plan') }}</span>
                         <span class="flex items-center gap-1"><span class="h-2 w-3 rounded-sm bg-emerald-500"></span>{{ __('Ist') }}</span>
+                        @if ($zeiten['hasOverbookedProject'])
+                            <span class="flex items-center gap-1"><span class="h-2 w-3 rounded-sm bg-red-500"></span>{{ __('Ist über Plan') }}</span>
+                        @endif
                     </div>
                 </div>
                 <div class="space-y-2.5">
@@ -154,9 +160,9 @@
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <div class="h-2 flex-1 overflow-hidden rounded-full bg-gray-200">
-                                        <div class="h-full rounded-full bg-emerald-500" style="width: {{ $actualWidth }}%" title="{{ __('Ist: :hours h', ['hours' => $fmt($row['hours'])]) }}"></div>
+                                        <div class="h-full rounded-full {{ $row['isOverbooked'] ? 'bg-red-500' : 'bg-emerald-500' }}" style="width: {{ $actualWidth }}%" title="{{ $row['isOverbooked'] ? __('Ist über Plan: :hours h', ['hours' => $fmt($row['hours'])]) : __('Ist: :hours h', ['hours' => $fmt($row['hours'])]) }}"></div>
                                     </div>
-                                    <span class="w-14 shrink-0 text-right text-[11px] tabular-nums text-gray-700">{{ $fmt($row['hours']) }} h</span>
+                                    <span class="w-14 shrink-0 text-right text-[11px] tabular-nums {{ $row['isOverbooked'] ? 'font-semibold text-red-600' : 'text-gray-700' }}">{{ $fmt($row['hours']) }} h</span>
                                 </div>
                             </div>
                         </div>
