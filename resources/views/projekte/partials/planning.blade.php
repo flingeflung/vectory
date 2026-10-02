@@ -18,9 +18,12 @@
                 if (e.detail.projectId === {{ $project->id }}) this.refreshPeople();
             };
             window.addEventListener('project-people-changed', this.onPeopleChanged);
+            this.onPlannedHoursChanged = () => this.refreshPeople();
+            window.addEventListener('project-planned-hours-changed', this.onPlannedHoursChanged);
         },
         destroy() {
             window.removeEventListener('project-people-changed', this.onPeopleChanged);
+            window.removeEventListener('project-planned-hours-changed', this.onPlannedHoursChanged);
         },
         async refreshPeople() {
             const container = document.getElementById('project-planning-groups-{{ $project->id }}');
@@ -36,13 +39,9 @@
                     merged[groupId][personId] = current !== undefined ? current : data.values[groupId][personId];
                 });
             });
-            const planned = {};
-            Object.keys(data.planned).forEach((groupId) => {
-                planned[groupId] = this.planned[groupId] !== undefined ? this.planned[groupId] : data.planned[groupId];
-            });
             container.innerHTML = data.html;
             this.values = merged;
-            this.planned = planned;
+            this.planned = data.planned;
             window.resnapshotProjectOverlay?.();
         },
         number(value) { return value === '' || value === null || Number.isNaN(Number(value)) ? 0 : Number(value); },
