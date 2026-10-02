@@ -8,6 +8,7 @@ use App\Models\Person;
 use App\Models\PlanningBaseLoad;
 use App\Models\PlanningPersonBaseLoad;
 use App\Models\ProjectPerson;
+use App\Support\Workdays;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
@@ -127,7 +128,7 @@ class ProjectPlanningCalculator
                 ->withoutGlobalScope('tenant')->where('tenant_id', $person->tenant_id)->where('year', $date->year)->get());
         $yearStart = CarbonImmutable::create($date->year, 1, 1);
         $yearEnd = CarbonImmutable::create($date->year, 12, 31);
-        $yearWorkdays = $this->weekdays($yearStart, $yearEnd);
+        $yearWorkdays = Workdays::count($yearStart, $yearEnd);
 
         return (float) $loads->filter(fn ($load) => CarbonImmutable::parse($load->valid_from)->lessThanOrEqualTo($date)
             && CarbonImmutable::parse($load->valid_to)->greaterThanOrEqualTo($date))
@@ -146,15 +147,5 @@ class ProjectPlanningCalculator
         }
 
         return $dates;
-    }
-
-    private function weekdays(CarbonImmutable $start, CarbonImmutable $end): int
-    {
-        $count = 0;
-        for ($date = $start; $date->lessThanOrEqualTo($end); $date = $date->addDay()) {
-            $count += $date->isWeekday() ? 1 : 0;
-        }
-
-        return $count;
     }
 }

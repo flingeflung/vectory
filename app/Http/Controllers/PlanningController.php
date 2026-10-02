@@ -12,11 +12,13 @@ use App\Models\ProjectPerson;
 use App\Models\SystemSetting;
 use App\Models\Tenant;
 use App\Models\UserPreference;
+use App\Services\PersonAnnualHoursCalculator;
 use App\Services\PlanningBaseLoadCalculator;
 use App\Services\ProjectPlanningCalculator;
 use App\Support\CurrentTenant;
 use App\Support\PlanningNav;
 use App\Support\PlanningAccess;
+use App\Support\Workdays;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -378,7 +380,7 @@ class PlanningController extends Controller
         ));
     }
 
-    public function arbeitszeit(Request $request): View
+    public function arbeitszeit(Request $request, PersonAnnualHoursCalculator $hoursCalculator): View
     {
         abort_unless($request->user()->can('planning.view'), 403);
         PlanningNav::remember($request->user(), 'planung.arbeitszeit');
@@ -402,18 +404,18 @@ class PlanningController extends Controller
             ->with(['weeklyHours' => fn ($query) => $query->orderByRaw('valid_from IS NOT NULL')->orderBy('valid_from')])
             ->orderBy('last_name')->orderBy('first_name')
             ->get()
-            ->filter(fn (Person $person) => $this->overlappingWeeklyHours($person, $yearStart, $yearEnd)->isNotEmpty())
+            ->filter(fn (Person $person) => $hoursCalculator->overlappingWeeklyHours($person, $yearStart, $yearEnd)->isNotEmpty())
             ->values();
 
         $showAllPeople = $request->query('person') === 'all';
         $personId = $request->integer('person');
         $person = $showAllPeople ? null : ($people->firstWhere('id', $personId) ?? $people->first());
         $highestWeeklyHours = (float) ($people
-            ->flatMap(function (Person $item) use ($yearStart, $yearEnd) {
-                [$employmentStart, $employmentEnd] = $this->employmentPeriod($item, $yearStart, $yearEnd);
+            ->flatMap(function (Person $item) use ($hoursCalculator, $yearStart, $yearEnd) {
+                [$employmentStart, $employmentEnd] = $hoursCalculator->employmentPeriod($item, $yearStart, $yearEnd);
 
                 return $employmentStart->lessThanOrEqualTo($employmentEnd)
-                    ? $this->overlappingWeeklyHours($item, $employmentStart, $employmentEnd)
+                    ? $hoursCalculator->overlappingWeeklyHours($item, $employmentStart, $employmentEnd)
                     : collect();
             })
             ->max(fn (PersonWeeklyHours $row) => (float) $row->hours) ?? 0);
@@ -423,16 +425,16 @@ class PlanningController extends Controller
         $datasets = $chartPeople->map(fn (Person $item) => [
             'personId' => $item->id,
             'label' => $item->fullName(),
-            'points' => $this->workingHoursChartPoints($item, $yearStart, $yearEnd),
+            'points' => $this->workingHoursChartPoints($hoursCalculator, $item, $yearStart, $yearEnd),
         ])->values();
 
         return view('planning.arbeitszeit', compact('years', 'year', 'people', 'person', 'datasets', 'showAllPeople', 'yMax'));
     }
 
-    private function workingHoursChartPoints(Person $person, CarbonImmutable $yearStart, CarbonImmutable $yearEnd): Collection
+    private function workingHoursChartPoints(PersonAnnualHoursCalculator $hoursCalculator, Person $person, CarbonImmutable $yearStart, CarbonImmutable $yearEnd): Collection
     {
         $daysInYear = $yearStart->diffInDays($yearEnd) + 1;
-        [$employmentStart, $employmentEnd] = $this->employmentPeriod($person, $yearStart, $yearEnd);
+        [$employmentStart, $employmentEnd] = $hoursCalculator->employmentPeriod($person, $yearStart, $yearEnd);
         if ($employmentStart->greaterThan($employmentEnd)) {
             return collect([['x' => 0, 'y' => 0], ['x' => $daysInYear, 'y' => 0, 'terminal' => true]]);
         }
@@ -441,7 +443,7 @@ class PlanningController extends Controller
         if ($employmentStart->greaterThan($yearStart)) {
             $points->push(['x' => 0, 'y' => 0]);
         }
-        $this->overlappingWeeklyHours($person, $employmentStart, $employmentEnd)
+        $hoursCalculator->overlappingWeeklyHours($person, $employmentStart, $employmentEnd)
             ->each(function (PersonWeeklyHours $row) use ($employmentStart, $points, $yearStart) {
                 $start = $row->valid_from
                     ? CarbonImmutable::parse($row->valid_from->toDateString())->max($employmentStart)
@@ -459,7 +461,7 @@ class PlanningController extends Controller
         return $points;
     }
 
-    public function stunden(Request $request, PlanningBaseLoadCalculator $baseLoadCalculator): View
+    public function stunden(Request $request, PlanningBaseLoadCalculator $baseLoadCalculator, PersonAnnualHoursCalculator $hoursCalculator): View
     {
         abort_unless($request->user()->can('planning.view'), 403);
         PlanningNav::remember($request->user(), 'planung.stunden');
@@ -488,7 +490,7 @@ class PlanningController extends Controller
 
         $yearStart = CarbonImmutable::create($year, 1, 1)->startOfDay();
         $yearEnd = CarbonImmutable::create($year, 12, 31)->startOfDay();
-        $totalWorkdays = $this->countWeekdays($yearStart, $yearEnd);
+        $totalWorkdays = Workdays::count($yearStart, $yearEnd);
         $activeHolidays = Holiday::query()
             ->where('tenant_id', $tenantId)
             ->where('active', true)
@@ -522,47 +524,18 @@ class PlanningController extends Controller
             ->get();
 
         $collator = new \Collator('de_DE');
-        $rows = $people->map(function (Person $person) use ($activeHolidays, $baseLoadCalculator, $baseLoads, $personBaseLoads, $yearStart, $yearEnd, $totalWorkdays) {
-            $employmentStart = $person->start_date
-                ? CarbonImmutable::parse($person->start_date->toDateString())->max($yearStart)
-                : $yearStart;
-            $employmentEnd = $person->end_date
-                ? CarbonImmutable::parse($person->end_date->toDateString())->min($yearEnd)
-                : $yearEnd;
-            $employmentWorkdays = $employmentStart->lessThanOrEqualTo($employmentEnd)
-                ? $this->countWeekdays($employmentStart, $employmentEnd)
-                : 0;
-            $holidayCount = $employmentWorkdays > 0
-                ? $this->countHolidays($activeHolidays, $employmentStart, $employmentEnd)
-                : 0;
-
-            if ($employmentWorkdays === 0) {
-                $brutto = 0.0;
-                $effectiveWoSt = 0.0;
-            } else {
-                $contractHours = $this->overlappingSum($person->weeklyHours, $employmentStart, $employmentEnd, fn (PersonWeeklyHours $row, int $segmentWorkdays) => $segmentWorkdays * ((float) $row->hours / 5));
-                $brutto = $this->overlappingSum(
-                    $person->weeklyHours,
-                    $employmentStart,
-                    $employmentEnd,
-                    fn (PersonWeeklyHours $row, int $segmentWorkdays, CarbonImmutable $segmentStart, CarbonImmutable $segmentEnd) => ($segmentWorkdays - $this->countHolidays($activeHolidays, $segmentStart, $segmentEnd)) * ((float) $row->hours / 5)
-                );
-                if ($contractHours === null || $brutto === null) {
-                    return null;
-                }
-                $effectiveWoSt = $contractHours / $employmentWorkdays * 5;
+        $rows = $people->map(function (Person $person) use ($activeHolidays, $baseLoadCalculator, $baseLoads, $hoursCalculator, $personBaseLoads, $yearStart, $yearEnd) {
+            $hours = $hoursCalculator->forPerson($person, $yearStart, $yearEnd, $activeHolidays);
+            if ($hours === null) {
+                return null;
             }
-
-            // Urlaubstage-Historie (Ralf, 2026-09-28): ändert sich der
-            // Jahresanspruch innerhalb des Jahres, wird er anteilig nach
-            // Arbeitstagen der jeweiligen Gültigkeit geblendet (analog zu
-            // einer unterjährigen Anpassung) - dieselbe Denkweise wie bei
-            // den Wochenstunden.
-            $vacationDaysEffective = $employmentWorkdays > 0
-                ? $this->overlappingSum($person->vacationDays, $employmentStart, $employmentEnd, fn (PersonVacationDays $row, int $segmentWorkdays) => $totalWorkdays > 0 ? (float) $row->days * $segmentWorkdays / $totalWorkdays : 0.0) ?? 0.0
-                : 0.0;
-            $vacationHours = $vacationDaysEffective * $effectiveWoSt / 5;
-            $netto = $brutto - $vacationHours;
+            $employmentStart = $hours['employmentStart'];
+            $employmentEnd = $hours['employmentEnd'];
+            $employmentWorkdays = $hours['workdays'];
+            $holidayCount = $hours['holidays'];
+            $effectiveWoSt = $hours['wost'];
+            $vacationHours = $hours['vacationHours'];
+            $netto = $hours['netto'];
             $annotations = collect();
             if ($person->start_date && $person->start_date->year === $yearStart->year) {
                 $annotations->push(__('ab :date', ['date' => $person->start_date->format('d.m.Y')]));
@@ -639,92 +612,5 @@ class PlanningController extends Controller
         $year = (int) $request->integer('year', $currentYear);
 
         return [$years, in_array($year, $years, true) ? $year : $years[0]];
-    }
-
-    private function overlappingWeeklyHours(Person $person, CarbonImmutable $yearStart, CarbonImmutable $yearEnd)
-    {
-        return $person->weeklyHours->filter(function (PersonWeeklyHours $row) use ($yearStart, $yearEnd) {
-            $rowStart = $row->valid_from ? CarbonImmutable::parse($row->valid_from->toDateString()) : $yearStart;
-            $rowEnd = $row->valid_to ? CarbonImmutable::parse($row->valid_to->toDateString()) : $yearEnd;
-
-            return $rowStart->lessThanOrEqualTo($yearEnd) && $rowEnd->greaterThanOrEqualTo($yearStart);
-        })->values();
-    }
-
-    /**
-     * @return array{0: CarbonImmutable, 1: CarbonImmutable}
-     */
-    private function employmentPeriod(Person $person, CarbonImmutable $yearStart, CarbonImmutable $yearEnd): array
-    {
-        $start = $person->start_date
-            ? CarbonImmutable::parse($person->start_date->toDateString())->max($yearStart)
-            : $yearStart;
-        $end = $person->end_date
-            ? CarbonImmutable::parse($person->end_date->toDateString())->min($yearEnd)
-            : $yearEnd;
-
-        return [$start, $end];
-    }
-
-    /**
-     * Summiert $valueFn über alle Historien-Zeilen, die das Jahr
-     * [$yearStart, $yearEnd] überhaupt berühren - je Zeile begrenzt auf den
-     * Überschneidungs-Zeitraum mit dem Jahr (Ralf, 2026-09-28: eine Person
-     * kann ihre Wochenstunden/ihren Urlaubsanspruch unterjährig ändern, die
-     * Jahresstunden dürfen dadurch nicht falsch werden). Gibt null zurück,
-     * wenn KEINE Zeile das Jahr berührt (Person hat dafür noch keine gültigen
-     * Daten - wird dann aus der Liste ausgeschlossen).
-     *
-     * @param  Collection<int, PersonWeeklyHours|PersonVacationDays>  $history
-     * @param  \Closure(PersonWeeklyHours|PersonVacationDays, int, CarbonImmutable, CarbonImmutable): float  $valueFn
-     */
-    private function overlappingSum($history, CarbonImmutable $yearStart, CarbonImmutable $yearEnd, \Closure $valueFn): ?float
-    {
-        $touched = false;
-        $sum = 0.0;
-        foreach ($history as $row) {
-            $rowStart = $row->valid_from ? CarbonImmutable::parse($row->valid_from->toDateString()) : $yearStart;
-            $rowEnd = $row->valid_to ? CarbonImmutable::parse($row->valid_to->toDateString()) : $yearEnd;
-            $segmentStart = $rowStart->greaterThan($yearStart) ? $rowStart : $yearStart;
-            $segmentEnd = $rowEnd->lessThan($yearEnd) ? $rowEnd : $yearEnd;
-            if ($segmentStart->greaterThan($segmentEnd)) {
-                continue;
-            }
-            $touched = true;
-            $sum += $valueFn($row, $this->countWeekdays($segmentStart, $segmentEnd), $segmentStart, $segmentEnd);
-        }
-
-        return $touched ? $sum : null;
-    }
-
-    private function countHolidays(Collection $holidays, CarbonImmutable $start, CarbonImmutable $end): int
-    {
-        return $holidays
-            ->filter(fn (Holiday $holiday) => $holiday->date->betweenIncluded($start, $end))
-            ->unique(fn (Holiday $holiday) => $holiday->date->toDateString())
-            ->count();
-    }
-
-    /**
-     * Reine Wochentage (Mo-Fr) im Zeitraum, ohne Feiertage oder
-     * Krankheitstage abzuziehen (Ralf, 2026-09-28, bewusste Vereinfachung).
-     */
-    private function countWeekdays(CarbonImmutable $start, CarbonImmutable $end): int
-    {
-        if ($start->greaterThan($end)) {
-            return 0;
-        }
-        $days = $start->diffInDays($end) + 1;
-        $fullWeeks = intdiv($days, 7);
-        $count = $fullWeeks * 5;
-        $cursor = $start->addWeeks($fullWeeks);
-        for ($i = 0; $i < $days % 7; $i++) {
-            if ($cursor->isWeekday()) {
-                $count++;
-            }
-            $cursor = $cursor->addDay();
-        }
-
-        return $count;
     }
 }

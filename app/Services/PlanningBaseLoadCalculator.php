@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\PlanningBaseLoad;
 use App\Models\PlanningPersonBaseLoad;
+use App\Support\Workdays;
 use Carbon\CarbonImmutable;
 
 class PlanningBaseLoadCalculator
@@ -46,7 +47,7 @@ class PlanningBaseLoadCalculator
     ): array {
         $yearStart = CarbonImmutable::create($year, 1, 1);
         $yearEnd = CarbonImmutable::create($year, 12, 31);
-        $yearWorkdays = $this->countWeekdays($yearStart, $yearEnd);
+        $yearWorkdays = Workdays::count($yearStart, $yearEnd);
         $periodStart = $availableFrom?->max($yearStart) ?? $yearStart;
         $periodEnd = $availableTo?->min($yearEnd) ?? $yearEnd;
         $yearly = 0.0;
@@ -62,7 +63,7 @@ class PlanningBaseLoadCalculator
                 continue;
             }
 
-            $validityShare = $this->countWeekdays($validFrom, $validTo) / $yearWorkdays;
+            $validityShare = Workdays::count($validFrom, $validTo) / $yearWorkdays;
             $annualValue = (float) $baseLoad->value
                 * ($baseLoad->calculation_type === 'weekly' ? self::STANDARD_WEEKS_PER_YEAR : 1);
             $yearly += $annualValue * $validityShare;
@@ -72,25 +73,5 @@ class PlanningBaseLoadCalculator
             'yearly' => $yearly,
             'weekly' => $yearly / self::STANDARD_WEEKS_PER_YEAR,
         ];
-    }
-
-    private function countWeekdays(CarbonImmutable $start, CarbonImmutable $end): int
-    {
-        if ($start->greaterThan($end)) {
-            return 0;
-        }
-
-        $days = $start->diffInDays($end) + 1;
-        $fullWeeks = intdiv($days, 7);
-        $count = $fullWeeks * 5;
-        $cursor = $start->addWeeks($fullWeeks);
-        for ($i = 0; $i < $days % 7; $i++) {
-            if ($cursor->isWeekday()) {
-                $count++;
-            }
-            $cursor = $cursor->addDay();
-        }
-
-        return $count;
     }
 }

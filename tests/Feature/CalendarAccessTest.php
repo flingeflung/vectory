@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\CalendarEntry;
 use App\Models\Person;
+use App\Models\SystemSetting;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\UserPreference;
@@ -129,5 +130,38 @@ class CalendarAccessTest extends TestCase
             'type' => CalendarEntry::TYPE_MOBILE_OFFICE,
             'note' => 'vormittags',
         ]);
+    }
+
+    public function test_organization_admin_cannot_read_or_change_calendar_entries_of_another_organization(): void
+    {
+        $home = Tenant::query()->firstOrFail();
+        $home->update(['is_home_tenant' => true]);
+        $tenantA = Tenant::query()->create(['name' => 'Kunde A']);
+        $tenantB = Tenant::query()->create(['name' => 'Kunde B']);
+        SystemSetting::set(SystemSetting::MULTI_TENANT_ENABLED, '1');
+
+        $personA = Person::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $tenantA->id, 'first_name' => 'Anna', 'last_name' => 'Alpha', 'calendar_enabled' => true]);
+        $personB = Person::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $tenantB->id, 'first_name' => 'Bernd', 'last_name' => 'Fremdbeta', 'calendar_enabled' => true]);
+        $adminA = User::factory()->create(['tenant_id' => $tenantA->id, 'person_id' => $personA->id, 'role' => 'organization_admin']);
+        $foreignEntry = CalendarEntry::query()->create(['person_id' => $personB->id, 'type' => CalendarEntry::TYPE_ABSENCE, 'starts_on' => '2026-10-05', 'ends_on' => '2026-10-05', 'note' => 'Geheim']);
+        $payload = fn (int $personId) => ['person_id' => $personId, 'type' => CalendarEntry::TYPE_ABSENCE, 'starts_on' => '2026-10-06', 'ends_on' => '2026-10-06', 'return_year' => 2026, 'return_month' => 10];
+
+        $this->actingAs($adminA)->withSession(['active_tenant_id' => $tenantA->id]);
+
+        $this->get(route('kalender', ['year' => 2026, 'month' => 10]))
+            ->assertOk()
+            ->assertSee('Alpha')
+            ->assertDontSee('Fremdbeta')
+            ->assertDontSee('Geheim');
+
+        $this->post(route('kalender.eintraege.store'), $payload($personB->id))->assertForbidden();
+        $this->put(route('kalender.eintraege.update', $foreignEntry), $payload($personB->id))->assertForbidden();
+        $this->delete(route('kalender.eintraege.destroy', $foreignEntry), ['return_year' => 2026, 'return_month' => 10])->assertForbidden();
+
+        $this->assertDatabaseHas('calendar_entries', ['id' => $foreignEntry->id, 'note' => 'Geheim']);
+        $this->assertDatabaseMissing('calendar_entries', ['person_id' => $personB->id, 'starts_on' => '2026-10-06']);
+
+        $this->post(route('kalender.eintraege.store'), $payload($personA->id))->assertRedirect();
+        $this->assertDatabaseHas('calendar_entries', ['person_id' => $personA->id, 'starts_on' => '2026-10-06']);
     }
 }
