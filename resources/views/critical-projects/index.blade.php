@@ -116,8 +116,11 @@
                 <h3 class="text-sm font-semibold">{{ __('Organisationen auswählen') }}</h3>
                 <button type="button" @click="$dispatch('close-modal', 'critical-project-organizations')" class="text-xl text-gray-400">×</button>
             </div>
+            <div class="flex items-center gap-2 border-b border-gray-100 px-4 py-2">
+                <button type="button" @click="$refs.list.querySelectorAll('input[type=checkbox]').forEach(i => i.checked = true)" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Alle') }}</button>
+                <button type="button" @click="$refs.list.querySelectorAll('input[type=checkbox]').forEach(i => i.checked = false)" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Keiner') }}</button>
+            </div>
             <div x-ref="list" class="max-h-[60vh] space-y-1 overflow-y-auto p-4 text-sm">
-                <div class="mb-2 flex gap-2"><button type="button" @click="$refs.list.querySelectorAll('input').forEach(i => i.checked = true)" class="text-xs text-blue-600">{{ __('Alle') }}</button><button type="button" @click="$refs.list.querySelectorAll('input').forEach(i => i.checked = false)" class="text-xs text-blue-600">{{ __('Keiner') }}</button></div>
                 @foreach ($organizations as $organization)
                     <label class="flex items-center gap-2 rounded px-1 py-1 hover:bg-gray-50"><input type="checkbox" name="organizations[]" value="{{ $organization->id }}" @checked($selectedIds->contains($organization->id)) class="rounded border-gray-300 text-blue-600"><span>{{ $organization->name }}</span></label>
                 @endforeach
