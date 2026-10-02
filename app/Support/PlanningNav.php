@@ -17,20 +17,24 @@ class PlanningNav
 {
     private const DEFAULT_ROUTE = 'planung.projektplanung';
 
-    public static function tabs(): array
+    public static function tabs(?User $user = null): array
     {
-        return [
+        $tabs = [
             ['route' => 'planung.projektplanung', 'match' => 'planung.projektplanung', 'label' => __('Projektplanung')],
             ['route' => 'planung.stunden', 'match' => 'planung.stunden', 'label' => __('Stunden')],
             ['route' => 'planung.grundlast', 'match' => 'planung.grundlast', 'label' => __('Grundlastbasis')],
             ['route' => 'planung.grundlast-person', 'match' => 'planung.grundlast-person', 'label' => __('Grundlast/Person')],
             ['route' => 'planung.arbeitszeit', 'match' => 'planung.arbeitszeit', 'label' => __('Arbeitszeit')],
         ];
+
+        return $user !== null && ! PlanningAccess::canViewExtended($user)
+            ? array_slice($tabs, 0, 1)
+            : $tabs;
     }
 
     public static function remember(User $user, string $route): void
     {
-        if (! in_array($route, self::routes(), true)) {
+        if (! in_array($route, self::routes($user), true)) {
             return;
         }
 
@@ -45,14 +49,14 @@ class PlanningNav
     {
         $route = UserPreference::configFor($user->id, UserPreference::PLANNING)['tab'] ?? null;
 
-        return in_array($route, self::routes(), true) ? $route : self::DEFAULT_ROUTE;
+        return in_array($route, self::routes($user), true) ? $route : self::DEFAULT_ROUTE;
     }
 
     /**
      * @return list<string>
      */
-    private static function routes(): array
+    private static function routes(?User $user = null): array
     {
-        return array_column(self::tabs(), 'route');
+        return array_column(self::tabs($user), 'route');
     }
 }

@@ -1,6 +1,6 @@
 {{--
     Zeiten-Tab, Unterreiter "Nach Person & Tag" (Ralf, 2026-09-28) - Personen×Tage-
-    Aufschlüsselung je Projekt, eigenes Recht project.hours.person_breakdown (siehe
+    Aufschlüsselung je Projekt, geschützt durch planning.view (siehe
     zeiten-body.blade.php für die Sichtbarkeits-Begründung). Eigene, per fetch()
     wechselbare Woche (gleiches Grundmuster wie das klassische Wochenraster,
     resources/views/jobload/index.blade.php) - Wochennavigation tauscht nur diesen

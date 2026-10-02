@@ -83,8 +83,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    // Neuer Hauptnavigationspunkt "Planung" (Ralf, 2026-09-28) - rechtegesteuert
-    // (planning.view), siehe PlanningController.
+    // Basiszugriff für eingeloggte Mitglieder einer Funktionsgruppe; die
+    // erweiterten Tabs erfordern planning.view, siehe PlanningController.
     Route::get('/planung', [PlanningController::class, 'index'])->name('planung.index');
     Route::get('/planung/stunden', [PlanningController::class, 'stunden'])->name('planung.stunden');
     Route::get('/planung/projektplanung', [PlanningController::class, 'projektplanung'])->name('planung.projektplanung');
@@ -153,11 +153,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/projekte/{project}', [ProjectController::class, 'update'])->name('projekte.update');
     Route::post('/projekte/{project}/planstunden/loesen', [ProjectController::class, 'breakPlannedHoursLink'])->name('projekte.planstunden.loesen');
     Route::post('/projekte/{project}/planstunden', [ProjectController::class, 'updatePlannedFunctionGroupHours'])->name('projekte.planstunden');
-    // Zeiten-Tab, Unterreiter "Nach Person & Tag" (Ralf, 2026-09-28) - eigenes Recht
-    // project.hours.person_breakdown, siehe ProjectController::zeitenPersonBreakdown().
+    // Personenbezogene Zeitenansichten erfordern planning.view.
     Route::get('/projekte/{project}/zeiten/personen', [ProjectController::class, 'zeitenPersonBreakdown'])->name('projekte.zeiten.personen');
-    // Zeiten-Tab, Unterreiter "Gesamtansicht" (Ralf, 2026-09-28) - gleiches Recht,
-    // siehe ProjectController::zeitenGesamtansicht().
+    // Aggregierte Modi sind allgemein sichtbar; Personenmodi erfordern planning.view.
     Route::get('/projekte/{project}/zeiten/gesamt', [ProjectController::class, 'zeitenGesamtansicht'])->name('projekte.zeiten.gesamt');
     // Versionskette / "Stamm-ID" (Ralf, 2026-09-20)
     Route::get('/projekte/{project}/stamm-id/kette', [StammIdController::class, 'chain'])->name('projekte.stamm-id.chain');

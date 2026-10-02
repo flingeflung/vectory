@@ -81,7 +81,7 @@ Rechte-Sets sind ausschließlich für User bestimmt. Sie bündeln konkrete fachl
 
 - Projekte anlegen oder bearbeiten,
 - Projektpersonen verwalten,
-- Planung anzeigen,
+- erweiterte Planung und personenbezogene Auswertungen anzeigen,
 - Kalendereinträge anderer Personen verwalten,
 - Zeiterfassungsübersichten einsehen.
 
@@ -134,7 +134,10 @@ Direkte, über einzelne Controller und Ansichten verstreute Rollenvergleiche sin
 
 - Super- und Zentral-Admin sehen die echten Projekte und Auslastungen aller für die Planung relevanten Organisationen.
 - Ein Organisations-Admin sieht innerhalb seiner Organisation die zulässigen Personen und Projektdaten, aber keine vertraulichen Projektdetails anderer Organisationen.
-- Ein User benötigt das entsprechende Planungsrecht aus seinem Rechte-Set. Seine Organisationssicht bleibt trotzdem begrenzt.
+- Ein User mit Login und mindestens einer Funktionsgruppe kann die Planungsseite öffnen. Ohne `planning.view` sieht er dort ausschließlich den Tab **Projektplanung**, sich selbst im Personenfilter und nur Projekte, denen er als Projektperson zugeordnet ist. Der Organisationsfilter bleibt auf seine freigeschalteten Organisationen begrenzt.
+- `planning.view` schaltet die Tabs **Stunden**, **Grundlastbasis**, **Grundlast/Person** und **Arbeitszeit** sowie die vollständige Personenansicht innerhalb der zulässigen Organisationssicht frei.
+- Im Planungstab eines Projekts sehen User ohne `planning.view` nur die Planstunden je Funktionsgruppe. Das Lösen einer Schablonenverknüpfung, die Bearbeitung der Funktionsgruppenstunden und die Verteilung auf Projektpersonen erfordern `planning.view`.
+- Im Zeiten-Tab eines Projekts sind die aggregierten Ansichten **Projektstunden** und **Zeitverlauf** für alle Projektberechtigten sichtbar. **Personen & Tage** sowie personenbezogene Modi und Aufschlüsselungen im Zeitverlauf erfordern `planning.view`.
 - Die Attribute **Ressourcenplanung** und **Kalender** bestimmen nur, ob eine Person fachlich in diesen Modulen teilnimmt.
 
 ## 9. Begriffe

@@ -18,23 +18,23 @@
 <div
     id="project-zeiten-body"
     class="text-sm"
-    x-data="{ subTab: {{ auth()->user()->can('project.hours.person_breakdown') ? 'window.projectZeitenSubTab || ' : '' }}'uebersicht' }"
+    x-data="{ subTab: (window.projectZeitenSubTab && ({{ \Illuminate\Support\Js::from(auth()->user()->can('planning.view')) }} || window.projectZeitenSubTab !== 'personen')) ? window.projectZeitenSubTab : 'uebersicht' }"
     x-init="$watch('subTab', value => window.projectZeitenSubTab = value)"
 >
     @php($fmt = fn ($hours) => number_format($hours, 2, ',', '.'))
 
     {{-- Unterreiter "Nach Person & Tag" (Ralf, 2026-09-28) - nur sichtbar mit eigenem
-         Recht project.hours.person_breakdown (personenbezogen, siehe
+         Recht planning.view (personenbezogen, siehe
          ProjectController::zeitenPersonBreakdown()). Wer das Recht nicht hat, sieht
          gar keinen Hinweis auf diesen Unterreiter - bewusst kein gesperrtes/gegrautes
          Element (Leistungskontrolle-Sensibilität, siehe Rechtekonzept-Diskussion). --}}
-    @can('project.hours.person_breakdown')
         <div class="mb-3 flex gap-1 border-b border-gray-100">
-            <button type="button" @click="subTab = 'uebersicht'" :class="subTab === 'uebersicht' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700'" class="border-b-2 px-2 pb-1.5 text-xs font-medium">{{ __('Übersicht') }}</button>
-            <button type="button" @click="subTab = 'personen'" :class="subTab === 'personen' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700'" class="border-b-2 px-2 pb-1.5 text-xs font-medium">{{ __('Nach Person & Tag') }}</button>
-            <button type="button" @click="subTab = 'gesamt'" :class="subTab === 'gesamt' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700'" class="border-b-2 px-2 pb-1.5 text-xs font-medium">{{ __('Gesamtansicht') }}</button>
+            <button type="button" @click="subTab = 'uebersicht'" :class="subTab === 'uebersicht' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700'" class="border-b-2 px-2 pb-1.5 text-xs font-medium">{{ __('Projektstunden') }}</button>
+            @can('planning.view')
+            <button type="button" @click="subTab = 'personen'" :class="subTab === 'personen' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700'" class="border-b-2 px-2 pb-1.5 text-xs font-medium">{{ __('Personen & Tage') }}</button>
+            @endcan
+            <button type="button" @click="subTab = 'gesamt'" :class="subTab === 'gesamt' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700'" class="border-b-2 px-2 pb-1.5 text-xs font-medium">{{ __('Zeitverlauf') }}</button>
         </div>
-    @endcan
 
     <div x-show="subTab === 'uebersicht'">
         <p class="mb-1 text-[11px] text-gray-400">
@@ -150,12 +150,12 @@
     @endif
     </div>
 
-    @can('project.hours.person_breakdown')
+    @can('planning.view')
         <div x-show="subTab === 'personen'" x-cloak>
             @include('projekte.partials.zeiten-personen-body', ['week' => $zeiten['personBreakdownWeek'], 'sortBy' => $zeiten['personBreakdownSort'], 'breakdown' => $zeiten['personBreakdown']])
         </div>
-        <div x-show="subTab === 'gesamt'" x-cloak>
-            @include('projekte.partials.zeiten-gesamt-body', ['gesamt' => $zeiten['gesamtansicht']])
-        </div>
     @endcan
+    <div x-show="subTab === 'gesamt'" x-cloak>
+        @include('projekte.partials.zeiten-gesamt-body', ['gesamt' => $zeiten['gesamtansicht'], 'canViewPeople' => auth()->user()->can('planning.view')])
+    </div>
 </div>

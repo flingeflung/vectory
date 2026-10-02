@@ -840,6 +840,14 @@ class ProjectController extends Controller
         // etwas ändert - wer nur den Titel o.ä. speichert, braucht dieses
         // Recht nicht extra (analog project.complete beim Statusfeld oben).
         $currentProjectPeople = ProjectPerson::where('project_id', $project->id)->get();
+        if (! $request->user()->can('planning.view')) {
+            $projectPeopleHoursInput = $currentProjectPeople
+                ->groupBy('function_group_id')
+                ->map(fn ($rows) => $rows->mapWithKeys(fn (ProjectPerson $row) => [
+                    $row->person_id => $row->planned_hours,
+                ])->all())
+                ->all();
+        }
         $currentPeopleByGroup = $currentProjectPeople
             ->groupBy('function_group_id')
             ->map(fn ($rows) => $rows->pluck('person_id')->sort()->values()->all())
@@ -1148,27 +1156,24 @@ class ProjectController extends Controller
             'ownTemplateName' => $project->projectTemplate?->name,
             'ownBreakdown' => $ownBreakdown,
             'ownRelevantFunctionGroups' => $ownRelevantFunctionGroups,
-            // Unterreiter "Nach Person & Tag" (Ralf, 2026-09-28) - nur berechnet, wenn das
-            // eigene, personenbezogene Recht vorliegt (sonst unnötige Query, das Fragment
+            // "Personen & Tage" wird nur mit dem erweiterten Planungsrecht berechnet
+            // (sonst unnötige Query, das Fragment
             // wird im View ohnehin nicht gerendert). auth() statt eines durchgereichten
             // Request, da zeitenData() auch aus plannedHoursEditorResponse() (kein Request-Param)
             // aufgerufen wird.
             'personBreakdownWeek' => CarbonImmutable::today()->startOfWeek(),
             'personBreakdownSort' => 'person',
-            'personBreakdown' => auth()->user()?->can('project.hours.person_breakdown')
+            'personBreakdown' => auth()->user()?->can('planning.view')
                 ? $this->zeitenPersonBreakdownData($project, CarbonImmutable::today()->startOfWeek())
                 : null,
-            // Unterreiter "Gesamtansicht" (Ralf, 2026-09-28) - gleiches Recht wie oben,
-            // Standard-Modus "Personen" mit der eigenen Person (siehe zeitenGesamtansichtData()).
-            'gesamtansicht' => auth()->user()?->can('project.hours.person_breakdown')
-                ? $this->zeitenGesamtansichtData($project, 'project', null, null, false, defaultToOwnPerson: true)
-                : null,
+            // "Zeitverlauf" startet aggregiert nach Projekten; personenbezogene Modi
+            // sind in zeitenGesamtansicht() durch planning.view geschützt.
+            'gesamtansicht' => $this->zeitenGesamtansichtData($project, 'project', null, null, false, defaultToOwnPerson: true),
         ];
     }
 
     /**
-     * Zeiten-Tab, Unterreiter "Nach Person & Tag" (Ralf, 2026-09-28) - eigenes
-     * Recht project.hours.person_breakdown, bewusst getrennt von project.view:
+     * Zeiten-Tab, "Personen & Tage" - planning.view, bewusst getrennt von project.view:
      * eine Personen×Tage-Aufschlüsselung ist personenbezogen (Leistungskontrolle-
      * Sensibilität, siehe Rechtekonzept-Diskussion), die restliche Zeiten-Ansicht
      * (Summen, kein Personenbezug) bleibt für alle Projektbeteiligten offen.
@@ -1178,7 +1183,7 @@ class ProjectController extends Controller
     public function zeitenPersonBreakdown(Request $request, Project $project): Response
     {
         abort_unless($request->user()->can('project.view'), 403);
-        abort_unless($request->user()->can('project.hours.person_breakdown'), 403);
+        abort_unless($request->user()->can('planning.view'), 403);
 
         $week = $this->parseIsoWeek($request->query('week'));
         $sortBy = $request->query('sort') === 'project' ? 'project' : 'person';
@@ -1284,16 +1289,13 @@ class ProjectController extends Controller
      * Personen"/"Nach Jobs"), aber auf die Jobs der beteiligten Projekte (HP+UP)
      * eingeschränkt und über deren Laufzeit statt über ein Kalenderjahr, plus ein
      * dritter, hier eigener Modus "Nach Projekten" (ergibt nur im Projekt-Kontext
-     * Sinn, deshalb nicht im Hauptmenü). Gleiches Recht wie "Nach Person & Tag"
-     * (project.hours.person_breakdown) - Modus "Projekte" zeigt nie Personen,
+     * Sinn, deshalb nicht im Hauptmenü). Modus "Projekte" zeigt nie Personen,
      * Modus "Personen" mit einer gewählten Person bzw. Modus "Jobs" beim
      * Draufklicken auf einen einzelnen Job zeigen personenbezogene Zeilen.
      */
     public function zeitenGesamtansicht(Request $request, Project $project): Response
     {
         abort_unless($request->user()->can('project.view'), 403);
-        abort_unless($request->user()->can('project.hours.person_breakdown'), 403);
-
         $data = $request->validate([
             'mode' => ['nullable', Rule::in(['project', 'person', 'job'])],
             'person_id' => ['nullable', 'integer'],
@@ -1301,9 +1303,17 @@ class ProjectController extends Controller
         ]);
         $mode = $data['mode'] ?? 'project';
         $showInactive = $request->boolean('show_inactive');
+        $canViewPeople = $request->user()->can('planning.view');
+        if (! $canViewPeople) {
+            $mode = in_array($mode, ['project', 'job'], true) ? $mode : 'project';
+            $data['person_id'] = null;
+            $data['job_id'] = null;
+            $showInactive = false;
+        }
 
         return response(view('projekte.partials.zeiten-gesamt-body', [
             'project' => $project,
+            'canViewPeople' => $canViewPeople,
             // defaultToOwnPerson=false: ein Reload aus der Filterleiste trägt den
             // zuletzt gültigen Stand (auch "– Alle –" = null) immer explizit weiter,
             // siehe zeitenGesamtansichtData().
@@ -1518,6 +1528,7 @@ class ProjectController extends Controller
     public function breakPlannedHoursLink(Request $request, Project $project): Response
     {
         abort_unless($request->user()->can('project.edit'), 403);
+        abort_unless($request->user()->can('planning.view'), 403);
         abort_unless($project->plannedHoursLinkedToTemplate(), 409);
 
         $templateName = $project->projectTemplate->name;
@@ -1545,6 +1556,7 @@ class ProjectController extends Controller
     public function updatePlannedFunctionGroupHours(Request $request, Project $project): Response
     {
         abort_unless($request->user()->can('project.edit'), 403);
+        abort_unless($request->user()->can('planning.view'), 403);
         abort_if($project->plannedHoursLinkedToTemplate(), 409);
 
         $request->validate(['hours' => ['nullable', 'array'], 'hours.*' => ['nullable', 'numeric', 'min:0', 'max:999']]);

@@ -4,6 +4,7 @@
     class="shrink-0"
 >
 @php($fmt = fn ($hours) => number_format($hours, 2, ',', '.'))
+@php($canManagePlanning = auth()->user()->can('planning.view'))
 @if ($zeiten['ownPlanLinked'])
     <div
         x-data="{
@@ -37,6 +38,7 @@
             <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('Planstunden dieses Projekts') }}</span>
             <span class="font-semibold tabular-nums">{{ $fmt($zeiten['ownPlan']) }} h</span>
             <span class="text-gray-400">{{ __('(aus Schablone „:name")', ['name' => $zeiten['ownTemplateName']]) }}</span>
+            @if ($canManagePlanning)
             <button
                 type="button"
                 @click="loesen()"
@@ -44,6 +46,7 @@
             >
                 {{ __('Lösen') }}
             </button>
+            @endif
         </div>
 
         {{-- Ralf, 2026-09-27: die Aufschlüsselung je Funktionsgruppe auch schon SEHEN,
@@ -62,6 +65,7 @@
         @endif
     </div>
 @elseif ($zeiten['ownRelevantFunctionGroups']->isNotEmpty() || $zeiten['ownBreakdown']->isNotEmpty())
+    @if ($canManagePlanning)
     <form
         x-data="{
             dirty: false,
@@ -127,6 +131,22 @@
             </button>
         </div>
     </form>
+    @else
+        <div class="mb-4 rounded-md border border-gray-200 bg-gray-50 px-3 py-2">
+            <div class="flex items-center justify-between gap-2">
+                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('Planstunden je Funktionsgruppe') }}</p>
+                <p class="text-xs text-gray-400">{{ __('Summe') }}: {{ $fmt($zeiten['ownBreakdown']->sum(fn ($hours) => (float) $hours)) }} h</p>
+            </div>
+            <div class="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                @foreach ($zeiten['ownRelevantFunctionGroups'] as $fg)
+                    <div class="flex items-center justify-between gap-1 rounded-md border border-gray-200 bg-white px-1.5 py-1 text-xs text-gray-600">
+                        <span class="min-w-0 truncate" title="{{ $fg->name }}">{{ $fg->short_name }}</span>
+                        <span class="shrink-0 font-medium text-gray-900">{{ $fmt((float) ($zeiten['ownBreakdown']->get((string) $fg->id) ?? 0)) }} h</span>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
 @else
     <div class="mb-4 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500">
         {{ __('Kein Plan hinterlegt') }}

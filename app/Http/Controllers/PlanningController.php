@@ -16,6 +16,7 @@ use App\Services\PlanningBaseLoadCalculator;
 use App\Services\ProjectPlanningCalculator;
 use App\Support\CurrentTenant;
 use App\Support\PlanningNav;
+use App\Support\PlanningAccess;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -25,9 +26,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
- * Neuer Hauptnavigationspunkt "Planung" (Ralf, 2026-09-28) - rechtegesteuert
- * (planning.view), Design wie der Admin-Bereich (Reiter oben, siehe
- * App\Support\PlanningNav/planning-layout.blade.php). Erster Reiter
+ * Hauptnavigationspunkt "Planung": Mitglieder einer Funktionsgruppe sehen
+ * ihre Projektplanung; planning.view schaltet die erweiterten Tabs frei.
+ * Design wie der Admin-Bereich (Tabs oben, siehe
+ * App\Support\PlanningNav/planning-layout.blade.php). Erster Tab
  * "Stunden": Jahresstunden-Kapazität je Person, aus Wochenstunden- und
  * Urlaubstage-Historie (siehe Person::weeklyHours()/vacationDays()) und den
  * (reinen Wochentags-)Arbeitstagen des gewählten Jahres berechnet.
@@ -38,14 +40,14 @@ class PlanningController extends Controller
 
     public function index(Request $request): RedirectResponse
     {
-        abort_unless($request->user()->can('planning.view'), 403);
+        abort_unless(PlanningAccess::canOpen($request->user()), 403);
 
         return redirect()->route(PlanningNav::preferredRoute($request->user()));
     }
 
     public function projektplanung(Request $request, ProjectPlanningCalculator $calculator): View
     {
-        abort_unless($request->user()->can('planning.view'), 403);
+        abort_unless(PlanningAccess::canOpen($request->user()), 403);
         PlanningNav::remember($request->user(), 'planung.projektplanung');
 
         $displayMode = $request->query('view') === 'year' ? 'year' : 'month';
@@ -244,6 +246,18 @@ class PlanningController extends Controller
         $homeTenant = Tenant::query()->where('is_home_tenant', true)->first();
         $homeTenantId = $homeTenant?->id;
         $hasCentralScope = $user->canAccessAllOrganizations();
+
+        if (! PlanningAccess::canViewExtended($user)) {
+            $person = Person::query()
+                ->withoutGlobalScope('tenant')
+                ->with(['weeklyHours', 'calendarEntries'])
+                ->findOrFail($user->person_id);
+
+            return [
+                collect([$person->tenant_id => collect([$person])]),
+                Tenant::query()->whereKey($person->tenant_id)->get()->keyBy('id'),
+            ];
+        }
 
         $query = Person::query()
             ->withoutGlobalScope('tenant')

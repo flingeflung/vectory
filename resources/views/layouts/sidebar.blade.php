@@ -223,7 +223,7 @@
         {{-- Ralf, 2026-09-28: neuer Hauptnavigationspunkt "Planung" -
              rechtegesteuert statt an eine Rolle gebunden, siehe
              App\Support\PlanningNav. --}}
-        @can('planning.view')
+        @if (\App\Support\PlanningAccess::canOpen(auth()->user()))
             <a
                 onclick="return window.navigateOrConfirm(event)"
                 href="{{ route(\App\Support\PlanningNav::preferredRoute(auth()->user())) }}"
@@ -231,7 +231,7 @@
             >
                 {{ __('Planung') }}
             </a>
-        @endcan
+        @endif
 
         @can('access-admin')
             <div class="my-2 border-t border-gray-100"></div>

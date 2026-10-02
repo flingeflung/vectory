@@ -62,6 +62,7 @@
 >
     @include('projekte.partials.planned-hours-editor')
 
+    @can('planning.view')
     <div class="shrink-0 flex items-start justify-between gap-3">
         <div>
             <h3 class="font-semibold text-gray-900">{{ __('Planstunden und Verteilung auf Projektbeteiligte') }}</h3>
@@ -151,4 +152,5 @@
             </div>
         </div>
     @endif
+    @endcan
 </div>

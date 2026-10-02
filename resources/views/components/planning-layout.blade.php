@@ -16,7 +16,7 @@
     <div class="h-full flex flex-col p-4 sm:p-6 lg:p-8">
         <div class="w-full max-w-7xl mx-auto flex flex-1 min-h-0 flex-col">
             <div class="mb-4 flex shrink-0 gap-4 border-b border-gray-200 text-sm">
-                @foreach (\App\Support\PlanningNav::tabs() as $item)
+                @foreach (\App\Support\PlanningNav::tabs(auth()->user()) as $item)
                     <a
                         onclick="return window.navigateOrConfirm(event)"
                         href="{{ route($item['route']) }}"

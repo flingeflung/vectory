@@ -4,7 +4,7 @@
     "Nach Personen"/"Nach Jobs"), aber auf die Jobs der beteiligten Projekte
     (HP+UP) eingeschränkt und über deren Laufzeit (frühestes Start- bis spätestes
     Enddatum) statt über ein Kalenderjahr, mit Kalenderwochen als Spalten. Gleiches
-    Recht wie "Nach Person & Tag" (project.hours.person_breakdown, siehe
+    Personenbezogene Modi sind durch planning.view geschützt (siehe
     zeiten-body.blade.php). Dritter, hier eigener Modus "Nach Projekten" (Ralf,
     2026-09-28) - ergibt nur im Projekt-Kontext Sinn, deshalb nicht im Hauptmenü.
     "– Alle –" im Personen-Dropdown schlüsselt stattdessen nach Personen auf
@@ -36,10 +36,12 @@
             <fieldset class="flex items-center gap-3">
                 <legend class="sr-only">{{ __('Darstellung') }}</legend>
                 <label class="flex items-center gap-1.5"><input type="radio" name="gesamt-mode" @checked($gesamt['mode'] === 'project') @click="window.projectZeitenGesamtMode = 'project'; reload({ mode: 'project' })" class="border-gray-300 text-btn-primary">{{ __('Nach Projekten') }}</label>
-                <label class="flex items-center gap-1.5"><input type="radio" name="gesamt-mode" @checked($gesamt['mode'] === 'person') @click="window.projectZeitenGesamtMode = 'person'; reload({ mode: 'person' })" class="border-gray-300 text-btn-primary">{{ __('Nach Personen') }}</label>
+                @if ($canViewPeople)
+                    <label class="flex items-center gap-1.5"><input type="radio" name="gesamt-mode" @checked($gesamt['mode'] === 'person') @click="window.projectZeitenGesamtMode = 'person'; reload({ mode: 'person' })" class="border-gray-300 text-btn-primary">{{ __('Nach Personen') }}</label>
+                @endif
                 <label class="flex items-center gap-1.5"><input type="radio" name="gesamt-mode" @checked($gesamt['mode'] === 'job') @click="window.projectZeitenGesamtMode = 'job'; reload({ mode: 'job' })" class="border-gray-300 text-btn-primary">{{ __('Nach Jobs') }}</label>
             </fieldset>
-            @if ($gesamt['mode'] === 'person')
+            @if ($gesamt['mode'] === 'person' && $canViewPeople)
                 <label class="flex items-center gap-2 text-gray-700">{{ __('Person') }}
                     <select @change="reload({ person_id: $event.target.value })" class="max-w-64 rounded-md border-gray-300 py-1 text-xs">
                         <option value="" @selected($gesamt['personId'] === null)>{{ __('– Alle –') }}</option>
@@ -52,7 +54,7 @@
                     <input type="checkbox" @checked($gesamt['showInactive']) @change="reload({ show_inactive: $event.target.checked ? '1' : '' })" class="rounded border-gray-300">
                     {{ __('Inaktive zeigen') }}
                 </label>
-            @elseif ($gesamt['mode'] === 'job')
+            @elseif ($gesamt['mode'] === 'job' && $canViewPeople)
                 <label class="flex items-center gap-2 text-gray-700">{{ __('Job') }}
                     <select @change="reload({ job_id: $event.target.value })" class="max-w-72 rounded-md border-gray-300 py-1 text-xs">
                         <option value="" @selected($gesamt['jobId'] === null)>{{ __('Alle Jobs') }}</option>
