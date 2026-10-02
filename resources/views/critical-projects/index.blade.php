@@ -6,8 +6,8 @@
     @php
         $severityClasses = [
             'blocked' => 'border-red-200 bg-red-50 text-red-700',
-            'critical' => 'border-orange-200 bg-orange-50 text-orange-700',
-            'watch' => 'border-amber-200 bg-amber-50 text-amber-700',
+            'critical' => 'border-orange-300 bg-orange-50 text-orange-800',
+            'watch' => 'border-blue-200 bg-blue-50 text-blue-700',
         ];
     @endphp
 
@@ -16,7 +16,7 @@
             <form method="GET" action="{{ route('critical-projects.index') }}" x-data="{ submitting: false, applyFilter(event) { if (this.submitting) return; this.submitting = true; this.$nextTick(() => event.target.form.requestSubmit()); } }" @submit="submitting = true" :class="{ 'cursor-wait': submitting }" class="mb-3 flex shrink-0 flex-wrap items-end gap-3 rounded-lg border border-gray-200 bg-white p-3 text-sm">
                 @foreach ($selectedIds as $id)<input type="hidden" name="organizations[]" value="{{ $id }}">@endforeach
                 <label class="grid gap-1">
-                    <span class="text-xs text-gray-500">{{ __('Schweregrad') }}</span>
+                    <span class="text-xs text-gray-500">{{ __('Dringlichkeit') }}</span>
                     <select name="severity" @change="applyFilter($event)" :class="{ 'pointer-events-none opacity-60': submitting }" class="rounded-md border-gray-300 py-1.5 text-sm">
                         <option value="">{{ __('Alle') }}</option>
                         <option value="blocked" @selected($severity === 'blocked')>{{ __('Handlungsbedarf') }}</option>
@@ -137,7 +137,7 @@
         <div class="max-h-[70vh] space-y-3 overflow-y-auto p-4 text-sm">
             <p class="text-gray-600">{{ __('Ein aktives Projekt erscheint, sobald mindestens eine der folgenden Regeln zutrifft.') }}</p>
             <section class="rounded-md border border-blue-100 bg-blue-50/40 p-3">
-                <h4 class="mb-2 font-semibold text-gray-900">{{ __('Bedeutung der Signale') }}</h4>
+                <h4 class="mb-2 font-semibold text-gray-900">{{ __('Dringlichkeitsstufen') }}</h4>
                 <div class="grid gap-2 md:grid-cols-3">
                     <div class="rounded-md bg-white p-2.5 shadow-sm">
                         <span class="rounded border px-1.5 py-0.5 text-[11px] font-semibold {{ $severityClasses['blocked'] }}">{{ __('Handlungsbedarf') }}</span>

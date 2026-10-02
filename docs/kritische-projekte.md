@@ -7,7 +7,7 @@ Die Seite bündelt aktive Projekte, bei denen ein konkret behebbares Problem den
 Direkt vor der Ergebnistabelle steht gemäß den [GUI-Grundsätzen](gui-grundsaetze.md) die Anzahl der aktuell angezeigten kritischen Projekte.
 Jede Projektzeile zeigt außerdem das Symbol und den Namen der zugehörigen Organisation.
 
-## Schweregrade
+## Dringlichkeitsstufen
 
 - **Handlungsbedarf:** Eine unmittelbar benötigte Voraussetzung fehlt. Der aktuelle Projektschritt kann nicht zuverlässig weitergeführt werden und verlangt sofortige Klärung.
 - **Kritisch:** Eine konkrete Abweichung gefährdet Termin, Ablauf oder Budget. Das Projekt sollte zeitnah geprüft und eine Maßnahme festgelegt werden.
