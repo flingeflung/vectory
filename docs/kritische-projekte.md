@@ -36,6 +36,7 @@ Die Projektdetails verwenden dieselben Regeln im Fehlercheck. Der Button steht r
 - Rollen und Sichtbarkeit fachlich abschließend festlegen
 - Abwesenheit, Beschäftigungsende und ausdrücklich benannte sowie benachrichtigte Vertretung
 - „Zur Kenntnis genommen“ und „Ausblenden bis …“
+- Befundvorkommen und persönliche Kennzeichnungen beim Abschluss oder Verwerfen eines Projekts direkt löschen. Zusätzlich einen täglichen Bereinigungslauf als Sicherheitsnetz vorsehen. Er entfernt verbliebene KPr-Datensätze abgeschlossener, verworfener oder gelöschter Projekte einschließlich der abhängigen Nutzerkennzeichnungen. Der Lauf wird über den Laravel Scheduler definiert; dessen Betrieb ist Bestandteil der [Checkliste für neue Zielsysteme](installation-zielsystem.md).
 - tägliche oder wöchentliche E-Mail-Berichte
 - weitere Regeln aus Viettos projektbezogenem Fehlercheck fachlich klassifizieren; endgültigen Namen des Checks festlegen
 - Schwellenwerte erst nach praktischer Erfahrung konfigurierbar machen
