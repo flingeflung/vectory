@@ -42,7 +42,12 @@ class CriticalProjectController extends Controller
             ->whereIn('tenant_id', $allowedIds)
             ->whereIn('status', [0, 1])
             ->with([
-                'tenant', 'workflow', 'projectPeople.person', 'projectPeople.functionGroup',
+                'tenant',
+                'workflow' => fn ($query) => $query->withoutGlobalScope('tenant'),
+                'projectPeople' => fn ($query) => $query->withoutGlobalScope('tenant'),
+                'projectPeople.person', 'projectPeople.functionGroup',
+                'projectWorkflowSteps' => fn ($query) => $query->withoutGlobalScope('tenant'),
+                'projectWorkflowSteps.workflowStep' => fn ($query) => $query->withoutGlobalScope('tenant'),
                 'projectWorkflowSteps.workflowStep.functionGroups',
                 'functionGroupHours', 'projectTemplate.functionGroups',
             ])->get();

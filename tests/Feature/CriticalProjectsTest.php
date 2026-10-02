@@ -87,12 +87,34 @@ class CriticalProjectsTest extends TestCase
             'status' => 0,
             'start_date' => today()->subDay(),
         ]);
+        $otherWorkflow = Workflow::query()->create([
+            'tenant_id' => $other->id,
+            'short_name' => 'FREMD',
+            'name' => 'Workflow der anderen Organisation',
+            'active' => true,
+        ]);
         $otherProject = Project::withoutGlobalScope('tenant')->create([
             'tenant_id' => $other->id,
             'source_pn' => '269912',
             'title' => 'Kritisch bei anderer Organisation',
-            'status' => 0,
-            'start_date' => today()->subDay(),
+            'workflow_id' => $otherWorkflow->id,
+            'status' => 1,
+        ]);
+        $otherStep = WorkflowStep::query()->create([
+            'tenant_id' => $other->id,
+            'workflow_id' => $otherWorkflow->id,
+            'title' => 'Überfälliger Fremdtermin',
+            'sort' => 1,
+            'is_active' => true,
+            'has_due_date' => true,
+        ]);
+        ProjectWorkflowStep::query()->create([
+            'tenant_id' => $other->id,
+            'project_id' => $otherProject->id,
+            'workflow_step_id' => $otherStep->id,
+            'sort' => 1,
+            'is_current' => true,
+            'due_date' => today()->subDay(),
         ]);
 
         $this->actingAs($user)->get(route('critical-projects.index'))
