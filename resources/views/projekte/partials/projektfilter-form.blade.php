@@ -251,7 +251,7 @@
     </form>
     </div>
 
-    <div class="flex items-center justify-between border-t border-gray-200 px-6 py-4">
+    <div class="flex flex-wrap items-center justify-between gap-2 border-t border-gray-200 px-6 py-4">
         <button type="button" @click="$dispatch('close-modal', 'projektfilter')" class="rounded border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
             {{ __('Abbrechen') }}
         </button>
@@ -270,7 +270,7 @@
                 type="button"
                 x-show="!savingAsNew"
                 @click="savingAsNew = true"
-                class="inline-flex items-center rounded-md border border-btn-secondary-border bg-btn-secondary px-4 py-2 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                class="inline-flex items-center rounded-md border border-btn-secondary-border bg-btn-secondary whitespace-nowrap px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
             >
                 {{ __('Speichern unter') }}
             </button>
@@ -292,7 +292,7 @@
                 formmethod="post"
                 formaction="{{ route('projekte.projektfilter.sets.store') }}"
                 x-show="savingAsNew"
-                class="inline-flex items-center rounded-md bg-btn-primary px-4 py-2 text-sm font-medium text-white hover:bg-btn-primary-hover"
+                class="inline-flex items-center rounded-md bg-btn-primary whitespace-nowrap px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover"
             >
                 {{ __('Speichern unter') }}
             </button>
@@ -303,20 +303,20 @@
                 formmethod="post"
                 formaction="{{ route('projekte.projektfilter.update') }}"
                 x-show="!savingAsNew"
-                class="inline-flex items-center rounded-md bg-btn-primary px-4 py-2 text-sm font-medium text-white hover:bg-btn-primary-hover"
+                class="inline-flex items-center rounded-md bg-btn-primary whitespace-nowrap px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover"
             >
                 {{ __('Speichern') }}
             </button>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2">
             <a
                 href="{{ route('projekte', array_filter(['sort' => $sort, 'direction' => $direction, 'projektfilter_submitted' => 1, 'reopen_filter' => 1])) }}"
-                class="inline-flex items-center rounded-md border border-btn-secondary-border bg-btn-secondary px-4 py-2 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                class="inline-flex items-center rounded-md border border-btn-secondary-border bg-btn-secondary whitespace-nowrap px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
             >
                 {{ __('Alle Filter zurücksetzen') }}
             </a>
-            <button type="submit" form="projektfilter-form" class="rounded bg-btn-primary px-4 py-2 text-xs font-medium text-white hover:bg-btn-primary-hover">
+            <button type="submit" form="projektfilter-form" class="rounded-md bg-btn-primary whitespace-nowrap px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
                 {{ __('Filtern') }}
             </button>
         </div>
