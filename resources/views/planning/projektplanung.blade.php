@@ -120,7 +120,7 @@
             <tbody>
                 @forelse ($selectedPersonGroups as $tenantId => $people)
                     @if ($showTenantGroups)
-                        <tr><th colspan="{{ ($displayMode === 'month' ? $days->count() : $weeks->count()) + 1 }}" class="sticky left-0 border-y border-gray-300 bg-slate-100 px-2 py-1 text-left font-semibold text-slate-700">{{ $tenants->get($tenantId)?->name ?? __('Unbekannter Kunde') }}</th></tr>
+                        <tr><th colspan="{{ ($displayMode === 'month' ? $days->count() : $weeks->count()) + 1 }}" class="border-y border-gray-300 bg-slate-100 p-0 text-left font-semibold text-slate-700"><span class="sticky left-0 inline-block px-2 py-1">{{ $tenants->get($tenantId)?->name ?? __('Unbekannter Kunde') }}</span></th></tr>
                     @endif
                     @foreach ($people as $person)
                         <tr class="border-b border-gray-200 bg-gray-50">
@@ -190,7 +190,7 @@
                                                     </div>
                                                 @endif
                                                 @if ($cellMilestones->isNotEmpty())
-                                                    <div class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center gap-0.5">
+                                                    <div class="pointer-events-none absolute inset-0 z-0 flex items-center justify-center gap-0.5">
                                                         @foreach ($cellMilestones as $milestone)
                                                             <span class="pointer-events-auto block h-2 w-2 rotate-45 border border-white bg-fuchsia-600 shadow-sm" title="{{ __('Meilenstein: :name (:date)', ['name' => $milestone['label'], 'date' => $day->format('d.m.Y')]) }}"></span>
                                                         @endforeach
@@ -217,7 +217,7 @@
                                                 @endif
                                                 @foreach ($cellMilestones as $milestone)
                                                     @php $milestoneDate = \Carbon\CarbonImmutable::parse($milestone['date']); @endphp
-                                                    <span class="absolute top-1/2 z-10 block h-2 w-2 -translate-x-1/2 -translate-y-1/2 rotate-45 border border-white bg-fuchsia-600 shadow-sm" style="left: {{ (($milestoneDate->isoWeekday() - 0.5) / 7) * 100 }}%" title="{{ __('Meilenstein: :name (:date)', ['name' => $milestone['label'], 'date' => $milestoneDate->format('d.m.Y')]) }}"></span>
+                                                    <span class="absolute top-1/2 z-0 block h-2 w-2 -translate-x-1/2 -translate-y-1/2 rotate-45 border border-white bg-fuchsia-600 shadow-sm" style="left: {{ (($milestoneDate->isoWeekday() - 0.5) / 7) * 100 }}%" title="{{ __('Meilenstein: :name (:date)', ['name' => $milestone['label'], 'date' => $milestoneDate->format('d.m.Y')]) }}"></span>
                                                 @endforeach
                                             </td>
                                         @endforeach
