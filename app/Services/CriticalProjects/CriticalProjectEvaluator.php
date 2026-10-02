@@ -33,7 +33,9 @@ class CriticalProjectEvaluator
 
         foreach ($workflowSteps->filter(fn ($step) => ! $step->completed_at && $step->due_date && $step->due_date->lt($today)) as $step) {
             $findings->push($this->finding($definition('schedule.overdue'),
-                __(':step war am :date fällig.', ['step' => $step->workflowStep->title, 'date' => $step->due_date->format('d.m.Y')])));
+                __(':step war am :date fällig.', ['step' => $step->workflowStep->title, 'date' => $step->due_date->format('d.m.Y')]),
+                null,
+                'workflow-step:'.$step->id));
         }
 
         $current = $workflowSteps->firstWhere('is_current', true);
@@ -48,6 +50,7 @@ class CriticalProjectEvaluator
                 $definition('schedule.current_missing'),
                 __('Termin für „:step“ fehlt.', ['step' => $step->workflowStep->title]),
                 $severity,
+                'workflow-step:'.$step->id,
             ));
         }
 
@@ -57,13 +60,13 @@ class CriticalProjectEvaluator
         foreach ($requiredGroups->reject(fn ($group) => $assignedGroupIds->contains($group->id)) as $group) {
             $rule = $definition('staffing.missing');
             $severity = $currentGroupIds->contains($group->id) ? 'blocked' : 'watch';
-            $findings->push($this->finding($rule, __('Funktionsgruppe „:group“ ist nicht besetzt.', ['group' => $group->name]), $severity));
+            $findings->push($this->finding($rule, __('Funktionsgruppe „:group“ ist nicht besetzt.', ['group' => $group->name]), $severity, 'function-group:'.$group->id));
         }
 
         if ((int) $project->status === 0 && $project->start_date && $project->start_date->lte($today)) {
             $severity = $project->start_date->lt($today) ? 'critical' : 'watch';
             $findings->push($this->finding($definition('project.start_still_planned'),
-                __('Projektstart: :date.', ['date' => $project->start_date->format('d.m.Y')]), $severity));
+                __('Projektstart: :date.', ['date' => $project->start_date->format('d.m.Y')]), $severity, 'project'));
         }
 
         $plannedHours = $project->effectivePlannedHours();
@@ -73,18 +76,19 @@ class CriticalProjectEvaluator
                     'plan' => number_format($plannedHours, 2, ',', '.'),
                     'booked' => number_format($bookedHours, 2, ',', '.'),
                     'difference' => number_format($bookedHours - $plannedHours, 2, ',', '.'),
-                ])));
+                ]), null, 'project'));
         }
 
         return $findings;
     }
 
     /** @param array<string, mixed> $rule */
-    private function finding(array $rule, string $detail, ?string $severity = null): array
+    private function finding(array $rule, string $detail, ?string $severity = null, string $subject = 'project'): array
     {
         $severity ??= $rule['severity'];
 
         return [
+            'key' => $rule['code'].':'.$subject,
             'code' => $rule['code'],
             'area' => $rule['area'],
             'title' => $rule['title'],

@@ -6,6 +6,7 @@ use App\Models\Project;
 use App\Models\SystemSetting;
 use App\Models\Tenant;
 use App\Services\CriticalProjects\CriticalProjectEvaluator;
+use App\Services\CriticalProjects\CriticalProjectFindingTracker;
 use App\Support\CurrentTenant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,7 +14,7 @@ use Illuminate\View\View;
 
 class CriticalProjectController extends Controller
 {
-    public function __invoke(Request $request, CriticalProjectEvaluator $evaluator): View
+    public function __invoke(Request $request, CriticalProjectEvaluator $evaluator, CriticalProjectFindingTracker $tracker): View
     {
         abort_unless($request->user()->can('project.view'), 403);
 
@@ -45,7 +46,10 @@ class CriticalProjectController extends Controller
 
             return ['project' => $project, 'findings' => $findings, 'current_step' => $currentStep?->workflowStep?->title,
                 'rank' => (int) ($findings->max('rank') ?? 0)];
-        })->filter(fn ($row) => $row['findings']->isNotEmpty());
+        });
+
+        $rows = $tracker->sync($rows, $request->user())
+            ->filter(fn ($row) => $row['findings']->isNotEmpty());
 
         $severity = $request->string('severity')->toString();
         $reason = $request->string('reason')->toString();
@@ -60,6 +64,16 @@ class CriticalProjectController extends Controller
         if ($evaluator->definitions()->pluck('code')->contains($reason)) {
             $rows = $rows->filter(function ($row) use ($reason) {
                 $row['findings'] = $row['findings']->where('code', $reason)->values();
+                $row['rank'] = (int) ($row['findings']->max('rank') ?? 0);
+
+                return $row['findings']->isNotEmpty();
+            });
+        }
+
+        $showHidden = $request->boolean('show_hidden');
+        if (! $showHidden) {
+            $rows = $rows->filter(function ($row) {
+                $row['findings'] = $row['findings']->reject(fn ($finding) => $finding['is_hidden'])->values();
                 $row['rank'] = (int) ($row['findings']->max('rank') ?? 0);
 
                 return $row['findings']->isNotEmpty();
@@ -81,7 +95,7 @@ class CriticalProjectController extends Controller
         $rows = ($direction === 'asc' ? $rows->sortBy($sorter) : $rows->sortByDesc($sorter))->values();
 
         return view('critical-projects.index', compact(
-            'organizations', 'selectedIds', 'rows', 'hiddenOtherCount', 'severity', 'reason', 'sort', 'direction', 'evaluator'
+            'organizations', 'selectedIds', 'rows', 'hiddenOtherCount', 'severity', 'reason', 'showHidden', 'sort', 'direction', 'evaluator'
         ));
     }
 }

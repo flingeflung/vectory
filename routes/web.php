@@ -25,6 +25,7 @@ use App\Http\Controllers\Admin\TenantController;
 use App\Http\Controllers\Admin\WorkflowController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CriticalProjectController;
+use App\Http\Controllers\CriticalProjectFindingStateController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DisplayFilterController;
 use App\Http\Controllers\FavoriteController;
@@ -76,6 +77,7 @@ Route::get('/', function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/kritische-projekte', CriticalProjectController::class)->name('critical-projects.index');
+    Route::patch('/kritische-projekte/befunde/{criticalProjectFinding}', [CriticalProjectFindingStateController::class, 'update'])->name('critical-projects.findings.update');
     Route::get('/kalender', [CalendarController::class, 'index'])->name('kalender');
     Route::post('/kalender/eintraege', [CalendarController::class, 'store'])->name('kalender.eintraege.store');
     Route::put('/kalender/eintraege/{calendarEntry}', [CalendarController::class, 'update'])->name('kalender.eintraege.update');

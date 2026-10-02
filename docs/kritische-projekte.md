@@ -31,12 +31,17 @@ Beendete und verworfene Projekte werden nicht geprüft. Qualitätsmindernde Fakt
 
 Die Projektdetails verwenden dieselben Regeln im Fehlercheck. Der Button steht rechts in der Aktionsleiste und wird bei Befunden dezent rot dargestellt. Das Overlay nennt Dringlichkeit, betroffenen Bereich, Befund und mögliche Lösung. Beendete und verworfene Projekte behalten den Button zur konsistenten Bedienung, werden aber nicht mehr geprüft.
 
+## Persönliche Befundsteuerung
+
+Jeder Befund kann persönlich als „Zur Kenntnis genommen“ gekennzeichnet oder bis einschließlich zu einem gewählten Datum ausgeblendet werden. Kenntnisgenommene Befunde bleiben sichtbar und werden optisch zurückgenommen. Ausgeblendete Befunde erscheinen nur mit dem Filter „Ausgeblendete anzeigen“ und können jederzeit wieder eingeblendet werden. Die Kennzeichnungen eines Nutzers haben keine Auswirkung auf andere Nutzer.
+
+Die Datensätze werden erst angelegt, wenn KPr ein aktives Projekt tatsächlich prüft. Sobald eine Ursache bei einer späteren Prüfung nicht mehr besteht, wird das Befundvorkommen einschließlich aller persönlichen Kennzeichnungen gelöscht. Tritt die Ursache danach erneut auf, entsteht ein neues, ungekennzeichnetes Befundvorkommen. Wird ein Projekt beendet oder verworfen, löscht der Statuswechsel sämtliche zugehörigen KPr-Datensätze unmittelbar.
+
 ## Spätere Schritte
 
 - Rollen und Sichtbarkeit fachlich abschließend festlegen
 - Abwesenheit, Beschäftigungsende und ausdrücklich benannte sowie benachrichtigte Vertretung
-- „Zur Kenntnis genommen“ und „Ausblenden bis …“
-- Befundvorkommen und persönliche Kennzeichnungen beim Abschluss oder Verwerfen eines Projekts direkt löschen. Zusätzlich einen täglichen Bereinigungslauf als Sicherheitsnetz vorsehen. Er entfernt verbliebene KPr-Datensätze abgeschlossener, verworfener oder gelöschter Projekte einschließlich der abhängigen Nutzerkennzeichnungen. Der Lauf wird über den Laravel Scheduler definiert; dessen Betrieb ist Bestandteil der [Checkliste für neue Zielsysteme](installation-zielsystem.md).
+- Einen täglichen Bereinigungslauf als zusätzliches Sicherheitsnetz vorsehen. Er entfernt verbliebene KPr-Datensätze abgeschlossener, verworfener oder gelöschter Projekte einschließlich der abhängigen Nutzerkennzeichnungen. Der Lauf wird über den Laravel Scheduler definiert; dessen Betrieb ist Bestandteil der [Checkliste für neue Zielsysteme](installation-zielsystem.md).
 - tägliche oder wöchentliche E-Mail-Berichte
 - weitere Regeln aus Viettos projektbezogenem Fehlercheck fachlich klassifizieren; endgültigen Namen des Checks festlegen
 - Schwellenwerte erst nach praktischer Erfahrung konfigurierbar machen

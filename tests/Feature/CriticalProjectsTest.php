@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\CriticalProjectFinding;
+use App\Models\CriticalProjectFindingState;
 use App\Models\Project;
 use App\Models\ProjectTemplate;
 use App\Models\ProjectWorkflowStep;
@@ -69,6 +71,104 @@ class CriticalProjectsTest extends TestCase
             ->assertOk()
             ->assertSee('keine kritischen Projekte gefunden')
             ->assertDontSee('269903');
+    }
+
+    public function test_user_can_acknowledge_hide_and_restore_a_finding(): void
+    {
+        $tenant = Tenant::query()->firstOrFail();
+        $user = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'super_admin']);
+        $project = Project::query()->create([
+            'tenant_id' => $tenant->id,
+            'source_pn' => '269907',
+            'title' => 'Persönlicher Befundstatus',
+            'status' => 0,
+            'start_date' => today()->subDay(),
+        ]);
+
+        $this->actingAs($user)->get(route('critical-projects.index'))->assertOk();
+        $finding = CriticalProjectFinding::query()->where('project_id', $project->id)->firstOrFail();
+
+        $this->patch(route('critical-projects.findings.update', $finding), ['action' => 'acknowledge'])
+            ->assertRedirect();
+        $this->assertNotNull(CriticalProjectFindingState::query()->firstOrFail()->acknowledged_at);
+
+        $this->patch(route('critical-projects.findings.update', $finding), [
+            'action' => 'hide',
+            'hidden_until' => today()->addWeek()->format('Y-m-d'),
+        ])->assertRedirect();
+
+        $this->get(route('critical-projects.index'))
+            ->assertOk()
+            ->assertDontSee($project->source_pn);
+        $this->get(route('critical-projects.index', ['show_hidden' => 1]))
+            ->assertOk()
+            ->assertSee($project->source_pn)
+            ->assertSee('Ausgeblendet bis');
+
+        $this->patch(route('critical-projects.findings.update', $finding), ['action' => 'restore'])
+            ->assertRedirect();
+        $this->get(route('critical-projects.index'))
+            ->assertOk()
+            ->assertSee($project->source_pn)
+            ->assertSee('Zur Kenntnis genommen');
+    }
+
+    public function test_resolved_and_recurring_cause_creates_a_new_finding_occurrence(): void
+    {
+        $tenant = Tenant::query()->firstOrFail();
+        $user = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'super_admin']);
+        $project = Project::query()->create([
+            'tenant_id' => $tenant->id,
+            'source_pn' => '269908',
+            'title' => 'Wiederkehrender Befund',
+            'status' => 0,
+            'start_date' => today()->subDay(),
+        ]);
+
+        $this->actingAs($user)->get(route('critical-projects.index'))->assertOk();
+        $first = CriticalProjectFinding::query()->where('project_id', $project->id)->firstOrFail();
+        CriticalProjectFindingState::query()->create([
+            'critical_project_finding_id' => $first->id,
+            'user_id' => $user->id,
+            'acknowledged_at' => now(),
+        ]);
+
+        $project->update(['start_date' => today()->addDay()]);
+        $this->get(route('critical-projects.index'))->assertOk();
+        $this->assertDatabaseMissing('critical_project_findings', ['id' => $first->id]);
+        $this->assertDatabaseCount('critical_project_finding_states', 0);
+
+        $project->update(['start_date' => today()->subDay()]);
+        $this->get(route('critical-projects.index'))->assertOk();
+        $second = CriticalProjectFinding::query()->where('project_id', $project->id)->firstOrFail();
+        $this->assertNotSame($first->id, $second->id);
+        $this->assertDatabaseCount('critical_project_finding_states', 0);
+    }
+
+    public function test_finishing_project_deletes_findings_and_personal_states(): void
+    {
+        $tenant = Tenant::query()->firstOrFail();
+        $user = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'super_admin']);
+        $project = Project::query()->create([
+            'tenant_id' => $tenant->id,
+            'source_pn' => '269909',
+            'title' => 'Abgeschlossenes Befundprojekt',
+            'status' => 0,
+            'start_date' => today()->subDay(),
+        ]);
+
+        $this->actingAs($user)->get(route('critical-projects.index'))->assertOk();
+        $finding = CriticalProjectFinding::query()->where('project_id', $project->id)->firstOrFail();
+        CriticalProjectFindingState::query()->create([
+            'critical_project_finding_id' => $finding->id,
+            'user_id' => $user->id,
+            'acknowledged_at' => now(),
+        ]);
+
+        $project->update(['status' => 2]);
+
+        $this->assertDatabaseCount('critical_project_findings', 0);
+        $this->assertDatabaseCount('critical_project_finding_states', 0);
     }
 
     public function test_planned_hours_resolve_template_from_another_organization(): void

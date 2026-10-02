@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Models\CriticalProjectFinding;
 use App\Models\Project;
 use App\Models\Task;
 use App\Support\StammId;
@@ -44,6 +45,10 @@ class ProjectObserver
 
     public function updated(Project $project): void
     {
+        if ($project->wasChanged('status') && in_array((int) $project->status, [2, 3], true)) {
+            CriticalProjectFinding::query()->where('project_id', $project->id)->delete();
+        }
+
         if ($project->wasChanged('workflow_id')) {
             Task::syncWorkflowTasksForProject($project);
         }
