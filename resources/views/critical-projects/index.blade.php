@@ -73,6 +73,14 @@
                                 <td class="px-4 py-3">
                                     <div class="font-medium"><x-pn-link :project="$project" /></div>
                                     <div class="max-w-80 truncate text-gray-700" title="{{ $project->title }}">{{ $project->title }}</div>
+                                    @php($hiddenFindingCount = $row['all_findings']->where('is_hidden', true)->count())
+                                    @if ($hiddenFindingCount > 0)
+                                        <div class="mt-1">
+                                            <span class="inline-flex rounded border border-gray-300 bg-gray-100 px-1.5 py-0.5 text-[11px] text-gray-600">
+                                                {{ trans_choice(':count ausgeblendeter Befund|:count ausgeblendete Befunde', $hiddenFindingCount, ['count' => $hiddenFindingCount]) }}
+                                            </span>
+                                        </div>
+                                    @endif
                                     <div class="mt-0.5 flex items-center gap-1.5 text-xs text-gray-400">
                                         <x-organization-icon :organization="$project->tenant" class="h-3.5 w-3.5" />
                                         <span>{{ $project->tenant?->name }}</span>

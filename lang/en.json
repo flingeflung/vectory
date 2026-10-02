@@ -1645,5 +1645,6 @@
     "Zur Kenntnis genommen": "Acknowledged",
     "Zur Kenntnis nehmen": "Acknowledge",
     ":count Punkt zum|:count Punkte zum": ":count finding to|:count findings to",
+    ":count ausgeblendeter Befund|:count ausgeblendete Befunde": ":count hidden finding|:count hidden findings",
     "Kritische Punkte": "Critical findings"
 }

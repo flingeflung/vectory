@@ -173,6 +173,7 @@ class CriticalProjectsTest extends TestCase
         $this->get(route('critical-projects.index', ['show_hidden' => 1]))
             ->assertOk()
             ->assertSee($project->source_pn)
+            ->assertSee('1 ausgeblendeter Befund')
             ->assertSee('Ausgeblendet bis');
 
         $this->patch(route('critical-projects.findings.update', $finding), ['action' => 'restore'])
