@@ -6,6 +6,7 @@
     // Gemeinsamer Button-Look fürs ganze Overlay: gefüllter grauer
     // Hintergrund grenzt Buttons klar von weißen Eingabefeldern ab
     // (die nur einen Rahmen haben).
+    $iconBtn = 'inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary p-1 text-gray-600 hover:bg-btn-secondary-hover hover:text-gray-800';
     $secondaryBtn = 'inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover';
     $secondaryBtnDisabled = 'inline-flex items-center rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-300 cursor-not-allowed';
 
@@ -169,9 +170,7 @@
                                 title="{{ __('Stamm-ID kopieren') }}"
                                 class="rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
                             >
-                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                </svg>
+                                <x-icon name="copy" class="h-4 w-4" />
                             </button>
                             <x-info-icon-button
                                 :title="__('Was ist die Stamm-ID?')"
@@ -214,25 +213,31 @@
                     <button
                         type="button"
                         @click="window.openIllustrationOrders({{ $project->id }})"
-                        class="{{ $secondaryBtn }}"
+                        class="{{ $iconBtn }}"
+                    title="{{ __('Illustrationsauftrag') }}"
+                    aria-label="{{ __('Illustrationsauftrag') }}"
                     >
-                        {{ __('Illustrationsauftrag') }}
+                        <x-icon name="illustration" class="h-5 w-5" />
                     </button>
                     @can('project.create')
                         <button
                             type="button"
                             @click="window.openProjectCopy({{ $project->id }})"
-                            class="{{ $secondaryBtn }}"
+                            class="{{ $iconBtn }}"
+                        title="{{ __('Projekt kopieren') }}"
+                        aria-label="{{ __('Projekt kopieren') }}"
                         >
-                            {{ __('Projekt kopieren') }}
+                            <x-icon name="copy" class="h-5 w-5" />
                         </button>
                     @endcan
                     <button
                         type="button"
                         onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'projektgruppen-panel-{{ $project->id }}' }))"
-                        class="{{ $secondaryBtn }}"
+                        class="{{ $iconBtn }}"
+                    title="{{ __('Gruppieren') }}"
+                    aria-label="{{ __('Gruppieren') }}"
                     >
-                        {{ __('Gruppieren') }}
+                        <x-icon name="group" class="h-5 w-5" />
                     </button>
                     {{--
                         Zeiterfassung/Ressourcenplanung-Idee (Ralf, 2026-09-27) - Reiter "Verknüpfte
@@ -244,9 +249,11 @@
                     <button
                         type="button"
                         @click="window.openProjectTimeTracking({{ $project->id }})"
-                        class="{{ $secondaryBtn }}"
+                        class="{{ $iconBtn }}"
+                    title="{{ __('Zeiterfassung') }}"
+                    aria-label="{{ __('Zeiterfassung') }}"
                     >
-                        {{ __('Zeiterfassung') }}
+                        <x-icon name="time-tracking" class="h-5 w-5" />
                     </button>
                     {{-- weitere Aktions-Buttons (Aufgabe zuweisen, -> Projekt-Pool, Fehlercheck, Sichtbarkeit, Sperrmail, ...) folgen später. --}}
                 </div>
