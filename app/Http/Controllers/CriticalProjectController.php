@@ -80,6 +80,12 @@ class CriticalProjectController extends Controller
             });
         }
 
+        $rows = $rows->map(function ($row) {
+            $row['findings'] = $row['findings']->sortByDesc('rank')->values();
+
+            return $row;
+        });
+
         $hiddenOtherCount = $rows->reject(fn ($row) => $selectedIds->contains((int) $row['project']->tenant_id))->count();
         $rows = $rows->filter(fn ($row) => $selectedIds->contains((int) $row['project']->tenant_id));
         $sort = $request->string('sort', 'severity')->toString();
