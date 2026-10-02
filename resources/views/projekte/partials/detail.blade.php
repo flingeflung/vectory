@@ -39,6 +39,9 @@
         @if ($isOverlay) data-drag-handle title="{{ __('Ziehen zum Verschieben') }}" @endif
     >
         <div class="flex items-center gap-2">
+            @if (\App\Models\SystemSetting::multiTenantEnabled())
+                <x-organization-icon :organization="$project->tenant" class="h-5 w-5" />
+            @endif
             <span class="text-base font-semibold text-gray-900">{{ $project->source_pn }}</span>
             {{--
                 Ralf, 2026-09-27: "durch die vielen Symbole hüpfen die Blätterpfeile nun hin und
