@@ -60,6 +60,18 @@
 
             <x-favorite-star :project="$project" :is-favorite="$project->isFavoritedBy(auth()->user())" />
 
+            {{-- Ralf, 2026-10-03: Gruppieren ist eine persönliche Zuordnung (wie der Stern), keine
+                 Projekt-Aktion - deshalb im Kopf statt in der Aktions-Reihe. --}}
+            <button
+                type="button"
+                onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'projektgruppen-panel-{{ $project->id }}' }))"
+                class="shrink-0 rounded p-0.5 hover:bg-gray-200"
+                title="{{ __('Gruppieren') }}"
+                aria-label="{{ __('Gruppieren') }}"
+            >
+                <x-icon name="group-color" class="h-5 w-5" />
+            </button>
+
             {{--
                 Ralf, 2026-09-27 (der eigentliche Grund für den Fehlklick auf "Verzeichnisinhalt
                 auflisten" statt den Blätterpfeil): project-directory-status zeigt bei Status
@@ -142,6 +154,7 @@
                  Alpine-State geht dabei verloren. Über window gemerkt, damit der
                  gewählte Tab dabei erhalten bleibt statt immer auf Details zu springen. --}}
             activeTab = window.projectOverlayActiveTab || 'details';
+            if (activeTab === 'checklisten') activeTab = 'details';
             {{-- Gilt das Workflow-Feld für die Projektart nicht (Ralf, 2026-09-20), gibt es den Reiter nicht. --}}
             @unless ($project->fieldApplies('workflow_id')) if (activeTab === 'workflow_steps') activeTab = 'details'; @endunless
             $watch('activeTab', value => window.projectOverlayActiveTab = value)
@@ -206,7 +219,6 @@
                     {{-- Ralf, 2026-09-27, siehe Roadmap-Backlog: Überblick über die gebuchten
                          Stunden - am Hauptprojekt inkl. Aufschlüsselung je Unterprojekt. --}}
                     <button type="button" @click="activeTab = 'zeiten'" :class="activeTab === 'zeiten' ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700'" class="pb-2">{{ __('Zeiten') }}</button>
-                    <button type="button" @click="activeTab = 'checklisten'" :class="activeTab === 'checklisten' ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700'" class="pb-2">{{ __('Checklisten') }}</button>
                 </div>
 
                 <div class="mb-2 flex flex-wrap items-center gap-2">
@@ -219,6 +231,15 @@
                     >
                         <x-icon name="illustration" class="h-5 w-5" />
                     </button>
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'projekt-checklisten-{{ $project->id }}' }))"
+                        class="{{ $iconBtn }}"
+                        title="{{ __('Checklisten') }}"
+                        aria-label="{{ __('Checklisten') }}"
+                    >
+                        <x-icon name="checklist" class="h-5 w-5" />
+                    </button>
                     @can('project.create')
                         <button
                             type="button"
@@ -230,15 +251,6 @@
                             <x-icon name="copy" class="h-5 w-5" />
                         </button>
                     @endcan
-                    <button
-                        type="button"
-                        onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'projektgruppen-panel-{{ $project->id }}' }))"
-                        class="{{ $iconBtn }}"
-                    title="{{ __('Gruppieren') }}"
-                    aria-label="{{ __('Gruppieren') }}"
-                    >
-                        <x-icon name="group" class="h-5 w-5" />
-                    </button>
                     {{--
                         Zeiterfassung/Ressourcenplanung-Idee (Ralf, 2026-09-27) - Reiter "Verknüpfte
                         Jobs" (welche Jobs für dieses Projekt direkt buchbar sind) nur mit
@@ -250,8 +262,8 @@
                         type="button"
                         @click="window.openProjectTimeTracking({{ $project->id }})"
                         class="{{ $iconBtn }}"
-                    title="{{ __('Zeiterfassung') }}"
-                    aria-label="{{ __('Zeiterfassung') }}"
+                    title="{{ __('Zeiten buchen') }}"
+                    aria-label="{{ __('Zeiten buchen') }}"
                     >
                         <x-icon name="time-tracking" class="h-5 w-5" />
                     </button>
@@ -269,6 +281,7 @@
             </div>
 
             @include('projekte.partials.project-group-modal', ['project' => $project])
+            @include('projekte.partials.checklisten')
             @include('projekte.partials.project-error-check-modal', ['project' => $project, 'findings' => $criticalFindings])
         </div>
 
@@ -698,9 +711,6 @@
             @include('projekte.partials.zeiten-body')
         </div>
 
-        <div x-show="activeTab === 'checklisten'" x-cloak class="text-sm">
-            @include('projekte.partials.checklisten')
-        </div>
         </div>
     </div>
 
