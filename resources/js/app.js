@@ -2,6 +2,7 @@
 import Alpine from 'alpinejs';
 import sort from '@alpinejs/sort';
 import columnResize from './column-resize';
+import './submit-lock';
 
 Alpine.plugin(sort);
 Alpine.data('columnResize', columnResize);
