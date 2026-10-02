@@ -160,6 +160,15 @@
         >
             {{ __('Projekte') }}
         </a>
+        @can('project.view')
+            <a
+                onclick="return window.navigateOrConfirm(event)"
+                href="{{ route('critical-projects.index') }}"
+                class="flex items-center px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('critical-projects.*') ? 'bg-sidebar-active text-sidebar-active-content' : 'text-sidebar-content hover:bg-sidebar-hover hover:text-sidebar-content-hover' }}"
+            >
+                {{ __('Kritische Projekte') }}
+            </a>
+        @endcan
         <button
             type="button"
             x-data
