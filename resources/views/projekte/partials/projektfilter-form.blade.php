@@ -312,7 +312,7 @@
         <div class="flex items-center gap-3">
             <a
                 href="{{ route('projekte', array_filter(['sort' => $sort, 'direction' => $direction, 'projektfilter_submitted' => 1, 'reopen_filter' => 1])) }}"
-                class="text-sm text-gray-500 hover:text-gray-700"
+                class="inline-flex items-center rounded-md border border-btn-secondary-border bg-btn-secondary px-4 py-2 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
             >
                 {{ __('Alle Filter zurücksetzen') }}
             </a>
