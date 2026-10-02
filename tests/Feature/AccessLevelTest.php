@@ -143,4 +143,24 @@ class AccessLevelTest extends TestCase
             ->assertDontSee('Superkollege')
             ->assertDontSee('value="super_admin"', false);
     }
+
+    public function test_only_super_admin_can_change_a_central_admins_access_level(): void
+    {
+        $home = Tenant::query()->firstOrFail();
+        $home->update(['is_home_tenant' => true]);
+        $person = Person::query()->create(['tenant_id' => $home->id, 'last_name' => 'Zentral', 'short_name' => 'ZE', 'active' => true]);
+        $target = User::factory()->create(['tenant_id' => $home->id, 'person_id' => $person->id, 'role' => AccessLevel::CENTRAL_ADMIN]);
+        $centralAdmin = User::factory()->create(['tenant_id' => $home->id, 'role' => AccessLevel::CENTRAL_ADMIN]);
+        $superAdmin = User::factory()->create(['tenant_id' => $home->id, 'role' => AccessLevel::SUPER_ADMIN]);
+
+        $this->actingAs($centralAdmin)
+            ->post(route('admin.personen.role.update', $person), ['access_level' => AccessLevel::USER])
+            ->assertForbidden();
+        $this->assertSame(AccessLevel::CENTRAL_ADMIN, $target->fresh()->role);
+
+        $this->actingAs($superAdmin)
+            ->post(route('admin.personen.role.update', $person), ['access_level' => AccessLevel::USER])
+            ->assertRedirect();
+        $this->assertSame(AccessLevel::USER, $target->fresh()->role);
+    }
 }

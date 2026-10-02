@@ -58,10 +58,12 @@ class AppServiceProvider extends ServiceProvider
             return $this->copy()->setTimezone(config('app.display_timezone'));
         });
 
-        // Rechtekonzept: Nur Super-Admin darf immer alles. Jede andere Rolle
-        // (auch Admin) läuft über Person::hasPermission() - deren Rechte
+        // Rechtekonzept: Super-, Zentral- und Organisations-Admins dürfen jede
+        // fachliche Aktion des Rechte-Katalogs ausführen (Organisationsgrenzen
+        // regelt CurrentTenant, siehe docs/zugriffsstufen-und-rechte.md). Nur
+        // Standard-User laufen über Person::hasPermission() - deren Rechte
         // kommen ausschließlich aus dem einen PermissionTemplate ("Rechte-
-        // Set"), das ihr zugewiesen ist (siehe Person-Modell). Jede Ability,
+        // Set"), das ihnen zugewiesen ist (siehe Person-Modell). Jede Ability,
         // die im Rechte-Katalog als Recht existiert, wird so geprüft - für
         // ein neues Recht muss nur eine Katalog-Zeile ergänzt werden, kein
         // neues Gate::define() hier.

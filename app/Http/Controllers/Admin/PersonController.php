@@ -637,6 +637,7 @@ class PersonController extends Controller
         abort_if($accessLevel === AccessLevel::CENTRAL_ADMIN && ! $personIsInHomeOrganization, 422, __('Ein Zentral-Admin muss zur zentralen Organisation gehören.'));
         abort_if($accessLevel === AccessLevel::ORGANIZATION_ADMIN && $personIsInHomeOrganization, 422, __('Ein Organisations-Admin muss zu einer Kundenorganisation gehören.'));
         abort_if($person->user->isSuperAdmin() && ! $request->user()->isSuperAdmin(), 403);
+        abort_if($person->user->isCentralAdmin() && ! $request->user()->isSuperAdmin(), 403);
 
         if ($accessLevel !== AccessLevel::SUPER_ADMIN && $person->user->isSuperAdmin()) {
             $remainingSuperAdmins = User::query()->where('role', AccessLevel::SUPER_ADMIN)->where('id', '!=', $person->user->id)->exists();
