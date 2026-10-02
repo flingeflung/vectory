@@ -547,6 +547,32 @@ class WorkflowController extends Controller
             }
         }
 
+        // Pro Workflow darf es genau höchstens eine Quelle für den
+        // Projektstart und eine für das Projektende geben. Für geöffnete
+        // Zeilen gilt der eingereichte Stand, für eingeklappte Zeilen der
+        // gespeicherte Stand, weil deren Detailfelder nicht im Request liegen.
+        $markerState = WorkflowStep::query()->where('workflow_id', $workflow->id)
+            ->get(['id', 'is_start', 'is_end'])
+            ->mapWithKeys(function (WorkflowStep $step) use ($request) {
+                $isSubmitted = $request->has("steps.$step->id.duration_days");
+
+                return [$step->id => [
+                    'is_start' => $isSubmitted ? $request->boolean("steps.$step->id.is_start") : $step->is_start,
+                    'is_end' => $isSubmitted ? $request->boolean("steps.$step->id.is_end") : $step->is_end,
+                ]];
+            });
+
+        foreach (['is_start' => __('Projektstart'), 'is_end' => __('Projektende')] as $field => $label) {
+            $markedIds = $markerState->filter(fn (array $state) => $state[$field])->keys();
+            if ($markedIds->count() <= 1) {
+                continue;
+            }
+
+            foreach ($markedIds as $stepId) {
+                $stepErrors["steps.$stepId.$field"] = [__('Nur ein Workflow-Schritt darf als :label markiert sein. Markierung bei den anderen Schritten entfernen!', ['label' => $label])];
+            }
+        }
+
         // Freigabe-Sonderfunktion (js_function=wfs_freigabe) braucht einen
         // Folge-WFS, der wirklich SPÄTER in der Reihenfolge liegt - sonst
         // könnte die externe Freigabe-Mail einen bereits durchlaufenen

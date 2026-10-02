@@ -367,13 +367,19 @@
                                                 </div>
 
                                                 <div class="col-span-2 flex flex-wrap gap-x-4 gap-y-1">
-                                                    <label class="inline-flex items-center gap-1"><input type="checkbox" name="steps[{{ $step->id }}][is_start]" value="1" @checked($isResubmit ? old("steps.{$step->id}.is_start") !== null : $step->is_start) class="rounded border-gray-300"> {{ __('Start des Projekts') }}</label>
-                                                    <label class="inline-flex items-center gap-1"><input type="checkbox" name="steps[{{ $step->id }}][is_end]" value="1" @checked($isResubmit ? old("steps.{$step->id}.is_end") !== null : $step->is_end) class="rounded border-gray-300"> {{ __('Ende des Projekts') }}</label>
+                                                    <label class="inline-flex items-center gap-1"><input type="checkbox" name="steps[{{ $step->id }}][is_start]" value="1" @checked($isResubmit && old("steps.{$step->id}.duration_days") !== null ? old("steps.{$step->id}.is_start") !== null : $step->is_start) class="rounded border-gray-300"> {{ __('Start des Projekts') }}</label>
+                                                    <label class="inline-flex items-center gap-1"><input type="checkbox" name="steps[{{ $step->id }}][is_end]" value="1" @checked($isResubmit && old("steps.{$step->id}.duration_days") !== null ? old("steps.{$step->id}.is_end") !== null : $step->is_end) class="rounded border-gray-300"> {{ __('Ende des Projekts') }}</label>
                                                     <label class="inline-flex items-center gap-1"><input type="checkbox" name="steps[{{ $step->id }}][is_market_launch]" value="1" @checked($isResubmit ? old("steps.{$step->id}.is_market_launch") !== null : $step->is_market_launch) class="rounded border-gray-300"> {{ __('Markteinführung') }}</label>
+                                                    @error("steps.{$step->id}.is_start")
+                                                        <span class="basis-full text-red-600">{{ $message }}</span>
+                                                    @enderror
+                                                    @error("steps.{$step->id}.is_end")
+                                                        <span class="basis-full text-red-600">{{ $message }}</span>
+                                                    @enderror
                                                 </div>
 
                                                 <div class="col-span-2 flex flex-wrap items-center gap-x-4 gap-y-1">
-                                                    <label class="inline-flex items-center gap-1"><input type="checkbox" name="steps[{{ $step->id }}][has_due_date]" value="1" @checked($isResubmit ? old("steps.{$step->id}.has_due_date") !== null : $step->has_due_date) class="rounded border-gray-300"> {{ __('Hat Termin') }}</label>
+                                                    <label class="inline-flex items-center gap-1"><input type="checkbox" name="steps[{{ $step->id }}][has_due_date]" value="1" @checked($isResubmit && old("steps.{$step->id}.duration_days") !== null ? old("steps.{$step->id}.has_due_date") !== null : $step->has_due_date) class="rounded border-gray-300"> {{ __('Hat Termin') }}</label>
                                                     <label class="inline-flex items-center gap-1">
                                                         {{ __('Dauer (Tage)') }}
                                                         <input type="number" name="steps[{{ $step->id }}][duration_days]" min="0" value="{{ old("steps.{$step->id}.duration_days", $step->duration_days) }}" class="w-16 rounded-md border-gray-300 text-xs">

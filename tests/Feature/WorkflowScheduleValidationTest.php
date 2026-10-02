@@ -53,6 +53,38 @@ class WorkflowScheduleValidationTest extends TestCase
         $this->assertTrue($step->fresh()->has_due_date);
     }
 
+    public function test_only_one_start_and_one_end_step_are_allowed(): void
+    {
+        [$user, $workflow, $firstStep] = $this->workflowStep();
+        $firstStep->update(['is_start' => true, 'is_end' => true, 'has_due_date' => true]);
+        $secondStep = WorkflowStep::query()->create([
+            'tenant_id' => $firstStep->tenant_id,
+            'workflow_id' => $workflow->id,
+            'title' => 'Zweiter Termin',
+            'sort' => 2,
+            'is_active' => true,
+            'has_due_date' => false,
+        ]);
+
+        $this->actingAs($user)->post(route('admin.workflows.schritte.bulk-update'), [
+            'workflow_id' => $workflow->id,
+            'steps' => [
+                $secondStep->id => [
+                    'title' => $secondStep->title,
+                    'duration_days' => 0,
+                    'is_start' => 1,
+                    'is_end' => 1,
+                    'has_due_date' => 1,
+                ],
+            ],
+        ])->assertStatus(422)
+            ->assertSee('Nur ein Workflow-Schritt darf als Projektstart markiert sein.')
+            ->assertSee('Nur ein Workflow-Schritt darf als Projektende markiert sein.');
+
+        $this->assertFalse($secondStep->fresh()->is_start);
+        $this->assertFalse($secondStep->fresh()->is_end);
+    }
+
     private function workflowStep(): array
     {
         $tenant = Tenant::query()->firstOrFail();
