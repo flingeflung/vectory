@@ -97,7 +97,7 @@
                                                     <span class="font-medium text-gray-800">{{ $finding['title'] }}</span>
                                                 </div>
                                                 <div class="mt-0.5 text-xs text-gray-600">{{ $finding['detail'] }}</div>
-                                                <div class="text-xs text-gray-400"><span class="font-medium">{{ __('Lösungshinweis') }}:</span> {{ $finding['solution'] }}</div>
+                                                <div class="text-xs text-gray-400"><span class="font-medium">{{ __('Mögliche Lösung') }}:</span> {{ $finding['solution'] }}</div>
                                             </div>
                                         @endforeach
                                     </div>
@@ -154,7 +154,7 @@
                 </div>
             </section>
             @foreach ($evaluator->definitions() as $definition)
-                <section class="rounded-md border border-gray-200 p-3"><div class="flex items-center gap-2"><h4 class="font-semibold text-gray-900">{{ $definition['title'] }}</h4><span class="rounded border px-1.5 py-0.5 text-[11px] {{ $severityClasses[$definition['severity']] }}">{{ $definition['severity_label'] }}</span></div><p class="mt-1 text-gray-700">{{ $definition['description'] }}</p><p class="mt-1 text-xs text-gray-500"><span class="font-medium">{{ __('Zählt nicht') }}:</span> {{ $definition['exclusion'] }}</p><p class="text-xs text-gray-500"><span class="font-medium">{{ __('Lösungshinweis') }}:</span> {{ $definition['solution'] }}</p></section>
+                <section class="rounded-md border border-gray-200 p-3"><div class="flex items-center gap-2"><h4 class="font-semibold text-gray-900">{{ $definition['title'] }}</h4><span class="rounded border px-1.5 py-0.5 text-[11px] {{ $severityClasses[$definition['severity']] }}">{{ $definition['severity_label'] }}</span></div><p class="mt-1 text-gray-700">{{ $definition['description'] }}</p><p class="mt-1 text-xs text-gray-500"><span class="font-medium">{{ __('Nicht berücksichtigt') }}:</span> {{ $definition['exclusion'] }}</p><p class="text-xs text-gray-500"><span class="font-medium">{{ __('Mögliche Lösung') }}:</span> {{ $definition['solution'] }}</p></section>
             @endforeach
         </div>
     </x-modal>

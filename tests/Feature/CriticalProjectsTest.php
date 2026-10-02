@@ -39,7 +39,7 @@ class CriticalProjectsTest extends TestCase
             ->assertOk()
             ->assertSee($critical->source_pn)
             ->assertSee('Projektstart erreicht, Status noch geplant')
-            ->assertSee('Lösungshinweis')
+            ->assertSee('Mögliche Lösung')
             ->assertDontSee($uncritical->source_pn);
     }
 
