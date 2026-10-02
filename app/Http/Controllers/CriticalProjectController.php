@@ -8,6 +8,7 @@ use App\Models\Tenant;
 use App\Services\CriticalProjects\CriticalProjectEvaluator;
 use App\Services\CriticalProjects\CriticalProjectFindingTracker;
 use App\Support\CurrentTenant;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -15,6 +16,26 @@ use Illuminate\View\View;
 class CriticalProjectController extends Controller
 {
     private const ORGANIZATION_SESSION_KEY = 'critical_projects.organization_ids.';
+
+    public function openProject(Request $request, int $project): RedirectResponse
+    {
+        abort_unless($request->user()->can('project.view'), 403);
+
+        $allowedTenantIds = SystemSetting::multiTenantEnabled()
+            ? CurrentTenant::availableTenants()->pluck('id')
+            : collect([CurrentTenant::id()]);
+        $target = Project::withoutGlobalScope('tenant')
+            ->whereIn('tenant_id', $allowedTenantIds)
+            ->whereIn('status', [0, 1])
+            ->findOrFail($project);
+
+        if (SystemSetting::multiTenantEnabled() && CurrentTenant::id() !== (int) $target->tenant_id) {
+            CurrentTenant::switchTo((int) $target->tenant_id);
+        }
+
+        return redirect()->route('critical-projects.index', $request->query())
+            ->with('open_project_from_critical_projects', $target->id);
+    }
 
     public function __invoke(Request $request, CriticalProjectEvaluator $evaluator, CriticalProjectFindingTracker $tracker): View
     {
@@ -112,6 +133,7 @@ class CriticalProjectController extends Controller
         $sort = $request->string('sort', 'severity')->toString();
         $direction = $request->string('direction', 'desc')->toString() === 'asc' ? 'asc' : 'desc';
         $acknowledgementEnabled = SystemSetting::criticalProjectAcknowledgementEnabled();
+        $openProjectId = (int) $request->session()->get('open_project_from_critical_projects', 0);
         $sorters = [
             'pn' => fn ($row) => $row['project']->source_pn,
             'title' => fn ($row) => mb_strtolower($row['project']->title),
@@ -123,7 +145,7 @@ class CriticalProjectController extends Controller
         $rows = ($direction === 'asc' ? $rows->sortBy($sorter) : $rows->sortByDesc($sorter))->values();
 
         return view('critical-projects.index', compact(
-            'organizations', 'selectedIds', 'rows', 'modalRows', 'hiddenOtherCount', 'severity', 'reason', 'showHidden', 'sort', 'direction', 'evaluator', 'acknowledgementEnabled'
+            'organizations', 'selectedIds', 'rows', 'modalRows', 'hiddenOtherCount', 'severity', 'reason', 'showHidden', 'sort', 'direction', 'evaluator', 'acknowledgementEnabled', 'openProjectId'
         ));
     }
 }

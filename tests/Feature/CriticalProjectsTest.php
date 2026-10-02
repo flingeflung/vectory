@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Models\Workflow;
 use App\Models\WorkflowStep;
 use App\Services\CriticalProjects\CriticalProjectEvaluator;
+use App\Support\CurrentTenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -134,7 +135,16 @@ class CriticalProjectsTest extends TestCase
         $this->get(route('critical-projects.index'))
             ->assertOk()
             ->assertSee($homeProject->source_pn)
-            ->assertDontSee($otherProject->source_pn);
+            ->assertDontSee($otherProject->source_pn)
+            ->assertSee(route('critical-projects.projects.open', $homeProject), false);
+
+        $openResponse = $this->get(route('critical-projects.projects.open', $homeProject));
+        $openResponse->assertRedirect(route('critical-projects.index'))
+            ->assertSessionHas('open_project_from_critical_projects', $homeProject->id);
+        $this->assertSame($home->id, CurrentTenant::id());
+        $this->get(route('critical-projects.index'))
+            ->assertOk()
+            ->assertSee("id: {$homeProject->id}", false);
 
         $this->get(route('critical-projects.index', ['organization_filter_submitted' => 1]))
             ->assertOk()

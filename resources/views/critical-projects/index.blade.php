@@ -71,7 +71,9 @@
                             @php($project = $row['project'])
                             <tr class="align-top hover:bg-gray-50">
                                 <td class="px-4 py-3">
-                                    <div class="font-medium"><x-pn-link :project="$project" /></div>
+                                    <div class="font-medium">
+                                        <a href="{{ route('critical-projects.projects.open', ['project' => $project->id, ...request()->except('project')]) }}" class="text-indigo-600 hover:underline">{{ $project->source_pn }}</a>
+                                    </div>
                                     <div class="max-w-80 truncate text-gray-700" title="{{ $project->title }}">{{ $project->title }}</div>
                                     @php($hiddenFindingCount = $row['all_findings']->where('is_hidden', true)->count())
                                     @if ($hiddenFindingCount > 0)
@@ -270,4 +272,12 @@
             @endforeach
         </div>
     </x-modal>
+
+    @if ($openProjectId)
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                window.dispatchEvent(new CustomEvent('open-project', { detail: { id: {{ $openProjectId }} } }));
+            }, { once: true });
+        </script>
+    @endif
 </x-app-layout>
