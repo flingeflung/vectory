@@ -126,8 +126,9 @@
                     {{ __('Eigener Wert, nicht mehr mit der Schablone verbunden') }}
                 </p>
             @endif
+        @endif
 
-            <section class="mb-6 max-w-2xl rounded-md border border-gray-200 bg-gray-50 px-3 py-2.5" aria-labelledby="project-hours-chart-title">
+        <section class="mb-6 max-w-2xl rounded-md border border-gray-200 bg-gray-50 px-3 py-2.5" aria-labelledby="project-hours-chart-title">
                 <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
                     <h3 id="project-hours-chart-title" class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('Soll/Ist je Projekt') }}</h3>
                     <div class="flex items-center gap-3 text-[11px] text-gray-500" aria-label="{{ __('Legende') }}">
@@ -168,8 +169,7 @@
                         </div>
                     @endforeach
                 </div>
-            </section>
-        @endif
+        </section>
 
         <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('Nach Job') }}</h3>
         <table class="w-full max-w-md">
