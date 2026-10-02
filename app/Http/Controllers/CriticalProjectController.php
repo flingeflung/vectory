@@ -111,6 +111,7 @@ class CriticalProjectController extends Controller
         $rows = $rows->filter(fn ($row) => $selectedIds->contains((int) $row['project']->tenant_id));
         $sort = $request->string('sort', 'severity')->toString();
         $direction = $request->string('direction', 'desc')->toString() === 'asc' ? 'asc' : 'desc';
+        $acknowledgementEnabled = SystemSetting::criticalProjectAcknowledgementEnabled();
         $sorters = [
             'pn' => fn ($row) => $row['project']->source_pn,
             'title' => fn ($row) => mb_strtolower($row['project']->title),
@@ -122,7 +123,7 @@ class CriticalProjectController extends Controller
         $rows = ($direction === 'asc' ? $rows->sortBy($sorter) : $rows->sortByDesc($sorter))->values();
 
         return view('critical-projects.index', compact(
-            'organizations', 'selectedIds', 'rows', 'modalRows', 'hiddenOtherCount', 'severity', 'reason', 'showHidden', 'sort', 'direction', 'evaluator'
+            'organizations', 'selectedIds', 'rows', 'modalRows', 'hiddenOtherCount', 'severity', 'reason', 'showHidden', 'sort', 'direction', 'evaluator', 'acknowledgementEnabled'
         ));
     }
 }

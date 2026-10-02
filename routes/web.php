@@ -412,12 +412,14 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     Route::delete('/kunden/{tenant}', [TenantController::class, 'destroy'])->name('kunden.destroy');
 });
 
-Route::middleware(['auth', 'verified', 'can:access-superadmin', RememberLastAdminPage::class])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'verified', 'can:access-superadmin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/superadmin', [SuperAdminController::class, 'index'])->name('superadmin');
     Route::post('/superadmin', [SuperAdminController::class, 'update'])->name('superadmin.update');
     Route::get('/superadmin/uebersetzung', [SuperAdminController::class, 'downloadTranslations'])->name('superadmin.uebersetzung.download');
     Route::post('/superadmin/uebersetzung', [SuperAdminController::class, 'uploadTranslations'])->name('superadmin.uebersetzung.upload');
+});
 
+Route::middleware(['auth', 'verified', 'can:access-superadmin', RememberLastAdminPage::class])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/hilfeseiten', [HelpArticleController::class, 'index'])->name('hilfeseiten');
     Route::post('/hilfeseiten', [HelpArticleController::class, 'store'])->name('hilfeseiten.store');
     Route::post('/hilfeseiten/reorder', [HelpArticleController::class, 'reorder'])->name('hilfeseiten.reorder');

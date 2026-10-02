@@ -248,12 +248,12 @@
             <a
                 onclick="return window.navigateOrConfirm(event)"
                 href="{{ session('admin.last_tab_url', route('admin.personen')) }}"
-                class="flex items-center px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.*') ? 'bg-sidebar-active text-sidebar-active-content' : 'text-sidebar-content hover:bg-sidebar-hover hover:text-sidebar-content-hover' }}"
+                class="flex items-center px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.*') && ! request()->routeIs('admin.superadmin*') ? 'bg-sidebar-active text-sidebar-active-content' : 'text-sidebar-content hover:bg-sidebar-hover hover:text-sidebar-content-hover' }}"
             >
                 {{ __('Admin') }}
             </a>
 
-            @if (request()->routeIs('admin.*'))
+            @if (request()->routeIs('admin.*') && ! request()->routeIs('admin.superadmin*'))
                 <div class="ml-3 space-y-1 border-l border-gray-200 pl-4">
                     @foreach (\App\Support\AdminNav::visibleGroups() as $groupLabel => $items)
                         @php($groupActive = $items->contains(fn ($item) => request()->routeIs($item['match'])))
@@ -267,6 +267,16 @@
                     @endforeach
                 </div>
             @endif
+        @endcan
+        @can('access-superadmin')
+            <div class="my-2 border-t border-gray-100"></div>
+            <a
+                onclick="return window.navigateOrConfirm(event)"
+                href="{{ route('admin.superadmin') }}"
+                class="flex items-center px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.superadmin*') ? 'bg-sidebar-active text-sidebar-active-content' : 'text-sidebar-content hover:bg-sidebar-hover hover:text-sidebar-content-hover' }}"
+            >
+                {{ __('Superadmin') }}
+            </a>
         @endcan
     </nav>
 </aside>

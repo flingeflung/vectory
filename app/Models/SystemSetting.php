@@ -15,6 +15,8 @@ class SystemSetting extends Model
 {
     public const MULTI_TENANT_ENABLED = 'multi_tenant_enabled';
 
+    public const CRITICAL_PROJECT_ACKNOWLEDGEMENT_ENABLED = 'critical_project_acknowledgement_enabled';
+
     public static function get(string $key, ?string $default = null): ?string
     {
         return static::query()->where('key', $key)->value('value') ?? $default;
@@ -28,6 +30,11 @@ class SystemSetting extends Model
     public static function multiTenantEnabled(): bool
     {
         return static::get(self::MULTI_TENANT_ENABLED, '0') === '1';
+    }
+
+    public static function criticalProjectAcknowledgementEnabled(): bool
+    {
+        return static::get(self::CRITICAL_PROJECT_ACKNOWLEDGEMENT_ENABLED, '0') === '1';
     }
 
     /**

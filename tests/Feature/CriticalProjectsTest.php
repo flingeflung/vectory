@@ -47,6 +47,7 @@ class CriticalProjectsTest extends TestCase
             ->assertSee($critical->source_pn)
             ->assertSee('Projektstart erreicht, Status noch geplant')
             ->assertSee('Mögliche Lösung')
+            ->assertDontSee('Alle zur Kenntnis nehmen')
             ->assertDontSee($uncritical->source_pn);
 
         $this->get(route('projekte.show', $critical))
@@ -143,6 +144,7 @@ class CriticalProjectsTest extends TestCase
 
     public function test_user_can_acknowledge_hide_and_restore_a_finding(): void
     {
+        SystemSetting::set(SystemSetting::CRITICAL_PROJECT_ACKNOWLEDGEMENT_ENABLED, '1');
         $tenant = Tenant::query()->firstOrFail();
         $user = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'super_admin']);
         $project = Project::query()->create([
@@ -216,6 +218,7 @@ class CriticalProjectsTest extends TestCase
 
     public function test_user_can_acknowledge_and_hide_all_findings_of_one_project(): void
     {
+        SystemSetting::set(SystemSetting::CRITICAL_PROJECT_ACKNOWLEDGEMENT_ENABLED, '1');
         $tenant = Tenant::query()->firstOrFail();
         $user = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'super_admin']);
         $project = Project::query()->create([

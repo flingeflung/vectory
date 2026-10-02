@@ -35,6 +35,8 @@ Die Projektdetails verwenden dieselben Regeln im Fehlercheck. Der Button steht r
 
 Jeder Befund kann persönlich als „Zur Kenntnis genommen“ gekennzeichnet oder bis einschließlich zu einem gewählten Datum ausgeblendet werden. Kenntnisgenommene Befunde bleiben sichtbar und werden optisch zurückgenommen. Ausgeblendete Befunde erscheinen nur mit dem Filter „Ausgeblendete anzeigen“ und können jederzeit wieder eingeblendet werden. Die Kennzeichnungen eines Nutzers haben keine Auswirkung auf andere Nutzer.
 
+Die reine Kenntnisnahme ist installationsweit konfigurierbar und standardmäßig ausgeschaltet. Der Super-Admin kann sie auf der eigenständigen Seite **Superadmin** aktivieren. Das zeitweise Ausblenden bleibt unabhängig von diesem Schalter verfügbar.
+
 Die Datensätze werden erst angelegt, wenn KPr ein aktives Projekt tatsächlich prüft. Sobald eine Ursache bei einer späteren Prüfung nicht mehr besteht, wird das Befundvorkommen einschließlich aller persönlichen Kennzeichnungen gelöscht. Tritt die Ursache danach erneut auf, entsteht ein neues, ungekennzeichnetes Befundvorkommen. Wird ein Projekt beendet oder verworfen, löscht der Statuswechsel sämtliche zugehörigen KPr-Datensätze unmittelbar.
 
 ## Spätere Schritte

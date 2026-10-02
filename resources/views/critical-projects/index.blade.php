@@ -137,12 +137,14 @@
                 </div>
                 <div class="max-h-[70vh] space-y-3 overflow-y-auto p-4 text-sm">
                     <div class="flex flex-wrap items-center gap-2 rounded-md border border-gray-200 bg-gray-50 p-3">
-                        <form method="POST" action="{{ route('critical-projects.findings.bulk-update') }}">
-                            @csrf @method('PATCH')
-                            <input type="hidden" name="action" value="acknowledge">
-                            @foreach ($row['all_findings'] as $finding)<input type="hidden" name="finding_ids[]" value="{{ $finding['occurrence']->id }}">@endforeach
-                            <button class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100">{{ __('Alle zur Kenntnis nehmen') }}</button>
-                        </form>
+                        @if ($acknowledgementEnabled)
+                            <form method="POST" action="{{ route('critical-projects.findings.bulk-update') }}">
+                                @csrf @method('PATCH')
+                                <input type="hidden" name="action" value="acknowledge">
+                                @foreach ($row['all_findings'] as $finding)<input type="hidden" name="finding_ids[]" value="{{ $finding['occurrence']->id }}">@endforeach
+                                <button class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100">{{ __('Alle zur Kenntnis nehmen') }}</button>
+                            </form>
+                        @endif
                         <form method="POST" action="{{ route('critical-projects.findings.bulk-update') }}" class="flex flex-wrap items-center gap-1.5">
                             @csrf @method('PATCH')
                             <input type="hidden" name="action" value="hide">
@@ -159,21 +161,21 @@
                     @foreach ($row['all_findings'] as $finding)
                     <section x-show="showHidden || {{ $finding['is_hidden'] ? 'false' : 'true' }}" @class([
                             'rounded-md border border-gray-200 p-3',
-                            'bg-gray-50' => $finding['state']?->acknowledged_at || $finding['is_hidden'],
+                            'bg-gray-50' => ($acknowledgementEnabled && $finding['state']?->acknowledged_at) || $finding['is_hidden'],
                         ])>
                         <div class="flex flex-wrap items-center gap-1.5">
                             <span class="rounded border px-1.5 py-0.5 text-[11px] font-semibold {{ $severityClasses[$finding['severity']] }}">{{ $finding['severity_label'] }}</span>
                             <span class="font-medium text-gray-900">{{ $finding['title'] }}</span>
                             @if ($finding['is_hidden'])
                                 <span class="rounded bg-gray-200 px-1.5 py-0.5 text-[11px] text-gray-600">{{ __('Ausgeblendet bis :date', ['date' => $finding['state']->hidden_until->format('d.m.Y')]) }}</span>
-                            @elseif ($finding['state']?->acknowledged_at)
+                            @elseif ($acknowledgementEnabled && $finding['state']?->acknowledged_at)
                                 <span class="rounded bg-gray-200 px-1.5 py-0.5 text-[11px] text-gray-600">{{ __('Zur Kenntnis genommen') }}</span>
                             @endif
                         </div>
                         <p class="mt-1 text-xs text-gray-600">{{ $finding['detail'] }}</p>
                         <p class="mt-1 text-xs text-gray-500"><span class="font-medium">{{ __('Mögliche Lösung') }}:</span> {{ $finding['solution'] }}</p>
                         <div class="mt-3 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-2">
-                            @if (! $finding['state']?->acknowledged_at)
+                            @if ($acknowledgementEnabled && ! $finding['state']?->acknowledged_at)
                                 <form method="POST" action="{{ route('critical-projects.findings.update', $finding['occurrence']) }}">
                                     @csrf @method('PATCH')
                                     <input type="hidden" name="action" value="acknowledge">
@@ -195,7 +197,7 @@
                                     <button class="rounded border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50">{{ __('Ausblenden') }}</button>
                                 </form>
                             @endif
-                            @if ($finding['state']?->acknowledged_at)
+                            @if ($acknowledgementEnabled && $finding['state']?->acknowledged_at)
                                 <form method="POST" action="{{ route('critical-projects.findings.update', $finding['occurrence']) }}">
                                     @csrf @method('PATCH')
                                     <input type="hidden" name="action" value="unacknowledge">

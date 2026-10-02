@@ -18,6 +18,7 @@ class SuperAdminController extends Controller
     {
         return view('admin.superadmin.index', [
             'multiTenantEnabled' => SystemSetting::multiTenantEnabled(),
+            'criticalProjectAcknowledgementEnabled' => SystemSetting::criticalProjectAcknowledgementEnabled(),
             'translatableLocales' => AvailableLocales::translatable(),
         ]);
     }
@@ -25,6 +26,7 @@ class SuperAdminController extends Controller
     public function update(Request $request): RedirectResponse
     {
         SystemSetting::set(SystemSetting::MULTI_TENANT_ENABLED, $request->boolean('multi_tenant_enabled') ? '1' : '0');
+        SystemSetting::set(SystemSetting::CRITICAL_PROJECT_ACKNOWLEDGEMENT_ENABLED, $request->boolean('critical_project_acknowledgement_enabled') ? '1' : '0');
 
         return redirect()->route('admin.superadmin')->with('status', 'superadmin-updated');
     }

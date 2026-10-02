@@ -69,8 +69,13 @@ class CriticalProjectFindingStateController extends Controller
     /** @return array<string, mixed> */
     private function validateAction(Request $request, bool $bulk = false): array
     {
+        $actions = $bulk ? ['hide'] : ['hide', 'restore'];
+        if (SystemSetting::criticalProjectAcknowledgementEnabled()) {
+            $actions = [...$actions, ...($bulk ? ['acknowledge'] : ['acknowledge', 'unacknowledge'])];
+        }
+
         $rules = [
-            'action' => ['required', Rule::in($bulk ? ['acknowledge', 'hide'] : ['acknowledge', 'hide', 'restore', 'unacknowledge'])],
+            'action' => ['required', Rule::in($actions)],
             'hidden_until' => ['nullable', 'required_if:action,hide', 'date', 'after_or_equal:today'],
         ];
         if ($bulk) {

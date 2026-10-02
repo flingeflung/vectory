@@ -1,5 +1,10 @@
-<x-admin-layout>
-    <div class="max-w-2xl">
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="text-xl font-semibold leading-tight text-gray-800">{{ __('Superadmin') }}</h2>
+    </x-slot>
+
+    <div class="h-full p-4 sm:p-6 lg:p-8">
+        <div class="mx-auto max-w-2xl">
         <div class="rounded-lg border border-gray-200 bg-white p-4">
             <div
                 x-data="{ dirty: false, show: false }"
@@ -15,6 +20,18 @@
                                 <span class="block text-sm font-medium text-gray-700">{{ __('Mandantenfähigkeit aktiv') }}</span>
                                 <span class="mt-1 block text-xs text-gray-400">
                                     {{ __('Installations-weiter Lizenzmodell-Schalter, gilt für alle Mandanten. Aus: Installation direkt bei einem Kunden, ein einzelner (Standard-)Mandant, keine Umschalter-Oberfläche sichtbar. An: Installation bei einem Dienstleister mit mehreren Kunden - Kundenverwaltung und Mandanten-Umschalter werden verfügbar.') }}
+                                </span>
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="border-t border-gray-100 pt-4">
+                        <label class="flex items-start gap-2">
+                            <input type="checkbox" name="critical_project_acknowledgement_enabled" value="1" @checked($criticalProjectAcknowledgementEnabled) class="mt-0.5 rounded border-gray-300">
+                            <span>
+                                <span class="block text-sm font-medium text-gray-700">{{ __('Kenntnisnahme bei kritischen Projekten verwenden') }}</span>
+                                <span class="mt-1 block text-xs text-gray-400">
+                                    {{ __('Blendet Funktionen ein, mit denen Nutzer Befunde als zur Kenntnis genommen kennzeichnen können. Ausblenden bis zu einem Datum bleibt unabhängig davon verfügbar.') }}
                                 </span>
                             </span>
                         </label>
@@ -78,5 +95,6 @@
                 </div>
             </div>
         </div>
+        </div>
     </div>
-</x-admin-layout>
+</x-app-layout>
