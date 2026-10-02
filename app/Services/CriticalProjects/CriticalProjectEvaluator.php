@@ -14,11 +14,11 @@ class CriticalProjectEvaluator
     public function definitions(): Collection
     {
         return collect([
-            ['code' => 'schedule.overdue', 'title' => __('Termin überschritten'), 'severity' => 'critical', 'severity_label' => __('Kritisch'), 'description' => __('Ein noch nicht abgeschlossener Termin liegt in der Vergangenheit.'), 'exclusion' => __('Heute fällige und bereits abgeschlossene Termine.'), 'solution' => __('Termin und weiteren Ablauf prüfen; Termin bei Bedarf aktualisieren.')],
-            ['code' => 'schedule.current_missing', 'title' => __('Termin im aktuellen Workflow-Schritt fehlt'), 'severity' => 'critical', 'severity_label' => __('Kritisch'), 'description' => __('Der aktuelle Workflow-Schritt verlangt einen Termin, es ist aber keiner eingetragen.'), 'exclusion' => __('Workflow-Schritte ohne Terminpflicht.'), 'solution' => __('Termin im Workflow festlegen.')],
-            ['code' => 'staffing.missing', 'title' => __('Projektperson fehlt'), 'severity' => 'watch', 'severity_label' => __('Beobachten'), 'description' => __('Mindestens eine im Workflow benötigte Funktionsgruppe ist nicht besetzt.'), 'exclusion' => __('Funktionsgruppen außerhalb des zugewiesenen Workflows.'), 'solution' => __('Eine geeignete Projektperson für die Funktionsgruppe zuweisen.')],
-            ['code' => 'project.start_still_planned', 'title' => __('Projektstart erreicht, Status noch geplant'), 'severity' => 'critical', 'severity_label' => __('Kritisch'), 'description' => __('Das Startdatum ist erreicht oder überschritten, das Projekt steht aber weiterhin auf „Geplant“.'), 'exclusion' => __('Projekte ohne Startdatum oder mit anderem Status.'), 'solution' => __('Projektstatus und tatsächlichen Start prüfen.')],
-            ['code' => 'budget.plan_exceeded', 'title' => __('Planstunden überschritten'), 'severity' => 'critical', 'severity_label' => __('Kritisch'), 'description' => __('Die gebuchten Stunden liegen über den Planstunden des Projekts.'), 'exclusion' => __('Projekte ohne Planstunden und Projekte innerhalb des Budgets.'), 'solution' => __('Mehraufwand prüfen und gegebenenfalls zusätzliches Budget mit dem Kunden abstimmen.')],
+            ['code' => 'schedule.overdue', 'area' => __('Termine'), 'title' => __('Termin überschritten'), 'severity' => 'critical', 'severity_label' => __('Kritisch'), 'description' => __('Ein noch nicht abgeschlossener Termin liegt in der Vergangenheit.'), 'exclusion' => __('Heute fällige und bereits abgeschlossene Termine.'), 'solution' => __('Termin und weiteren Ablauf prüfen; Termin bei Bedarf aktualisieren.')],
+            ['code' => 'schedule.current_missing', 'area' => __('Workflow'), 'title' => __('Termin im aktuellen Workflow-Schritt fehlt'), 'severity' => 'critical', 'severity_label' => __('Kritisch'), 'description' => __('Der aktuelle Workflow-Schritt verlangt einen Termin, es ist aber keiner eingetragen.'), 'exclusion' => __('Workflow-Schritte ohne Terminpflicht.'), 'solution' => __('Termin im Workflow festlegen.')],
+            ['code' => 'staffing.missing', 'area' => __('Projektbeteiligte'), 'title' => __('Projektperson fehlt'), 'severity' => 'watch', 'severity_label' => __('Beobachten'), 'description' => __('Mindestens eine im Workflow benötigte Funktionsgruppe ist nicht besetzt.'), 'exclusion' => __('Funktionsgruppen außerhalb des zugewiesenen Workflows.'), 'solution' => __('Eine geeignete Projektperson für die Funktionsgruppe zuweisen.')],
+            ['code' => 'project.start_still_planned', 'area' => __('Projektstatus'), 'title' => __('Projektstart erreicht, Status noch geplant'), 'severity' => 'critical', 'severity_label' => __('Kritisch'), 'description' => __('Das Startdatum ist erreicht oder überschritten, das Projekt steht aber weiterhin auf „Geplant“.'), 'exclusion' => __('Projekte ohne Startdatum oder mit anderem Status.'), 'solution' => __('Projektstatus und tatsächlichen Start prüfen.')],
+            ['code' => 'budget.plan_exceeded', 'area' => __('Planstunden'), 'title' => __('Planstunden überschritten'), 'severity' => 'critical', 'severity_label' => __('Kritisch'), 'description' => __('Die gebuchten Stunden liegen über den Planstunden des Projekts.'), 'exclusion' => __('Projekte ohne Planstunden und Projekte innerhalb des Budgets.'), 'solution' => __('Mehraufwand prüfen und gegebenenfalls zusätzliches Budget mit dem Kunden abstimmen.')],
         ]);
     }
 
@@ -77,6 +77,7 @@ class CriticalProjectEvaluator
 
         return [
             'code' => $rule['code'],
+            'area' => $rule['area'],
             'title' => $rule['title'],
             'severity' => $severity,
             'severity_label' => match ($severity) {

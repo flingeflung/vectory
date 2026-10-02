@@ -44,7 +44,9 @@ class CriticalProjectsTest extends TestCase
 
         $this->get(route('projekte.show', $critical))
             ->assertOk()
-            ->assertSee('Fehlercheck: 1 Befund');
+            ->assertSee('Fehlercheck: 1 Befund')
+            ->assertSee('Projektstatus')
+            ->assertSee('Mögliche Lösung');
     }
 
     public function test_reason_filter_keeps_only_matching_findings(): void
@@ -100,5 +102,23 @@ class CriticalProjectsTest extends TestCase
 
         $this->assertTrue($project->projectTemplate()->exists());
         $this->assertSame(0.0, $project->effectivePlannedHours());
+    }
+
+    public function test_finished_project_keeps_button_but_is_not_checked(): void
+    {
+        $tenant = Tenant::query()->firstOrFail();
+        $user = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'super_admin']);
+        $project = Project::query()->create([
+            'tenant_id' => $tenant->id,
+            'source_pn' => '269905',
+            'title' => 'Beendetes Projekt',
+            'status' => 2,
+            'start_date' => today()->subYear(),
+        ]);
+
+        $this->actingAs($user)->get(route('projekte.show', $project))
+            ->assertOk()
+            ->assertSee('Fehlercheck: keine Befunde')
+            ->assertSee('Beendete und verworfene Projekte werden nicht mehr geprüft.');
     }
 }

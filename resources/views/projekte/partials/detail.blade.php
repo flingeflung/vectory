@@ -257,6 +257,7 @@
                     </button>
                     <button
                         type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'project-error-check-{{ $project->id }}' }))"
                         class="{{ $criticalFindings->isNotEmpty() ? 'inline-flex items-center rounded-md border border-red-200 bg-red-50 p-1 text-red-700 hover:bg-red-100' : $iconBtn }}"
                         title="{{ $criticalFindings->isNotEmpty() ? trans_choice('Fehlercheck: :count Befund|Fehlercheck: :count Befunde', $criticalFindings->count(), ['count' => $criticalFindings->count()]) : __('Fehlercheck: keine Befunde') }}"
                         aria-label="{{ __('Fehlercheck') }}"
@@ -268,6 +269,7 @@
             </div>
 
             @include('projekte.partials.project-group-modal', ['project' => $project])
+            @include('projekte.partials.project-error-check-modal', ['project' => $project, 'findings' => $criticalFindings])
         </div>
 
         <div

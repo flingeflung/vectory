@@ -29,12 +29,14 @@ Beendete und verworfene Projekte werden nicht geprüft. Qualitätsmindernde Fakt
 
 `CriticalProjectEvaluator` ist die gemeinsame fachliche Prüfstelle. Sein Regelkatalog speist zugleich Auswertung, Grundfilter und das sichtbare Regelwerk. Die Seite zählt Projekte eindeutig, auch wenn mehrere Gründe zutreffen. Der Hinweis auf weitere Organisationen berücksichtigt die aktiven Grund- und Schwerefilter.
 
+Die Projektdetails verwenden dieselben Regeln im Fehlercheck. Der Button steht rechts in der Aktionsleiste und wird bei Befunden dezent rot dargestellt. Das Overlay nennt Dringlichkeit, betroffenen Bereich, Befund und mögliche Lösung. Beendete und verworfene Projekte behalten den Button zur konsistenten Bedienung, werden aber nicht mehr geprüft.
+
 ## Spätere Schritte
 
 - Rollen und Sichtbarkeit fachlich abschließend festlegen
 - Abwesenheit, Beschäftigungsende und ausdrücklich benannte sowie benachrichtigte Vertretung
 - „Zur Kenntnis genommen“ und „Ausblenden bis …“
 - tägliche oder wöchentliche E-Mail-Berichte
-- dieselbe Prüflogik im projektbezogenen Fehlercheck nutzen; endgültigen Namen des Checks festlegen
+- weitere Regeln aus Viettos projektbezogenem Fehlercheck fachlich klassifizieren; endgültigen Namen des Checks festlegen
 - Schwellenwerte erst nach praktischer Erfahrung konfigurierbar machen
 - Info-Mail erst nach deren allgemeiner fachlicher Konzeption anbinden
