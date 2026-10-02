@@ -33,7 +33,9 @@ class CriticalProjectFindingStateController extends Controller
 
         $this->apply($state, $validated);
 
-        return back()->with('status', 'critical-finding-state-updated');
+        return back()
+            ->with('status', 'critical-finding-state-updated')
+            ->with('open_critical_project_modal', $criticalProjectFinding->project_id);
     }
 
     public function bulkUpdate(Request $request): RedirectResponse
@@ -59,7 +61,9 @@ class CriticalProjectFindingStateController extends Controller
             }
         });
 
-        return back()->with('status', 'critical-finding-state-updated');
+        return back()
+            ->with('status', 'critical-finding-state-updated')
+            ->with('open_critical_project_modal', $findings->first()->project_id);
     }
 
     /** @return array<string, mixed> */

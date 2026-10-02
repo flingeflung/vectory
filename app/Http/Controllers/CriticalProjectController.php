@@ -92,6 +92,11 @@ class CriticalProjectController extends Controller
             return $row;
         });
 
+        // Für eine Aktion im geöffneten Details-Overlay müssen die Befunde
+        // noch gerendert werden, auch wenn das Projekt nach dem Ausblenden
+        // seines letzten sichtbaren Befunds aus der Tabelle verschwindet.
+        $modalRows = $rows->filter(fn ($row) => $selectedIds->contains((int) $row['project']->tenant_id));
+
         $showHidden = $request->boolean('show_hidden');
         if (! $showHidden) {
             $rows = $rows->filter(function ($row) {
@@ -117,7 +122,7 @@ class CriticalProjectController extends Controller
         $rows = ($direction === 'asc' ? $rows->sortBy($sorter) : $rows->sortByDesc($sorter))->values();
 
         return view('critical-projects.index', compact(
-            'organizations', 'selectedIds', 'rows', 'hiddenOtherCount', 'severity', 'reason', 'showHidden', 'sort', 'direction', 'evaluator'
+            'organizations', 'selectedIds', 'rows', 'modalRows', 'hiddenOtherCount', 'severity', 'reason', 'showHidden', 'sort', 'direction', 'evaluator'
         ));
     }
 }

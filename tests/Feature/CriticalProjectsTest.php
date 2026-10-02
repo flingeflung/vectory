@@ -163,18 +163,19 @@ class CriticalProjectsTest extends TestCase
         $this->patch(route('critical-projects.findings.update', $finding), [
             'action' => 'hide',
             'hidden_until' => today()->addWeek()->format('Y-m-d'),
-        ])->assertRedirect();
+        ])->assertRedirect()
+            ->assertSessionHas('open_critical_project_modal', $project->id);
 
-        $this->get(route('critical-projects.index'))
-            ->assertOk()
-            ->assertDontSee($project->source_pn);
+        $response = $this->get(route('critical-projects.index'))->assertOk();
+        $this->assertFalse($response->viewData('rows')->contains(fn ($row) => $row['project']->is($project)));
         $this->get(route('critical-projects.index', ['show_hidden' => 1]))
             ->assertOk()
             ->assertSee($project->source_pn)
             ->assertSee('Ausgeblendet bis');
 
         $this->patch(route('critical-projects.findings.update', $finding), ['action' => 'restore'])
-            ->assertRedirect();
+            ->assertRedirect()
+            ->assertSessionHas('open_critical_project_modal', $project->id);
         $this->get(route('critical-projects.index'))
             ->assertOk()
             ->assertSee($project->source_pn)

@@ -124,9 +124,9 @@
         </div>
     </div>
 
-    @foreach ($rows as $row)
+    @foreach ($modalRows as $row)
         @php($project = $row['project'])
-        <x-modal name="critical-project-details-{{ $project->id }}" max-width="3xl" :draggable="true">
+        <x-modal name="critical-project-details-{{ $project->id }}" :show="(int) session('open_critical_project_modal') === (int) $project->id" max-width="3xl" :draggable="true">
             <div x-data="{ showHidden: @js($showHidden) }">
                 <div data-drag-handle class="flex cursor-move items-center justify-between rounded-t-lg border-b border-gray-200 bg-gray-100 px-4 py-3">
                     <div>
