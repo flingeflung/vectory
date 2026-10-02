@@ -1128,7 +1128,6 @@ class ProjectController extends Controller
             ->map(fn ($row) => [
                 'label' => ($row->code ? $row->code.' – ' : '').$row->name,
                 'hours' => (float) $row->total,
-                'percent' => $total > 0 ? (float) $row->total / $total * 100 : 0,
             ]);
 
         // Für den "Lösen"-Editor (Ralf, 2026-09-27: "dadurch habe ich keine Möglichkeit mehr,

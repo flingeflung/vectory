@@ -127,7 +127,6 @@
                 <tr class="border-b border-gray-200 text-xs text-gray-500">
                     <th class="py-1 pr-3 text-left font-medium">{{ __('Job') }}</th>
                     <th class="px-3 py-1 text-right font-medium">{{ __('Stunden') }}</th>
-                    <th class="py-1 pl-3 text-right font-medium">{{ __('Anteil') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -135,7 +134,6 @@
                     <tr class="border-b border-gray-100">
                         <td class="py-1 pr-3">{{ $item['label'] }}</td>
                         <td class="px-3 py-1 whitespace-nowrap text-right tabular-nums">{{ $fmt($item['hours']) }}</td>
-                        <td class="py-1 pl-3 whitespace-nowrap text-right tabular-nums">{{ number_format($item['percent'], 1, ',', '.') }} %</td>
                     </tr>
                 @endforeach
             </tbody>
@@ -143,7 +141,6 @@
                 <tr class="font-semibold text-gray-800">
                     <td class="py-1 pr-3">{{ __('Summe') }}</td>
                     <td class="px-3 py-1 whitespace-nowrap text-right tabular-nums">{{ $fmt($zeiten['total']) }}</td>
-                    <td class="py-1 pl-3 whitespace-nowrap text-right tabular-nums">100,0 %</td>
                 </tr>
             </tfoot>
         </table>
