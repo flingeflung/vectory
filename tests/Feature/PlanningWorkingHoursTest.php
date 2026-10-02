@@ -16,7 +16,8 @@ class PlanningWorkingHoursTest extends TestCase
     public function test_all_people_view_contains_every_visible_working_hours_series(): void
     {
         $tenant = Tenant::query()->firstOrFail();
-        $people = collect(['Dreißig Eins', 'Dreißig Zwei'])->map(function (string $lastName) use ($tenant) {
+        $people = collect([['Dreißig Eins', 30], ['Neununddreißig', 39]])->map(function (array $personData) use ($tenant) {
+            [$lastName, $hours] = $personData;
             $person = Person::query()->create([
                 'tenant_id' => $tenant->id,
                 'last_name' => $lastName,
@@ -27,7 +28,7 @@ class PlanningWorkingHoursTest extends TestCase
             DB::table('person_weekly_hours')->insert([
                 'tenant_id' => $tenant->id,
                 'person_id' => $person->id,
-                'hours' => 30,
+                'hours' => $hours,
                 'valid_from' => null,
                 'valid_to' => null,
                 'created_at' => now(),
@@ -47,6 +48,7 @@ class PlanningWorkingHoursTest extends TestCase
             ->assertSee("sameValueNames.join(', ')", false);
 
         $this->assertTrue($response->viewData('showAllPeople'));
+        $this->assertSame(41, $response->viewData('yMax'));
         $this->assertSame(
             $people->pluck('id')->sort()->values()->all(),
             $response->viewData('datasets')->pluck('personId')->sort()->values()->all(),

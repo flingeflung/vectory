@@ -403,8 +403,8 @@ class PlanningController extends Controller
                     : collect();
             })
             ->max(fn (PersonWeeklyHours $row) => (float) $row->hours) ?? 0);
-        $yMax = (int) ceil($highestWeeklyHours / 10) * 10;
-        $yMax = max(10, $yMax);
+        $roundedYMax = (int) ceil($highestWeeklyHours / 10) * 10;
+        $yMax = max(10, $roundedYMax, (int) ceil($highestWeeklyHours + 2));
         $chartPeople = $showAllPeople ? $people : collect([$person])->filter();
         $datasets = $chartPeople->map(fn (Person $item) => [
             'personId' => $item->id,
