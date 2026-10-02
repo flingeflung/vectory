@@ -114,7 +114,10 @@ class Project extends Model
 
     public function projectTemplate(): BelongsTo
     {
-        return $this->belongsTo(ProjectTemplate::class);
+        // Die Schablone gehört immer zum Mandanten des Projekts. Bei
+        // mandantenübergreifenden Übersichten (z. B. Kritische Projekte)
+        // darf deshalb nicht der gerade aktive Mandant die Relation leeren.
+        return $this->belongsTo(ProjectTemplate::class)->withoutGlobalScope('tenant');
     }
 
     /**
@@ -161,7 +164,11 @@ class Project extends Model
             return null;
         }
 
-        return (float) $this->projectTemplate->functionGroups->sum('pivot.planned_hours');
+        // Eine inzwischen gelöschte oder inkonsistent referenzierte
+        // Schablone darf Übersichten nicht mit einem 500er abbrechen.
+        return $this->projectTemplate
+            ? (float) $this->projectTemplate->functionGroups->sum('pivot.planned_hours')
+            : null;
     }
 
     /**
