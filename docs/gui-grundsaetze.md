@@ -1,0 +1,10 @@
+# GUI-Grundsätze
+
+Diese Grundsätze gelten für neue Oberflächen und werden bei Änderungen an bestehenden Oberflächen berücksichtigt.
+
+## Listen und Tabellen
+
+- Vor jeder Tabelle oder Ergebnisliste steht die Anzahl der aktuell angezeigten Einträge.
+- Die Bezeichnung ist immer fachlich und kontextbezogen, zum Beispiel „12 Projekte“, „8 Personen“ oder „3 kritische Projekte“.
+- Der allgemeine Begriff „Datensätze“ wird in der Benutzeroberfläche dafür nicht verwendet.
+- Die Anzahl berücksichtigt alle gerade wirksamen Filter und zeigt daher den tatsächlich sichtbaren Umfang der Liste.

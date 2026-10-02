@@ -4,6 +4,8 @@
 
 Die Seite bündelt aktive Projekte, bei denen ein konkret behebbares Problem den weiteren Ablauf gefährdet oder beobachtet werden sollte. Sie zeigt nur Organisationen, auf die der angemeldete Nutzer bereits Zugriff hat.
 
+Direkt vor der Ergebnistabelle steht gemäß den [GUI-Grundsätzen](gui-grundsaetze.md) die Anzahl der aktuell angezeigten kritischen Projekte.
+
 ## Regeln
 
 | Code | Regel | Standard-Schwere |

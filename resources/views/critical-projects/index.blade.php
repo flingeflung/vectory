@@ -38,7 +38,6 @@
                 </button>
                 <button type="button" onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'critical-project-organizations' }))" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Organisationen') }} ({{ $selectedIds->count() }})</button>
                 <button type="button" onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'critical-project-rules' }))" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Regelwerk') }}</button>
-                <span class="ml-auto text-xs text-gray-500">{{ trans_choice(':count kritisches Projekt|:count kritische Projekte', $rows->count(), ['count' => $rows->count()]) }}</span>
             </form>
 
             @if ($hiddenOtherCount > 0)
@@ -47,6 +46,9 @@
                 </button>
             @endif
 
+            <div class="mb-1 shrink-0 text-xs text-gray-500">
+                {{ trans_choice(':count kritisches Projekt|:count kritische Projekte', $rows->count(), ['count' => $rows->count()]) }}
+            </div>
             <div class="min-h-0 flex-1 overflow-auto rounded-lg border border-gray-200 bg-white">
                 <table class="min-w-full divide-y divide-gray-200 text-sm">
                     <thead class="bg-gray-50">
