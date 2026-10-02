@@ -381,6 +381,9 @@
                                                     @error("steps.{$step->id}.duration_days")
                                                         <span class="text-red-600">{{ $message }}</span>
                                                     @enderror
+                                                    @error("steps.{$step->id}.has_due_date")
+                                                        <span class="basis-full text-red-600">{{ $message }}</span>
+                                                    @enderror
                                                 </div>
 
                                                 <div class="col-span-2 flex flex-wrap gap-x-4 gap-y-1">

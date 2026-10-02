@@ -530,6 +530,23 @@ class WorkflowController extends Controller
 
         $validated = $validator->validated();
 
+        // Ein Schritt, der das Start- oder Enddatum des Projekts liefert,
+        // braucht zwingend selbst einen Termin. Sonst wäre er als Quelle
+        // markiert, könnte aber kein Datum liefern (konkreter Altbestand:
+        // "Projektende" im Workflow "Print-Dokument (2026)"). Nur geöffnete
+        // Detailzeilen prüfen; eingeklappte Schritte fehlen bewusst im Request.
+        $stepErrors = [];
+        foreach ($validated['steps'] as $stepId => $data) {
+            if (! $request->has("steps.$stepId.duration_days")) {
+                continue;
+            }
+
+            $isStartOrEnd = $request->boolean("steps.$stepId.is_start") || $request->boolean("steps.$stepId.is_end");
+            if ($isStartOrEnd && ! $request->boolean("steps.$stepId.has_due_date")) {
+                $stepErrors["steps.$stepId.has_due_date"] = [__('Ein Schritt für Projektstart oder Projektende muss einen Termin haben.')];
+            }
+        }
+
         // Freigabe-Sonderfunktion (js_function=wfs_freigabe) braucht einen
         // Folge-WFS, der wirklich SPÄTER in der Reihenfolge liegt - sonst
         // könnte die externe Freigabe-Mail einen bereits durchlaufenen
@@ -537,25 +554,24 @@ class WorkflowController extends Controller
         // sie mehrere Felder (js_function + after_freigabe_workflow_step_id)
         // gegen die sort-Reihenfolge ALLER Schritte des Workflows abgleicht.
         $sortById = WorkflowStep::query()->where('workflow_id', $workflow->id)->pluck('sort', 'id');
-        $orderErrors = [];
         foreach ($validated['steps'] as $stepId => $data) {
             if (($data['js_function'] ?? null) !== 'wfs_freigabe') {
                 continue;
             }
             $afterId = $data['after_freigabe_workflow_step_id'] ?? null;
             if ($afterId === null) {
-                $orderErrors["steps.$stepId.after_freigabe_workflow_step_id"] = [__('Bitte den WFS nach der Freigabe festlegen.')];
+                $stepErrors["steps.$stepId.after_freigabe_workflow_step_id"] = [__('Bitte den WFS nach der Freigabe festlegen.')];
             } elseif (($sortById[$afterId] ?? -1) <= ($sortById[$stepId] ?? PHP_INT_MAX)) {
-                $orderErrors["steps.$stepId.after_freigabe_workflow_step_id"] = [__('Der Folge-WFS muss später in der Reihenfolge liegen als dieser Schritt.')];
+                $stepErrors["steps.$stepId.after_freigabe_workflow_step_id"] = [__('Der Folge-WFS muss später in der Reihenfolge liegen als dieser Schritt.')];
             }
         }
 
-        if ($orderErrors !== []) {
+        if ($stepErrors !== []) {
             $request->flash();
 
             return response()
                 ->view('admin.workflows.partials.content', $this->buildIndexData($request, $workflow->id) + [
-                    'errors' => (new ViewErrorBag)->put('default', new MessageBag($orderErrors)),
+                    'errors' => (new ViewErrorBag)->put('default', new MessageBag($stepErrors)),
                 ])
                 ->setStatusCode(422);
         }
