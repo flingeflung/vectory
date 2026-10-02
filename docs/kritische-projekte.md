@@ -29,10 +29,14 @@ Personenbezogene Befunde zeigen nur die für die Projektsteuerung erforderliche 
 | `schedule.overdue` | Ein nicht abgeschlossener Termin liegt vor dem heutigen Datum. | Kritisch |
 | `schedule.current_missing` | Bei einem noch nicht abgeschlossenen, terminführenden Workflow-Schritt fehlt das Datum. Start- und Ende-Schritte werden immer geprüft. | Aktueller Schritt: Handlungsbedarf; Start/Ende: Kritisch; andere Schritte: Beobachten |
 | `staffing.missing` | Eine im Workflow benötigte Funktionsgruppe hat keine Projektperson. | Beobachten; im aktuellen Schritt: Handlungsbedarf |
+| `staffing.person_absent` | Eine Projektperson ist aktuell länger abwesend. Wochenenden und aktive Feiertage ihrer Organisation zählen nicht als Arbeitstage. | 3–5 Arbeitstage: Beobachten; mehr als 5 Arbeitstage: Handlungsbedarf |
+| `staffing.person_unavailable` | Eine Projektperson ist inaktiv oder ihr Beschäftigungsende ist erreicht. | Handlungsbedarf |
 | `project.start_still_planned` | Der Projektstart ist erreicht, der Status aber weiterhin „Geplant“. | Am Starttag: Beobachten; danach: Kritisch |
 | `budget.plan_exceeded` | Gebuchte Stunden überschreiten die wirksamen Planstunden. | Kritisch |
 
 Beendete und verworfene Projekte werden nicht geprüft. Qualitätsmindernde Faktoren werden später separat von Gefährdungen des Projekterfolgs behandelt.
+
+KPr löst aufgrund eines Befunds keinen automatischen E-Mail-Versand aus. Projekt- und Redaktionsleitung tragen die Verantwortung, angezeigte Befunde zu bearbeiten. Ein späterer Mailversand an eine Vertretung wird ausschließlich bewusst durch einen berechtigten Nutzer innerhalb der noch zu entwickelnden Vertretungsfunktion ausgelöst.
 
 ## Aufbau
 
@@ -50,7 +54,7 @@ Die Datensätze werden erst angelegt, wenn KPr ein aktives Projekt tatsächlich 
 
 ## Spätere Schritte
 
-- Abwesenheit, Beschäftigungsende und ausdrücklich benannte sowie benachrichtigte Vertretung
+- Vertretungsfunktion: Nutzer können eine eigene Vertretung festlegen; ein noch festzulegendes Recht erlaubt dies für andere Personen. Eine E-Mail an die Vertretung wird ausschließlich bewusst durch einen Nutzer ausgelöst. Sobald die Vertretungsfunktion besteht, unterdrückt eine hinterlegte Vertretung die Befunde `staffing.person_absent` und `staffing.person_unavailable`.
 - Einen täglichen Bereinigungslauf als zusätzliches Sicherheitsnetz vorsehen. Er entfernt verbliebene KPr-Datensätze abgeschlossener, verworfener oder gelöschter Projekte einschließlich der abhängigen Nutzerkennzeichnungen. Der Lauf wird über den Laravel Scheduler definiert; dessen Betrieb ist Bestandteil der [Checkliste für neue Zielsysteme](installation-zielsystem.md).
 - tägliche oder wöchentliche E-Mail-Berichte
 - weitere Regeln aus Viettos projektbezogenem Fehlercheck fachlich klassifizieren; endgültigen Namen des Checks festlegen

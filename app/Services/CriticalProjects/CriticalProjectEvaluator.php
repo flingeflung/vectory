@@ -2,11 +2,18 @@
 
 namespace App\Services\CriticalProjects;
 
+use App\Models\CalendarEntry;
+use App\Models\Holiday;
 use App\Models\Project;
+use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 
 class CriticalProjectEvaluator
 {
+    /** @var array<string, Collection<int, string>> */
+    private array $holidayCache = [];
+
     /**
      * Der Katalog ist zugleich die zentrale Quelle für Filter und Regelwerk.
      * Neue Regeln erhalten einen stabilen Code und werden in evaluate() ergänzt.
@@ -17,6 +24,8 @@ class CriticalProjectEvaluator
             ['code' => 'schedule.overdue', 'area' => __('Termine'), 'title' => __('Termin überschritten'), 'severity' => 'critical', 'severity_label' => __('Kritisch'), 'description' => __('Ein noch nicht abgeschlossener Termin liegt in der Vergangenheit.'), 'exclusion' => __('Heute fällige und bereits abgeschlossene Termine.'), 'solution' => __('Termin und weiteren Ablauf prüfen; Termin bei Bedarf aktualisieren.')],
             ['code' => 'schedule.current_missing', 'area' => __('Termine'), 'title' => __('Termin im Workflow-Schritt fehlt'), 'severity' => 'watch', 'severity_label' => __('Beobachten'), 'description' => __('Ein noch nicht abgeschlossener Workflow-Schritt verlangt einen Termin, es ist aber keiner eingetragen. Beim aktuellen Schritt besteht Handlungsbedarf; fehlende Start- und Endtermine sind kritisch.'), 'exclusion' => __('Abgeschlossene Workflow-Schritte und Schritte ohne Terminpflicht, sofern sie nicht Projektstart oder Projektende festlegen.'), 'solution' => __('Termin im Dialog „Termine berechnen“ festlegen oder berechnen.')],
             ['code' => 'staffing.missing', 'area' => __('Projektbeteiligte'), 'title' => __('Projektperson fehlt'), 'severity' => 'watch', 'severity_label' => __('Beobachten'), 'description' => __('Mindestens eine im Workflow benötigte Funktionsgruppe ist nicht besetzt.'), 'exclusion' => __('Funktionsgruppen außerhalb des zugewiesenen Workflows.'), 'solution' => __('Eine geeignete Projektperson für die Funktionsgruppe zuweisen.')],
+            ['code' => 'staffing.person_absent', 'area' => __('Projektbeteiligte'), 'title' => __('Projektperson länger abwesend'), 'severity' => 'watch', 'severity_label' => __('Beobachten'), 'description' => __('Eine Projektperson ist mindestens drei Arbeitstage abwesend. Ab mehr als fünf Arbeitstagen besteht Handlungsbedarf.'), 'exclusion' => __('Abwesenheiten von höchstens zwei Arbeitstagen; Wochenenden und aktive Feiertage der Organisation der Person zählen nicht als Arbeitstage.'), 'solution' => __('Vertretung organisieren oder Projektbesetzung anpassen.')],
+            ['code' => 'staffing.person_unavailable', 'area' => __('Projektbeteiligte'), 'title' => __('Projektperson nicht verfügbar'), 'severity' => 'blocked', 'severity_label' => __('Handlungsbedarf'), 'description' => __('Eine zugewiesene Projektperson ist inaktiv oder ihr Beschäftigungsende ist erreicht.'), 'exclusion' => __('Aktive Personen ohne erreichtes Beschäftigungsende.'), 'solution' => __('Vertretung organisieren oder Projektbesetzung anpassen.')],
             ['code' => 'project.start_still_planned', 'area' => __('Projektstatus'), 'title' => __('Projektstart erreicht, Status noch geplant'), 'severity' => 'critical', 'severity_label' => __('Kritisch'), 'description' => __('Das Startdatum ist erreicht oder überschritten, das Projekt steht aber weiterhin auf „Geplant“.'), 'exclusion' => __('Projekte ohne Startdatum oder mit anderem Status.'), 'solution' => __('Projektstatus und tatsächlichen Start prüfen.')],
             ['code' => 'budget.plan_exceeded', 'area' => __('Planstunden'), 'title' => __('Planstunden überschritten'), 'severity' => 'critical', 'severity_label' => __('Kritisch'), 'description' => __('Die gebuchten Stunden liegen über den Planstunden des Projekts.'), 'exclusion' => __('Projekte ohne Planstunden und Projekte innerhalb des Budgets.'), 'solution' => __('Mehraufwand prüfen und gegebenenfalls zusätzliches Budget mit dem Kunden abstimmen.')],
         ]);
@@ -63,6 +72,48 @@ class CriticalProjectEvaluator
             $findings->push($this->finding($rule, __('Funktionsgruppe „:group“ ist nicht besetzt.', ['group' => $group->name]), $severity, 'function-group:'.$group->id));
         }
 
+        foreach ($project->projectPeople->filter(fn ($assignment) => $assignment->person)->groupBy('person_id') as $assignments) {
+            $person = $assignments->first()->person;
+            $groups = $assignments->pluck('functionGroup.short_name')->filter()->unique()->join(', ');
+            $groupSuffix = $groups !== '' ? __(' (Funktionsgruppe: :groups)', ['groups' => $groups]) : '';
+
+            if (! $person->active || ($person->end_date && $person->end_date->lte($today))) {
+                $detail = ! $person->active
+                    ? __(':person ist inaktiv.', ['person' => $person->fullName()])
+                    : __('Das Beschäftigungsende von :person wurde am :date erreicht.', ['person' => $person->fullName(), 'date' => $person->end_date->format('d.m.Y')]);
+                $findings->push($this->finding(
+                    $definition('staffing.person_unavailable'),
+                    $detail.$groupSuffix,
+                    'blocked',
+                    'person:'.$person->id,
+                ));
+
+                continue;
+            }
+
+            $currentAbsences = $person->calendarEntries
+                ->where('type', CalendarEntry::TYPE_ABSENCE)
+                ->filter(fn (CalendarEntry $entry) => $entry->starts_on->lte($today) && $entry->ends_on->gte($today));
+            foreach ($currentAbsences as $absence) {
+                $workdays = $this->workdays($absence->starts_on, $absence->ends_on, (int) $person->tenant_id);
+                if ($workdays < 3) {
+                    continue;
+                }
+
+                $findings->push($this->finding(
+                    $definition('staffing.person_absent'),
+                    __(':person ist vom :from bis :until abwesend (:days Arbeitstage).', [
+                        'person' => $person->fullName(),
+                        'from' => $absence->starts_on->format('d.m.Y'),
+                        'until' => $absence->ends_on->format('d.m.Y'),
+                        'days' => $workdays,
+                    ]).$groupSuffix,
+                    $workdays > 5 ? 'blocked' : 'watch',
+                    'calendar-entry:'.$absence->id,
+                ));
+            }
+        }
+
         if ((int) $project->status === 0 && $project->start_date && $project->start_date->lte($today)) {
             $severity = $project->start_date->lt($today) ? 'critical' : 'watch';
             $findings->push($this->finding($definition('project.start_still_planned'),
@@ -80,6 +131,39 @@ class CriticalProjectEvaluator
         }
 
         return $findings;
+    }
+
+    private function workdays(CarbonInterface $start, CarbonInterface $end, int $tenantId): int
+    {
+        $start = CarbonImmutable::instance($start);
+        $end = CarbonImmutable::instance($end);
+        $holidays = $this->holidays($tenantId, $start->year, $end->year);
+        $count = 0;
+
+        for ($date = $start; $date->lte($end); $date = $date->addDay()) {
+            if ($date->isWeekday() && ! $holidays->contains($date->toDateString())) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /** @return Collection<int, string> */
+    private function holidays(int $tenantId, int $fromYear, int $toYear): Collection
+    {
+        $dates = collect();
+        foreach (range($fromYear, $toYear) as $year) {
+            $key = $tenantId.'-'.$year;
+            $dates = $dates->merge($this->holidayCache[$key] ??= Holiday::query()->withoutGlobalScope('tenant')
+                ->where('tenant_id', $tenantId)
+                ->where('active', true)
+                ->whereYear('date', $year)
+                ->pluck('date')
+                ->map(fn ($date) => CarbonImmutable::parse($date)->toDateString()));
+        }
+
+        return $dates;
     }
 
     /** @param array<string, mixed> $rule */

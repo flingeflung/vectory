@@ -63,7 +63,7 @@ class CriticalProjectController extends Controller
                 'tenant',
                 'workflow' => fn ($query) => $query->withoutGlobalScope('tenant'),
                 'projectPeople' => fn ($query) => $query->withoutGlobalScope('tenant'),
-                'projectPeople.person', 'projectPeople.functionGroup',
+                'projectPeople.person.calendarEntries', 'projectPeople.functionGroup',
                 'projectWorkflowSteps' => fn ($query) => $query->withoutGlobalScope('tenant'),
                 'projectWorkflowSteps.workflowStep' => fn ($query) => $query->withoutGlobalScope('tenant'),
                 'projectWorkflowSteps.workflowStep.functionGroups',

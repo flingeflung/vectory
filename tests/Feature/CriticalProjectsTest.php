@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\CalendarEntry;
 use App\Models\CriticalProjectFinding;
 use App\Models\CriticalProjectFindingState;
 use App\Models\FunctionGroup;
+use App\Models\Holiday;
 use App\Models\Permission;
 use App\Models\PermissionTemplate;
 use App\Models\Person;
@@ -20,6 +22,7 @@ use App\Models\WorkflowStep;
 use App\Services\CriticalProjects\CriticalProjectEvaluator;
 use App\Support\AccessLevel;
 use App\Support\CurrentTenant;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -603,5 +606,83 @@ class CriticalProjectsTest extends TestCase
         $this->actingAs($user)->get(route('critical-projects.index'))
             ->assertOk()
             ->assertSee('1 Punkt zum');
+    }
+
+    public function test_project_person_availability_uses_workdays_and_organization_holidays(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-10-05 09:00:00'));
+        $tenant = Tenant::query()->firstOrFail();
+        $person = Person::query()->create([
+            'tenant_id' => $tenant->id,
+            'last_name' => 'Abwesend',
+            'first_name' => 'Anna',
+            'short_name' => 'AA',
+            'active' => true,
+        ]);
+        $group = FunctionGroup::query()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Redaktion',
+            'short_name' => 'TR',
+            'sort' => 1,
+            'active' => true,
+        ]);
+        $project = Project::query()->create([
+            'tenant_id' => $tenant->id,
+            'source_pn' => '269919',
+            'title' => 'Projekt mit Abwesenheit',
+            'status' => 1,
+        ]);
+        ProjectPerson::query()->create([
+            'tenant_id' => $tenant->id,
+            'project_id' => $project->id,
+            'function_group_id' => $group->id,
+            'person_id' => $person->id,
+        ]);
+        $absence = CalendarEntry::query()->create([
+            'person_id' => $person->id,
+            'type' => CalendarEntry::TYPE_ABSENCE,
+            'starts_on' => '2026-10-05',
+            'ends_on' => '2026-10-12',
+        ]);
+        $holiday = Holiday::query()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Testfeiertag',
+            'date' => '2026-10-07',
+            'weekday' => 3,
+            'active' => true,
+        ]);
+
+        $loadProject = fn () => $project->fresh()->load([
+            'projectPeople.person.calendarEntries',
+            'projectPeople.functionGroup',
+            'projectWorkflowSteps.workflowStep.functionGroups',
+            'functionGroupHours',
+            'projectTemplate.functionGroups',
+        ]);
+        $withHoliday = app(CriticalProjectEvaluator::class)->evaluate($loadProject(), 0)
+            ->firstWhere('code', 'staffing.person_absent');
+        $this->assertSame('watch', $withHoliday['severity']);
+        $this->assertStringContainsString('5 Arbeitstage', $withHoliday['detail']);
+
+        $holiday->delete();
+        $withoutHoliday = app(CriticalProjectEvaluator::class)->evaluate($loadProject(), 0)
+            ->firstWhere('code', 'staffing.person_absent');
+        $this->assertSame('blocked', $withoutHoliday['severity']);
+        $this->assertStringContainsString('6 Arbeitstage', $withoutHoliday['detail']);
+
+        $absence->update(['ends_on' => '2026-10-06']);
+        $shortAbsence = app(CriticalProjectEvaluator::class)->evaluate($loadProject(), 0);
+        $this->assertFalse($shortAbsence->contains('code', 'staffing.person_absent'));
+
+        $person->update(['active' => false]);
+        $inactive = app(CriticalProjectEvaluator::class)->evaluate($loadProject(), 0)
+            ->firstWhere('code', 'staffing.person_unavailable');
+        $this->assertSame('blocked', $inactive['severity']);
+
+        $person->update(['active' => true, 'end_date' => today()]);
+        $ended = app(CriticalProjectEvaluator::class)->evaluate($loadProject(), 0)
+            ->firstWhere('code', 'staffing.person_unavailable');
+        $this->assertSame('blocked', $ended['severity']);
+        $this->assertStringContainsString('Beschäftigungsende', $ended['detail']);
     }
 }
