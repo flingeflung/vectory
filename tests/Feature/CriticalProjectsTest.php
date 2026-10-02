@@ -298,6 +298,7 @@ class CriticalProjectsTest extends TestCase
         $this->assertNotNull($row);
         $this->assertCount($findings->count() - 1, $row['findings']);
         $this->assertFalse($row['findings']->contains(fn ($finding) => $finding['is_hidden']));
+        $this->assertSame((int) $row['all_findings']->max('rank'), $row['rank']);
     }
 
     public function test_resolved_and_recurring_cause_creates_a_new_finding_occurrence(): void

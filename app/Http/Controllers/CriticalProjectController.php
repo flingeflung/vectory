@@ -122,7 +122,6 @@ class CriticalProjectController extends Controller
         if (! $showHidden) {
             $rows = $rows->map(function ($row) {
                 $row['findings'] = $row['findings']->reject(fn ($finding) => $finding['is_hidden'])->values();
-                $row['rank'] = (int) ($row['findings']->max('rank') ?? 0);
 
                 return $row;
             })->filter(fn ($row) => $row['findings']->isNotEmpty());
