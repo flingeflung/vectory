@@ -255,6 +255,14 @@
                     >
                         <x-icon name="time-tracking" class="h-5 w-5" />
                     </button>
+                    <button
+                        type="button"
+                        class="{{ $criticalFindings->isNotEmpty() ? 'inline-flex items-center rounded-md border border-red-200 bg-red-50 p-1 text-red-700 hover:bg-red-100' : $iconBtn }}"
+                        title="{{ $criticalFindings->isNotEmpty() ? trans_choice('Fehlercheck: :count Befund|Fehlercheck: :count Befunde', $criticalFindings->count(), ['count' => $criticalFindings->count()]) : __('Fehlercheck: keine Befunde') }}"
+                        aria-label="{{ __('Fehlercheck') }}"
+                    >
+                        <x-icon name="error-check" class="h-5 w-5" />
+                    </button>
                     {{-- weitere Aktions-Buttons (Aufgabe zuweisen, -> Projekt-Pool, Fehlercheck, Sichtbarkeit, Sperrmail, ...) folgen später. --}}
                 </div>
             </div>

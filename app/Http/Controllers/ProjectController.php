@@ -31,6 +31,7 @@ use App\Models\UserTablePreference;
 use App\Models\Tenant;
 use App\Models\Workflow;
 use App\Models\WorkflowStep;
+use App\Services\CriticalProjects\CriticalProjectEvaluator;
 use App\Services\ProjectDirectoryLocator;
 use App\Services\ProjectNumberAllocator;
 use App\Support\CurrentTenant;
@@ -77,6 +78,7 @@ class ProjectController extends Controller
     public function __construct(
         private readonly ProjectDirectoryLocator $directoryLocator,
         private readonly ProjectNumberAllocator $numberAllocator,
+        private readonly CriticalProjectEvaluator $criticalProjectEvaluator,
     ) {}
 
     public function index(Request $request): View
@@ -971,8 +973,17 @@ class ProjectController extends Controller
         $directoryCreateInSv = $svStatus === 'not_found';
         $directoryOpenSv = $svStatus === 'found';
 
+        $project->loadMissing(['hauptprojekt', 'unterprojekte' => fn ($query) => $query->orderBy('source_pn'), 'markets', 'projectPeople.person', 'projectPeople.functionGroup', 'functionGroupHours', 'projectTemplate.functionGroups', 'workflow', 'activities.user', 'projectWorkflowSteps.workflowStep.functionGroups', 'projectWorkflowSteps.people.functionGroup', 'projectWorkflowSteps.people.person', 'graphicOrders.initiatedBy', 'graphicOrders.illustrator', 'projectChecklists.checklist.sections.points', 'projectChecklists.activatedBy', 'projectChecklistPoints.doneBy', 'products.productGroup', 'products.projects:id,source_pn,title']);
+        $criticalFindings = in_array((int) $project->status, [0, 1], true)
+            ? $this->criticalProjectEvaluator->evaluate(
+                $project,
+                (float) DB::table('job_hours')->where('project_id', $project->id)->sum('hours'),
+            )
+            : collect();
+
         return [
-            'project' => $project->loadMissing(['hauptprojekt', 'unterprojekte' => fn ($query) => $query->orderBy('source_pn'), 'markets', 'projectPeople.person', 'projectPeople.functionGroup', 'functionGroupHours', 'projectTemplate.functionGroups', 'workflow', 'activities.user', 'projectWorkflowSteps.workflowStep.functionGroups', 'projectWorkflowSteps.people.functionGroup', 'projectWorkflowSteps.people.person', 'graphicOrders.initiatedBy', 'graphicOrders.illustrator', 'projectChecklists.checklist.sections.points', 'projectChecklists.activatedBy', 'projectChecklistPoints.doneBy', 'products.productGroup', 'products.projects:id,source_pn,title']),
+            'project' => $project,
+            'criticalFindings' => $criticalFindings,
             // Für den "Checklisten auswählen"-Dialog - der aktuell zugewiesene
             // Katalog, gleiches Prinzip wie bei availableWorkflows unten (auch
             // inaktive Checklisten bleiben sichtbar, wenn schon zugewiesen).

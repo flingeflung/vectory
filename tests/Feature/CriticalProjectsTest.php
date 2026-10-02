@@ -41,6 +41,10 @@ class CriticalProjectsTest extends TestCase
             ->assertSee('Projektstart erreicht, Status noch geplant')
             ->assertSee('Mögliche Lösung')
             ->assertDontSee($uncritical->source_pn);
+
+        $this->get(route('projekte.show', $critical))
+            ->assertOk()
+            ->assertSee('Fehlercheck: 1 Befund');
     }
 
     public function test_reason_filter_keeps_only_matching_findings(): void
