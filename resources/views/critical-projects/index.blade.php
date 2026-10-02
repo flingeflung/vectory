@@ -13,11 +13,11 @@
 
     <div class="flex h-full flex-col p-4 sm:p-6 lg:p-8">
         <div class="mx-auto flex min-h-0 w-full max-w-[100rem] flex-1 flex-col">
-            <form method="GET" action="{{ route('critical-projects.index') }}" x-data="{ submitting: false }" @submit="submitting = true" class="mb-3 flex shrink-0 flex-wrap items-end gap-3 rounded-lg border border-gray-200 bg-white p-3 text-sm">
+            <form method="GET" action="{{ route('critical-projects.index') }}" x-data="{ submitting: false, applyFilter(event) { if (this.submitting) return; this.submitting = true; this.$nextTick(() => event.target.form.requestSubmit()); } }" @submit="submitting = true" :class="{ 'cursor-wait': submitting }" class="mb-3 flex shrink-0 flex-wrap items-end gap-3 rounded-lg border border-gray-200 bg-white p-3 text-sm">
                 @foreach ($selectedIds as $id)<input type="hidden" name="organizations[]" value="{{ $id }}">@endforeach
                 <label class="grid gap-1">
                     <span class="text-xs text-gray-500">{{ __('Schweregrad') }}</span>
-                    <select name="severity" class="rounded-md border-gray-300 py-1.5 text-sm">
+                    <select name="severity" @change="applyFilter($event)" :class="{ 'pointer-events-none opacity-60': submitting }" class="rounded-md border-gray-300 py-1.5 text-sm">
                         <option value="">{{ __('Alle') }}</option>
                         <option value="blocked" @selected($severity === 'blocked')>{{ __('Blockiert') }}</option>
                         <option value="critical" @selected($severity === 'critical')>{{ __('Kritisch') }}</option>
@@ -26,16 +26,17 @@
                 </label>
                 <label class="grid min-w-64 gap-1">
                     <span class="text-xs text-gray-500">{{ __('Grund') }}</span>
-                    <select name="reason" class="rounded-md border-gray-300 py-1.5 text-sm">
+                    <select name="reason" @change="applyFilter($event)" :class="{ 'pointer-events-none opacity-60': submitting }" class="rounded-md border-gray-300 py-1.5 text-sm">
                         <option value="">{{ __('Alle') }}</option>
                         @foreach ($evaluator->definitions() as $definition)
                             <option value="{{ $definition['code'] }}" @selected($reason === $definition['code'])>{{ $definition['title'] }}</option>
                         @endforeach
                     </select>
                 </label>
-                <button type="submit" :disabled="submitting" class="inline-flex items-center gap-1.5 rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover disabled:cursor-wait disabled:opacity-50">
-                    <span x-show="submitting" x-cloak><x-loading-spinner class="h-3.5 w-3.5 text-white" /></span>{{ __('Filtern') }}
-                </button>
+                <a href="{{ route('critical-projects.index', ['organizations' => $selectedIds->all()]) }}" @click="submitting = true" :class="{ 'pointer-events-none opacity-60': submitting }" class="inline-flex items-center gap-1.5 rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
+                    {{ __('Filter zurücksetzen') }}
+                </a>
+                <span x-show="submitting" x-cloak class="self-center text-gray-500"><x-loading-spinner class="h-4 w-4" /></span>
                 <button type="button" onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'critical-project-organizations' }))" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Organisationen') }} ({{ $selectedIds->count() }})</button>
                 <button type="button" onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'critical-project-rules' }))" class="ml-auto rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100">{{ __('Regelwerk') }}</button>
             </form>
