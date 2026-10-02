@@ -3,6 +3,44 @@
 @tailwind utilities;
 
 /*
+ * Einheitlich kompakte Eingabefelder (Ralf, 2026-10-03: "zu viel Weißraum in
+ * den Textfeldern und Dropdowns"). Das Forms-Plugin setzt vertikal 0,5rem; in
+ * der ganzen Oberfläche ist das die Ausnahme, kompakt (py-1) die Regel. Eine
+ * zentrale Regel statt hunderter Einzelklassen. Explizite py-*-Klassen an einem
+ * Feld gewinnen weiterhin (Utilities stehen später). Das Anmeldeformular
+ * (layouts/guest) bleibt bewusst großzügig.
+ */
+@layer base {
+    [type='text'],
+    [type='email'],
+    [type='url'],
+    [type='password'],
+    [type='number'],
+    [type='date'],
+    [type='datetime-local'],
+    [type='month'],
+    [type='search'],
+    [type='tel'],
+    [type='time'],
+    [type='week'],
+    textarea,
+    select {
+        padding-top: 0.25rem;
+        padding-bottom: 0.25rem;
+    }
+
+    .form-comfortable [type='text'],
+    .form-comfortable [type='email'],
+    .form-comfortable [type='password'],
+    .form-comfortable [type='number'],
+    .form-comfortable [type='search'],
+    .form-comfortable select {
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+    }
+}
+
+/*
  * Ohne diese Regel tut x-cloak nichts (ist nur ein Attribut, keine
  * Tailwind-Klasse) - Elemente blitzen beim Laden kurz sichtbar auf, bis
  * Alpine initialisiert ist und x-cloak wieder entfernt.
