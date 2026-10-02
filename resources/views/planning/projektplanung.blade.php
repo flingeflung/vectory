@@ -148,9 +148,7 @@
                                 <tr class="border-b border-gray-100">
                                     <td class="sticky left-0 z-[1] max-w-72 border-r border-gray-200 bg-white py-1 pl-5 pr-2">
                                         <div class="flex min-w-0 items-start gap-1.5">
-                                            @if ($projectRow['tenant']?->icon_filename)
-                                                <img src="{{ $projectRow['tenant']->iconUrl() }}" alt="{{ $projectRow['tenant']->name }}" title="{{ $projectRow['tenant']->name }}" class="mt-0.5 h-4 w-4 shrink-0 object-contain">
-                                            @endif
+                                            <x-organization-icon :organization="$projectRow['tenant']" class="mt-0.5" />
                                             <div class="min-w-0 flex-1">
                                                 <div class="flex min-w-0 items-center gap-1.5">
                                                     @if ($projectRow['canOpen'])

@@ -8,3 +8,4 @@ Diese Grundsätze gelten für neue Oberflächen und werden bei Änderungen an be
 - Die Bezeichnung ist immer fachlich und kontextbezogen, zum Beispiel „12 Projekte“, „8 Personen“ oder „3 kritische Projekte“.
 - Der allgemeine Begriff „Datensätze“ wird in der Benutzeroberfläche dafür nicht verwendet.
 - Die Anzahl berücksichtigt alle gerade wirksamen Filter und zeigt daher den tatsächlich sichtbaren Umfang der Liste.
+- Können Einträge verschiedener Organisationen gemeinsam angezeigt werden, wird bei jedem Eintrag das Organisationssymbol angezeigt. Ist kein eigenes Logo hinterlegt, erscheint ein neutrales Organisationssymbol. Der Organisationsname bleibt zusätzlich als Text oder Tooltip erkennbar.

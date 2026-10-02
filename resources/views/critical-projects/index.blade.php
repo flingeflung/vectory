@@ -68,7 +68,10 @@
                                 <td class="px-4 py-3">
                                     <div class="font-medium"><x-pn-link :project="$project" /></div>
                                     <div class="max-w-80 truncate text-gray-700" title="{{ $project->title }}">{{ $project->title }}</div>
-                                    <div class="mt-0.5 text-xs text-gray-400">{{ $project->tenant?->name }}</div>
+                                    <div class="mt-0.5 flex items-center gap-1.5 text-xs text-gray-400">
+                                        <x-organization-icon :organization="$project->tenant" class="h-3.5 w-3.5" />
+                                        <span>{{ $project->tenant?->name }}</span>
+                                    </div>
                                 </td>
                                 <td class="px-4 py-3">
                                     <div class="text-gray-800">{{ $project->workflow?->name ?? '–' }}</div>
