@@ -1117,6 +1117,9 @@ class ProjectController extends Controller
         $total = (float) $perProject->sum('hours');
         $planRows = $perProject->filter(fn ($row) => $row['plan'] !== null);
         $planTotal = $planRows->isNotEmpty() ? (float) $planRows->sum('plan') : null;
+        $projectHoursChartMax = max(1, (float) $perProject->max(
+            fn ($row) => max((float) ($row['plan'] ?? 0), (float) $row['hours'])
+        ));
 
         $byJob = DB::table('job_hours')
             ->join('job_types', 'job_types.id', '=', 'job_hours.job_type_id')
@@ -1150,6 +1153,8 @@ class ProjectController extends Controller
             'total' => $total,
             'isHauptprojekt' => $project->verbund_rolle === 1,
             'planTotal' => $planTotal,
+            'projectHoursChartMax' => $projectHoursChartMax,
+            'hasDetachedProjectPlan' => $perProject->contains(fn ($row) => $row['plan'] !== null && ! $row['planLinked']),
             'ownPlan' => $project->effectivePlannedHours(),
             'ownPlanLinked' => $project->plannedHoursLinkedToTemplate(),
             'ownTemplateName' => $project->projectTemplate?->name,

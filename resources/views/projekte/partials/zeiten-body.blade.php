@@ -21,7 +21,11 @@
     x-data="{ subTab: (window.projectZeitenSubTab && ({{ \Illuminate\Support\Js::from(auth()->user()->can('planning.view')) }} || window.projectZeitenSubTab !== 'personen')) ? window.projectZeitenSubTab : 'uebersicht' }"
     x-init="$watch('subTab', value => window.projectZeitenSubTab = value)"
 >
-    @php($fmt = fn ($hours) => number_format($hours, 2, ',', '.'))
+    @php
+        $fmt = static function ($hours) {
+            return number_format($hours, 2, ',', '.');
+        };
+    @endphp
 
     {{-- Unterreiter "Nach Person & Tag" (Ralf, 2026-09-28) - nur sichtbar mit eigenem
          Recht planning.view (personenbezogen, siehe
@@ -113,12 +117,52 @@
                     </tr>
                 </tfoot>
             </table>
-            @if ($zeiten['perProject']->contains(fn ($row) => $row['plan'] !== null && ! $row['planLinked']))
+            @if ($zeiten['hasDetachedProjectPlan'])
                 <p class="mb-4 -mt-4 flex items-center gap-1 text-[11px] text-gray-400">
                     <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
                     {{ __('Eigener Wert, nicht mehr mit der Schablone verbunden') }}
                 </p>
             @endif
+
+            <section class="mb-6 max-w-2xl rounded-md border border-gray-200 bg-gray-50 px-3 py-2.5" aria-labelledby="project-hours-chart-title">
+                <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <h3 id="project-hours-chart-title" class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('Soll/Ist je Projekt') }}</h3>
+                    <div class="flex items-center gap-3 text-[11px] text-gray-500" aria-label="{{ __('Legende') }}">
+                        <span class="flex items-center gap-1"><span class="h-2 w-3 rounded-sm bg-indigo-300"></span>{{ __('Plan') }}</span>
+                        <span class="flex items-center gap-1"><span class="h-2 w-3 rounded-sm bg-emerald-500"></span>{{ __('Ist') }}</span>
+                    </div>
+                </div>
+                <div class="space-y-2.5">
+                    @foreach ($zeiten['perProject'] as $row)
+                        @php
+                            $planWidth = $row['plan'] !== null ? min(100, (float) $row['plan'] / $zeiten['projectHoursChartMax'] * 100) : 0;
+                            $actualWidth = min(100, (float) $row['hours'] / $zeiten['projectHoursChartMax'] * 100);
+                            $projectCaption = $row['label'].' – '.$row['title'];
+                        @endphp
+                        <div class="grid grid-cols-[minmax(7rem,10rem)_minmax(9rem,1fr)] items-center gap-2">
+                            <div class="min-w-0 truncate text-xs {{ $row['isHauptprojekt'] ? 'font-semibold text-indigo-700' : 'text-gray-600' }}" title="{{ $projectCaption }}">
+                                {{ $row['label'] }}
+                            </div>
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-2">
+                                    <div class="h-2 flex-1 overflow-hidden rounded-full bg-gray-200">
+                                        @if ($row['plan'] !== null)
+                                            <div class="h-full rounded-full bg-indigo-300" style="width: {{ $planWidth }}%" title="{{ __('Plan: :hours h', ['hours' => $fmt($row['plan'])]) }}"></div>
+                                        @endif
+                                    </div>
+                                    <span class="w-14 shrink-0 text-right text-[11px] tabular-nums text-gray-500">{{ $row['plan'] !== null ? $fmt($row['plan']).' h' : '–' }}</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <div class="h-2 flex-1 overflow-hidden rounded-full bg-gray-200">
+                                        <div class="h-full rounded-full bg-emerald-500" style="width: {{ $actualWidth }}%" title="{{ __('Ist: :hours h', ['hours' => $fmt($row['hours'])]) }}"></div>
+                                    </div>
+                                    <span class="w-14 shrink-0 text-right text-[11px] tabular-nums text-gray-700">{{ $fmt($row['hours']) }} h</span>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </section>
         @endif
 
         <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('Nach Job') }}</h3>
