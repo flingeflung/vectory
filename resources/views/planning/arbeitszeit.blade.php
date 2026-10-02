@@ -10,6 +10,7 @@
 
         <label class="flex items-center gap-2 text-gray-700">{{ __('Person') }}
             <select name="person" onchange="this.form.submit()" class="min-w-56 rounded-md border-gray-300 py-1 text-sm" @disabled($people->isEmpty())>
+                <option value="all" @selected($showAllPeople)>{{ __('– alle –') }}</option>
                 @foreach ($people as $item)
                     <option value="{{ $item->id }}" @selected($person?->id === $item->id)>{{ $item->last_name }}, {{ $item->first_name }}</option>
                 @endforeach
@@ -18,10 +19,10 @@
     </form>
 
     <div class="min-h-0 flex-1 rounded-lg border border-gray-200 bg-white p-4">
-        @if ($person)
+        @if ($datasets->isNotEmpty())
             <div
                 class="h-full min-h-80"
-                x-data="planningWorkingHoursChart({{ \Illuminate\Support\Js::from($points) }})"
+                x-data="planningWorkingHoursChart({{ \Illuminate\Support\Js::from($datasets) }}, {{ \Illuminate\Support\Js::from($showAllPeople) }})"
             >
                 <canvas x-ref="canvas"></canvas>
             </div>
@@ -32,10 +33,10 @@
         @endif
     </div>
 
-    @if ($person)
+    @if ($datasets->isNotEmpty())
         <script>
             document.addEventListener('alpine:init', () => {
-                Alpine.data('planningWorkingHoursChart', (points) => {
+                Alpine.data('planningWorkingHoursChart', (sourceDatasets, showAllPeople) => {
                     let chart = null;
                     let ChartClass = null;
                     const year = {{ $year }};
@@ -45,6 +46,34 @@
                     const monthCenters = monthStarts.slice(0, 12).map((start, month) => (start + monthStarts[month + 1]) / 2);
                     const monthFormatter = new Intl.DateTimeFormat(document.documentElement.lang || 'de-DE', { month: 'short', timeZone: 'UTC' });
                     const monthLabels = Array.from({ length: 12 }, (_, month) => monthFormatter.format(new Date(Date.UTC(year, month, 1))));
+                    const dayCount = monthStarts[12];
+                    const colorFor = (index) => `hsl(${Math.round((index * 137.508 + 218) % 360)} 68% 45%)`;
+                    const expandPoints = (points) => {
+                        const changeDays = new Set(points.filter((point) => !point.terminal).map((point) => Number(point.x)));
+                        let value = 0;
+                        let pointIndex = 0;
+                        return Array.from({ length: dayCount + 1 }, (_, day) => {
+                            while (pointIndex < points.length && Number(points[pointIndex].x) <= day) {
+                                value = Number(points[pointIndex].y);
+                                pointIndex++;
+                            }
+                            return { x: day, y: value, change: changeDays.has(day) };
+                        });
+                    };
+                    const chartDatasets = sourceDatasets.map((dataset, index) => ({
+                        label: dataset.label,
+                        personId: dataset.personId,
+                        data: expandPoints(dataset.points),
+                        stepped: 'before',
+                        borderColor: colorFor(index),
+                        originalBorderColor: colorFor(index),
+                        backgroundColor: showAllPeople ? 'transparent' : 'rgba(37, 99, 235, 0.08)',
+                        borderWidth: 2,
+                        pointRadius: (context) => context.raw?.change ? 3 : 0,
+                        pointHoverRadius: (context) => context.raw?.change ? 5 : 0,
+                        pointHitRadius: 5,
+                        fill: !showAllPeople,
+                    }));
 
                     return {
                         async init() {
@@ -86,28 +115,39 @@
                                 type: 'line',
                                 plugins: [calendarGrid],
                                 data: {
-                                    datasets: [{
-                                        label: {{ \Illuminate\Support\Js::from(__('Wochenstunden')) }},
-                                        data: points,
-                                        stepped: 'before',
-                                        borderColor: '#2563eb',
-                                        backgroundColor: 'rgba(37, 99, 235, 0.08)',
-                                        borderWidth: 2,
-                                        pointRadius: (context) => context.raw?.terminal ? 0 : 3,
-                                        pointHoverRadius: (context) => context.raw?.terminal ? 0 : 5,
-                                        pointHitRadius: (context) => context.raw?.terminal ? 0 : 6,
-                                        fill: true,
-                                    }],
+                                    datasets: chartDatasets,
                                 },
                                 options: {
                                     responsive: true,
                                     maintainAspectRatio: false,
                                     parsing: false,
                                     layout: { padding: { bottom: 24 } },
-                                    interaction: { intersect: true, mode: 'nearest' },
+                                    interaction: { intersect: false, mode: 'index', axis: 'x' },
                                     plugins: {
-                                        legend: { display: false },
+                                        legend: {
+                                            display: showAllPeople,
+                                            position: 'top',
+                                            align: 'start',
+                                            labels: { usePointStyle: true, pointStyle: 'line', boxWidth: 22, boxHeight: 8, padding: 12 },
+                                            onHover: (event, item, legend) => {
+                                                legend.chart.canvas.style.cursor = 'pointer';
+                                                legend.chart.data.datasets.forEach((dataset, index) => {
+                                                    dataset.borderColor = index === item.datasetIndex ? dataset.originalBorderColor : 'rgba(156, 163, 175, 0.18)';
+                                                    dataset.borderWidth = index === item.datasetIndex ? 4 : 1;
+                                                });
+                                                legend.chart.update('none');
+                                            },
+                                            onLeave: (event, item, legend) => {
+                                                legend.chart.canvas.style.cursor = 'default';
+                                                legend.chart.data.datasets.forEach((dataset) => {
+                                                    dataset.borderColor = dataset.originalBorderColor;
+                                                    dataset.borderWidth = 2;
+                                                });
+                                                legend.chart.update('none');
+                                            },
+                                        },
                                         tooltip: {
+                                            filter: (item, index, items) => items.findIndex((candidate) => Math.abs(candidate.parsed.y - item.parsed.y) < 0.001) === index,
                                             callbacks: {
                                                 title: (items) => {
                                                     if (!items.length) return '';
@@ -115,7 +155,13 @@
                                                     const date = new Date(yearStart + dayOffset * dayMs);
                                                     return date.toLocaleDateString(document.documentElement.lang || 'de-DE');
                                                 },
-                                                label: (context) => `${context.parsed.y.toLocaleString('de-DE', { maximumFractionDigits: 1 })} h`,
+                                                label: (context) => {
+                                                    const sameValueNames = context.tooltip.dataPoints
+                                                        .filter((item) => Math.abs(item.parsed.y - context.parsed.y) < 0.001)
+                                                        .map((item) => item.dataset.label);
+                                                    const hours = `${context.parsed.y.toLocaleString('de-DE', { maximumFractionDigits: 1 })} h`;
+                                                    return showAllPeople ? `${hours}: ${sameValueNames.join(', ')}` : hours;
+                                                },
                                             },
                                         },
                                     },

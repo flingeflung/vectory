@@ -391,8 +391,9 @@ class PlanningController extends Controller
             ->filter(fn (Person $person) => $this->overlappingWeeklyHours($person, $yearStart, $yearEnd)->isNotEmpty())
             ->values();
 
+        $showAllPeople = $request->query('person') === 'all';
         $personId = $request->integer('person');
-        $person = $people->firstWhere('id', $personId) ?? $people->first();
+        $person = $showAllPeople ? null : ($people->firstWhere('id', $personId) ?? $people->first());
         $highestWeeklyHours = (float) ($people
             ->flatMap(function (Person $item) use ($yearStart, $yearEnd) {
                 [$employmentStart, $employmentEnd] = $this->employmentPeriod($item, $yearStart, $yearEnd);
@@ -404,38 +405,44 @@ class PlanningController extends Controller
             ->max(fn (PersonWeeklyHours $row) => (float) $row->hours) ?? 0);
         $yMax = (int) ceil($highestWeeklyHours / 10) * 10;
         $yMax = max(10, $yMax);
-        $points = collect();
+        $chartPeople = $showAllPeople ? $people : collect([$person])->filter();
+        $datasets = $chartPeople->map(fn (Person $item) => [
+            'personId' => $item->id,
+            'label' => $item->fullName(),
+            'points' => $this->workingHoursChartPoints($item, $yearStart, $yearEnd),
+        ])->values();
 
-        if ($person) {
-            $daysInYear = $yearStart->diffInDays($yearEnd) + 1;
-            [$employmentStart, $employmentEnd] = $this->employmentPeriod($person, $yearStart, $yearEnd);
-            if ($employmentStart->greaterThan($employmentEnd)) {
-                $points = collect([['x' => 0, 'y' => 0], ['x' => $daysInYear, 'y' => 0, 'terminal' => true]]);
-            } else {
-                if ($employmentStart->greaterThan($yearStart)) {
-                    $points->push(['x' => 0, 'y' => 0]);
-                }
-                $this->overlappingWeeklyHours($person, $employmentStart, $employmentEnd)
-                    ->each(function (PersonWeeklyHours $row) use ($employmentStart, $points, $yearStart) {
-                        $start = $row->valid_from
-                            ? CarbonImmutable::parse($row->valid_from->toDateString())->max($employmentStart)
-                            : $employmentStart;
-                        $points->push([
-                            'x' => $yearStart->diffInDays($start),
-                            'y' => (float) $row->hours,
-                        ]);
-                    });
+        return view('planning.arbeitszeit', compact('years', 'year', 'people', 'person', 'datasets', 'showAllPeople', 'yMax'));
+    }
 
-                if ($points->isNotEmpty() && $employmentEnd->lessThan($yearEnd)) {
-                    $points->push(['x' => $yearStart->diffInDays($employmentEnd->addDay()), 'y' => 0]);
-                }
-                if ($points->isNotEmpty()) {
-                    $points->push(['x' => $daysInYear, 'y' => $points->last()['y'], 'terminal' => true]);
-                }
-            }
+    private function workingHoursChartPoints(Person $person, CarbonImmutable $yearStart, CarbonImmutable $yearEnd): Collection
+    {
+        $daysInYear = $yearStart->diffInDays($yearEnd) + 1;
+        [$employmentStart, $employmentEnd] = $this->employmentPeriod($person, $yearStart, $yearEnd);
+        if ($employmentStart->greaterThan($employmentEnd)) {
+            return collect([['x' => 0, 'y' => 0], ['x' => $daysInYear, 'y' => 0, 'terminal' => true]]);
         }
 
-        return view('planning.arbeitszeit', compact('years', 'year', 'people', 'person', 'points', 'yMax'));
+        $points = collect();
+        if ($employmentStart->greaterThan($yearStart)) {
+            $points->push(['x' => 0, 'y' => 0]);
+        }
+        $this->overlappingWeeklyHours($person, $employmentStart, $employmentEnd)
+            ->each(function (PersonWeeklyHours $row) use ($employmentStart, $points, $yearStart) {
+                $start = $row->valid_from
+                    ? CarbonImmutable::parse($row->valid_from->toDateString())->max($employmentStart)
+                    : $employmentStart;
+                $points->push(['x' => $yearStart->diffInDays($start), 'y' => (float) $row->hours]);
+            });
+
+        if ($points->isNotEmpty() && $employmentEnd->lessThan($yearEnd)) {
+            $points->push(['x' => $yearStart->diffInDays($employmentEnd->addDay()), 'y' => 0]);
+        }
+        if ($points->isNotEmpty()) {
+            $points->push(['x' => $daysInYear, 'y' => $points->last()['y'], 'terminal' => true]);
+        }
+
+        return $points;
     }
 
     public function stunden(Request $request, PlanningBaseLoadCalculator $baseLoadCalculator): View
