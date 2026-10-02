@@ -6,6 +6,12 @@ Die Seite bündelt aktive Projekte, bei denen ein konkret behebbares Problem den
 
 Direkt vor der Ergebnistabelle steht gemäß den [GUI-Grundsätzen](gui-grundsaetze.md) die Anzahl der aktuell angezeigten kritischen Projekte.
 
+## Schweregrade
+
+- **Blockiert:** Eine unmittelbar benötigte Voraussetzung fehlt. Der aktuelle Projektschritt kann nicht zuverlässig weitergeführt werden und verlangt sofortige Klärung.
+- **Kritisch:** Eine konkrete Abweichung gefährdet Termin, Ablauf oder Budget. Das Projekt sollte zeitnah geprüft und eine Maßnahme festgelegt werden.
+- **Beobachten:** Es gibt einen frühen Hinweis oder eine künftig benötigte Angabe fehlt. Noch besteht kein akutes Hindernis, eine Prüfung ist jedoch sinnvoll.
+
 ## Regeln
 
 | Code | Regel | Standard-Schwere |

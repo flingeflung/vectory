@@ -129,6 +129,23 @@
         <div data-drag-handle class="flex cursor-move items-center justify-between rounded-t-lg border-b border-gray-200 bg-gray-100 px-4 py-3"><h3 class="font-semibold">{{ __('Regelwerk für kritische Projekte') }}</h3><button type="button" @click="$dispatch('close-modal', 'critical-project-rules')" class="text-xl text-gray-400">×</button></div>
         <div class="max-h-[70vh] space-y-3 overflow-y-auto p-4 text-sm">
             <p class="text-gray-600">{{ __('Ein aktives Projekt erscheint, sobald mindestens eine der folgenden Regeln zutrifft.') }}</p>
+            <section class="rounded-md border border-blue-100 bg-blue-50/40 p-3">
+                <h4 class="mb-2 font-semibold text-gray-900">{{ __('Bedeutung der Signale') }}</h4>
+                <div class="grid gap-2 md:grid-cols-3">
+                    <div class="rounded-md bg-white p-2.5 shadow-sm">
+                        <span class="rounded border px-1.5 py-0.5 text-[11px] font-semibold {{ $severityClasses['blocked'] }}">{{ __('Blockiert') }}</span>
+                        <p class="mt-1.5 text-xs text-gray-600">{{ __('Eine unmittelbar benötigte Voraussetzung fehlt. Der aktuelle Projektschritt kann nicht zuverlässig weitergeführt werden und verlangt sofortige Klärung.') }}</p>
+                    </div>
+                    <div class="rounded-md bg-white p-2.5 shadow-sm">
+                        <span class="rounded border px-1.5 py-0.5 text-[11px] font-semibold {{ $severityClasses['critical'] }}">{{ __('Kritisch') }}</span>
+                        <p class="mt-1.5 text-xs text-gray-600">{{ __('Eine konkrete Abweichung gefährdet Termin, Ablauf oder Budget. Das Projekt sollte zeitnah geprüft und eine Maßnahme festgelegt werden.') }}</p>
+                    </div>
+                    <div class="rounded-md bg-white p-2.5 shadow-sm">
+                        <span class="rounded border px-1.5 py-0.5 text-[11px] font-semibold {{ $severityClasses['watch'] }}">{{ __('Beobachten') }}</span>
+                        <p class="mt-1.5 text-xs text-gray-600">{{ __('Es gibt einen frühen Hinweis oder eine künftig benötigte Angabe fehlt. Noch besteht kein akutes Hindernis, eine Prüfung ist jedoch sinnvoll.') }}</p>
+                    </div>
+                </div>
+            </section>
             @foreach ($evaluator->definitions() as $definition)
                 <section class="rounded-md border border-gray-200 p-3"><div class="flex items-center gap-2"><h4 class="font-semibold text-gray-900">{{ $definition['title'] }}</h4><span class="rounded border px-1.5 py-0.5 text-[11px] {{ $severityClasses[$definition['severity']] }}">{{ $definition['severity_label'] }}</span></div><p class="mt-1 text-gray-700">{{ $definition['description'] }}</p><p class="mt-1 text-xs text-gray-500"><span class="font-medium">{{ __('Zählt nicht') }}:</span> {{ $definition['exclusion'] }}</p><p class="text-xs text-gray-500"><span class="font-medium">{{ __('Lösungshinweis') }}:</span> {{ $definition['solution'] }}</p></section>
             @endforeach
