@@ -37,7 +37,7 @@
                     <span x-show="submitting" x-cloak><x-loading-spinner class="h-3.5 w-3.5 text-white" /></span>{{ __('Filtern') }}
                 </button>
                 <button type="button" onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'critical-project-organizations' }))" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Organisationen') }} ({{ $selectedIds->count() }})</button>
-                <button type="button" onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'critical-project-rules' }))" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Regelwerk') }}</button>
+                <button type="button" onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'critical-project-rules' }))" class="ml-auto rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100">{{ __('Regelwerk') }}</button>
             </form>
 
             @if ($hiddenOtherCount > 0)
