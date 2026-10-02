@@ -29,6 +29,12 @@ class SuperAdminSettingsTest extends TestCase
             ->assertSee('Kenntnisnahme bei kritischen Projekten verwenden');
         $this->assertFalse(session()->has('admin.last_tab_url'));
 
+        $this->withSession(['admin.last_tab_url' => route('admin.superadmin')])
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('href="'.route('admin.personen').'"', false);
+        $this->assertFalse(session()->has('admin.last_tab_url'));
+
         $this->post(route('admin.superadmin.update'), [
             'critical_project_acknowledgement_enabled' => '1',
         ])->assertRedirect(route('admin.superadmin'));

@@ -245,9 +245,19 @@
         @can('access-admin')
             <div class="my-2 border-t border-gray-100"></div>
 
+            @php
+                $adminEntryUrl = session('admin.last_tab_url', route('admin.personen'));
+                $adminEntryPath = parse_url($adminEntryUrl, PHP_URL_PATH);
+                $superadminPath = parse_url(route('admin.superadmin'), PHP_URL_PATH);
+                if ($adminEntryPath && $superadminPath && str_starts_with($adminEntryPath, $superadminPath)) {
+                    session()->forget('admin.last_tab_url');
+                    $adminEntryUrl = route('admin.personen');
+                }
+            @endphp
+
             <a
                 onclick="return window.navigateOrConfirm(event)"
-                href="{{ session('admin.last_tab_url', route('admin.personen')) }}"
+                href="{{ $adminEntryUrl }}"
                 class="flex items-center px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.*') && ! request()->routeIs('admin.superadmin*') ? 'bg-sidebar-active text-sidebar-active-content' : 'text-sidebar-content hover:bg-sidebar-hover hover:text-sidebar-content-hover' }}"
             >
                 {{ __('Admin') }}
