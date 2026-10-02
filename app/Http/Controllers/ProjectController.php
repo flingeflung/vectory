@@ -37,6 +37,7 @@ use App\Services\ProjectNumberAllocator;
 use App\Support\CurrentTenant;
 use App\Support\ProjectColumnCatalog;
 use App\Support\ProjectFilterCatalog;
+use App\Support\ProjectPlanningGroups;
 use App\Support\StammId;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -539,6 +540,32 @@ class ProjectController extends Controller
             'allFunctionGroups' => $this->functionGroupsWithEligibleMembers($project, $request),
             'availableWorkflows' => $this->availableWorkflows($project),
             'secondaryBtn' => 'inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover',
+        ]);
+    }
+
+    /**
+     * Gruppenliste des Planungs-Tabs als JSON (HTML + Personenwerte), damit der Tab nach einer
+     * Änderung der Projektbeteiligten (z. B. im Workflow-Schritt) live nachzieht - gleiches
+     * Muster wie peopleField() oben, aber ohne den Tab komplett zu ersetzen, damit bereits
+     * getippte Stunden erhalten bleiben (die Zusammenführung macht der Client).
+     */
+    public function planningGroups(Request $request, Project $project): JsonResponse
+    {
+        abort_unless($request->user()->can('project.view') && $request->user()->can('planning.view'), 403);
+
+        $project->loadMissing(['projectPeople.person', 'projectPeople.functionGroup', 'functionGroupHours', 'projectTemplate.functionGroups']);
+        $allFunctionGroups = $this->functionGroupsWithEligibleMembers($project, $request);
+        $data = ProjectPlanningGroups::for($project, $allFunctionGroups);
+
+        return response()->json([
+            'html' => view('projekte.partials.planning-groups', [
+                'project' => $project,
+                'isOverlay' => $request->boolean('overlay', true),
+                'planningGroups' => $data['planningGroups'],
+                'entriesByGroup' => $data['entriesByGroup'],
+            ])->render(),
+            'planned' => $data['plannedValues'],
+            'values' => $data['personValues'],
         ]);
     }
 
