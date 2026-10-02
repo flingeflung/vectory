@@ -7,7 +7,7 @@
         $severityClasses = [
             'blocked' => 'border-red-200 bg-red-50 text-red-700',
             'critical' => 'border-orange-300 bg-orange-50 text-orange-800',
-            'watch' => 'border-blue-200 bg-blue-50 text-blue-700',
+            'watch' => 'border-slate-300 bg-slate-100 text-slate-700',
         ];
     @endphp
 
