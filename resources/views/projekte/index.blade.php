@@ -39,8 +39,8 @@
                 </button>
 
                 @if (! empty($filters))
-                    <a href="{{ route('projekte', array_filter(['sort' => $sort, 'direction' => $direction, 'projektfilter_submitted' => 1])) }}" class="inline-flex items-center rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover">
-                        {{ __('Filter zurücksetzen') }}
+                    <a href="{{ route('projekte', array_filter(['sort' => $sort, 'direction' => $direction, 'projektfilter_submitted' => 1])) }}" class="mr-4 inline-flex items-center rounded-md border border-gray-300 bg-white px-2 py-0.5 text-xs font-medium text-gray-600 hover:bg-btn-secondary-hover hover:text-gray-800">
+                        {{ __('Projektfilter zurücksetzen') }}
                     </a>
                 @endif
 

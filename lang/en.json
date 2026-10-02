@@ -1190,6 +1190,7 @@
     "Projekte, die diesen Workflow bereits haben, bleiben unverändert.": "Projects that already have this workflow remain unchanged.",
     "Projektende": "",
     "Projektfilter": "Project filter",
+    "Projektfilter zurücksetzen": "",
     "Projektfortschritt": "Project progress",
     "Projektfortschritt: :percent %": "Project progress: :percent %",
     "Projektfortschritt: kein aktueller Workflow-Schritt": "Project progress: no current workflow step",
