@@ -15,6 +15,14 @@ class UserPreferenceTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_project_planning_is_the_first_and_default_planning_tab(): void
+    {
+        $user = User::factory()->create(['role' => 'super_admin']);
+
+        $this->assertSame('planung.projektplanung', PlanningNav::tabs()[0]['route']);
+        $this->assertSame('planung.projektplanung', PlanningNav::preferredRoute($user));
+    }
+
     public function test_planning_remembers_the_last_tab_for_each_user(): void
     {
         $tenant = Tenant::query()->firstOrFail();
