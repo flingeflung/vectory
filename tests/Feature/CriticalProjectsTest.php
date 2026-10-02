@@ -76,6 +76,56 @@ class CriticalProjectsTest extends TestCase
             ->assertDontSee('269903');
     }
 
+    public function test_severity_filter_removes_other_findings_from_project_row(): void
+    {
+        $tenant = Tenant::query()->firstOrFail();
+        $user = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'super_admin']);
+        $workflow = Workflow::query()->create([
+            'tenant_id' => $tenant->id,
+            'short_name' => 'FILTER',
+            'name' => 'Filterworkflow',
+            'active' => true,
+        ]);
+        $project = Project::query()->create([
+            'tenant_id' => $tenant->id,
+            'source_pn' => '269913',
+            'title' => 'Projekt mit mehreren Dringlichkeiten',
+            'workflow_id' => $workflow->id,
+            'status' => 0,
+        ]);
+
+        foreach ([
+            ['title' => 'Projektstart', 'is_start' => true, 'is_end' => false],
+            ['title' => 'Projektende', 'is_start' => false, 'is_end' => true],
+        ] as $sort => $definition) {
+            $step = WorkflowStep::query()->create([
+                'tenant_id' => $tenant->id,
+                'workflow_id' => $workflow->id,
+                'title' => $definition['title'],
+                'sort' => $sort + 1,
+                'is_active' => true,
+                'has_due_date' => true,
+                'is_start' => $definition['is_start'],
+                'is_end' => $definition['is_end'],
+            ]);
+            ProjectWorkflowStep::query()->create([
+                'tenant_id' => $tenant->id,
+                'project_id' => $project->id,
+                'workflow_step_id' => $step->id,
+                'sort' => $sort + 1,
+                'is_current' => $sort === 0,
+            ]);
+        }
+
+        $response = $this->actingAs($user)->get(route('critical-projects.index', ['severity' => 'critical']))
+            ->assertOk()
+            ->assertSee($project->source_pn);
+
+        $row = $response->viewData('rows')->first(fn ($row) => $row['project']->is($project));
+        $this->assertNotNull($row);
+        $this->assertSame(['critical'], $row['findings']->pluck('severity')->unique()->values()->all());
+    }
+
     public function test_project_organization_filter_is_independent_from_global_organization_switch(): void
     {
         SystemSetting::set(SystemSetting::MULTI_TENANT_ENABLED, '1');

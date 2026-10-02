@@ -90,20 +90,20 @@ class CriticalProjectController extends Controller
         $severity = $request->string('severity')->toString();
         $reason = $request->string('reason')->toString();
         if (in_array($severity, ['blocked', 'critical', 'watch'], true)) {
-            $rows = $rows->filter(function ($row) use ($severity) {
+            $rows = $rows->map(function ($row) use ($severity) {
                 $row['findings'] = $row['findings']->where('severity', $severity)->values();
                 $row['rank'] = (int) ($row['findings']->max('rank') ?? 0);
 
-                return $row['findings']->isNotEmpty();
-            });
+                return $row;
+            })->filter(fn ($row) => $row['findings']->isNotEmpty());
         }
         if ($evaluator->definitions()->pluck('code')->contains($reason)) {
-            $rows = $rows->filter(function ($row) use ($reason) {
+            $rows = $rows->map(function ($row) use ($reason) {
                 $row['findings'] = $row['findings']->where('code', $reason)->values();
                 $row['rank'] = (int) ($row['findings']->max('rank') ?? 0);
 
-                return $row['findings']->isNotEmpty();
-            });
+                return $row;
+            })->filter(fn ($row) => $row['findings']->isNotEmpty());
         }
 
         $rows = $rows->map(function ($row) {
