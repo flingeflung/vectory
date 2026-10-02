@@ -120,12 +120,12 @@ class CriticalProjectController extends Controller
 
         $showHidden = $request->boolean('show_hidden');
         if (! $showHidden) {
-            $rows = $rows->filter(function ($row) {
+            $rows = $rows->map(function ($row) {
                 $row['findings'] = $row['findings']->reject(fn ($finding) => $finding['is_hidden'])->values();
                 $row['rank'] = (int) ($row['findings']->max('rank') ?? 0);
 
-                return $row['findings']->isNotEmpty();
-            });
+                return $row;
+            })->filter(fn ($row) => $row['findings']->isNotEmpty());
         }
 
         $hiddenOtherCount = $rows->reject(fn ($row) => $selectedIds->contains((int) $row['project']->tenant_id))->count();

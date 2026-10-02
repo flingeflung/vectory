@@ -245,6 +245,61 @@ class CriticalProjectsTest extends TestCase
             ->assertSee('Zur Kenntnis genommen');
     }
 
+    public function test_hidden_finding_is_removed_from_row_when_project_has_another_visible_finding(): void
+    {
+        $tenant = Tenant::query()->firstOrFail();
+        $user = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'super_admin']);
+        $workflow = Workflow::query()->create([
+            'tenant_id' => $tenant->id,
+            'short_name' => 'HIDDEN',
+            'name' => 'Workflow für Ausblendtest',
+            'active' => true,
+        ]);
+        $project = Project::query()->create([
+            'tenant_id' => $tenant->id,
+            'source_pn' => '269914',
+            'title' => 'Projekt mit sichtbarem und ausgeblendetem Befund',
+            'status' => 0,
+            'workflow_id' => $workflow->id,
+            'start_date' => today()->subDay(),
+        ]);
+        foreach (['Projektstart', 'Projektende'] as $sort => $title) {
+            $step = WorkflowStep::query()->create([
+                'tenant_id' => $tenant->id,
+                'workflow_id' => $workflow->id,
+                'title' => $title,
+                'sort' => $sort + 1,
+                'is_active' => true,
+                'has_due_date' => true,
+                'is_start' => $sort === 0,
+                'is_end' => $sort === 1,
+            ]);
+            ProjectWorkflowStep::query()->create([
+                'tenant_id' => $tenant->id,
+                'project_id' => $project->id,
+                'workflow_step_id' => $step->id,
+                'sort' => $sort + 1,
+                'is_current' => $sort === 0,
+            ]);
+        }
+
+        $this->actingAs($user)->get(route('critical-projects.index'))->assertOk();
+        $findings = CriticalProjectFinding::query()->where('project_id', $project->id)->get();
+        $this->assertGreaterThanOrEqual(2, $findings->count());
+        CriticalProjectFindingState::query()->create([
+            'critical_project_finding_id' => $findings->first()->id,
+            'user_id' => $user->id,
+            'hidden_until' => today()->addDay(),
+        ]);
+
+        $response = $this->get(route('critical-projects.index'))->assertOk();
+        $row = $response->viewData('rows')->first(fn ($row) => $row['project']->is($project));
+
+        $this->assertNotNull($row);
+        $this->assertCount($findings->count() - 1, $row['findings']);
+        $this->assertFalse($row['findings']->contains(fn ($finding) => $finding['is_hidden']));
+    }
+
     public function test_resolved_and_recurring_cause_creates_a_new_finding_occurrence(): void
     {
         $tenant = Tenant::query()->firstOrFail();
