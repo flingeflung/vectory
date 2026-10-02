@@ -35,7 +35,7 @@
                     </select>
                 </label>
                 <label class="flex h-[38px] items-center gap-2 text-xs text-gray-600">
-                    <input type="checkbox" name="show_hidden" value="1" @checked($showHidden) @change="applyFilter($event)" :disabled="submitting" class="rounded border-gray-300 text-blue-600">
+                    <input type="checkbox" name="show_hidden" value="1" @checked($showHidden) @change="applyFilter($event)" :class="{ 'pointer-events-none opacity-60': submitting }" class="rounded border-gray-300 text-blue-600">
                     <span>{{ __('Ausgeblendete anzeigen') }}</span>
                 </label>
                 <a href="{{ route('critical-projects.index', ['organization_filter_submitted' => 1, 'organizations' => $selectedIds->all()]) }}" @click="submitting = true" :class="{ 'pointer-events-none opacity-60': submitting }" class="inline-flex items-center gap-1.5 rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
