@@ -199,7 +199,7 @@
                                 <form method="POST" action="{{ route('critical-projects.findings.update', $finding['occurrence']) }}">
                                     @csrf @method('PATCH')
                                     <input type="hidden" name="action" value="unacknowledge">
-                                    <button class="px-1 py-1 text-xs text-gray-500 underline hover:text-gray-700">{{ __('Kenntnisnahme aufheben') }}</button>
+                                    <button class="rounded border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50">{{ __('Kenntnisnahme aufheben') }}</button>
                                 </form>
                             @endif
                         </div>
