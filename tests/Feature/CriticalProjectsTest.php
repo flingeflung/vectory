@@ -4,8 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\Project;
 use App\Models\ProjectTemplate;
+use App\Models\ProjectWorkflowStep;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Models\Workflow;
+use App\Models\WorkflowStep;
+use App\Services\CriticalProjects\CriticalProjectEvaluator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -120,5 +124,54 @@ class CriticalProjectsTest extends TestCase
             ->assertOk()
             ->assertSee('Fehlercheck: keine Befunde')
             ->assertSee('Beendete und verworfene Projekte werden nicht mehr geprüft.');
+    }
+
+    public function test_missing_workflow_dates_are_ranked_by_context(): void
+    {
+        $tenant = Tenant::query()->firstOrFail();
+        $workflow = Workflow::query()->create([
+            'tenant_id' => $tenant->id,
+            'short_name' => 'TERM',
+            'name' => 'Terminprüfung',
+            'active' => true,
+        ]);
+        $project = Project::query()->create([
+            'tenant_id' => $tenant->id,
+            'source_pn' => '269906',
+            'title' => 'Projekt mit fehlenden Terminen',
+            'workflow_id' => $workflow->id,
+            'status' => 0,
+        ]);
+        $definitions = [
+            ['title' => 'Projektstart', 'is_current' => true, 'is_start' => true, 'is_end' => false],
+            ['title' => 'Zwischentermin', 'is_current' => false, 'is_start' => false, 'is_end' => false],
+            ['title' => 'Projektende', 'is_current' => false, 'is_start' => false, 'is_end' => true],
+        ];
+        foreach ($definitions as $sort => $definition) {
+            $step = WorkflowStep::query()->create([
+                'tenant_id' => $tenant->id,
+                'workflow_id' => $workflow->id,
+                'title' => $definition['title'],
+                'sort' => $sort + 1,
+                'is_active' => true,
+                'has_due_date' => true,
+                'is_start' => $definition['is_start'],
+                'is_end' => $definition['is_end'],
+            ]);
+            ProjectWorkflowStep::query()->create([
+                'tenant_id' => $tenant->id,
+                'project_id' => $project->id,
+                'workflow_step_id' => $step->id,
+                'sort' => $sort + 1,
+                'is_current' => $definition['is_current'],
+            ]);
+        }
+
+        $project->load(['projectWorkflowSteps.workflowStep.functionGroups', 'projectPeople', 'functionGroupHours', 'projectTemplate.functionGroups']);
+        $findings = app(CriticalProjectEvaluator::class)->evaluate($project, 0);
+
+        $this->assertSame('blocked', $findings->first(fn ($finding) => str_contains($finding['detail'], 'Projektstart'))['severity']);
+        $this->assertSame('watch', $findings->first(fn ($finding) => str_contains($finding['detail'], 'Zwischentermin'))['severity']);
+        $this->assertSame('critical', $findings->first(fn ($finding) => str_contains($finding['detail'], 'Projektende'))['severity']);
     }
 }

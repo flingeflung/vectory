@@ -15,7 +15,7 @@ class CriticalProjectEvaluator
     {
         return collect([
             ['code' => 'schedule.overdue', 'area' => __('Termine'), 'title' => __('Termin überschritten'), 'severity' => 'critical', 'severity_label' => __('Kritisch'), 'description' => __('Ein noch nicht abgeschlossener Termin liegt in der Vergangenheit.'), 'exclusion' => __('Heute fällige und bereits abgeschlossene Termine.'), 'solution' => __('Termin und weiteren Ablauf prüfen; Termin bei Bedarf aktualisieren.')],
-            ['code' => 'schedule.current_missing', 'area' => __('Workflow'), 'title' => __('Termin im aktuellen Workflow-Schritt fehlt'), 'severity' => 'critical', 'severity_label' => __('Kritisch'), 'description' => __('Der aktuelle Workflow-Schritt verlangt einen Termin, es ist aber keiner eingetragen.'), 'exclusion' => __('Workflow-Schritte ohne Terminpflicht.'), 'solution' => __('Termin im Workflow festlegen.')],
+            ['code' => 'schedule.current_missing', 'area' => __('Termine'), 'title' => __('Termin im Workflow-Schritt fehlt'), 'severity' => 'watch', 'severity_label' => __('Beobachten'), 'description' => __('Ein noch nicht abgeschlossener Workflow-Schritt verlangt einen Termin, es ist aber keiner eingetragen. Beim aktuellen Schritt besteht Handlungsbedarf; fehlende Start- und Endtermine sind kritisch.'), 'exclusion' => __('Abgeschlossene Workflow-Schritte und Schritte ohne Terminpflicht, sofern sie nicht Projektstart oder Projektende festlegen.'), 'solution' => __('Termin im Dialog „Termine berechnen“ festlegen oder berechnen.')],
             ['code' => 'staffing.missing', 'area' => __('Projektbeteiligte'), 'title' => __('Projektperson fehlt'), 'severity' => 'watch', 'severity_label' => __('Beobachten'), 'description' => __('Mindestens eine im Workflow benötigte Funktionsgruppe ist nicht besetzt.'), 'exclusion' => __('Funktionsgruppen außerhalb des zugewiesenen Workflows.'), 'solution' => __('Eine geeignete Projektperson für die Funktionsgruppe zuweisen.')],
             ['code' => 'project.start_still_planned', 'area' => __('Projektstatus'), 'title' => __('Projektstart erreicht, Status noch geplant'), 'severity' => 'critical', 'severity_label' => __('Kritisch'), 'description' => __('Das Startdatum ist erreicht oder überschritten, das Projekt steht aber weiterhin auf „Geplant“.'), 'exclusion' => __('Projekte ohne Startdatum oder mit anderem Status.'), 'solution' => __('Projektstatus und tatsächlichen Start prüfen.')],
             ['code' => 'budget.plan_exceeded', 'area' => __('Planstunden'), 'title' => __('Planstunden überschritten'), 'severity' => 'critical', 'severity_label' => __('Kritisch'), 'description' => __('Die gebuchten Stunden liegen über den Planstunden des Projekts.'), 'exclusion' => __('Projekte ohne Planstunden und Projekte innerhalb des Budgets.'), 'solution' => __('Mehraufwand prüfen und gegebenenfalls zusätzliches Budget mit dem Kunden abstimmen.')],
@@ -37,9 +37,18 @@ class CriticalProjectEvaluator
         }
 
         $current = $workflowSteps->firstWhere('is_current', true);
-        if ($current && $current->workflowStep?->has_due_date && ! $current->due_date) {
-            $findings->push($this->finding($definition('schedule.current_missing'),
-                __('Für „:step“ ist kein Termin eingetragen.', ['step' => $current->workflowStep->title])));
+        $missingDateSteps = $workflowSteps->filter(fn ($step) => ! $step->completed_at
+            && ! $step->due_date
+            && ($step->workflowStep?->has_due_date || $step->effectiveIsStart() || $step->effectiveIsEnd()));
+        foreach ($missingDateSteps as $step) {
+            $severity = $step->is_current
+                ? 'blocked'
+                : ($step->effectiveIsStart() || $step->effectiveIsEnd() ? 'critical' : 'watch');
+            $findings->push($this->finding(
+                $definition('schedule.current_missing'),
+                __('Termin für „:step“ fehlt.', ['step' => $step->workflowStep->title]),
+                $severity,
+            ));
         }
 
         $assignedGroupIds = $project->projectPeople->pluck('function_group_id')->filter()->unique();

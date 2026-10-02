@@ -18,7 +18,7 @@ Jede Projektzeile zeigt außerdem das Symbol und den Namen der zugehörigen Orga
 | Code | Regel | Standard-Schwere |
 |---|---|---|
 | `schedule.overdue` | Ein nicht abgeschlossener Termin liegt vor dem heutigen Datum. | Kritisch |
-| `schedule.current_missing` | Der aktuelle Workflow-Schritt verlangt einen Termin, hat aber keinen. | Kritisch |
+| `schedule.current_missing` | Bei einem noch nicht abgeschlossenen, terminführenden Workflow-Schritt fehlt das Datum. Start- und Ende-Schritte werden immer geprüft. | Aktueller Schritt: Handlungsbedarf; Start/Ende: Kritisch; andere Schritte: Beobachten |
 | `staffing.missing` | Eine im Workflow benötigte Funktionsgruppe hat keine Projektperson. | Beobachten; im aktuellen Schritt: Handlungsbedarf |
 | `project.start_still_planned` | Der Projektstart ist erreicht, der Status aber weiterhin „Geplant“. | Am Starttag: Beobachten; danach: Kritisch |
 | `budget.plan_exceeded` | Gebuchte Stunden überschreiten die wirksamen Planstunden. | Kritisch |
