@@ -82,23 +82,11 @@ class ProjectTemplateController extends Controller
         // in CLAUDE.md statt der "aktiv ODER gerade zugewiesen"-Variante.
         $workflows = Workflow::query()->where('tenant_id', $tenantId)->orderBy('sort')->orderBy('name')->get();
 
-        // "Von anderem Kunden importieren" (Ralf, 2026-09-18) - gleiches
-        // Muster wie Papierformate: pull-basiert. Bewusst nur für Heimat-
-        // Admin/Super-Admin (Ralf: "das darf ja wieder nur vom H-Admin aus
-        // möglich sein", gleiche Mandanten-Grenze wie sonst im Rollenmodell) -
-        // eigener Check statt sich allein auf availableTenants() zu
-        // verlassen, das über person_tenant auch einzelnen ausgeliehenen
-        // Personen Zugriff auf einen fremden Mandanten geben kann, was hier
-        // NICHT reichen soll (Katalog-Import ist keine Personen-Ausleihe).
-        $otherTenants = $request->user()->canAccessAllOrganizations()
-            ? CurrentTenant::availableTenants()->reject(fn ($t) => $t->id === $tenantId)->values()
-            : collect();
 
         return [
             'templates' => $templates,
             'selectedTemplate' => $selectedTemplate,
             'workflows' => $workflows,
-            'otherTenants' => $otherTenants,
             'creating' => ! $selectedTemplate && $request->boolean('neu'),
         ];
     }
@@ -253,62 +241,6 @@ class ProjectTemplateController extends Controller
 
             return $new;
         });
-
-        return redirect()->route('admin.projektschablonen', ['schablone' => $new->id])->with('status', 'projektschablonen-updated');
-    }
-
-    /**
-     * Liefert den Schablonen-Katalog EINES anderen (erreichbaren) Kunden für
-     * den zweiten Auswahlschritt im "Von anderem Kunden holen"-Dialog (siehe
-     * View) - withoutGlobalScope('tenant'), da $sourceTenantId absichtlich
-     * NICHT der aktive Mandant ist.
-     */
-    public function catalogFromTenant(Request $request): JsonResponse
-    {
-        $user = $request->user();
-        abort_unless($user->canAccessAllOrganizations(), 403);
-
-        $source = CurrentTenant::availableTenants()->firstWhere('id', $request->integer('tenant_id'));
-        abort_if($source === null || $source->id === CurrentTenant::id(), 422);
-
-        $templates = ProjectTemplate::query()->withoutGlobalScope('tenant')
-            ->where('tenant_id', $source->id)->orderBy('name')->get();
-
-        return response()->json($templates->map(fn (ProjectTemplate $t) => [
-            'id' => $t->id,
-            'label' => $t->name.' ('.rtrim(rtrim((string) $t->duration_value, '0'), '.').' '.ProjectTemplate::durationUnitOptions()[$t->duration_unit].')',
-        ]));
-    }
-
-    /**
-     * "Von einem anderen Kunden holen" (Ralf, 2026-09-18) - pull-basiert wie
-     * bei den Papierformaten abgestimmt ("Stand im Zielkunden, Quelle
-     * wählen"), hier aber gezielt EINE einzelne Schablone statt des ganzen
-     * Katalogs (Ralfs Entscheidung: Schablonen sind fachlich zu
-     * unterschiedlich für einen Alles-oder-nichts-Import). Bewusst OHNE
-     * Workflow-Kopplung/Fktgrp-Stunden - Workflows/Funktionsgruppen
-     * unterscheiden sich je Kunde, gleiche Begründung wie bei
-     * WorkflowController::copyToTenant(). Startet inaktiv (siehe duplicate()).
-     */
-    public function importFromTenant(Request $request): RedirectResponse
-    {
-        $user = $request->user();
-        abort_unless($user->canAccessAllOrganizations(), 403);
-
-        $tenantId = CurrentTenant::id();
-        $source = CurrentTenant::availableTenants()->firstWhere('id', $request->integer('source_tenant_id'));
-        abort_if($source === null || $source->id === $tenantId, 422);
-
-        $sourceTemplate = ProjectTemplate::query()->withoutGlobalScope('tenant')
-            ->where('tenant_id', $source->id)->findOrFail($request->integer('source_template_id'));
-
-        $new = ProjectTemplate::query()->create([
-            ...$this->characteristicsData($sourceTemplate),
-            'tenant_id' => $tenantId,
-            'name' => $this->uniqueTemplateName($sourceTemplate->name, $tenantId),
-            'active' => false,
-            'created_by_user_id' => Auth::id(),
-        ]);
 
         return redirect()->route('admin.projektschablonen', ['schablone' => $new->id])->with('status', 'projektschablonen-updated');
     }

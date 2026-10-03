@@ -5,15 +5,6 @@
             <div class="shrink-0 space-y-1.5 border-b border-gray-100 p-2">
                 <span class="text-xs font-semibold text-gray-500">{{ __('Aufwandsschablonen') }}</span>
                 <div class="flex items-center gap-1">
-                    @if ($otherTenants->isNotEmpty())
-                        <button
-                            type="button"
-                            onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'projektschablonen-uebernehmen' }))"
-                            class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
-                        >
-                            {{ __('Von anderem Kunden importieren') }}
-                        </button>
-                    @endif
                     <a
                         href="{{ route('admin.projektschablonen', ['neu' => 1]) }}"
                         onclick="return window.navigateOrConfirm(event)"

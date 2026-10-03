@@ -235,7 +235,6 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     Route::put('/personen/tabellenspalten', [PersonTablePreferenceController::class, 'update'])->name('personen.tabellenspalten.update');
     Route::get('/feiertage', [HolidayController::class, 'index'])->name('feiertage');
     Route::post('/feiertage', [HolidayController::class, 'store'])->name('feiertage.store');
-    Route::post('/feiertage/uebernehmen', [HolidayController::class, 'importFromTenant'])->name('feiertage.uebernehmen');
     Route::post('/feiertage/{holiday}', [HolidayController::class, 'update'])->name('feiertage.update');
     Route::delete('/feiertage/{holiday}', [HolidayController::class, 'destroy'])->name('feiertage.destroy');
 
@@ -243,7 +242,6 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     Route::post('/jobtypen/gruppen', [JobTypeController::class, 'storeGroup'])->name('jobtypen.gruppen.store');
     Route::post('/jobtypen/gruppen/reihenfolge', [JobTypeController::class, 'reorderGroups'])->name('jobtypen.gruppen.reorder');
     Route::post('/jobtypen/gruppen/{jobGroup}', [JobTypeController::class, 'updateGroup'])->name('jobtypen.gruppen.update');
-    Route::post('/jobtypen/uebernehmen', [JobTypeController::class, 'importFromTenant'])->name('jobtypen.uebernehmen');
     Route::post('/jobtypen', [JobTypeController::class, 'store'])->name('jobtypen.store');
     Route::post('/jobtypen/{jobType}', [JobTypeController::class, 'update'])->name('jobtypen.update');
     Route::redirect('/', '/admin/personen')->name('index');
@@ -301,8 +299,6 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     Route::post('/projektschablonen', [ProjectTemplateController::class, 'store'])->name('projektschablonen.store');
     // Feste Pfade vor der {template}-Wildcard registriert - sonst würden sie
     // als ID interpretiert (404, gleiche Falle wie bei Projektkategorien/Workflows).
-    Route::get('/projektschablonen/fremdkatalog', [ProjectTemplateController::class, 'catalogFromTenant'])->name('projektschablonen.fremdkatalog');
-    Route::post('/projektschablonen/uebernehmen', [ProjectTemplateController::class, 'importFromTenant'])->name('projektschablonen.uebernehmen');
     Route::post('/projektschablonen/reihenfolge', [ProjectTemplateController::class, 'reorder'])->name('projektschablonen.reorder');
     Route::post('/projektschablonen/{template}', [ProjectTemplateController::class, 'update'])->name('projektschablonen.update');
     Route::post('/projektschablonen/{template}/funktionsgruppen', [ProjectTemplateController::class, 'updateFunctionGroups'])->name('projektschablonen.funktionsgruppen.update');
@@ -359,7 +355,6 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
 
     Route::get('/papierformate', [PaperFormatController::class, 'index'])->name('papierformate');
     Route::get('/papierformate/katalog', [PaperFormatController::class, 'catalog'])->name('papierformate.katalog');
-    Route::post('/papierformate/uebernehmen', [PaperFormatController::class, 'importFromTenant'])->name('papierformate.uebernehmen');
     Route::post('/papierformate', [PaperFormatController::class, 'store'])->name('papierformate.store');
     // Fester Pfad vor dem {paperFormat}-Wildcard registriert - sonst würde
     // "reorder" als ID interpretiert (gleiche Falle wie bei Workflows/

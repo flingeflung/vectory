@@ -27,33 +27,8 @@ class JobTypeController extends Controller
             ? $groups->firstWhere('id', $request->integer('gruppe'))
             : $groups->first();
 
-        // Import nur für Zentral-Admin/Super-Admin, gleiche Mandanten-Grenze
-        // wie bei Papierformaten/Projektschablonen (Ralf, 2026-09-18).
-        $user = Auth::user();
-        $otherTenants = $user->canAccessAllOrganizations()
-            ? CurrentTenant::availableTenants()->reject(fn (Tenant $t) => $t->id === CurrentTenant::id())->values()
-            : collect();
 
-        return view('admin.job-types.index', compact('groups', 'jobs', 'selectedGroup', 'otherTenants'));
-    }
-
-    /**
-     * Übernimmt Jobgruppen + Jobtypen eines anderen Kunden (siehe
-     * JobTypeCatalogImporter) - pull-basiert, nur Zentral-Admin/Super-Admin.
-     */
-    public function importFromTenant(Request $request, JobTypeCatalogImporter $importer): RedirectResponse
-    {
-        $user = $request->user();
-        abort_unless($user->canAccessAllOrganizations(), 403);
-
-        $target = Tenant::query()->findOrFail(CurrentTenant::id());
-        $source = CurrentTenant::availableTenants()->firstWhere('id', $request->integer('source_tenant_id'));
-        abort_if($source === null || $source->id === $target->id, 422);
-
-        return redirect()->route('admin.jobtypen')
-            ->with('status', 'jobtypen-import-done')
-            ->with('import_summary', $importer->import($source, $target))
-            ->with('import_source_name', $source->name);
+        return view('admin.job-types.index', compact('groups', 'jobs', 'selectedGroup'));
     }
 
     public function storeGroup(Request $request): RedirectResponse

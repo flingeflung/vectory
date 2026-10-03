@@ -34,19 +34,8 @@ class PaperFormatController extends Controller
             ])
             ->values();
 
-        // "Von anderem Kunden importieren" bewusst nur für Zentral-Admin/
-        // Super-Admin (Ralf, 2026-09-18: "das darf ja wieder nur vom H-Admin
-        // aus möglich sein", gleiche Mandanten-Grenze wie bei Projekt-
-        // schablonen) - eigener Check statt sich allein auf
-        // availableTenants() zu verlassen, das über person_tenant auch
-        // einzelnen ausgeliehenen Personen Zugriff geben kann, was hier
-        // NICHT reichen soll (Katalog-Import ist keine Personen-Ausleihe).
-        $user = Auth::user();
-        $otherTenants = $user->canAccessAllOrganizations()
-            ? CurrentTenant::availableTenants()->reject(fn (Tenant $t) => $t->id === CurrentTenant::id())->values()
-            : collect();
 
-        return view('admin.papierformate.index', ['formats' => $formats, 'combinations' => $combinations, 'otherTenants' => $otherTenants]);
+        return view('admin.papierformate.index', ['formats' => $formats, 'combinations' => $combinations]);
     }
 
     /**
@@ -133,29 +122,4 @@ class PaperFormatController extends Controller
         return redirect()->route('admin.papierformate');
     }
 
-    /**
-     * Übernimmt den Formate-Katalog eines anderen Kunden (Schritt 5, siehe
-     * PaperFormatCatalogImporter) - pull-basiert. Bewusst nur für Heimat-
-     * Admin/Super-Admin (Ralf, 2026-09-18), nicht jeden mit availableTenants()-
-     * Zugriff - eine per person_tenant ausgeliehene Person soll sich damit
-     * keine Kataloge aus dem verleihenden Mandanten ziehen können.
-     */
-    public function importFromTenant(Request $request, PaperFormatCatalogImporter $importer): RedirectResponse
-    {
-        $user = $request->user();
-        abort_unless($user->canAccessAllOrganizations(), 403);
-
-        $target = Tenant::query()->findOrFail(CurrentTenant::id());
-        $sourceId = $request->integer('source_tenant_id');
-
-        $source = CurrentTenant::availableTenants()->firstWhere('id', $sourceId);
-        abort_if($source === null || $source->id === $target->id, 422);
-
-        $summary = $importer->import($source, $target);
-
-        return redirect()->route('admin.papierformate')
-            ->with('status', 'papierformate-import-done')
-            ->with('import_summary', $summary)
-            ->with('import_source_name', $source->name);
-    }
 }
