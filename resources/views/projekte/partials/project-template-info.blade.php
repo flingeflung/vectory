@@ -10,12 +10,15 @@
     <div>
         <div class="text-sm font-medium text-gray-900">{{ $template->name }}</div>
         <div class="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-gray-500">
-            <span>{{ __('Format') }}: {{ \App\Models\ProjectTemplate::formatOptions()[$template->format] ?? '–' }}</span>
+            @if ($template->use_characteristics)
+                <span>{{ __('Format') }}: {{ \App\Models\ProjectTemplate::formatOptions()[$template->format] ?? '–' }}</span>
+            @endif
             <span>{{ __('Dauer') }}: {{ rtrim(rtrim((string) $template->duration_value, '0'), '.') }} {{ \App\Models\ProjectTemplate::durationUnitOptions()[$template->duration_unit] }}</span>
             <span>{{ __('Workflow') }}: {{ $template->workflow?->name ?? __('– keiner –') }}</span>
         </div>
     </div>
 
+    @if ($template->use_characteristics)
     <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
         @foreach (\App\Models\ProjectTemplate::characteristicFields() as $field => $meta)
             @php($option = $meta['options'][$template->$field] ?? null)
@@ -34,6 +37,7 @@
             </div>
         @endforeach
     </div>
+    @endif
 
     @if ($template->remarks)
         <div>

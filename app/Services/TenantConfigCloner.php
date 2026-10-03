@@ -472,6 +472,7 @@ class TenantConfigCloner
                     'duration_value' => $row->duration_value,
                     'duration_unit' => $row->duration_unit,
                     'remarks' => $row->remarks,
+                    'use_characteristics' => $row->use_characteristics,
                     'active' => $row->active,
                 ]);
                 $map[$row->id] = $new->id;

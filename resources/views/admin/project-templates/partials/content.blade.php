@@ -96,7 +96,10 @@
                 x-init="$nextTick(() => $refs.newName?.focus())"
             >
                 @csrf
-                @include('admin.project-templates.partials.fields', ['template' => null])
+                @include('admin.project-templates.partials.fields-main', ['template' => null])
+                <p class="mt-3 text-xs text-gray-400">{{ __('Die Stunden je Funktionsgruppe tragen Sie nach dem Speichern ein, sobald ein Workflow gekoppelt ist.') }}</p>
+                @include('admin.project-templates.partials.fields-characteristics', ['template' => null])
+                @include('admin.project-templates.partials.fields-remarks', ['template' => null])
                 <div class="mt-3 flex justify-end gap-2">
                     <a href="{{ route('admin.projektschablonen') }}" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover">
                         {{ __('Abbrechen') }}
@@ -142,16 +145,20 @@
             </div>
 
             <div class="flex-1 min-h-0 overflow-y-auto p-3 space-y-4">
+                @php($plannedHours = $template->functionGroups->mapWithKeys(fn ($fg) => [(string) $fg->id => (string) $fg->pivot->planned_hours]))
                 <form
                     data-row-form
-                    x-data="{ dirty: false }"
+                    x-data="{ dirty: false, hours: {{ \Illuminate\Support\Js::from($plannedHours) }} }"
                     @input="dirty = window.formIsDirty($el, window.__projectTemplatesDirtyForms)"
                     @submit="dirty = false; window.__projectTemplatesDirtyForms.delete($el)"
                     method="POST"
                     action="{{ route('admin.projektschablonen.update', $template) }}"
                 >
                     @csrf
-                    @include('admin.project-templates.partials.fields', ['template' => $template])
+                    @include('admin.project-templates.partials.fields-main', ['template' => $template])
+                    @include('admin.project-templates.partials.hours', ['template' => $template])
+                    @include('admin.project-templates.partials.fields-characteristics', ['template' => $template])
+                    @include('admin.project-templates.partials.fields-remarks', ['template' => $template])
                     <div class="mt-2 flex items-center justify-between">
                         <p class="text-xs text-gray-400">
                             {{ __('angelegt von :name am :date', ['name' => $createdByName, 'date' => $template->created_at?->format('d.m.Y')]) }}
@@ -164,70 +171,6 @@
                         </button>
                     </div>
                 </form>
-
-                {{--
-                    Step 2 der Kapa-Planung (Ralf, 2026-09-18): geplante
-                    Stunden je Funktionsgruppe - eigenes Formular/eigener
-                    Speichern-Vorgang (sync auf die Pivot-Tabelle). Welche
-                    Fktgrp hier auftauchen, bestimmt Step 3
-                    (Workflow-Kopplung) - Ralf-Korrektur 2026-09-18: "Zuerst
-                    muss ein WF gekoppelt werden, erst dadurch ergeben sich
-                    die Fktgrps", siehe ProjectTemplate::relevantFunctionGroups().
-                    Ausnahme (Ralf, 2026-09-28): eine Sammelprojekt-Schablone
-                    (unrestricted_function_groups) braucht KEINE Workflow-
-                    Kopplung - relevantFunctionGroups() liefert dann direkt
-                    den vollen Katalog, siehe Model.
-                --}}
-                @php($relevantFunctionGroups = $template->relevantFunctionGroups())
-                <div class="border-t border-gray-100 pt-3">
-                    @if (! $template->workflow_id && ! $template->unrestricted_function_groups)
-                        <p class="text-xs text-gray-400">{{ __('Erst einen Workflow koppeln, um Stunden je Funktionsgruppe zu planen (oder als Sammelprojekt-Schablone markieren).') }}</p>
-                    @elseif ($relevantFunctionGroups->isEmpty())
-                        <p class="text-xs text-gray-400">{{ __('Der gekoppelte Workflow hat noch keinen Schritten Funktionsgruppen zugeordnet.') }}</p>
-                    @else
-                        @php($plannedHours = $template->functionGroups->mapWithKeys(fn ($fg) => [(string) $fg->id => (string) $fg->pivot->planned_hours]))
-                        <form
-                            data-row-form
-                            x-data="{ dirty: false, hours: {{ \Illuminate\Support\Js::from($plannedHours) }} }"
-                            @input="dirty = window.formIsDirty($el, window.__projectTemplatesDirtyForms)"
-                            @submit="dirty = false; window.__projectTemplatesDirtyForms.delete($el)"
-                            method="POST"
-                            action="{{ route('admin.projektschablonen.funktionsgruppen.update', $template) }}"
-                        >
-                            @csrf
-                            <div class="flex items-center justify-between">
-                                <p class="text-xs font-medium text-gray-600">{{ __('Stunden je Funktionsgruppe') }}</p>
-                                <p class="text-xs text-gray-400">
-                                    {{ __('Summe') }}: <span x-text="Object.values(hours).reduce((sum, v) => sum + (parseFloat(v) || 0), 0).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })"></span> h
-                                </p>
-                            </div>
-                            {{--
-                                Gestaltgesetz der Nähe (Ralf, 2026-09-18):
-                                Label und Eingabefeld gehören sichtbar
-                                zusammengefasst, nicht nur per Reihenfolge -
-                                das vorherige flex-1 auf dem Namen drückte das
-                                Feld an den rechten Zellenrand, wo es optisch
-                                näher am NÄCHSTEN Label stand als am eigenen.
-                                Eine umrandete Box je Fktgrp (statt reiner
-                                Abstands-Steuerung) macht die Zuordnung
-                                eindeutig, unabhängig von der Textlänge.
-                            --}}
-                            <div class="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-                                @foreach ($relevantFunctionGroups as $fg)
-                                    <label class="flex items-center justify-between gap-1 rounded-md border border-gray-200 px-1.5 py-1 text-xs text-gray-600">
-                                        <span class="min-w-0 truncate" title="{{ $fg->name }}">{{ $fg->short_name }}</span>
-                                        <input type="number" name="hours[{{ $fg->id }}]" x-model="hours['{{ $fg->id }}']" min="0" max="999" step="0.5" placeholder="–" class="w-20 shrink-0 rounded-md border-gray-300 py-0.5 text-xs">
-                                    </label>
-                                @endforeach
-                            </div>
-                            <div class="mt-1 flex justify-end">
-                                <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
-                                    {{ __('Speichern') }}
-                                </button>
-                            </div>
-                        </form>
-                    @endif
-                </div>
             </div>
         @else
             <div class="shrink-0 border-b border-gray-100 p-3">

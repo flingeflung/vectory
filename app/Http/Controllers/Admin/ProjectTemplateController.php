@@ -58,7 +58,7 @@ class ProjectTemplateController extends Controller
 
         foreach (ProjectTemplate::filterableFields() as $field) {
             if ($request->filled($field)) {
-                $query->where($field, (int) $request->query($field));
+                $query->where('use_characteristics', true)->where($field, (int) $request->query($field));
             }
         }
 
@@ -167,6 +167,11 @@ class ProjectTemplateController extends Controller
             'updated_by_user_id' => Auth::id(),
         ]);
 
+        // Ralf, 2026-10-03: Stunden je Funktionsgruppe stehen im selben Formular (ein Speichern).
+        if ($request->boolean('hours_present')) {
+            $this->syncFunctionGroupHours($request, $template->refresh());
+        }
+
         return redirect()->route('admin.projektschablonen', ['schablone' => $template->id])->with('status', 'projektschablonen-updated');
     }
 
@@ -179,6 +184,17 @@ class ProjectTemplateController extends Controller
     {
         abort_unless($template->tenant_id === CurrentTenant::id(), 404);
 
+        $this->syncFunctionGroupHours($request, $template);
+
+        return redirect()->route('admin.projektschablonen', ['schablone' => $template->id])->with('status', 'projektschablonen-updated');
+    }
+
+    /**
+     * Gemeinsame Speicherlogik für die Stunden je Funktionsgruppe (eigene Route und das
+     * Haupt-Formular der Schablone).
+     */
+    private function syncFunctionGroupHours(Request $request, ProjectTemplate $template): void
+    {
         $request->validate(['hours' => ['nullable', 'array'], 'hours.*' => ['nullable', 'numeric', 'min:0', 'max:999']]);
 
         $hours = collect($request->array('hours'))
@@ -197,8 +213,6 @@ class ProjectTemplateController extends Controller
         ]);
 
         $template->functionGroups()->sync($syncData);
-
-        return redirect()->route('admin.projektschablonen', ['schablone' => $template->id])->with('status', 'projektschablonen-updated');
     }
 
     public function destroy(Request $request, ProjectTemplate $template): RedirectResponse
@@ -325,7 +339,7 @@ class ProjectTemplateController extends Controller
      */
     private function characteristicsData(ProjectTemplate $source): array
     {
-        $data = ['format' => $source->format, 'duration_value' => $source->duration_value, 'duration_unit' => $source->duration_unit, 'remarks' => $source->remarks, 'unrestricted_function_groups' => $source->unrestricted_function_groups];
+        $data = ['format' => $source->format, 'duration_value' => $source->duration_value, 'duration_unit' => $source->duration_unit, 'remarks' => $source->remarks, 'use_characteristics' => $source->use_characteristics, 'unrestricted_function_groups' => $source->unrestricted_function_groups];
 
         foreach (array_keys(ProjectTemplate::characteristicFields()) as $field) {
             $data[$field] = $source->$field;
@@ -336,19 +350,25 @@ class ProjectTemplateController extends Controller
 
     private function validated(Request $request, int $tenantId): array
     {
+        $useCharacteristics = $request->boolean('use_characteristics');
+
         $rules = [
             'name' => ['required', 'string', 'max:255'],
-            'format' => ['nullable', 'integer', 'in:1,2,3'],
             'workflow_id' => ['nullable', 'integer', Rule::exists('workflows', 'id')->where('tenant_id', $tenantId)],
             'duration_value' => ['required', 'numeric', 'min:0.5', 'max:999', 'multiple_of:0.5'],
             'duration_unit' => ['required', 'string', 'in:weeks,months'],
             'remarks' => ['nullable', 'string'],
         ];
 
-        foreach (ProjectTemplate::characteristicFields() as $field => $meta) {
-            $rules[$field] = ['required', 'integer', 'in:'.implode(',', array_keys($meta['options']))];
+        // Format und Merkmale gehören zusammen (Ralf, 2026-10-03): nur geprüft und gespeichert,
+        // wenn der Schalter an ist. Abgewählt bleiben die bisherigen Werte unverändert erhalten.
+        if ($useCharacteristics) {
+            $rules['format'] = ['nullable', 'integer', 'in:1,2,3'];
+            foreach (ProjectTemplate::characteristicFields() as $field => $meta) {
+                $rules[$field] = ['required', 'integer', 'in:'.implode(',', array_keys($meta['options']))];
+            }
         }
 
-        return $request->validate($rules);
+        return [...$request->validate($rules), 'use_characteristics' => $useCharacteristics];
     }
 }

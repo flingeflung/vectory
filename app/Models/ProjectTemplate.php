@@ -19,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
     'tenant_id', 'name', 'sort', 'format', 'workflow_id', 'unrestricted_function_groups', 'reusable_content_share', 'languages_count', 'product_maturity',
     'product_change_delays', 'contact_availability', 'localizer_availability', 'software_share',
     'product_complexity', 'print_variants_count', 'images_count', 'duration_value', 'duration_unit',
-    'remarks', 'active', 'created_by_user_id', 'updated_by_user_id',
+    'remarks', 'use_characteristics', 'active', 'created_by_user_id', 'updated_by_user_id',
 ])]
 class ProjectTemplate extends Model
 {
@@ -27,7 +27,7 @@ class ProjectTemplate extends Model
 
     protected function casts(): array
     {
-        return ['active' => 'boolean', 'unrestricted_function_groups' => 'boolean', 'duration_value' => 'decimal:1'];
+        return ['active' => 'boolean', 'use_characteristics' => 'boolean', 'unrestricted_function_groups' => 'boolean', 'duration_value' => 'decimal:1'];
     }
 
     /**
