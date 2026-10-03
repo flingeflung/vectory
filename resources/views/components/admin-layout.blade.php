@@ -43,7 +43,7 @@
                 @endforeach
             </div>
 
-            @if (\App\Models\SystemSetting::multiTenantEnabled() && ! request()->routeIs('admin.personen*', 'admin.kunden*', 'admin.superadmin', 'admin.hilfeseiten*'))
+            @if (\App\Models\SystemSetting::multiTenantEnabled() && ! request()->routeIs('admin.personen*', 'admin.kunden*', 'admin.voreinstellungen*', 'admin.superadmin', 'admin.hilfeseiten*'))
                 <div class="mb-2 shrink-0 text-xs text-gray-400">
                     @if (request()->routeIs('admin.function-groups*'))
                         @if ($currentTenant?->id === $homeTenant?->id)

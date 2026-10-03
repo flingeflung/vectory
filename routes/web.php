@@ -416,6 +416,11 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     Route::delete('/kunden/{tenant}', [TenantController::class, 'destroy'])->name('kunden.destroy');
 });
 
+Route::middleware(['auth', 'verified', 'can:access-central-admin', RememberLastAdminPage::class])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/voreinstellungen', [\App\Http\Controllers\Admin\PresetCopyController::class, 'index'])->name('voreinstellungen');
+    Route::post('/voreinstellungen', [\App\Http\Controllers\Admin\PresetCopyController::class, 'apply'])->name('voreinstellungen.apply');
+});
+
 Route::middleware(['auth', 'verified', 'can:access-superadmin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/superadmin', [SuperAdminController::class, 'index'])->name('superadmin');
     Route::post('/superadmin', [SuperAdminController::class, 'update'])->name('superadmin.update');

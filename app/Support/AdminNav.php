@@ -44,6 +44,7 @@ class AdminNav
             __('Mandant') => [
                 ['route' => 'admin.config', 'match' => 'admin.config', 'label' => __('Stammdaten')],
                 ['route' => 'admin.kunden', 'match' => 'admin.kunden*', 'label' => __('Organisationen'), 'if' => SystemSetting::multiTenantEnabled()],
+                ['route' => 'admin.voreinstellungen', 'match' => 'admin.voreinstellungen*', 'label' => __('Voreinstellungen übernehmen'), 'if' => SystemSetting::multiTenantEnabled(), 'gate' => 'access-central-admin'],
             ],
             __('Planung') => [
                 ['route' => 'admin.feiertage', 'match' => 'admin.feiertage*', 'label' => __('Feiertage')],
