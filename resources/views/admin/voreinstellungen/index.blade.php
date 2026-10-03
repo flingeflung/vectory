@@ -24,6 +24,9 @@
                     @endforeach
                 </select>
             </div>
+            @if ($ready)
+                <p class="ml-auto self-end pb-2 text-xs text-gray-400">{{ __('Umbenennen erzeugt automatisch eine Kopie.') }}</p>
+            @endif
             @if ($source && $target && $source->id === $target->id)
                 <p class="text-xs text-amber-700">{{ __('Quelle und Ziel müssen verschieden sein.') }}</p>
             @endif
