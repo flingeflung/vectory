@@ -32,9 +32,9 @@ class AdminNav
                 ['route' => 'admin.projektschablonen', 'match' => 'admin.projektschablonen*', 'label' => __('Aufwandsschablonen')],
                 ['route' => 'admin.maerkte', 'match' => 'admin.maerkte*', 'label' => __('Märkte')],
                 ['route' => 'admin.workflows', 'match' => 'admin.workflows*', 'label' => __('Workflows')],
+                ['route' => 'admin.jobtypen', 'match' => 'admin.jobtypen*', 'label' => __('Jobtypen (Zeiterfassung)')],
                 ['route' => 'admin.checklisten', 'match' => 'admin.checklisten*', 'label' => __('Checklisten')],
                 ['route' => 'admin.papierformate', 'match' => 'admin.papierformate*', 'label' => __('Papierformate')],
-                ['route' => 'admin.jobtypen', 'match' => 'admin.jobtypen*', 'label' => __('Jobtypen (Zeiterfassung)')],
             ],
             __('Kommunikation') => [
                 ['route' => 'admin.mail-vorlagen', 'match' => 'admin.mail-vorlagen*', 'label' => __('Mail-Vorlagen')],
