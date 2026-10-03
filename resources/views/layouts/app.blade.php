@@ -546,19 +546,28 @@
             eingegebenen Werte), das wirkte wie "passiert nichts".
         --}}
         <script>
-            window.showManageSavedToast = (function () {
-                const timers = new Map();
-                return function (toastId) {
-                    const toast = document.getElementById(toastId);
-                    if (!toast) {
+            {{-- Globale Kurzmeldung oben über allem (Ralf, 2026-10-03: Meldung soll nichts mehr
+                 verschieben). showManageSavedToast() bleibt für die bestehenden Aufrufer erhalten;
+                 der Text kommt aus dem (dauerhaft ausgeblendeten) Meldungs-Element dort. --}}
+            window.showToast = (function () {
+                let timer = null;
+                return function (text, seconds = 2) {
+                    const element = document.getElementById('global-toast');
+                    if (! element) {
                         return;
                     }
-                    const data = Alpine.$data(toast);
+                    const data = Alpine.$data(element);
+                    data.text = text;
                     data.show = true;
-                    clearTimeout(timers.get(toastId));
-                    timers.set(toastId, setTimeout(() => { data.show = false; }, 2000));
+                    clearTimeout(timer);
+                    timer = setTimeout(() => { data.show = false; }, seconds * 1000);
                 };
             })();
+
+            window.showManageSavedToast = function (toastId) {
+                const source = document.getElementById(toastId);
+                window.showToast(source ? source.textContent.trim() : {{ \Illuminate\Support\Js::from(__('Gespeichert.')) }});
+            };
         </script>
 
         {{--
@@ -3661,5 +3670,21 @@
                 });
             })();
         </script>
+        <div
+            id="global-toast"
+            x-data="{ show: false, text: '' }"
+            x-show="show"
+            x-cloak
+            x-transition.opacity
+            role="status"
+            class="pointer-events-none fixed inset-x-0 top-3 z-[100] flex justify-center px-4"
+        >
+            <div class="pointer-events-auto flex items-start gap-3 rounded-md border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-800 shadow-lg">
+                <span x-text="text"></span>
+                <button type="button" @click="show = false" class="shrink-0 text-green-700/70 hover:text-green-900" aria-label="{{ __('Schließen') }}">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+        </div>
     </body>
 </html>
