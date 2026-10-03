@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Market;
+use App\Models\Project;
+use App\Models\ProjectTemplate;
 use App\Models\ProjectTypeMain;
 use App\Models\ProjectTypeSub;
 use App\Models\SystemSetting;
@@ -240,5 +242,70 @@ class PresetCopyTest extends TestCase
 
         $this->assertSame('Modelle', $targetModel->fresh()->label);
         $this->assertFalse((bool) $targetModel->fresh()->applies_to_all_types);
+    }
+
+    private function workflow(Tenant $tenant, string $name, int $steps = 2, bool $published = false): \App\Models\Workflow
+    {
+        $workflow = \App\Models\Workflow::query()->withoutGlobalScope('tenant')->create([
+            'tenant_id' => $tenant->id, 'short_name' => strtoupper(substr($name, 0, 3)), 'name' => $name, 'active' => true, 'sort' => 1,
+            'published_at' => $published ? now() : null,
+        ]);
+        for ($i = 1; $i <= $steps; $i++) {
+            \App\Models\WorkflowStep::query()->withoutGlobalScope('tenant')->create([
+                'tenant_id' => $tenant->id, 'workflow_id' => $workflow->id, 'title' => 'Schritt '.$i, 'sort' => $i,
+            ]);
+        }
+
+        return $workflow;
+    }
+
+    public function test_workflow_is_copied_with_steps_and_overwrite_is_blocked_when_published_or_used(): void
+    {
+        $source = $this->workflow($this->source, 'Print', 3);
+
+        $this->apply(['workflows' => ['w:'.$source->id => '1']]);
+        $copy = \App\Models\Workflow::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->firstOrFail();
+        $this->assertSame(3, \App\Models\WorkflowStep::query()->withoutGlobalScope('tenant')->where('workflow_id', $copy->id)->count());
+
+        // Entwurf, unbenutzt: Überschreiben ersetzt die Schritte komplett.
+        \App\Models\WorkflowStep::query()->withoutGlobalScope('tenant')->where('workflow_id', $source->id)->orderBy('sort')->first()->update(['title' => 'Geändert']);
+        $this->apply(['workflows' => ['w:'.$source->id => '1']], ['workflows' => ['w:'.$source->id => 'overwrite']]);
+        $this->assertSame(3, \App\Models\WorkflowStep::query()->withoutGlobalScope('tenant')->where('workflow_id', $copy->id)->count());
+        $this->assertContains('Geändert', \App\Models\WorkflowStep::query()->withoutGlobalScope('tenant')->where('workflow_id', $copy->id)->pluck('title')->all());
+
+        // Verwendet: Überschreiben wird verweigert, Rest bleibt unverändert.
+        Project::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $this->target->id, 'source_pn' => '1', 'title' => 'P', 'status' => 0, 'workflow_id' => $copy->id]);
+        \App\Models\WorkflowStep::query()->withoutGlobalScope('tenant')->where('workflow_id', $source->id)->orderBy('sort')->first()->update(['title' => 'Nochmal anders']);
+        $this->apply(['workflows' => ['w:'.$source->id => '1']], ['workflows' => ['w:'.$source->id => 'overwrite']]);
+        $this->assertNotContains('Nochmal anders', \App\Models\WorkflowStep::query()->withoutGlobalScope('tenant')->where('workflow_id', $copy->id)->pluck('title')->all());
+
+        // Umbenennen geht trotzdem.
+        $this->apply(['workflows' => ['w:'.$source->id => '1']], ['workflows' => ['w:'.$source->id => 'rename']]);
+        $this->assertSame(['Print', 'Print (Kopie)'], \App\Models\Workflow::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->orderBy('id')->pluck('name')->all());
+    }
+
+    public function test_published_workflow_in_target_cannot_be_overwritten(): void
+    {
+        $source = $this->workflow($this->source, 'Print', 2);
+        $target = $this->workflow($this->target, 'Print', 1, published: true);
+
+        $this->apply(['workflows' => ['w:'.$source->id => '1']], ['workflows' => ['w:'.$source->id => 'overwrite']]);
+
+        $this->assertSame(1, \App\Models\WorkflowStep::query()->withoutGlobalScope('tenant')->where('workflow_id', $target->id)->count());
+    }
+
+    public function test_template_brings_its_workflow_along(): void
+    {
+        $workflow = $this->workflow($this->source, 'Print', 2);
+        $template = ProjectTemplate::query()->withoutGlobalScope('tenant')->create([
+            'tenant_id' => $this->source->id, 'name' => 'Fachbuch', 'workflow_id' => $workflow->id, 'format' => 1, 'active' => true, 'duration_value' => 1, 'duration_unit' => 'weeks',
+        ]);
+
+        $this->apply(['project-templates' => ['t:'.$template->id => '1']]);
+
+        $copy = ProjectTemplate::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->firstOrFail();
+        $this->assertSame('Fachbuch', $copy->name);
+        $this->assertSame('Print', \App\Models\Workflow::query()->withoutGlobalScope('tenant')->findOrFail($copy->workflow_id)->name);
+        $this->assertSame($this->target->id, (int) \App\Models\Workflow::query()->withoutGlobalScope('tenant')->findOrFail($copy->workflow_id)->tenant_id);
     }
 }

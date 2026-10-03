@@ -18,6 +18,8 @@ class PresetCopier
             new MarketSetsArea,
             new ProjectTypesArea,
             new AttributesArea,
+            new WorkflowsArea,
+            new ProjectTemplatesArea,
         ];
     }
 

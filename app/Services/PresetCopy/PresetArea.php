@@ -18,8 +18,8 @@ interface PresetArea
      * Reihenfolge = Anzeigereihenfolge; "parent" ist der key des übergeordneten Eintrags
      * (der bei Wahl des Untereintrags automatisch mit übernommen wird).
      *
-     * @return list<array{key: string, label: string, parent: ?string, conflict: bool, renamable: bool, note: ?string, group?: string, group_hint?: string, hint?: string}>
-     *                                                                                                                  Optional: "group" (+ "group_hint") setzt eine Zwischenüberschrift vor den Eintrag, "hint" ist ein Tooltip.
+     * @return list<array{key: string, label: string, parent: ?string, conflict: bool, renamable: bool, note: ?string, group?: string, group_hint?: string, hint?: string, overwritable?: bool}>
+     *                                                                                                                  Optional: "group" (+ "group_hint") setzt eine Zwischenüberschrift vor den Eintrag, "hint" ist ein Tooltip, "overwritable" = false blendet die Wahl "Überschreiben" aus (z.B. weil der Eintrag im Ziel schon verwendet wird).
      */
     public function items(int $sourceTenantId, int $targetTenantId): array;
 

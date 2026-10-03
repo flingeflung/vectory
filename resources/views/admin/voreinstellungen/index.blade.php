@@ -90,7 +90,9 @@
                                                 @if ($item['renamable'])
                                                     <option value="rename">{{ __('Umbenennen') }}</option>
                                                 @endif
-                                                <option value="overwrite">{{ __('Überschreiben') }}</option>
+                                                @if ($item['overwritable'] ?? true)
+                                                    <option value="overwrite">{{ __('Überschreiben') }}</option>
+                                                @endif
                                             </select>
                                         @endif
                                     </li>
