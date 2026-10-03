@@ -102,4 +102,28 @@ class DialogHelpTest extends TestCase
             ->assertSee('project-overlay')
             ->assertSee('app.blade.php', false);
     }
+
+    public function test_help_visibility_levels_follow_the_three_admin_levels(): void
+    {
+        $tenant = Tenant::query()->firstOrFail();
+        $user = fn (string $role) => User::factory()->create(['tenant_id' => $tenant->id, 'role' => $role]);
+        $article = fn (?string $level) => new HelpArticle(['key' => 'x', 'visible_role' => $level]);
+
+        // Alle Admin-Stufen (Wert "admin", unverändert für bestehende Seiten)
+        $this->assertTrue($article('admin')->isVisibleTo($user('organization_admin')));
+        $this->assertTrue($article('admin')->isVisibleTo($user('central_admin')));
+        $this->assertFalse($article('admin')->isVisibleTo($user('user')));
+
+        // Zentral-Admin und höher
+        $this->assertFalse($article('central_admin')->isVisibleTo($user('organization_admin')));
+        $this->assertTrue($article('central_admin')->isVisibleTo($user('central_admin')));
+        $this->assertTrue($article('central_admin')->isVisibleTo($user('super_admin')));
+
+        // Nur Super-Admin
+        $this->assertFalse($article('super_admin')->isVisibleTo($user('central_admin')));
+        $this->assertTrue($article('super_admin')->isVisibleTo($user('super_admin')));
+
+        // Alle
+        $this->assertTrue($article(null)->isVisibleTo($user('user')));
+    }
 }

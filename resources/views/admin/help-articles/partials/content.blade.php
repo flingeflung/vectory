@@ -63,7 +63,7 @@
 
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('Sichtbar für') }}</label>
-                        <select name="visible_role" class="mt-0.5 w-56 rounded-md border-gray-300 text-sm">
+                        <select name="visible_role" class="mt-0.5 w-full max-w-md rounded-md border-gray-300 text-sm">
                             <option value="" @selected($selected->visible_role === null)>{{ __('Alle') }}</option>
                             @foreach (\App\Models\HelpArticle::VISIBILITY_LEVELS as $value => $label)
                                 <option value="{{ $value }}" @selected($selected->visible_role === $value)>{{ $label }}</option>

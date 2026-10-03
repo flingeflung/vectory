@@ -17,8 +17,8 @@ use Illuminate\Support\Collection;
 class HelpArticle extends Model
 {
     /**
-     * Sichtbarkeits-Stufen für visible_role (Ralf, 2026-09-16) - dieselben
-     * zwei Stufen wie die access-admin/access-superadmin-Gates, damit eine
+     * Sichtbarkeits-Stufen für visible_role (Ralf, 2026-09-16) - Stufen
+     * wie die access-admin/access-central-admin/access-superadmin-Gates, damit eine
      * Hilfeseite z.B. nur den Superadmin betrifft, obwohl der normale
      * Hilfe-Button für jeden eingeloggten Nutzer da ist. null = für alle,
      * das explizite Feld drückt nur die BEIDEN einschränkenden Stufen aus.
@@ -27,11 +27,18 @@ class HelpArticle extends Model
      */
     public const VISIBLE_ADMIN = 'admin';
 
+    public const VISIBLE_CENTRAL_ADMIN = 'central_admin';
+
     public const VISIBLE_SUPER_ADMIN = 'super_admin';
 
+    /**
+     * Von weit nach eng (Ralf, 2026-10-03, nach Einführung der drei Admin-Stufen): "admin" gilt für ALLE Admin-Stufen
+     * (Organisations-Admin, Zentral-Admin, Super-Admin) - der Wert bleibt, damit bestehende Seiten unverändert wirken.
+     */
     public const VISIBILITY_LEVELS = [
-        self::VISIBLE_ADMIN => 'Admin & Superadmin',
-        self::VISIBLE_SUPER_ADMIN => 'nur Superadmin',
+        self::VISIBLE_ADMIN => 'Alle Admin-Stufen (Organisations-, Zentral- und Super-Admin)',
+        self::VISIBLE_CENTRAL_ADMIN => 'Zentral-Admin und Super-Admin',
+        self::VISIBLE_SUPER_ADMIN => 'Nur Super-Admin',
     ];
 
     /**
@@ -159,6 +166,7 @@ class HelpArticle extends Model
     {
         return match ($this->visible_role) {
             self::VISIBLE_SUPER_ADMIN => $user?->isSuperAdmin() ?? false,
+            self::VISIBLE_CENTRAL_ADMIN => $user?->canAccessAllOrganizations() ?? false,
             self::VISIBLE_ADMIN => $user?->isAdmin() ?? false,
             default => true,
         };
