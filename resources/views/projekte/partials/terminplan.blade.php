@@ -1,5 +1,5 @@
 {{--
-    Tab "Zeitplan" (Ralf, 2026-10-03): Jahresansicht der Projektfamilie (Hauptprojekt + Unterprojekte)
+    Unterreiter "Terminplan" im Tab "Planung" (Ralf, 2026-10-03): Jahresansicht der Projektfamilie (Hauptprojekt + Unterprojekte)
     mit Zeitraum-Balken und Meilensteinen, "die Gantt-Ansicht aus der Planung im Kleinen". Rein
     lesend und nicht klickbar. Daten: App\Support\ProjectFamilyTimeline. Die Darstellung läuft im
     Browser, damit der Jahreswechsel ohne Nachladen geht.
@@ -10,12 +10,17 @@
     $timelineYears = $timelineRows->flatMap(fn ($row) => collect([$row['start'], $row['end'], ...collect($row['milestones'])->pluck('date')->all()])->filter()->map(fn ($date) => (int) substr($date, 0, 4)))->unique()->sort()->values();
     $timelineCurrentYear = (int) now()->year;
     $timelineInitialYear = $timelineYears->isEmpty() || $timelineYears->contains($timelineCurrentYear) ? $timelineCurrentYear : $timelineYears->first();
+    // Blättern nur bis ein Jahr vor bzw. nach den Terminen der angezeigten Projekte.
+    $timelineMinYear = ($timelineYears->isEmpty() ? $timelineCurrentYear : $timelineYears->first()) - 1;
+    $timelineMaxYear = ($timelineYears->isEmpty() ? $timelineCurrentYear : $timelineYears->last()) + 1;
 @endphp
 
 <div
     class="text-sm"
     x-data="{
         year: {{ $timelineInitialYear }},
+        minYear: {{ $timelineMinYear }},
+        maxYear: {{ $timelineMaxYear }},
         rows: {{ \Illuminate\Support\Js::from($timelineRows) }},
         years: {{ \Illuminate\Support\Js::from($timelineYears) }},
         monthNames: {{ \Illuminate\Support\Js::from(collect(range(1, 12))->map(fn ($m) => \Carbon\CarbonImmutable::create(2026, $m, 1)->translatedFormat('M'))->all()) }},
@@ -33,7 +38,7 @@
             const right = Math.min(this.daysInYear(), to) / this.daysInYear() * 100;
             return { left: left + '%', width: Math.max(0.4, right - left) + '%', before: from < 0, after: to > this.daysInYear() };
         },
-        monthStarts() { return Array.from({ length: 12 }, (_, m) => ({ name: this.monthNames[m], left: (Date.UTC(this.year, m, 1) - this.yearStart()) / 86400000 / this.daysInYear() * 100 })); },
+        monthStarts() { return Array.from({ length: 12 }, (_, m) => { const from = (Date.UTC(this.year, m, 1) - this.yearStart()) / 86400000, to = (Date.UTC(this.year, m + 1, 1) - this.yearStart()) / 86400000; return { name: this.monthNames[m], left: from / this.daysInYear() * 100, width: (to - from) / this.daysInYear() * 100 }; }); },
         fmt(iso) { const p = iso.split('-'); return p[2] + '.' + p[1] + '.' + p[0]; },
     }"
 >
@@ -49,9 +54,9 @@
                 @endif
             </p>
             <div class="flex items-center gap-1 text-xs">
-                <button type="button" @click="year--" class="rounded border border-gray-300 bg-btn-secondary px-1.5 py-0.5 hover:bg-btn-secondary-hover" aria-label="{{ __('Vorheriges Jahr') }}">&lsaquo;</button>
+                <button type="button" @click="year--" :disabled="year <= minYear" class="rounded border border-gray-300 bg-btn-secondary px-1.5 py-0.5 hover:bg-btn-secondary-hover disabled:cursor-not-allowed disabled:opacity-40" aria-label="{{ __('Vorheriges Jahr') }}">&lsaquo;</button>
                 <span class="w-12 text-center font-semibold tabular-nums text-gray-800" x-text="year"></span>
-                <button type="button" @click="year++" class="rounded border border-gray-300 bg-btn-secondary px-1.5 py-0.5 hover:bg-btn-secondary-hover" aria-label="{{ __('Nächstes Jahr') }}">&rsaquo;</button>
+                <button type="button" @click="year++" :disabled="year >= maxYear" class="rounded border border-gray-300 bg-btn-secondary px-1.5 py-0.5 hover:bg-btn-secondary-hover disabled:cursor-not-allowed disabled:opacity-40" aria-label="{{ __('Nächstes Jahr') }}">&rsaquo;</button>
             </div>
         </div>
 
@@ -60,9 +65,9 @@
                 {{-- Monatskopf --}}
                 <div class="grid grid-cols-[13rem_minmax(0,1fr)] border-b border-gray-200 bg-gray-50 text-[11px] text-gray-500">
                     <div class="px-2 py-1">{{ __('Projekt') }}</div>
-                    <div class="relative h-6">
+                    <div class="relative h-6 border-l-2 border-gray-400">
                         <template x-for="month in monthStarts()" :key="month.name">
-                            <div class="absolute inset-y-0 border-l border-gray-200 pl-1 pt-1" :style="'left:' + month.left + '%'" x-text="month.name"></div>
+                            <div class="absolute inset-y-0 flex items-center justify-center border-l border-gray-200" :style="'left:' + month.left + '%;width:' + month.width + '%'" x-text="month.name"></div>
                         </template>
                     </div>
                 </div>
@@ -78,10 +83,10 @@
                             </div>
                             <div class="truncate text-[11px] text-gray-500" title="{{ $row['title'] }}">{{ $row['title'] }}</div>
                         </div>
-                        <div class="relative h-9" x-data="{ r: rows[{{ $index }}] }">
+                        <div class="relative h-9 border-l-2 border-gray-400" x-data="{ r: rows[{{ $index }}] }">
                             {{-- Monatslinien --}}
                             <template x-for="month in monthStarts()" :key="month.name">
-                                <div class="absolute inset-y-0 border-l border-gray-100" :style="'left:' + month.left + '%'"></div>
+                                <div x-show="month.left > 0" class="absolute inset-y-0 border-l border-gray-100" :style="'left:' + month.left + '%'"></div>
                             </template>
                             {{-- Heute --}}
                             <div x-show="inYear(today)" class="absolute inset-y-0 w-px bg-red-400" :style="'left:' + pct(today) + '%'" title="{{ __('Heute') }}"></div>

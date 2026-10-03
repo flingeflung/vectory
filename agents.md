@@ -100,7 +100,10 @@ Aus dem Review vom 03.10.2026: An diesen Stellen sind bisher Fehler entstanden. 
    - Wenn dieselbe Regel (Arbeitstage, Stunden, Rechte) an zwei Stellen berechnet wird, dann nutze die gemeinsame Stelle (`Workdays`, `PersonAnnualHoursCalculator`).
 8. **Kommentare und Doku:**
    - Wenn sich ein Verhalten ändert, dann korrigiere Kommentare und Doku, die das alte Verhalten beschreiben.
-9. **Tests:**
+9. **Dialoge (Overlays):**
+   - Wenn du einen neuen Dialog (`<x-modal name="…">`) anlegst, dann führe `php artisan dialogs:sync` aus, damit er eine feste Dialog-ID bekommt (`config/dialog-ids.php`).
+   - Wenn du einen Dialog umbenennst, dann trage den neuen Namen mit der ALTEN ID in `config/dialog-ids.php` ein und lösche den alten Eintrag. Sonst verliert die zugehörige Hilfeseite ihre Zuordnung. Ein Test warnt dich davor.
+10. **Tests:**
    - Führe vor dem Commit die gesamte Testsuite aus (`php artisan test`).
    - Wenn du einen Controller mit Checkboxen testest, dann sende alle Checkbox-Felder mit. Fehlen sie, dann werden Werte stillschweigend auf „aus“ gesetzt.
    - Teste nie mit unvollständigen Requests an echten Datensätzen.

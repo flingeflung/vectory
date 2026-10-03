@@ -366,12 +366,24 @@ $dialogId = $helpId ? \App\Support\DialogId::for($name) : null;
         x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
     >
         @if ($dialogId)
+            {{-- Dialog-ID (Ralf, 2026-10-03): klein unten links - dort steht meist nichts oder nur
+                 "Abbrechen". Klick kopiert die ID (für alle). Das Fragezeichen oben rechts erscheint
+                 nur, wenn es zu dieser ID eine Hilfeseite gibt. --}}
             <button
                 type="button"
-                x-on:click.stop="window.openDialogHelp && window.openDialogHelp('{{ $dialogId }}')"
-                class="absolute left-1.5 top-0.5 z-20 cursor-help rounded px-0.5 font-mono text-[9px] leading-none text-gray-300 hover:bg-gray-100 hover:text-gray-600"
-                title="{{ __('Dialog-ID :id - bei Rückfragen bitte nennen. Klick öffnet die Hilfe zu diesem Dialog.', ['id' => $dialogId]) }}"
+                x-on:click.stop="window.copyToClipboard('{{ $dialogId }}').then((ok) => window.showToast && window.showToast(ok ? '{{ __('Dialog-ID :id kopiert', ['id' => $dialogId]) }}' : '{{ __('Kopieren nicht möglich - ID bitte abtippen: :id', ['id' => $dialogId]) }}'))"
+                class="absolute bottom-1 left-1.5 z-20 cursor-copy rounded px-0.5 font-mono text-[9px] leading-none text-gray-300 hover:bg-gray-100 hover:text-gray-600"
+                title="{{ __('Dialog-ID :id - Klick kopiert sie in die Zwischenablage. Bei Rückfragen bitte nennen.', ['id' => $dialogId]) }}"
             >{{ $dialogId }}</button>
+            @if (in_array($dialogId, \App\Support\DialogId::withHelpArticle(), true))
+                <button
+                    type="button"
+                    x-on:click.stop="window.openDialogHelp && window.openDialogHelp('{{ $dialogId }}')"
+                    class="absolute right-12 top-2.5 z-20 flex h-5 w-5 items-center justify-center rounded-full border border-indigo-300 bg-indigo-50 text-[11px] font-semibold leading-none text-indigo-700 hover:bg-indigo-100"
+                    title="{{ __('Hilfe zu diesem Dialog') }}"
+                    aria-label="{{ __('Hilfe zu diesem Dialog') }}"
+                >?</button>
+            @endif
         @endif
         {{ $slot }}
     </div>

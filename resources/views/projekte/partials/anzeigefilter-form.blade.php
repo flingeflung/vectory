@@ -29,7 +29,7 @@
         savingAsNew: {{ $errors->has('name') ? 'true' : 'false' }},
     }"
 >
-    <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+    <div class="flex cursor-move select-none items-center justify-between rounded-t-lg border-b border-gray-200 px-6 py-4" data-drag-handle title="{{ __('Ziehen zum Verschieben') }}">
         <h2 class="text-lg font-medium text-gray-900">{{ __('Anzeigefilter') }}</h2>
         <button
             type="button"
