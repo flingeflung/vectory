@@ -435,6 +435,38 @@ class PresetCopyTest extends TestCase
         $this->assertContains('TR + PL (Kopie)', $names());
     }
 
+    public function test_base_load_is_written_into_the_current_year_with_full_year_validity(): void
+    {
+        $year = (int) now()->year;
+        \App\Models\PlanningBaseLoad::query()->withoutGlobalScope('tenant')->create([
+            'tenant_id' => $this->source->id, 'year' => $year - 1, 'name' => 'Teammeetings', 'calculation_type' => 'weekly', 'value' => 2,
+            'valid_from' => ($year - 1).'-02-01', 'valid_to' => ($year - 1).'-06-30',
+        ]);
+
+        $this->apply(['base-loads' => ['y:'.($year - 1) => '1']]);
+
+        $row = \App\Models\PlanningBaseLoad::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->firstOrFail();
+        $this->assertSame($year, $row->year);
+        $this->assertSame($year.'-01-01', $row->valid_from->format('Y-m-d'));
+        $this->assertSame($year.'-12-31', $row->valid_to->format('Y-m-d'));
+
+        // Im Ziel gibt es das Jahr jetzt: ohne "Überschreiben" bleibt es dabei.
+        $this->apply(['base-loads' => ['y:'.($year - 1) => '1']]);
+        $this->assertSame(1, \App\Models\PlanningBaseLoad::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->count());
+    }
+
+    public function test_function_group_access_is_transferred_without_removing_any(): void
+    {
+        $home = Tenant::query()->where('is_home_tenant', true)->firstOrFail();
+        $group = \App\Models\FunctionGroup::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $home->id, 'name' => 'Redaktion', 'short_name' => 'RED', 'sort' => 1, 'active' => true]);
+        $group->availableTenants()->attach($this->source->id);
+
+        $this->apply(['function-group-access' => ['f:'.$group->id => '1']]);
+
+        $this->assertTrue($group->fresh()->isAvailableForTenant($this->target->id));
+        $this->assertTrue($group->fresh()->isAvailableForTenant($this->source->id), 'Quelle behält ihre Freigabe.');
+    }
+
     public function test_source_and_target_are_remembered_per_user(): void
     {
         $this->get(route('admin.voreinstellungen', ['source' => $this->source->id, 'target' => $this->target->id]))->assertOk();
