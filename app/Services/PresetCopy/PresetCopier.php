@@ -23,6 +23,9 @@ class PresetCopier
             new ChecklistsArea,
             new MailTemplatesArea,
             new CopyTemplatesArea,
+            new PaperFormatsArea,
+            new JobTypesArea,
+            new HolidaysArea,
         ];
     }
 

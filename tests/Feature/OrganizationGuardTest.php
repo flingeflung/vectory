@@ -94,6 +94,8 @@ class OrganizationGuardTest extends TestCase
         'app/Models/Tenant.php::people' => 1,
         'app/Models/Tenant.php::projects' => 1,
         // Konfiguration übernehmen: reine Zuordnungstabellen, nur über ausdrückliche Schritt-/Schablonen-IDs zweier aktiver Organisationen (Controller prüft active()).
+        'app/Services/PresetCopy/JobTypesArea.php::job_groups' => 3, // jeweils mit ausdrücklicher tenant_id einer gewählten, aktiven Organisation
+        'app/Services/PresetCopy/JobTypesArea.php::job_types' => 3,
         'app/Services/PresetCopy/ProjectTemplatesArea.php::project_template_function_group' => 3,
         'app/Services/PresetCopy/WorkflowsArea.php::workflow_step_function_group' => 2,
         'app/Services/JobTypeCatalogImporter.php::job_groups' => 4,
