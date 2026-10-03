@@ -61,7 +61,7 @@ class AttributesArea implements PresetArea
             $items[] = [
                 'key' => 's:'.$attribute->key,
                 'group' => __('Geltung der Systemfelder'),
-                'group_hint' => __('Systemfelder sind fest eingebaute Felder, die es für jede Organisation gibt, zum Beispiel Workflow oder Markt. Bei ihnen legen Sie fest, für welche Projektarten sie gelten. Wenn Sie hier ein Feld ankreuzen und beim Ziel „Überschreiben“ wählen, gilt es dort für dieselben Projektarten wie in der Quelle. Das Feld selbst gibt es im Ziel ohnehin schon.'),
+                'group_hint' => __('Systemfelder sind in jeder Organisation bereits vorhanden, zum Beispiel Workflow oder Markt. Hier legen Sie fest, ob übernommen werden soll, für welche Projektarten sie verwendet werden. Markieren Sie dazu das entsprechende Systemfeld und wählen Sie rechts „Überschreiben“.'),
                 'label' => $attribute->label,
                 'parent' => null,
                 'conflict' => true,
