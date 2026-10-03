@@ -8,7 +8,7 @@
     globale window.__helpLightboxSrc, gesetzt vom Klick-Handler in
     help-panel.blade.php.
 --}}
-<x-modal name="help-image-lightbox" max-width="5xl" :help-id="false">
+<x-modal name="help-image-lightbox" max-width="5xl" :help-id="false" :draggable="false">
     <div
         class="relative"
         x-data

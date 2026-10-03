@@ -3,7 +3,9 @@
     'show' => false,
     'maxWidth' => '2xl',
     'dirtyCheck' => null,
-    'draggable' => false,
+    // Ralf, 2026-10-03: alle Dialoge verschiebbar (Standard). Ohne eigenen Griff (data-drag-handle) zieht
+    // ein Klick in den oberen Streifen; Vollbild-Dialoge und die Bild-Lightbox schalten es ab.
+    'draggable' => true,
     'height' => null,
     'resizable' => false,
     'fullscreen' => false,
@@ -58,6 +60,7 @@ $dialogId = $helpId ? \App\Support\DialogId::for($name) : null;
         show: @js($show),
         dirtyCheckFn: {{ $dirtyCheck ? \Illuminate\Support\Js::from($dirtyCheck) : 'null' }},
         draggable: @js($draggable),
+        keepHeight: @js((bool) ($resizable || $fullscreen || $height)),
         resizable: @js($resizable),
         fullscreen: @js($fullscreen),
         maximize: false,
@@ -68,6 +71,19 @@ $dialogId = $helpId ? \App\Support\DialogId::for($name) : null;
         dragging: false,
         resizing: false,
         closing: false,
+        hasHandle() {
+            return !! this.$refs.box.querySelector('[data-drag-handle]');
+        },
+        dragZone(e) {
+            if (! this.draggable || this.fullscreen || this.hasHandle()) {
+                return false;
+            }
+            const rect = this.$refs.box.getBoundingClientRect();
+            if (e.clientY - rect.top > 56) {
+                return false;
+            }
+            return ! e.target.closest('button, a, input, select, textarea, label, summary, [contenteditable], [role=button]');
+        },
         rememberNormalState() {
             const box = this.$refs.box;
             if (! box || this.maximize) {
@@ -339,9 +355,10 @@ $dialogId = $helpId ? \App\Support\DialogId::for($name) : null;
         @endunless
         x-ref="box"
         data-modal-box
-        x-on:mousedown="$event.target.closest('[data-drag-handle]') && startDrag($event)"
+        x-on:mousedown="($event.target.closest('[data-drag-handle]') || dragZone($event)) && startDrag($event)"
+        x-on:mousemove="$el.style.cursor = dragZone($event) ? 'move' : ''"
         :class="(dragPos ? '' : 'sm:mx-auto') + (dragging ? ' select-none' : '') + ((fullscreen && maximize) ? ' resize-none' : (resizable ? ' resize' : '')) + (fullscreen ? ' mx-0 my-0' : ' mb-6')"
-        :style="`${(dragging || resizing) ? 'transition: none;' : ''}${dragPos ? `position: fixed; left: ${dragPos.x}px; top: ${dragPos.y}px; width: ${dragBox.width}px; height: ${dragBox.height}px; margin: 0;` : ''}${fullscreen ? ' min-width: 0; min-height: 0; max-width: none; max-height: none;' : ''}{{ $heightStyle }}${!fullscreen && {{ json_encode((bool) $resizable) }} ? 'min-width: 480px; min-height: 320px; max-width: 95vw; max-height: 92vh;' : ''}`"
+        :style="`${(dragging || resizing) ? 'transition: none;' : ''}${dragPos ? `position: fixed; left: ${dragPos.x}px; top: ${dragPos.y}px; width: ${dragBox.width}px; ${keepHeight ? 'height: ' + dragBox.height + 'px;' : ''} margin: 0;` : ''}${fullscreen ? ' min-width: 0; min-height: 0; max-width: none; max-height: none;' : ''}{{ $heightStyle }}${!fullscreen && {{ json_encode((bool) $resizable) }} ? 'min-width: 480px; min-height: 320px; max-width: 95vw; max-height: 92vh;' : ''}`"
         {{--
             Ralf-Bug-Report: "Overlay springt ganz nach links an den
             Bildrand" - "sm:mx-auto" (Zentrierung) kam bisher NUR über
