@@ -151,6 +151,22 @@ class TenantController extends Controller
      * angelegt sind". Verhindert versehentliches Löschen eines bereits
      * genutzten Kunden.
      */
+    /**
+     * Organisation komplett deaktivieren bzw. wieder aktivieren (Ralf, 2026-10-03; nur Super-Admin, siehe
+     * Route). Nichts wird gelöscht, die Daten sind nur überall ausgeblendet (Tenant::inactiveIds()). Die
+     * Heimat-Organisation bleibt immer aktiv.
+     */
+    public function setActive(Request $request, Tenant $tenant): RedirectResponse
+    {
+        abort_unless(SystemSetting::multiTenantEnabled(), 403);
+        abort_if($tenant->is_home_tenant, 422, __('Die Heimat-Organisation kann nicht deaktiviert werden.'));
+
+        $tenant->update(['is_active' => $request->boolean('active')]);
+
+        return redirect()->route('admin.kunden', ['tenant' => $tenant->id])
+            ->with('status', $tenant->is_active ? 'tenant-activated' : 'tenant-deactivated');
+    }
+
     public function destroy(Tenant $tenant): RedirectResponse
     {
         abort_unless(SystemSetting::multiTenantEnabled(), 403);

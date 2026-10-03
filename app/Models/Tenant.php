@@ -5,10 +5,59 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
-#[Fillable(['name', 'short_name', 'icon_filename', 'project_path', 'arbeitsverzeichnis_path', 'notification_email', 'max_project_copies', 'gantt_max_projects', 'jobload_time_grid', 'default_weekly_hours', 'default_vacation_days', 'is_home_tenant'])]
+#[Fillable(['name', 'short_name', 'icon_filename', 'project_path', 'arbeitsverzeichnis_path', 'notification_email', 'max_project_copies', 'gantt_max_projects', 'jobload_time_grid', 'default_weekly_hours', 'default_vacation_days', 'is_home_tenant', 'is_active'])]
 class Tenant extends Model
 {
+    /** @var array<int, int>|null */
+    private static ?array $inactiveIds = null;
+
+    protected function casts(): array
+    {
+        return ['is_home_tenant' => 'boolean', 'is_active' => 'boolean'];
+    }
+
+    protected static function booted(): void
+    {
+        $forget = fn () => self::$inactiveIds = null;
+        static::saved($forget);
+        static::deleted($forget);
+    }
+
+    /**
+     * IDs aller deaktivierten Organisationen (ein Abruf je Anfrage). Grundlage der Schutzregel
+     * "tenant_active" in BelongsToTenant: Daten dieser Organisationen sind überall ausgeblendet,
+     * auch dort, wo die Regel "tenant" bewusst umgangen wird. Die Heimat-Organisation ist nie darunter.
+     *
+     * @return array<int, int>
+     */
+    public static function inactiveIds(): array
+    {
+        // Während älterer Migrationen existiert die Spalte noch nicht (diese laufen mit Eloquent-Modellen und
+        // lösen die Schutzregel schon aus): dann ist nichts deaktiviert.
+        if (self::$inactiveIds === null && ! Schema::hasColumn('tenants', 'is_active')) {
+            return [];
+        }
+
+        return self::$inactiveIds ??= DB::table('tenants')
+            ->where('is_active', false)
+            ->where('is_home_tenant', false)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    public static function forgetInactiveCache(): void
+    {
+        self::$inactiveIds = null;
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
     public function iconUrl(): ?string
     {
         return $this->icon_filename

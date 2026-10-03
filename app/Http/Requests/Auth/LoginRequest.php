@@ -50,6 +50,15 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        // Ralf, 2026-10-03: Nutzer einer deaktivierten Organisation können sich nicht anmelden.
+        if (in_array((int) Auth::user()->tenant_id, \App\Models\Tenant::inactiveIds(), true)) {
+            Auth::logout();
+
+            throw ValidationException::withMessages([
+                'username' => __('Ihre Organisation ist in dieser Vectory-Installation nicht mehr aktiv. Eine Anmeldung ist daher nicht möglich. Bitte wenden Sie sich bei Fragen an Ihre zuständige Administration.'),
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 

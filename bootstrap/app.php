@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             \App\Http\Middleware\SetLocale::class,
+            \App\Http\Middleware\EnsureOrganizationIsActive::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
@@ -48,6 +49,19 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null;
             }
 
+            // Ralf, 2026-10-03: Ein Link auf einen Datensatz, der nicht (mehr) erreichbar ist (fremde oder
+            // deaktivierte Organisation, gelöscht), zeigte bisher den rohen Technik-Text "No query results
+            // for model ...". Stattdessen eine kurze, neutrale Meldung - sie verrät bewusst nicht, WARUM
+            // der Datensatz nicht erreichbar ist.
+            $notFound = $e->getPrevious() instanceof \Illuminate\Database\Eloquent\ModelNotFoundException;
+            $flash = $notFound
+                ? ['notice' => match (class_basename($e->getPrevious()->getModel())) {
+                    'Project' => __('Das Projekt wurde nicht gefunden oder steht nicht zur Verfügung.'),
+                    'Person' => __('Die Person wurde nicht gefunden oder steht nicht zur Verfügung.'),
+                    default => __('Der Eintrag wurde nicht gefunden oder steht nicht zur Verfügung.'),
+                }]
+                : ['error' => $e->getMessage()];
+
             // Ralf-Bug-Report, 2026-09-18: ERR_TOO_MANY_REDIRECTS - back()
             // landete auf genau der URL, die gerade erst mit dieser
             // Exception fehlgeschlagen ist (die "vorherige" Seite WAR die
@@ -56,9 +70,9 @@ return Application::configure(basePath: dirname(__DIR__))
             // aktuelle, stattdessen zu einer garantiert ungated Startseite.
             $target = url()->previous();
             if ($target === $request->fullUrl()) {
-                return redirect()->route('dashboard')->with('error', $e->getMessage());
+                return redirect()->route('dashboard')->with($flash);
             }
 
-            return redirect()->back()->with('error', $e->getMessage());
+            return redirect()->back()->with($flash);
         });
     })->create();

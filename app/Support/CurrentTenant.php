@@ -70,6 +70,11 @@ class CurrentTenant
      */
     public static function userCanAccess(User $user, int $tenantId): bool
     {
+        // Deaktivierte Organisationen sind für niemanden erreichbar (Ralf, 2026-10-03).
+        if (in_array($tenantId, Tenant::inactiveIds(), true)) {
+            return false;
+        }
+
         if ($user->tenant_id === $tenantId || AccessLevel::canAccessAllOrganizations($user)) {
             return true;
         }
@@ -169,7 +174,7 @@ class CurrentTenant
         }
 
         if (AccessLevel::canAccessAllOrganizations($user)) {
-            return Tenant::query()->orderBy('name')->get();
+            return Tenant::query()->active()->orderBy('name')->get();
         }
 
         $extraIds = $user->person_id
@@ -178,6 +183,6 @@ class CurrentTenant
 
         $ids = collect([$user->tenant_id])->merge($extraIds)->unique();
 
-        return Tenant::query()->whereIn('id', $ids)->orderBy('name')->get();
+        return Tenant::query()->active()->whereIn('id', $ids)->orderBy('name')->get();
     }
 }

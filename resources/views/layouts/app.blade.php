@@ -143,6 +143,11 @@
         <x-help-panel />
         <x-help-image-lightbox />
 
+        @if (session('notice'))
+            <script>
+                window.addEventListener('DOMContentLoaded', () => setTimeout(() => window.showToast({{ \Illuminate\Support\Js::from(session('notice')) }}, 7, 'info'), 50));
+            </script>
+        @endif
         @if (session('error'))
             <script>
                 window.addEventListener('DOMContentLoaded', () => window.notifyDialog({{ \Illuminate\Support\Js::from(session('error')) }}, {{ \Illuminate\Support\Js::from(__('Geht nicht')) }}));
@@ -551,13 +556,14 @@
                  der Text kommt aus dem (dauerhaft ausgeblendeten) Meldungs-Element dort. --}}
             window.showToast = (function () {
                 let timer = null;
-                return function (text, seconds = 2) {
+                return function (text, seconds = 2, type = 'success') {
                     const element = document.getElementById('global-toast');
                     if (! element) {
                         return;
                     }
                     const data = Alpine.$data(element);
                     data.text = text;
+                    data.type = type;
                     data.show = true;
                     clearTimeout(timer);
                     timer = setTimeout(() => { data.show = false; }, seconds * 1000);
@@ -3798,14 +3804,17 @@
         </script>
         <div
             id="global-toast"
-            x-data="{ show: false, text: '' }"
+            x-data="{ show: false, text: '', type: 'success' }"
             x-show="show"
             x-cloak
             x-transition.opacity
             role="status"
             class="pointer-events-none fixed inset-x-0 top-3 z-[100] flex justify-center px-4"
         >
-            <div class="pointer-events-auto flex items-start gap-3 rounded-md border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-800 shadow-lg">
+            <div
+                class="pointer-events-auto flex items-start gap-3 rounded-md border px-4 py-2 text-sm shadow-lg"
+                :class="type === 'info' ? 'border-sky-200 bg-sky-50 text-sky-900' : 'border-green-200 bg-green-50 text-green-800'"
+            >
                 <span x-text="text"></span>
                 <button type="button" @click="show = false" class="shrink-0 text-green-700/70 hover:text-green-900" aria-label="{{ __('Schließen') }}">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>

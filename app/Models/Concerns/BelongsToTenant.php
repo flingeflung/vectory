@@ -23,6 +23,16 @@ trait BelongsToTenant
             }
         });
 
+        // Daten deaktivierter Organisationen (Tenant::inactiveIds()) sind IMMER ausgeblendet - im Gegensatz zu
+        // "tenant" auch dort, wo withoutGlobalScope('tenant') für organisationsübergreifende Sichten benutzt
+        // wird. Nur die Organisationsverwaltung des Super-Admins nimmt sie bewusst heraus.
+        static::addGlobalScope('tenant_active', function (Builder $builder) {
+            $inactive = \App\Models\Tenant::inactiveIds();
+            if ($inactive !== []) {
+                $builder->whereNotIn($builder->getModel()->getTable().'.tenant_id', $inactive);
+            }
+        });
+
         static::creating(function ($model) {
             if (! $model->tenant_id && Auth::check()) {
                 $model->tenant_id = CurrentTenant::id();

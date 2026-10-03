@@ -89,7 +89,7 @@
                             @if ($selectedTenant?->id === $tenant->id) data-selected @endif
                             class="flex flex-col rounded px-2 py-1 {{ $selectedTenant?->id === $tenant->id ? 'bg-indigo-50 font-medium text-indigo-700' : 'text-gray-700 hover:bg-gray-50' }}"
                         >
-                            {{ $tenant->name }}
+                            <span @class(['text-gray-400' => ! $tenant->is_active])>{{ $tenant->name }}{{ ! $tenant->is_active ? ' [i]' : '' }}</span>
                         </a>
                     @endforeach
                 @endif
@@ -185,6 +185,19 @@
                     </div>
                 </form>
 
+                @if (! $selectedTenant->is_active)
+                    <div class="shrink-0 border-t border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                        {{ __('Diese Organisation ist deaktiviert: Anmeldungen sind gesperrt und alle ihre Daten sind überall ausgeblendet. Es wurde nichts gelöscht - mit „Reaktivieren“ ist alles sofort wieder da.') }}
+                    </div>
+                @endif
+                @can('access-superadmin')
+                    @unless ($selectedTenant->is_home_tenant)
+                        <form x-ref="activeForm" method="POST" action="{{ route('admin.kunden.active', $selectedTenant) }}" class="hidden">
+                            @csrf
+                            <input type="hidden" name="active" value="{{ $selectedTenant->is_active ? 0 : 1 }}">
+                        </form>
+                    @endunless
+                @endcan
                 @unless ($selectedTenant->hasData())
                     <form x-ref="deleteForm" method="POST" action="{{ route('admin.kunden.destroy', $selectedTenant) }}" class="hidden">
                         @csrf
@@ -192,19 +205,39 @@
                     </form>
                 @endunless
                 <div class="shrink-0 flex items-center justify-between border-t border-gray-100 p-3">
-                    @unless ($selectedTenant->hasData())
-                        <button
-                            type="button"
-                            @click="window.deleteWithConfirm($refs.deleteForm, {
-                                message: {{ \Illuminate\Support\Js::from(__('Dieser Kunde hat noch keine Daten und kann gefahrlos gelöscht werden.')) }},
-                            })"
-                            class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
-                        >
-                            {{ __('Löschen') }}
-                        </button>
-                    @else
-                        <span></span>
-                    @endunless
+                    <div class="flex items-center gap-2">
+                        @unless ($selectedTenant->hasData())
+                            <button
+                                type="button"
+                                @click="window.deleteWithConfirm($refs.deleteForm, {
+                                    message: {{ \Illuminate\Support\Js::from(__('Dieser Kunde hat noch keine Daten und kann gefahrlos gelöscht werden.')) }},
+                                })"
+                                class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                            >
+                                {{ __('Löschen') }}
+                            </button>
+                        @endunless
+                        @can('access-superadmin')
+                            @unless ($selectedTenant->is_home_tenant)
+                                <button
+                                    type="button"
+                                    @click="(async () => {
+                                        if (await window.confirmDialog({
+                                            title: {{ \Illuminate\Support\Js::from($selectedTenant->is_active ? __('Organisation deaktivieren?') : __('Organisation reaktivieren?')) }},
+                                            message: {{ \Illuminate\Support\Js::from($selectedTenant->is_active
+                                                ? __('Wenn Sie „:name“ deaktivieren, können sich ihre Nutzer nicht mehr anmelden, und angemeldete Nutzer werden abgemeldet. Alle Daten der Organisation (Projekte, Personen, Stunden) verschwinden aus allen Listen und Auswertungen, auch ausgeliehene Personen. Es wird nichts gelöscht; mit „Reaktivieren“ ist alles sofort wieder da.', ['name' => $selectedTenant->name])
+                                                : __('Wenn Sie „:name“ reaktivieren, können sich ihre Nutzer wieder anmelden, und alle Daten sind sofort wieder sichtbar.', ['name' => $selectedTenant->name])) }},
+                                            confirmLabel: {{ \Illuminate\Support\Js::from($selectedTenant->is_active ? __('Deaktivieren') : __('Reaktivieren')) }},
+                                            cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
+                                        })) { $refs.activeForm.requestSubmit(); }
+                                    })()"
+                                    class="rounded-md border border-amber-300 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-50"
+                                >
+                                    {{ $selectedTenant->is_active ? __('Deaktivieren') : __('Reaktivieren') }}
+                                </button>
+                            @endunless
+                        @endcan
+                    </div>
                     <button type="submit" form="tenant-form-{{ $selectedTenant->id }}" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
                         {{ __('Speichern') }}
                     </button>
