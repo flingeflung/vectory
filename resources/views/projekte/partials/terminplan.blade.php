@@ -65,7 +65,7 @@
                 {{-- Monatskopf --}}
                 <div class="grid grid-cols-[13rem_minmax(0,1fr)] border-b border-gray-200 bg-gray-50 text-[11px] text-gray-500">
                     <div class="px-2 py-1">{{ __('Projekt') }}</div>
-                    <div class="relative h-6 border-l-2 border-gray-400">
+                    <div class="relative h-6">
                         <template x-for="month in monthStarts()" :key="month.name">
                             <div class="absolute inset-y-0 flex items-center justify-center border-l border-gray-200" :style="'left:' + month.left + '%;width:' + month.width + '%'" x-text="month.name"></div>
                         </template>
@@ -83,7 +83,7 @@
                             </div>
                             <div class="truncate text-[11px] text-gray-500" title="{{ $row['title'] }}">{{ $row['title'] }}</div>
                         </div>
-                        <div class="relative h-9 border-l-2 border-gray-400" x-data="{ r: rows[{{ $index }}] }">
+                        <div class="relative h-9 border-l-2 border-gray-300" x-data="{ r: rows[{{ $index }}] }">
                             {{-- Monatslinien --}}
                             <template x-for="month in monthStarts()" :key="month.name">
                                 <div x-show="month.left > 0" class="absolute inset-y-0 border-l border-gray-100" :style="'left:' + month.left + '%'"></div>
