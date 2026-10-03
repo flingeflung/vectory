@@ -87,6 +87,8 @@ Aus dem Review vom 03.10.2026: An diesen Stellen sind bisher Fehler entstanden. 
 3. **Mandantengrenzen:**
    - Wenn eine Abfrage Daten mehrerer Organisationen liest oder ändert, dann umgehe globale Scopes nur lokal und begründet.
    - Wenn ein Datensatz keine eigene `tenant_id` hat, dann prüfe den Zugriff über den zugehörigen Datensatz und teste fremde Organisationen mit einem eigenen Test.
+   - Organisationen lassen sich deaktivieren (`tenants.is_active`). Eloquent-Modelle mit `BelongsToTenant` blenden deren Daten über die zweite Schutzregel `tenant_active` automatisch aus. Wenn du eine rohe `DB::table(…)`-Abfrage auf Personen, Projekte oder Auswertungen baust, dann schließe `Tenant::inactiveIds()` aus (`whereNotIn`) und liste wählbare Organisationen mit `Tenant::query()->active()`.
+   - Wenn ein Modell eine Person zuordnet (Projektbeteiligte, Aufgaben …), dann binde `HidesInactiveOrganizationPersons` ein, sonst bricht die Ansicht ab, sobald die Person ausgeblendet ist.
 4. **Live-Aktualisierung zwischen Tabs und Overlays:**
    - Wenn dieselben Daten in mehreren Tabs oder Bausteinen stehen, dann prüfe jeden Baustein, der sie anzeigt, und nicht nur den, den du gerade änderst.
    - Wenn Projektpersonen oder Planstunden geändert werden, dann aktualisieren sich alle Anzeigen darauf über die Events `project-people-changed` und `project-planned-hours-changed`.

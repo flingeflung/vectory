@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
+use App\Models\Concerns\HidesInactiveOrganizationPersons;
 use App\Observers\ProjectWorkflowStepPersonObserver;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[ObservedBy(ProjectWorkflowStepPersonObserver::class)]
 class ProjectWorkflowStepPerson extends Model
 {
-    use BelongsToTenant;
+    use BelongsToTenant, HidesInactiveOrganizationPersons;
 
     public function projectWorkflowStep(): BelongsTo
     {

@@ -109,6 +109,8 @@ class JobloadOverviewController extends Controller
                 ->orWhereIn('people.id', DB::table('person_tenant')->select('person_id')->where('tenant_id', $tenantId))
                 ->orWhereIn('people.id', DB::table('job_hours')->select('person_id')->where('tenant_id', $tenantId));
         })
+            // Ralf, 2026-10-03: Personen deaktivierter Organisationen sind überall ausgeblendet (auch ausgeliehene).
+            ->whereNotIn('people.tenant_id', \App\Models\Tenant::inactiveIds())
             // Ralf, 2026-09-19: Personen ohne Login können keine Stunden buchen -
             // in der Personen-Auswahl sinnlos.
             ->whereIn('people.id', DB::table('users')->select('person_id')->whereNotNull('person_id'))

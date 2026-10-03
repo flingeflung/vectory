@@ -161,6 +161,7 @@ class ProjectFilterCatalog
             ->join('people as p', 'p.id', '=', 'pp.person_id')
             ->join('function_groups as fg', 'fg.id', '=', 'pp.function_group_id')
             ->where('pp.tenant_id', $tenantId)
+            ->whereNotIn('p.tenant_id', \App\Models\Tenant::inactiveIds())
             ->distinct()
             ->get(['p.id', 'p.first_name', 'p.last_name', 'p.active', 'fg.id as group_id', 'fg.name as group_name'])
             ->groupBy('id')

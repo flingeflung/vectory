@@ -119,7 +119,7 @@ class PersonController extends Controller
         // sieht dadurch automatisch nur die eigenen Kataloge.
         $tenantFilter = $filters['tenant_id'] ?? null;
         if ($tenantFilter === 'all') {
-            $catalogTenantIds = Tenant::query()->pluck('id');
+            $catalogTenantIds = Tenant::query()->active()->pluck('id');
             // 0 statt $tenantId: bei "Alle" gibt es keinen sinnvollen
             // "Heimat"-Bezugspunkt - sonst hätte der gerade aktive Kunde
             // (oben rechts umschaltbar) den Zusatz "(Kundenname)" mal
@@ -148,7 +148,7 @@ class PersonController extends Controller
             'multiTenantEnabled' => SystemSetting::multiTenantEnabled(),
             'personColumns' => PersonTableColumnCatalog::orderedFor($request->user(), SystemSetting::multiTenantEnabled()),
             'canSearchAllTenants' => $canSearchAllTenants,
-            'tenants' => $canSearchAllTenants ? Tenant::query()->orderBy('name')->get() : collect(),
+            'tenants' => $canSearchAllTenants ? Tenant::query()->active()->orderBy('name')->get() : collect(),
             'filters' => $filters,
             'tenantId' => $catalogHomeTenantId,
             // Ralf, 2026-09-18: "ich habe immer noch doppelte Einträge dort,
@@ -192,6 +192,7 @@ class PersonController extends Controller
 
         $homeTenant = Tenant::query()->where('is_home_tenant', true)->first();
         $otherTenants = Tenant::query()
+            ->active()
             ->when($homeTenant, fn (Builder $query) => $query->where('id', '!=', $homeTenant->id))
             ->orderBy('name')
             ->get();
@@ -733,7 +734,7 @@ class PersonController extends Controller
                 ->where(fn ($query) => $query->where('active', true)->orWhereIn('id', $person->functionGroups->pluck('id')))
                 ->orderBy('name')->get(),
             'multiTenantEnabled' => $multiTenantEnabled,
-            'otherTenants' => $multiTenantEnabled ? Tenant::query()->where('id', '!=', $personTenantId)->orderBy('name')->get() : collect(),
+            'otherTenants' => $multiTenantEnabled ? Tenant::query()->active()->where('id', '!=', $personTenantId)->orderBy('name')->get() : collect(),
             'actingUserIsSuperAdmin' => $request->user()->isSuperAdmin(),
             'actingUserCanManageAccessLevel' => $request->user()->isSuperAdmin() || $request->user()->isCentralAdmin(),
             'canFullyEdit' => $this->personFullyEditableByCurrentUser($request, $person),

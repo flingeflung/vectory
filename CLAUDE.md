@@ -18,6 +18,7 @@
 ## Mandantenfähigkeit
 - Langfristziel: marktfähiges Produkt für zwei Zielgruppen – (1) interne TR-Abteilungen in Unternehmen (keine Mandantenfähigkeit nötig) und (2) Dienstleister für TR mit vielen Kunden (Mandantenfähigkeit nötig).
 - Entscheidung: Mandantenfähigkeit von Anfang an im Datenmodell verankern (Single-DB-Ansatz: `tenant_id`-Spalte + globaler Eloquent-Scope), aber Mandanten-Verwaltungs-UI/Umschalten erst später bauen. Ein Default-Mandant reicht für Step 1.
+- **Organisation deaktivieren (Ralf, 2026-10-03)**: Super-Admin schaltet eine Organisation unter Admin › Mandant › Organisationen auf inaktiv (`tenants.is_active`, nie die Heimat-Organisation). Wirkung: Anmeldung gesperrt, laufende Sitzungen werden bei der nächsten Aktion abgemeldet (`EnsureOrganizationIsActive`), alle Daten und ausgeliehenen Personen sind überall ausgeblendet - über die zweite Schutzregel `tenant_active` (`BelongsToTenant`, Quelle `Tenant::inactiveIds()`) und `HidesInactiveOrganizationPersons` für Personen-Zuordnungen. Nichts wird gelöscht. Rohe `DB::table`-Abfragen umgehen die Regeln und müssen `Tenant::inactiveIds()` selbst berücksichtigen. Absicherung: `OrganizationDeactivationTest` und `OrganizationDeactivationCrawlTest`.
 
 ## Zugriffsstufenmodell
 1. Super-Admin – installationsweiter Vollzugriff einschließlich technischer Funktionen

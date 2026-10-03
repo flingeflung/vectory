@@ -21,7 +21,7 @@ final class CriticalProjectAccess
         }
 
         if (AccessLevel::canAccessAllOrganizations($user)) {
-            return Tenant::query()->orderBy('name')->get();
+            return Tenant::query()->active()->orderBy('name')->get();
         }
 
         if (AccessLevel::isOrganizationAdmin($user)) {

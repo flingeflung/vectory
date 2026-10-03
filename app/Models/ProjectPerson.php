@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
+use App\Models\Concerns\HidesInactiveOrganizationPersons;
 use App\Observers\ProjectPersonObserver;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[ObservedBy(ProjectPersonObserver::class)]
 class ProjectPerson extends Model
 {
-    use BelongsToTenant;
+    use BelongsToTenant, HidesInactiveOrganizationPersons;
 
     protected function casts(): array
     {

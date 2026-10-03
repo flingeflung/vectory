@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\TaskSource;
 use App\Models\Concerns\BelongsToTenant;
+use App\Models\Concerns\HidesInactiveOrganizationPersons;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,7 +13,7 @@ use Illuminate\Support\Collection;
 #[Fillable(['tenant_id', 'project_id', 'person_id', 'function_group_id', 'project_workflow_step_id', 'graphic_order_id', 'source'])]
 class Task extends Model
 {
-    use BelongsToTenant;
+    use BelongsToTenant, HidesInactiveOrganizationPersons;
 
     protected function casts(): array
     {

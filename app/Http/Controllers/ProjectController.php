@@ -1393,6 +1393,7 @@ class ProjectController extends Controller
         $ownPersonId = (int) (auth()->user()->person_id ?? 0);
 
         $people = DB::table('people')
+            ->whereNotIn('tenant_id', Tenant::inactiveIds())
             ->whereIn('id', DB::table('job_hours')->select('person_id')->distinct()->whereIn('project_id', $participantIds))
             ->get(['id', 'first_name', 'last_name', 'active']);
         $people = $people->filter(fn ($p) => $showInactive || $p->active || (int) $p->id === $ownPersonId)

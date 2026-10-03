@@ -117,7 +117,7 @@ class FunctionGroupController extends Controller
             'usage' => $usage,
             'canManageCatalog' => $canManageCatalog,
             'matrixTenants' => $canManageCatalog && SystemSetting::multiTenantEnabled()
-                ? Tenant::query()->whereKeyNot($catalogTenantId)->orderBy('name')->get()
+                ? Tenant::query()->active()->whereKeyNot($catalogTenantId)->orderBy('name')->get()
                 : collect(),
             'availability' => $canManageCatalog && SystemSetting::multiTenantEnabled()
                 ? DB::table('function_group_tenant')->get()->groupBy('function_group_id')->map->pluck('tenant_id')

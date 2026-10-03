@@ -134,4 +134,21 @@ class OrganizationDeactivationTest extends TestCase
             ->assertSessionHas('notice', 'Das Projekt wurde nicht gefunden oder steht nicht zur Verfügung.')
             ->assertSessionMissing('error');
     }
+
+    public function test_project_of_an_active_organization_survives_persons_of_a_deactivated_one(): void
+    {
+        $group = \App\Models\FunctionGroup::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $this->home->id, 'name' => 'Technische Redaktion', 'short_name' => 'TR']);
+        $user = User::factory()->create(['tenant_id' => $this->home->id, 'role' => 'central_admin']);
+        $this->actingAs($user);
+        $project = Project::query()->create(['tenant_id' => $this->home->id, 'source_pn' => '270002', 'title' => 'Heimatprojekt', 'status' => 1]);
+        $person = Person::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $this->customer->id, 'last_name' => 'Zzzgeliehen', 'first_name' => 'Gerd', 'active' => true]);
+        \App\Models\ProjectPerson::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $this->home->id, 'project_id' => $project->id, 'function_group_id' => $group->id, 'person_id' => $person->id, 'is_primary' => true]);
+
+        $this->withHeaders(['X-Overlay' => '1'])->get(route('projekte.show', $project))->assertOk()->assertSee('Zzzgeliehen');
+
+        $this->deactivate();
+
+        // Vorher stürzte die Detailansicht ab (Zuordnung zeigte auf eine ausgeblendete Person).
+        $this->withHeaders(['X-Overlay' => '1'])->get(route('projekte.show', $project))->assertOk()->assertDontSee('Zzzgeliehen');
+    }
 }
