@@ -45,6 +45,25 @@
  * Tailwind-Klasse) - Elemente blitzen beim Laden kurz sichtbar auf, bis
  * Alpine initialisiert ist und x-cloak wieder entfernt.
  */
+/*
+ * Einheitlicher Dialog-Kopf (Ralf, 2026-10-03): jeder Dialog hat seine Kopfzeile selbst gebaut, daher
+ * unterschiedliche Höhen und Titelgrößen. Der Kopf (= Ziehgriff, siehe window.prepareDialog in
+ * layouts/app.blade.php) bekommt hier überall dieselben Maße; die höhere Spezifität schlägt die
+ * Tailwind-Klassen am jeweiligen Element ohne !important.
+ */
+[data-modal-box] [data-drag-handle] {
+    padding: 0.5rem 1rem;
+    min-height: 2.75rem;
+    align-items: center;
+}
+
+[data-modal-box] [data-drag-handle] :is(h1, h2, h3) {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 600;
+    color: #111827;
+}
+
 [x-cloak] {
     display: none !important;
 }
