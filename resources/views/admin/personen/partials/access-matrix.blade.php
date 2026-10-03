@@ -14,7 +14,7 @@
             <tr>
                 <th class="sticky left-0 top-0 z-20 min-w-48 border-b border-r border-gray-200 bg-gray-50 px-2 py-1.5 text-left font-medium">{{ __('Name') }}</th>
                 @if ($homeTenant)
-                    <th class="sticky top-0 z-10 min-w-28 border-b border-gray-200 bg-gray-50 px-2 py-1.5 text-center font-medium" title="{{ __('Heimat-Mandant') }}">
+                    <th class="sticky top-0 z-10 min-w-28 border-b border-gray-200 bg-gray-50 px-2 py-1.5 text-center font-medium" title="{{ __('Heimat-Organisation') }}">
                         {{ $homeTenant->short_name ?? $homeTenant->name }}
                     </th>
                 @endif

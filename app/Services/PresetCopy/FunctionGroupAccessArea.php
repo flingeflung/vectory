@@ -25,7 +25,7 @@ class FunctionGroupAccessArea implements PresetArea
 
     public function hint(): string
     {
-        return __('Funktionsgruppen werden ausschließlich beim Heimat-Mandanten angelegt und können von dort für die anderen Organisationen freigeschaltet werden. Dies können Sie hier durchführen. Bereits freigeschaltete Inhalte bleiben unverändert; es wird nie eine Freigabe entzogen.');
+        return __('Funktionsgruppen werden ausschließlich beim Heimat-Organisation angelegt und können von dort für die anderen Organisationen freigeschaltet werden. Dies können Sie hier durchführen. Bereits freigeschaltete Inhalte bleiben unverändert; es wird nie eine Freigabe entzogen.');
     }
 
     public function items(int $sourceTenantId, int $targetTenantId): array
