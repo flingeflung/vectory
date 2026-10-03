@@ -577,11 +577,19 @@
             window.prepareDialog = function (box) {
                 if (! box.__dialogObserver) {
                     let timer = null;
-                    box.__dialogObserver = new MutationObserver(() => {
+                    // Auch Ein-/Ausblenden (Alpine x-show/x-cloak) und Klassenwechsel beobachten - ein Button wie
+                    // "+ Stunden buchen" erscheint oft erst nach dem Laden, ohne dass ein Element neu eingefügt wird.
+                    // Eigene Änderungen (Dialog-Rahmen, ID, Hilfe-Button, Kopfzeile) ausnehmen, sonst Endlosschleife.
+                    const ownChange = (target) => target === box
+                        || (target.hasAttribute && (target.hasAttribute('data-dialog-help') || target.hasAttribute('data-dialog-id') || target.hasAttribute('data-drag-handle')));
+                    box.__dialogObserver = new MutationObserver((records) => {
+                        if (records.every((record) => ownChange(record.target))) {
+                            return;
+                        }
                         clearTimeout(timer);
                         timer = setTimeout(() => window.prepareDialog(box), 60);
                     });
-                    box.__dialogObserver.observe(box, { childList: true, subtree: true });
+                    box.__dialogObserver.observe(box, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class', 'hidden', 'x-cloak'] });
                 }
 
                 const close = [...box.querySelectorAll('button')].find((button) => ! button.hasAttribute('data-dialog-help') && button.querySelector('path[d^="M6 18L18 6"]'));

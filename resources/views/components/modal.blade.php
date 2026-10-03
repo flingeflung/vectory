@@ -357,7 +357,7 @@ $dialogId = $helpId ? \App\Support\DialogId::for($name) : null;
         data-modal-box
         x-on:mousedown="($event.target.closest('[data-drag-handle]') || dragZone($event)) && startDrag($event)"
         x-on:mousemove="$el.style.cursor = dragZone($event) ? 'move' : ''"
-        x-effect="if (show) { $nextTick(() => window.prepareDialog && window.prepareDialog($el)); }"
+        x-effect="if (show) { $nextTick(() => window.prepareDialog && window.prepareDialog($el)); setTimeout(() => window.prepareDialog && window.prepareDialog($el), 450); }"
         :class="(dragPos ? '' : 'sm:mx-auto') + (dragging ? ' select-none' : '') + ((fullscreen && maximize) ? ' resize-none' : (resizable ? ' resize' : '')) + (fullscreen ? ' mx-0 my-0' : ' mb-6')"
         :style="`${(dragging || resizing) ? 'transition: none;' : ''}${dragPos ? `position: fixed; left: ${dragPos.x}px; top: ${dragPos.y}px; width: ${dragBox.width}px; ${keepHeight ? 'height: ' + dragBox.height + 'px;' : ''} margin: 0;` : ''}${fullscreen ? ' min-width: 0; min-height: 0; max-width: none; max-height: none;' : ''}{{ $heightStyle }}${!fullscreen && {{ json_encode((bool) $resizable) }} ? 'min-width: 480px; min-height: 320px; max-width: 95vw; max-height: 92vh;' : ''}`"
         {{--
