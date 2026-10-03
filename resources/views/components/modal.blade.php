@@ -357,6 +357,7 @@ $dialogId = $helpId ? \App\Support\DialogId::for($name) : null;
         data-modal-box
         x-on:mousedown="($event.target.closest('[data-drag-handle]') || dragZone($event)) && startDrag($event)"
         x-on:mousemove="$el.style.cursor = dragZone($event) ? 'move' : ''"
+        x-effect="if (show) { $nextTick(() => window.prepareDialog && window.prepareDialog($el)); }"
         :class="(dragPos ? '' : 'sm:mx-auto') + (dragging ? ' select-none' : '') + ((fullscreen && maximize) ? ' resize-none' : (resizable ? ' resize' : '')) + (fullscreen ? ' mx-0 my-0' : ' mb-6')"
         :style="`${(dragging || resizing) ? 'transition: none;' : ''}${dragPos ? `position: fixed; left: ${dragPos.x}px; top: ${dragPos.y}px; width: ${dragBox.width}px; ${keepHeight ? 'height: ' + dragBox.height + 'px;' : ''} margin: 0;` : ''}${fullscreen ? ' min-width: 0; min-height: 0; max-width: none; max-height: none;' : ''}{{ $heightStyle }}${!fullscreen && {{ json_encode((bool) $resizable) }} ? 'min-width: 480px; min-height: 320px; max-width: 95vw; max-height: 92vh;' : ''}`"
         {{--
@@ -398,7 +399,7 @@ $dialogId = $helpId ? \App\Support\DialogId::for($name) : null;
                 <button
                     type="button"
                     x-on:click.stop="window.openDialogHelp && window.openDialogHelp('{{ $dialogId }}')"
-                    x-effect="if (show) { $nextTick(() => window.placeDialogHelp && window.placeDialogHelp($el)); }"
+                    data-dialog-help
                     class="absolute right-12 top-3 z-20 flex h-6 w-6 items-center justify-center rounded-md border border-gray-400 bg-white text-xs font-medium leading-none text-gray-400 hover:border-gray-500 hover:text-gray-600"
                     title="{{ __('Hilfe zu diesem Dialog') }}"
                     aria-label="{{ __('Hilfe zu diesem Dialog') }}"

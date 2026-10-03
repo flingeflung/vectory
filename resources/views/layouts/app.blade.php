@@ -570,6 +570,48 @@
                 window.dispatchEvent(new CustomEvent('open-modal', { detail: 'help-panel' }));
             };
 
+            {{-- Einheitlicher Dialog-Kopf (Ralf, 2026-10-03): alle Dialoge sind verschiebbar, also bekommt jede
+                Kopfzeile (die Zeile mit dem Schließen-X und dem unteren Rand) den hellgrauen Ziehgriff, sofern
+                sie keinen eigenen hat. Läuft beim Öffnen und erneut, wenn der Inhalt nachgeladen wird; richtet
+                danach das Hilfe-Fragezeichen am X aus. --}}
+            window.prepareDialog = function (box) {
+                if (! box.__dialogObserver) {
+                    let timer = null;
+                    box.__dialogObserver = new MutationObserver(() => {
+                        clearTimeout(timer);
+                        timer = setTimeout(() => window.prepareDialog(box), 60);
+                    });
+                    box.__dialogObserver.observe(box, { childList: true, subtree: true });
+                }
+
+                const close = [...box.querySelectorAll('button')].find((button) => ! button.hasAttribute('data-dialog-help') && button.querySelector('path[d^="M6 18L18 6"]'));
+                if (close) {
+                    let header = close.closest('[data-drag-handle]');
+                    if (! header) {
+                        header = close.parentElement;
+                        while (header && header !== box && ! header.classList.contains('border-b')) {
+                            header = header.parentElement;
+                        }
+                    }
+                    if (header && header !== box && header.offsetTop <= 8) {
+                        const color = getComputedStyle(header).backgroundColor;
+                        header.setAttribute('data-drag-handle', '');
+                        header.classList.add('cursor-move', 'select-none', 'rounded-t-lg');
+                        if (! header.title) {
+                            header.title = {{ \Illuminate\Support\Js::from(__('Ziehen zum Verschieben')) }};
+                        }
+                        if (color === 'rgba(0, 0, 0, 0)' || color === 'transparent' || color === 'rgb(255, 255, 255)') {
+                            header.classList.add('bg-gray-100');
+                        }
+                    }
+                }
+
+                const help = box.querySelector('[data-dialog-help]');
+                if (help) {
+                    window.placeDialogHelp(help);
+                }
+            };
+
             {{-- Fragezeichen eines Dialogs (components/modal.blade.php) vertikal mittig zum Schließen-X und
                 mit etwas Abstand links davon ausrichten. Das X ist oft erst nach dem Nachladen des Inhalts da,
                 deshalb ein paar Wiederholungen. --}}
@@ -2275,8 +2317,8 @@
 
         {{-- Globale Schnelllisten aus der Topbar. --}}
         <x-modal name="favorites" max-width="md">
-            <div class="p-4">
-                <div class="mb-3 flex items-center justify-between">
+            <div>
+                <div class="flex items-center justify-between border-b border-gray-200 px-4 py-3">
                     <h2 class="text-lg font-medium text-gray-900">{{ __('Favoriten') }}</h2>
                     <button
                         type="button"
@@ -2289,7 +2331,7 @@
                         </svg>
                     </button>
                 </div>
-                <div id="favorites-body" class="max-h-96 overflow-y-auto text-sm text-gray-500">
+                <div id="favorites-body" class="m-4 max-h-96 overflow-y-auto text-sm text-gray-500">
                     {{ __('Lädt…') }}
                 </div>
             </div>
@@ -2311,8 +2353,8 @@
         </script>
 
         <x-modal name="recent-projects" max-width="md">
-            <div class="p-4">
-                <div class="mb-3 flex items-center justify-between">
+            <div>
+                <div class="flex items-center justify-between border-b border-gray-200 px-4 py-3">
                     <h2 class="text-lg font-medium text-gray-900">{{ __('Zuletzt geöffnete Projekte') }}</h2>
                     <button
                         type="button"
@@ -2325,7 +2367,7 @@
                         </svg>
                     </button>
                 </div>
-                <div id="recent-projects-body" class="max-h-96 overflow-y-auto text-sm text-gray-500">
+                <div id="recent-projects-body" class="m-4 max-h-96 overflow-y-auto text-sm text-gray-500">
                     {{ __('Lädt…') }}
                 </div>
             </div>

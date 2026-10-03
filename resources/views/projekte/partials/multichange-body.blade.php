@@ -215,7 +215,7 @@
              (bei Fluent-Overlay-Scrollbars unsichtbare) Bildlaufleiste verriet nicht, dass man scrollen kann. Knöpfe deshalb
              immer am unteren Rand des Dialogs festgehalten (nur der Inhalt darüber scrollt). --}}
         <div
-            class="sticky -bottom-3 z-10 -mx-4 -mb-3 flex gap-2 border-t border-gray-100 bg-white px-4 py-3"
+            class="sticky -bottom-3 z-10 -mx-4 -mb-3 flex justify-end gap-2 border-t border-gray-100 bg-white px-4 py-3"
             x-data="{
                 async apply() {
                     const ok = await window.confirmDialog({
@@ -601,13 +601,16 @@
                 </div>
             @endforeach
 
-            <button
-                type="submit"
-                :disabled="! field"
-                class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
-            >
-                {{ __('Prüfen') }}
-            </button>
+            {{-- Fußzeile wie im Folgedialog (Ralf, 2026-10-03): rechtsbündig, genug Luft unter dem Button. --}}
+            <div class="-mx-4 -mb-3 mt-4 flex justify-end gap-2 border-t border-gray-100 bg-white px-4 py-3">
+                <button
+                    type="submit"
+                    :disabled="! field"
+                    class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    {{ __('Prüfen') }}
+                </button>
+            </div>
         </div>
     </form>
 @endif
