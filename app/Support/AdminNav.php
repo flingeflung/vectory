@@ -74,4 +74,25 @@ class AdminNav
 
         return null;
     }
+
+    /**
+     * Brotkrumen für den Kopf jeder Admin-Seite (Ralf, 2026-10-03): "Admin › Mandant › Organisationen".
+     * Gruppe und Seite kommen aus derselben Definition wie die Navigation selbst.
+     *
+     * @return array<int, string>
+     */
+    public static function breadcrumb(): array
+    {
+        $crumbs = [__('Admin')];
+
+        foreach (self::visibleGroups() as $groupLabel => $items) {
+            foreach ($items as $item) {
+                if (request()->routeIs($item['match'])) {
+                    return [...$crumbs, $groupLabel, $item['label']];
+                }
+            }
+        }
+
+        return $crumbs;
+    }
 }

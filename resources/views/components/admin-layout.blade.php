@@ -19,9 +19,14 @@
 
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Admin') }}
-        </h2>
+        <nav class="flex flex-wrap items-center gap-x-2 text-xl leading-tight" aria-label="{{ __('Brotkrumen') }}">
+            @foreach (\App\Support\AdminNav::breadcrumb() as $crumb)
+                @if (! $loop->first)
+                    <span class="text-gray-300" aria-hidden="true">&rsaquo;</span>
+                @endif
+                <span class="{{ $loop->last ? 'font-semibold text-gray-800' : 'text-gray-500' }}">{{ $crumb }}</span>
+            @endforeach
+        </nav>
     </x-slot>
 
     <div class="h-full flex flex-col p-4 sm:p-6 lg:p-8">
