@@ -50,7 +50,7 @@
                     @endif
 
                     @foreach ($areas as $area)
-                        <section class="mb-5" data-area="{{ $area['key'] }}">
+                        <section class="mb-8" data-area="{{ $area['key'] }}">
                             <div class="mb-1 flex items-center gap-3 border-b border-gray-200 pb-1">
                                 <h3 class="text-sm font-semibold text-gray-800">{{ $area['label'] }}</h3>
                                 <span class="text-xs text-gray-400">{{ count($area['items']) }}</span>
