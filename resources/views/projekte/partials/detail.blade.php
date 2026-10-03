@@ -215,6 +215,7 @@
                     @if ($project->fieldApplies('workflow_id'))
                     <button type="button" @click="activeTab = 'workflow_steps'" :class="activeTab === 'workflow_steps' ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700'" class="pb-2">{{ __('Workflow') }}</button>
                     @endif
+                    <button type="button" @click="activeTab = 'zeitplan'" :class="activeTab === 'zeitplan' ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700'" class="pb-2">{{ __('Zeitplan') }}</button>
                     <button type="button" @click="activeTab = 'planung'" :class="activeTab === 'planung' ? 'border-b-2 border-gray-800 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700'" class="pb-2">{{ __('Planung') }}</button>
                     {{-- Ralf, 2026-09-27, siehe Roadmap-Backlog: Überblick über die gebuchten
                          Stunden - am Hauptprojekt inkl. Aufschlüsselung je Unterprojekt. --}}
@@ -701,6 +702,11 @@
                     </div>
                 @endif
             @endif
+        </div>
+
+        {{-- Ralf, 2026-10-03: Mini-Gantt der Projektfamilie (Hauptprojekt + Unterprojekte) mit Meilensteinen. --}}
+        <div x-show="activeTab === 'zeitplan'" x-cloak class="text-sm">
+            @include('projekte.partials.zeitplan')
         </div>
 
         <div x-show="activeTab === 'planung'" x-cloak class="h-full min-h-0">
