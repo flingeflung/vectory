@@ -570,6 +570,29 @@
                 window.dispatchEvent(new CustomEvent('open-modal', { detail: 'help-panel' }));
             };
 
+            {{-- Fragezeichen eines Dialogs (components/modal.blade.php) vertikal mittig zum Schließen-X und
+                mit etwas Abstand links davon ausrichten. Das X ist oft erst nach dem Nachladen des Inhalts da,
+                deshalb ein paar Wiederholungen. --}}
+            window.placeDialogHelp = function (el, attempt = 0) {
+                const box = el.closest('[data-modal-box]');
+                if (! box) {
+                    return;
+                }
+                const close = [...box.querySelectorAll('button')].find((button) => button !== el && button.querySelector('path[d^="M6 18L18 6"]'));
+                const closeRect = close ? close.getBoundingClientRect() : null;
+                if (! closeRect || closeRect.width === 0) {
+                    if (attempt < 6) {
+                        setTimeout(() => window.placeDialogHelp(el, attempt + 1), 250);
+                    }
+                    return;
+                }
+                const boxRect = box.getBoundingClientRect();
+                // Der Dialog skaliert beim Einblenden kurz (Übergang) - auf Layout-Pixel zurückrechnen.
+                const scale = boxRect.width > 0 ? boxRect.width / box.offsetWidth : 1;
+                el.style.top = ((closeRect.top - boxRect.top + closeRect.height / 2) / scale - el.offsetHeight / 2) + 'px';
+                el.style.right = ((boxRect.right - closeRect.left) / scale + 12) + 'px';
+            };
+
             window.showManageSavedToast = function (toastId) {
                 const source = document.getElementById(toastId);
                 window.showToast(source ? source.textContent.trim() : {{ \Illuminate\Support\Js::from(__('Gespeichert.')) }});

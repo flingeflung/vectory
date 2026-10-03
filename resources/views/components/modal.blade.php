@@ -376,10 +376,13 @@ $dialogId = $helpId ? \App\Support\DialogId::for($name) : null;
                 title="{{ __('Dialog-ID :id - Klick kopiert sie in die Zwischenablage. Bei Rückfragen bitte nennen.', ['id' => $dialogId]) }}"
             >{{ $dialogId }}</button>
             @if (in_array($dialogId, \App\Support\DialogId::withHelpArticle(), true))
+                {{-- Position wird beim Öffnen am Schließen-X des Dialogs ausgerichtet (window.placeDialogHelp),
+                     weil die Kopfzeilen unterschiedlich hoch sind; statische Werte nur als Rückfall. --}}
                 <button
                     type="button"
                     x-on:click.stop="window.openDialogHelp && window.openDialogHelp('{{ $dialogId }}')"
-                    class="absolute right-12 top-2.5 z-20 flex h-5 w-5 items-center justify-center rounded-full border border-indigo-300 bg-indigo-50 text-[11px] font-semibold leading-none text-indigo-700 hover:bg-indigo-100"
+                    x-effect="if (show) { $nextTick(() => window.placeDialogHelp && window.placeDialogHelp($el)); }"
+                    class="absolute right-12 top-3 z-20 flex h-6 w-6 items-center justify-center rounded-md border border-gray-400 bg-white text-xs font-medium leading-none text-gray-400 hover:border-gray-500 hover:text-gray-600"
                     title="{{ __('Hilfe zu diesem Dialog') }}"
                     aria-label="{{ __('Hilfe zu diesem Dialog') }}"
                 >?</button>
