@@ -26,6 +26,8 @@
         </div>
     @endif
 
+    <p class="mb-2 shrink-0 text-xs text-gray-400">{{ __('Für die Jahre 2026 bis 2036 sind Feiertage angelegt. Für spätere Jahre ist ein Update durch das System notwendig.') }}</p>
+
     <div
         class="mb-3 shrink-0 space-y-2"
         x-data="{ creating: {{ old('_form') === 'create' ? 'true' : 'false' }}, createDirty: {{ old('_form') === 'create' && $errors->any() ? 'true' : 'false' }} }"

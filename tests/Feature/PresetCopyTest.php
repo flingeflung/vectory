@@ -349,6 +349,9 @@ class PresetCopyTest extends TestCase
         $holiday = \App\Models\Holiday::query()->withoutGlobalScope('tenant')->create([
             'tenant_id' => $this->source->id, 'name' => 'Tag der Einheit', 'date' => '2026-10-03', 'weekday' => 6, 'active' => true,
         ]);
+        \App\Models\Holiday::query()->withoutGlobalScope('tenant')->create([
+            'tenant_id' => $this->source->id, 'name' => 'Brückentag', 'date' => '2026-10-02', 'weekday' => 5, 'active' => false,
+        ]);
         $groupId = DB::table('job_groups')->insertGetId(['tenant_id' => $this->source->id, 'name' => 'Redaktion', 'sort' => 1, 'created_at' => now(), 'updated_at' => now()]);
         $jobId = DB::table('job_types')->insertGetId(['tenant_id' => $this->source->id, 'job_group_id' => $groupId, 'code' => 'LEK', 'name' => 'Lektorat', 'active' => true, 'created_at' => now(), 'updated_at' => now()]);
         $a4 = \App\Models\PaperFormat::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $this->source->id, 'name' => 'A4', 'width_mm' => 210, 'height_mm' => 297, 'active' => true, 'sort' => 1]);
@@ -356,22 +359,25 @@ class PresetCopyTest extends TestCase
         $combo = \App\Models\PaperFormatCombination::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $this->source->id, 'input_format_id' => $a4->id, 'output_format_id' => $a5->id, 'fold_count' => 1, 'active' => true]);
 
         $this->apply([
-            'holidays' => ['h:'.$holiday->id => '1'],
+            'holidays' => ['y:2026' => '1'],
             'job-types' => ['j:'.$jobId => '1'],
             'paper-formats' => ['p:'.$combo->id => '1'],
         ])->assertRedirect();
 
-        $this->assertSame(1, \App\Models\Holiday::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->count());
+        $this->assertSame(2, \App\Models\Holiday::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->count());
         $this->assertSame(['Redaktion'], DB::table('job_groups')->where('tenant_id', $this->target->id)->pluck('name')->all(), 'Jobgruppe kommt mit dem Jobtyp.');
         $this->assertSame(['LEK'], DB::table('job_types')->where('tenant_id', $this->target->id)->pluck('code')->all());
         $this->assertSame(2, \App\Models\PaperFormat::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->count(), 'Kombination bringt beide Formate mit.');
         $this->assertSame(1, \App\Models\PaperFormatCombination::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->count());
 
+        // Inaktiv-Status wandert mit.
+        $this->assertFalse((bool) \App\Models\Holiday::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->where('name', 'Brückentag')->value('active'));
+
         // Zweiter Durchgang: nichts doppelt.
         $this->apply([
-            'holidays' => ['h:'.$holiday->id => '1'], 'job-types' => ['j:'.$jobId => '1'], 'paper-formats' => ['p:'.$combo->id => '1'],
+            'holidays' => ['y:2026' => '1'], 'job-types' => ['j:'.$jobId => '1'], 'paper-formats' => ['p:'.$combo->id => '1'],
         ]);
-        $this->assertSame(1, \App\Models\Holiday::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->count());
+        $this->assertSame(2, \App\Models\Holiday::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->count());
         $this->assertSame(1, DB::table('job_types')->where('tenant_id', $this->target->id)->count());
         $this->assertSame(2, \App\Models\PaperFormat::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->count());
     }
