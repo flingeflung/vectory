@@ -606,6 +606,40 @@
                     }
                 }
 
+                // Dialog-ID unten links: sitzt direkt darüber Inhalt (z. B. ein Button), bekommt der Dialog
+                // unten etwas Luft, damit sich beides nicht berührt.
+                const idButton = box.querySelector('[data-dialog-id]');
+                box.style.paddingBottom = '';
+                if (idButton && box.offsetWidth > 0) {
+                    const boxRect = box.getBoundingClientRect();
+                    const idRect = idButton.getBoundingClientRect();
+                    const probeY = boxRect.bottom - 19;
+                    const leaf = 'button, a, input, select, textarea, img, svg, path, p, span, td, th, li, h1, h2, h3, h4, h5, h6, code, strong, em';
+                    // Behälter (div, form, label …) zählen nur, wenn ein eigener Text genau an dieser Stelle steht.
+                    const isContent = (el, x, y) => {
+                        if (el.matches(leaf)) {
+                            return true;
+                        }
+                        return [...el.childNodes].some((node) => {
+                            if (node.nodeType !== 3 || node.textContent.trim() === '') {
+                                return false;
+                            }
+                            const range = document.createRange();
+                            range.selectNodeContents(node);
+                            return [...range.getClientRects()].some((rect) => x >= rect.left - 2 && x <= rect.right + 2 && y >= rect.top - 2 && y <= rect.bottom + 2);
+                        });
+                    };
+                    const crowded = [4, 24, 44].some((offset) => {
+                        const x = idRect.left + offset;
+                        const hit = document.elementsFromPoint(x, probeY)
+                            .find((el) => el !== idButton && el !== box && box.contains(el));
+                        return hit && isContent(hit, x, probeY);
+                    });
+                    if (crowded) {
+                        box.style.paddingBottom = '14px';
+                    }
+                }
+
                 const help = box.querySelector('[data-dialog-help]');
                 if (help) {
                     window.placeDialogHelp(help);
