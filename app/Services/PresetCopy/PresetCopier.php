@@ -15,7 +15,6 @@ class PresetCopier
     public function areas(): array
     {
         return [
-            new MarketsArea,
             new MarketSetsArea,
             new ProjectTypesArea,
         ];

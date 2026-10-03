@@ -7,7 +7,8 @@ use App\Models\MarketSet;
 use Illuminate\Support\Collection;
 
 /**
- * Ländergruppen (Märkte-Sets): Identität = Name. Die enthaltenen Märkte werden bei Bedarf im Ziel mit
+ * Ländergruppen (Märkte-Sets): Identität = Name. Einzelne Märkte gibt es in der Verwaltung nur als Mitglieder
+ * einer Ländergruppe (Ralf, 2026-10-03: lose Märkte "laufen ins Leere"), darum werden nur Gruppen angeboten. Die enthaltenen Märkte werden bei Bedarf im Ziel mit
  * angelegt (ohne Märkte wäre die Gruppe leer). "Überschreiben" setzt die Mitglieder der Zielgruppe auf
  * die der Quelle - die Gruppe behält ihre ID, Projekte bleiben unberührt.
  */
@@ -39,7 +40,7 @@ class MarketSetsArea implements PresetArea
 
     public function apply(int $sourceTenantId, int $targetTenantId, array $choices, PresetReport $report): void
     {
-        $targetMarkets = $this->markets($targetTenantId)->keyBy(fn (Market $m) => MarketsArea::identityOf($m));
+        $targetMarkets = $this->markets($targetTenantId)->keyBy(fn (Market $m) => self::identityOf($m));
         $created = false;
 
         foreach ($this->sets($sourceTenantId) as $source) {
@@ -59,7 +60,7 @@ class MarketSetsArea implements PresetArea
             // Mitglieder: fehlende Märkte im Ziel anlegen.
             $memberIds = [];
             foreach ($source->markets as $market) {
-                $identity = MarketsArea::identityOf($market);
+                $identity = self::identityOf($market);
                 if (! $targetMarkets->has($identity)) {
                     $targetMarkets->put($identity, Market::query()->withoutGlobalScope('tenant')->create(
                         $market->only(['country_id', 'language_id', 'country_iso', 'country_name', 'country_short_name', 'language_code', 'language_name', 'no_translation'])
@@ -91,6 +92,11 @@ class MarketSetsArea implements PresetArea
         if ($created) {
             Market::renumberForTenant($targetTenantId);
         }
+    }
+
+    private static function identityOf(Market $market): string
+    {
+        return $market->country_iso.'|'.strtolower($market->language_code);
     }
 
     private function freeName(string $name, array $taken): string

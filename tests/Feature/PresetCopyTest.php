@@ -45,6 +45,18 @@ class PresetCopyTest extends TestCase
         ]);
     }
 
+    /** @param list<string> $isos */
+    private function group(Tenant $tenant, string $name, array $isos): \App\Models\MarketSet
+    {
+        $set = \App\Models\MarketSet::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $tenant->id, 'name' => $name, 'sort' => 1]);
+        foreach ($isos as $iso) {
+            $market = $this->market($tenant, $iso, strtolower($iso), $iso.'-Land');
+            $set->markets()->attach($market->id, ['tenant_id' => $tenant->id]);
+        }
+
+        return $set;
+    }
+
     private function main(Tenant $tenant, string $name): ProjectTypeMain
     {
         return ProjectTypeMain::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $tenant->id, 'name' => $name, 'active' => true, 'sort' => 1]);
@@ -70,34 +82,31 @@ class PresetCopyTest extends TestCase
         $this->actingAs(User::factory()->create(['tenant_id' => $this->source->id, 'role' => 'organization_admin']));
         // Verbotene Seiten werden freundlich zurück zur Startseite geleitet (Hinweis statt Fehlerseite).
         $this->get(route('admin.voreinstellungen'))->assertRedirect();
-        $this->apply(['markets' => ['FR|fr' => '1']])->assertRedirect();
+        $this->apply(['market-sets' => ['g:1' => '1']])->assertRedirect();
         $this->assertSame(0, Market::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->count());
     }
 
-    public function test_page_lists_entries_with_conflicts(): void
+    public function test_page_lists_country_groups_with_conflicts(): void
     {
-        $this->market($this->source, 'DE', 'de', 'Deutschland');
-        $this->market($this->target, 'DE', 'de', 'Deutschland');
-        $this->market($this->source, 'FR', 'fr', 'Frankreich');
+        $this->group($this->source, 'DACH', ['DE']);
+        $this->group($this->target, 'DACH', ['DE']);
+        $this->group($this->source, 'Nordics', ['SE']);
 
         $this->get(route('admin.voreinstellungen', ['source' => $this->source->id, 'target' => $this->target->id]))
-            ->assertOk()->assertSee('Frankreich')->assertSee('gibt es schon');
+            ->assertOk()->assertSee('Nordics')->assertSee('gibt es schon');
     }
 
-    public function test_markets_are_copied_and_existing_ones_are_skipped_or_overwritten(): void
+    public function test_existing_country_group_is_skipped_or_overwritten_with_the_source_members(): void
     {
-        $this->market($this->source, 'FR', 'fr', 'Frankreich');
-        $this->market($this->source, 'DE', 'de', 'Deutschland (neu)');
-        $existing = $this->market($this->target, 'DE', 'de', 'Deutschland');
+        $source = $this->group($this->source, 'DACH', ['DE', 'AT']);
+        $existing = $this->group($this->target, 'DACH', ['CH']);
 
-        $this->apply(['markets' => ['FR|fr' => '1', 'DE|de' => '1']])->assertRedirect();
+        $this->apply(['market-sets' => ['g:'.$source->id => '1']]);
+        $this->assertSame(['CH'], $existing->markets()->withoutGlobalScope('tenant')->pluck('country_iso')->all(), 'Standard bei Gleichnamigem ist Überspringen.');
 
-        $this->assertSame(2, Market::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->count());
-        $this->assertSame('Deutschland', $existing->fresh()->country_name, 'Standard bei Gleichnamigem ist Überspringen.');
-
-        $this->apply(['markets' => ['DE|de' => '1']], ['markets' => ['DE|de' => 'overwrite']]);
-        $this->assertSame('Deutschland (neu)', $existing->fresh()->country_name);
-        $this->assertSame(2, Market::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->count());
+        $this->apply(['market-sets' => ['g:'.$source->id => '1']], ['market-sets' => ['g:'.$source->id => 'overwrite']]);
+        $this->assertEqualsCanonicalizing(['DE', 'AT'], $existing->markets()->withoutGlobalScope('tenant')->pluck('country_iso')->all());
+        $this->assertSame(1, \App\Models\MarketSet::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->count());
     }
 
     public function test_choosing_a_sub_type_brings_its_main_type_along(): void
@@ -134,7 +143,7 @@ class PresetCopyTest extends TestCase
 
     public function test_nothing_selected_changes_nothing(): void
     {
-        $this->market($this->source, 'FR', 'fr', 'Frankreich');
+        $this->group($this->source, 'DACH', ['DE']);
 
         $this->apply([])->assertSessionHas('notice');
         $this->assertSame(0, Market::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->count());
@@ -144,7 +153,7 @@ class PresetCopyTest extends TestCase
     {
         $this->target->update(['is_active' => false]);
 
-        $this->apply(['markets' => ['FR|fr' => '1']])->assertStatus(422);
+        $this->apply(['market-sets' => ['g:1' => '1']])->assertStatus(422);
     }
 
     public function test_country_group_brings_its_markets_along(): void
