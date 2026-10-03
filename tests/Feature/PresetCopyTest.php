@@ -405,6 +405,36 @@ class PresetCopyTest extends TestCase
         $this->assertSame('RED', \App\Models\Department::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->where('name', 'Redaktion')->value('short_name'));
     }
 
+    public function test_permission_sets_are_never_overwritten_and_bring_basis_and_building_blocks(): void
+    {
+        $permission = \App\Models\Permission::query()->firstOrFail();
+        $make = fn (Tenant $tenant, string $name, bool $baustein = false, ?int $basis = null) => \App\Models\PermissionTemplate::query()->withoutGlobalScope('tenant')
+            ->create(['tenant_id' => $tenant->id, 'name' => $name, 'is_baustein' => $baustein, 'basis_id' => $basis, 'sort' => 1]);
+        $tr = $make($this->source, 'TR');
+        $tr->permissions()->sync([$permission->id]);
+        $block = $make($this->source, 'Projektleitung', true);
+        $set = $make($this->source, 'TR + PL', false, $tr->id);
+        $set->bausteine()->sync([$block->id]);
+
+        $this->apply(['permission-templates' => ['p:'.$set->id => '1']]);
+
+        $names = fn () => \App\Models\PermissionTemplate::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->orderBy('id')->pluck('name')->all();
+        $this->assertEqualsCanonicalizing(['TR + PL', 'TR', 'Projektleitung'], $names(), 'Basis und Baustein kommen als Voraussetzung mit.');
+        $copy = \App\Models\PermissionTemplate::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->where('name', 'TR + PL')->firstOrFail();
+        $this->assertSame('TR', $copy->basis->name);
+        $this->assertSame($this->target->id, (int) $copy->basis->tenant_id);
+        $this->assertSame(1, $copy->bausteine()->count());
+        $this->assertTrue($copy->hasPermission($permission->key), 'Rechte der Basis wirken.');
+
+        // Zweites Mal: nichts doppelt, auch "Überschreiben" überschreibt nicht.
+        $this->apply(['permission-templates' => ['p:'.$set->id => '1']], ['permission-templates' => ['p:'.$set->id => 'overwrite']]);
+        $this->assertCount(3, $names());
+
+        // Umbenennen legt eine Kopie an.
+        $this->apply(['permission-templates' => ['p:'.$set->id => '1']], ['permission-templates' => ['p:'.$set->id => 'rename']]);
+        $this->assertContains('TR + PL (Kopie)', $names());
+    }
+
     public function test_source_and_target_are_remembered_per_user(): void
     {
         $this->get(route('admin.voreinstellungen', ['source' => $this->source->id, 'target' => $this->target->id]))->assertOk();

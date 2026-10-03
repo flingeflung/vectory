@@ -64,6 +64,9 @@
                                 <button type="button" class="rounded border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-200" onclick="this.closest('section').querySelectorAll('input[type=checkbox]').forEach((c) => c.checked = true); this.closest('form').dispatchEvent(new Event('change', { bubbles: true }))">{{ __('Alle') }}</button>
                                 <button type="button" class="rounded border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-200" onclick="this.closest('section').querySelectorAll('input[type=checkbox]').forEach((c) => c.checked = false); this.closest('form').dispatchEvent(new Event('change', { bubbles: true }))">{{ __('Keine') }}</button>
                             </div>
+                            @if (! empty($area['hint']))
+                                <p class="mb-1 text-xs text-gray-500">{{ $area['hint'] }}</p>
+                            @endif
                             @if ($area['items'] === [])
                                 <p class="py-2 text-xs text-gray-400">{{ __('Die Quelle hat hier keine Einträge.') }}</p>
                             @endif

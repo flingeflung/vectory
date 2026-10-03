@@ -34,6 +34,7 @@ class PresetCopyController extends Controller
             ? collect($this->copier->areas())->map(fn ($area) => [
                 'key' => $area->key(),
                 'label' => $area->label(),
+                'hint' => method_exists($area, 'hint') ? $area->hint() : null,
                 'items' => $area->items($source->id, $target->id),
             ])->all()
             : [];

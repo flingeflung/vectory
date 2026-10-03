@@ -30,6 +30,7 @@ class PresetCopier
             new DepartmentsArea,
             new BusinessUnitsArea,
             new LegacyRolesArea,
+            new PermissionTemplatesArea,
         ];
     }
 
