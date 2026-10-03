@@ -39,6 +39,7 @@ class AdminNav
             __('Kommunikation') => [
                 ['route' => 'admin.mail-vorlagen', 'match' => 'admin.mail-vorlagen*', 'label' => __('Mail-Vorlagen')],
                 ['route' => 'admin.hilfeseiten', 'match' => 'admin.hilfeseiten*', 'label' => __('Hilfeseiten'), 'gate' => 'access-superadmin'],
+                ['route' => 'admin.dialog-ids', 'match' => 'admin.dialog-ids', 'label' => __('Dialog-IDs'), 'gate' => 'access-superadmin'],
             ],
             __('Mandant') => [
                 ['route' => 'admin.config', 'match' => 'admin.config', 'label' => __('Stammdaten')],

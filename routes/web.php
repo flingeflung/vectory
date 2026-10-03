@@ -424,6 +424,7 @@ Route::middleware(['auth', 'verified', 'can:access-superadmin'])->prefix('admin'
 });
 
 Route::middleware(['auth', 'verified', 'can:access-superadmin', RememberLastAdminPage::class])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/dialog-ids', [\App\Http\Controllers\Admin\DialogIdController::class, 'index'])->name('dialog-ids');
     Route::get('/hilfeseiten', [HelpArticleController::class, 'index'])->name('hilfeseiten');
     Route::post('/hilfeseiten', [HelpArticleController::class, 'store'])->name('hilfeseiten.store');
     Route::post('/hilfeseiten/reorder', [HelpArticleController::class, 'reorder'])->name('hilfeseiten.reorder');

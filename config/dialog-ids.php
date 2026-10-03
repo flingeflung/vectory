@@ -53,6 +53,8 @@ return [
     'project-time-tracking' => 'D-78FH',
     'projekt-checklisten' => 'D-R7YD',
     'projektfilter' => 'D-E4DM',
+    'projektgruppen-panel' => 'D-TEIR',
+    'projektgruppen-panel-uebersicht' => 'D-2EIH',
     'projektplanung-organisationen' => 'D-81D2',
     'projektplanung-personen' => 'D-7BIG',
     'projektschablonen-uebernehmen' => 'D-92P5',

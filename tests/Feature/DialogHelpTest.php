@@ -35,7 +35,7 @@ class DialogHelpTest extends TestCase
         // mit der ALTEN ID in config/dialog-ids.php eintragen (sonst verliert die Hilfeseite die Zuordnung)
         // und den alten Eintrag löschen. Dynamisch benannte Dialoge (Name aus Variablen) fehlen hier bewusst.
         $vanished = array_values(array_diff($registered, $names));
-        $dynamic = ['projektgruppen-panel'];
+        $dynamic = ['projektgruppen-panel', 'projektgruppen-panel-uebersicht'];
         $vanished = array_values(array_diff($vanished, $dynamic));
         $this->assertSame([], $vanished, 'Dialog umbenannt/entfernt? Neuen Namen mit der alten ID in config/dialog-ids.php eintragen: '.implode(', ', $vanished));
     }
@@ -85,5 +85,21 @@ class DialogHelpTest extends TestCase
         $with = \Illuminate\Support\Facades\Blade::render('<x-modal name="test-dialog-xyz">Inhalt</x-modal>');
         $this->assertStringContainsString('aria-label="Hilfe zu diesem Dialog"', $with);
         DialogId::forgetCache();
+    }
+
+    public function test_support_page_lists_dialog_ids_for_super_admin_only(): void
+    {
+        $tenant = Tenant::query()->firstOrFail();
+        $id = DialogId::for('project-overlay');
+
+        $this->actingAs(User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'organization_admin']))
+            ->get(route('admin.dialog-ids'))->assertRedirect();
+
+        $this->actingAs(User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'super_admin']))
+            ->get(route('admin.dialog-ids'))
+            ->assertOk()
+            ->assertSee($id)
+            ->assertSee('project-overlay')
+            ->assertSee('app.blade.php', false);
     }
 }
