@@ -9,7 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
-/** Zentrale Seite "Voreinstellungen übernehmen" - nur Zentral-/Super-Admin (Ralf, 2026-10-03). */
+/** Zentrale Seite "Konfiguration übernehmen" - nur Zentral-/Super-Admin (Ralf, 2026-10-03). */
 class PresetCopyController extends Controller
 {
     public function __construct(private readonly PresetCopier $copier) {}

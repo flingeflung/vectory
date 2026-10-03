@@ -1,6 +1,6 @@
 <x-admin-layout>
     {{--
-        Voreinstellungen übernehmen (Ralf, 2026-10-03, Vorbild InDesign "Stile laden"): Quelle und Ziel wählen,
+        Konfiguration übernehmen (Ralf, 2026-10-03, Vorbild InDesign "Stile laden"): Quelle und Ziel wählen,
         dann einzelne Einträge ankreuzen. Gleichnamiges im Ziel ist markiert und wird je Eintrag überschrieben,
         umbenannt oder übersprungen. Gespeichert wird erst mit dem Button, alles in einem Zug (ganz oder gar nicht).
     --}}
