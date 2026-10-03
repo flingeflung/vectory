@@ -90,7 +90,7 @@ class Attribute extends Model
             // jedem anderen System-Feld, nur die Caption bleibt pro Kunde
             // frei ("bei Viega Modell, anderswo Typ/Produkt"). Feld wird
             // später ohnehin per PIM-Anbindung befüllt, nicht manuell.
-            'system_model' => 'Modell/System',
+            'system_model' => 'Produkt/Modell/System/Typ',
             'remarks' => 'Bemerkungen',
         ],
         self::SECTION_ABLAUFDATEN => [

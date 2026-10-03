@@ -54,6 +54,7 @@
 
                     @foreach ($areas as $area)
                         <section class="mb-8" data-area="{{ $area['key'] }}">
+                            @php $previousGroup = null; @endphp
                             <div class="mb-1 flex items-center gap-3 border-b border-gray-200 pb-1">
                                 <h3 class="text-sm font-semibold text-gray-800">{{ $area['label'] }}</h3>
                                 <span class="text-xs text-gray-400">{{ count($area['items']) }}</span>
@@ -65,7 +66,16 @@
                             @endif
                             <ul>
                                 @foreach ($area['items'] as $item)
-                                    <li class="flex items-center gap-3 py-0.5 text-sm" @if ($item['parent']) style="padding-left: 1.75rem" @endif>
+                                    @if (($item['group'] ?? null) && ($item['group'] !== ($previousGroup ?? null)))
+                                        <li class="mb-1 mt-4">
+                                            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ $item['group'] }}</p>
+                                            @if (! empty($item['group_hint']))
+                                                <p class="text-xs text-gray-400">{{ $item['group_hint'] }}</p>
+                                            @endif
+                                        </li>
+                                    @endif
+                                    @php $previousGroup = $item['group'] ?? null; @endphp
+                                    <li class="flex items-center gap-3 py-0.5 text-sm" @if (! empty($item['hint'])) title="{{ $item['hint'] }}" @endif @if ($item['parent']) style="padding-left: 1.75rem" @endif>
                                         <label class="flex min-w-0 flex-1 items-center gap-2">
                                             <input type="checkbox" name="sel[{{ $area['key'] }}][{{ $item['key'] }}]" value="1" class="rounded border-gray-300">
                                             <span class="truncate {{ $item['parent'] ? 'text-gray-700' : 'font-medium text-gray-900' }}">{{ $item['label'] }}</span>

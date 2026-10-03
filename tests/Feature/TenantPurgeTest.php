@@ -125,4 +125,15 @@ class TenantPurgeTest extends TestCase
 
         $this->assertDatabaseHas('tenants', ['id' => $this->test->id]);
     }
+
+    public function test_a_deleted_active_organization_falls_back_to_the_home_organization(): void
+    {
+        $this->withSession(['active_tenant_id' => $this->test->id]);
+        $this->assertSame($this->test->id, \App\Support\CurrentTenant::id());
+
+        $this->purge('Testkunde');
+
+        $this->assertSame($this->home->id, \App\Support\CurrentTenant::id());
+        $this->get(route('dashboard'))->assertOk();
+    }
 }

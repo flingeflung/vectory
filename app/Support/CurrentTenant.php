@@ -47,6 +47,11 @@ class CurrentTenant
             return (int) $sessionTenantId;
         }
 
+        // Gemerkte Organisation gibt es nicht mehr (gelöscht) oder ist gesperrt: Merker verwerfen, weiter mit der Heimat-Organisation.
+        if ($sessionTenantId) {
+            session()->forget(self::SESSION_KEY);
+        }
+
         // Frischer Login (Session noch leer, z.B. nach dem Einloggen) -
         // zuletzt aktiven Kunden aus der DB wiederherstellen, statt immer
         // beim Heimat-Mandanten zu starten (Ralfs Bug-Report: startet nach
@@ -70,8 +75,8 @@ class CurrentTenant
      */
     public static function userCanAccess(User $user, int $tenantId): bool
     {
-        // Deaktivierte Organisationen sind für niemanden erreichbar (Ralf, 2026-10-03).
-        if (in_array($tenantId, Tenant::inactiveIds(), true)) {
+        // Gelöschte und deaktivierte Organisationen sind für niemanden erreichbar (Ralf, 2026-10-03).
+        if (! in_array($tenantId, Tenant::existingIds(), true) || in_array($tenantId, Tenant::inactiveIds(), true)) {
             return false;
         }
 

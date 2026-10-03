@@ -226,4 +226,19 @@ class PresetCopyTest extends TestCase
 
         \Illuminate\Support\Facades\Schema::table('projects', fn ($t) => $t->dropColumn(['attributes_gleich_test', 'attributes_gleich_test_kopie', 'attributes_gleich_test_sort', 'attributes_gleich_test_kopie_sort']));
     }
+
+    public function test_system_field_applicability_and_editable_label_are_overwritten(): void
+    {
+        app(\App\Services\TenantConfigCloner::class)->seedSystemAttributes($this->source);
+        app(\App\Services\TenantConfigCloner::class)->seedSystemAttributes($this->target);
+        $sourceModel = \App\Models\Attribute::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->source->id)->where('key', 'system_model')->firstOrFail();
+        $sourceModel->update(['label' => 'Modelle', 'applies_to_all_types' => false]);
+        $targetModel = \App\Models\Attribute::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->where('key', 'system_model')->firstOrFail();
+        $this->assertSame('Produkt/Modell/System/Typ', $targetModel->label, 'Neue Vorbelegung der Bezeichnung.');
+
+        $this->apply(['attributes' => ['s:system_model' => '1']], ['attributes' => ['s:system_model' => 'overwrite']]);
+
+        $this->assertSame('Modelle', $targetModel->fresh()->label);
+        $this->assertFalse((bool) $targetModel->fresh()->applies_to_all_types);
+    }
 }

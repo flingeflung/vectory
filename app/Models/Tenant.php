@@ -13,6 +13,8 @@ class Tenant extends Model
     /** @var array<int, int>|null */
     private static ?array $inactiveIds = null;
 
+    private static ?array $existingIds = null;
+
     protected function casts(): array
     {
         return ['is_home_tenant' => 'boolean', 'is_active' => 'boolean'];
@@ -20,7 +22,10 @@ class Tenant extends Model
 
     protected static function booted(): void
     {
-        $forget = fn () => self::$inactiveIds = null;
+        $forget = function () {
+            self::$inactiveIds = null;
+            self::$existingIds = null;
+        };
         static::saved($forget);
         static::deleted($forget);
     }
@@ -48,9 +53,21 @@ class Tenant extends Model
             ->all();
     }
 
+    /**
+     * IDs aller vorhandenen Organisationen - damit eine gelöschte, aber noch in der Sitzung gemerkte
+     * Organisation nicht als "aktiv" weiterlebt (Ralf, 2026-10-03: gelöschte Organisation im Schalter gewählt).
+     *
+     * @return array<int, int>
+     */
+    public static function existingIds(): array
+    {
+        return self::$existingIds ??= DB::table('tenants')->pluck('id')->map(fn ($id) => (int) $id)->all();
+    }
+
     public static function forgetInactiveCache(): void
     {
         self::$inactiveIds = null;
+        self::$existingIds = null;
     }
 
     public function scopeActive($query)

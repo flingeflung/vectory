@@ -60,11 +60,14 @@ class AttributesArea implements PresetArea
         foreach ($this->attributes($sourceTenantId)->where('system', true)->whereIn('key', Attribute::RESTRICTABLE_SYSTEM_FIELDS) as $attribute) {
             $items[] = [
                 'key' => 's:'.$attribute->key,
-                'label' => __('Systemfeld „:name“: Geltung für Projektarten', ['name' => $attribute->label]),
+                'group' => __('Geltung der Systemfelder'),
+                'group_hint' => __('Systemfelder sind fest eingebaute Felder, die es für jede Organisation gibt, zum Beispiel Workflow oder Markt. Bei ihnen legen Sie fest, für welche Projektarten sie gelten. Wenn Sie hier ein Feld ankreuzen und beim Ziel „Überschreiben“ wählen, gilt es dort für dieselben Projektarten wie in der Quelle. Das Feld selbst gibt es im Ziel ohnehin schon.'),
+                'label' => $attribute->label,
                 'parent' => null,
                 'conflict' => true,
                 'renamable' => false,
-                'note' => $attribute->applies_to_all_types ? __('gilt für alle') : __('nur bestimmte Projektarten'),
+                'note' => $attribute->applies_to_all_types ? __('gilt für alle Projektarten') : __('gilt nur für ausgewählte Projektarten'),
+                'hint' => __('Übernimmt nur, für welche Projektarten dieses Feld gilt.'),
             ];
         }
 
@@ -151,6 +154,10 @@ class AttributesArea implements PresetArea
         }
 
         $target->update(['applies_to_all_types' => $source->applies_to_all_types]);
+        // Bezeichnung nur, wenn sie pro Kunde änderbar ist (aktuell nur das Produkt-/Modell-Feld).
+        if ($target->label_editable && $source->label !== $target->label) {
+            $target->update(['label' => $source->label]);
+        }
         $missing = $this->syncTypes($source, $target, $typeMap);
         $report->add($this->label(), $name, __('überschrieben').$this->missingNote($missing));
     }

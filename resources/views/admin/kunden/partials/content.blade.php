@@ -210,7 +210,7 @@
                             <button
                                 type="button"
                                 @click="window.deleteWithConfirm($refs.deleteForm, {
-                                    message: {{ \Illuminate\Support\Js::from(__('Dieser Kunde hat noch keine Personen oder Projekte. Seine Einstellungen (z. B. Projektarten, Märkte, Ländergruppen, Workflows, Attribute) werden mit gelöscht. Das lässt sich nicht rückgängig machen.')) }},
+                                    message: {{ \Illuminate\Support\Js::from(__('Diese Organisation hat noch keine Personen oder Projekte. Seine Einstellungen (z. B. Projektarten, Märkte, Ländergruppen, Workflows, Attribute) werden mit gelöscht. Das lässt sich nicht rückgängig machen.')) }},
                                 })"
                                 class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
                             >

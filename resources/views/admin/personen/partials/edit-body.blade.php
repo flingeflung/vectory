@@ -144,6 +144,9 @@
                 @input="dirty = window.formIsDirty($el)"
                 class="space-y-4 rounded-lg border border-gray-200 bg-white p-4"
             >
+                @if (\App\Models\SystemSetting::multiTenantEnabled())
+                    <p class="-mt-1 text-xs text-gray-400">{{ __('Gültig für Organisation: :tenant', ['tenant' => $person->tenant?->name ?? '–']) }}</p>
+                @endif
                 <div class="flex items-end gap-4">
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('ID') }}</label>

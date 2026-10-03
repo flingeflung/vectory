@@ -79,7 +79,7 @@ class ProjectFilterCatalog
             // n:m-Produktverknüpfung statt Freitext - eigener fester
             // Eintrag statt über die generische attribute:-Schleife unten,
             // siehe gleiche Begründung in ProjectColumnCatalog.
-            ['key' => 'system_model', 'label' => Attribute::query()->where('tenant_id', $tenantId)->where('key', 'system_model')->value('label') ?? __('Modell/System'), 'type' => 'text'],
+            ['key' => 'system_model', 'label' => Attribute::query()->where('tenant_id', $tenantId)->where('key', 'system_model')->value('label') ?? __('Produkt/Modell/System/Typ'), 'type' => 'text'],
             // Ralf, 2026-09-13: "Produktgruppe als Dropdown, Text bleibt für
             // Produktname/-nummer" - eigenes Kriterium zusätzlich zum
             // Freitext oben, NICHT zu verwechseln mit project_group_id
