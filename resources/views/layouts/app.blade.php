@@ -564,6 +564,12 @@
                 };
             })();
 
+            {{-- Hilfe zu einem bestimmten Dialog (Klick auf die Dialog-ID, siehe components/modal.blade.php). --}}
+            window.openDialogHelp = function (dialogId) {
+                window.currentHelpDialog = dialogId;
+                window.dispatchEvent(new CustomEvent('open-modal', { detail: 'help-panel' }));
+            };
+
             window.showManageSavedToast = function (toastId) {
                 const source = document.getElementById(toastId);
                 window.showToast(source ? source.textContent.trim() : {{ \Illuminate\Support\Js::from(__('Gespeichert.')) }});

@@ -40,9 +40,17 @@ class HelpController extends Controller
         }
 
         $routeName = (string) $request->query('route', '');
-        $article = $routeName !== ''
-            ? HelpArticle::query()->forRoute($routeName)->with('translations')->first()
+        $dialogId = (string) $request->query('dialog', '');
+
+        // Zuerst der Artikel zum Dialog (Dialog-ID steht in route_names), sonst der zur Seite.
+        $dialogArticle = $dialogId !== ''
+            ? HelpArticle::query()->forRoute($dialogId)->with('translations')->first()
             : null;
+        if ($dialogArticle && ! $dialogArticle->isVisibleTo($request->user())) {
+            $dialogArticle = null;
+        }
+        $article = $dialogArticle
+            ?? ($routeName !== '' ? HelpArticle::query()->forRoute($routeName)->with('translations')->first() : null);
 
         if ($article && ! $article->isVisibleTo($request->user())) {
             $article = null;
@@ -59,6 +67,8 @@ class HelpController extends Controller
             // (Routennamen)" in der Hilfeseiten-Verwaltung einträgt - sonst
             // müsste er dafür jedes Mal fragen, welche Route das gerade ist.
             'routeName' => $routeName,
+            'dialogId' => $dialogId,
+            'dialogHasArticle' => $dialogArticle !== null,
             'canManageHelp' => $request->user()?->isSuperAdmin(),
         ]);
     }

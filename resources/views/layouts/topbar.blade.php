@@ -130,7 +130,7 @@
              angezeigt wird. --}}
         <button
             type="button"
-            onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'help-panel' }))"
+            onclick="window.currentHelpDialog = ''; window.dispatchEvent(new CustomEvent('open-modal', { detail: 'help-panel' }))"
             class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-white/20 text-sm font-medium hover:bg-white/10 focus:outline-none"
             title="{{ __('Hilfe zu dieser Seite') }}"
         >

@@ -13,7 +13,7 @@
     was hier die eigentliche Seiten-URL überschreiben würde. Eigene,
     schlanke Debounce-Funktion ohne History-Nebenwirkung stattdessen.
 --}}
-<x-modal name="help-panel" max-width="3xl" :draggable="true">
+<x-modal name="help-panel" max-width="3xl" :draggable="true" :help-id="false">
     <div
         class="flex h-[85vh] max-h-[85vh] flex-col"
         x-data="{
@@ -22,6 +22,7 @@
                 this.timer = setTimeout(async () => {
                     const params = new URLSearchParams({
                         route: window.currentHelpKey || '',
+                        dialog: window.currentHelpDialog || '',
                         q: this.$refs.searchInput.value,
                     });
                     const html = await fetch({{ \Illuminate\Support\Js::from(route('hilfe')) }} + '?' + params.toString()).then((r) => r.text());

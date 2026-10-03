@@ -22,6 +22,9 @@
     // Klick-außerhalb-schließt-Geste, Seite bleibt scrollbar - alles
     // andere (Escape schließt, Ziehen usw.) bleibt unverändert.
     'blocking' => true,
+    // Ralf, 2026-10-03: kleine Dialog-ID oben links (siehe App\Support\DialogId); für Hilfe- und
+    // Lightbox-Fenster selbst abgeschaltet.
+    'helpId' => true,
 ])
 
 @php
@@ -47,6 +50,7 @@ $maxWidth = [
 $boxOverflowClass = 'overflow-hidden';
 $heightStyle = $height ? "height: {$height};" : '';
 $storageKey = "vectory-modal-size-{$name}";
+$dialogId = $helpId ? \App\Support\DialogId::for($name) : null;
 @endphp
 
 <div
@@ -351,7 +355,7 @@ $storageKey = "vectory-modal-size-{$name}";
             (dragPos gesetzt): position:fixed mit explizitem left/top
             überschreibt einen simplen Auto-Margin ohnehin.
         --}}
-        class="pointer-events-auto sm:mx-auto bg-white rounded-lg {{ $boxOverflowClass }} shadow-xl transform transition-all {{ $resizable ? '' : 'sm:w-full '.$maxWidth }}"
+        class="relative pointer-events-auto sm:mx-auto bg-white rounded-lg {{ $boxOverflowClass }} shadow-xl transform transition-all {{ $resizable ? '' : 'sm:w-full '.$maxWidth }}"
         @if (! $show)
             x-transition:enter="ease-out duration-300"
             x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
@@ -361,6 +365,14 @@ $storageKey = "vectory-modal-size-{$name}";
         x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
         x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
     >
+        @if ($dialogId)
+            <button
+                type="button"
+                x-on:click.stop="window.openDialogHelp && window.openDialogHelp('{{ $dialogId }}')"
+                class="absolute left-1.5 top-0.5 z-20 cursor-help rounded px-0.5 font-mono text-[9px] leading-none text-gray-300 hover:bg-gray-100 hover:text-gray-600"
+                title="{{ __('Dialog-ID :id - bei Rückfragen bitte nennen. Klick öffnet die Hilfe zu diesem Dialog.', ['id' => $dialogId]) }}"
+            >{{ $dialogId }}</button>
+        @endif
         {{ $slot }}
     </div>
 </div>
