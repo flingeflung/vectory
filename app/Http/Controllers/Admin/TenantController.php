@@ -8,6 +8,7 @@ use App\Models\PermissionTemplate;
 use App\Models\SystemSetting;
 use App\Models\Tenant;
 use App\Services\TenantConfigCloner;
+use App\Services\TenantPurger;
 use App\Support\CurrentTenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,7 +19,7 @@ use Illuminate\View\View;
 
 class TenantController extends Controller
 {
-    public function __construct(private readonly TenantConfigCloner $configCloner) {}
+    public function __construct(private readonly TenantConfigCloner $configCloner, private readonly TenantPurger $purger) {}
 
     /**
      * Eigener Admin-Tab statt Teil der Konfig-Seite - Ralf: bei 100+
@@ -176,6 +177,25 @@ class TenantController extends Controller
         $tenant->delete();
 
         return redirect()->route('admin.kunden');
+    }
+
+    /**
+     * Endgültig löschen samt Personen, Projekten und allen Daten (Ralf, 2026-10-03: Test-Organisationen
+     * rückstandsfrei entfernen). Nur Super-Admin; zur Sicherheit muss der Name der Organisation eingetippt werden.
+     */
+    public function purge(Request $request, Tenant $tenant): RedirectResponse
+    {
+        abort_unless(SystemSetting::multiTenantEnabled(), 403);
+        abort_if($tenant->is_home_tenant, 422);
+
+        if (trim((string) $request->input('confirm_name')) !== $tenant->name) {
+            return back()->with('error', __('Der eingegebene Name stimmt nicht überein. Es wurde nichts gelöscht.'));
+        }
+
+        $name = $tenant->name;
+        $this->purger->purge($tenant);
+
+        return redirect()->route('admin.kunden')->with('notice', __('Die Organisation „:name“ wurde mit allen Daten gelöscht.', ['name' => $name]));
     }
 
     private function normalizedPath(Request $request, string $field): ?string

@@ -425,6 +425,7 @@ Route::middleware(['auth', 'verified', 'can:access-superadmin'])->prefix('admin'
     Route::get('/superadmin', [SuperAdminController::class, 'index'])->name('superadmin');
     Route::post('/superadmin', [SuperAdminController::class, 'update'])->name('superadmin.update');
     Route::post('/kunden/{tenant}/aktiv', [TenantController::class, 'setActive'])->name('kunden.active');
+    Route::delete('/kunden/{tenant}/endgueltig', [TenantController::class, 'purge'])->name('kunden.purge');
     Route::get('/superadmin/uebersetzung', [SuperAdminController::class, 'downloadTranslations'])->name('superadmin.uebersetzung.download');
     Route::post('/superadmin/uebersetzung', [SuperAdminController::class, 'uploadTranslations'])->name('superadmin.uebersetzung.upload');
 });

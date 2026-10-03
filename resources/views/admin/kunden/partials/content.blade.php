@@ -218,6 +218,20 @@
                             </button>
                         @endunless
                         @can('access-superadmin')
+                            @if ($selectedTenant->hasData() && ! $selectedTenant->is_home_tenant)
+                                <div x-data="{ open: false, typed: '' }" class="flex items-center gap-2">
+                                    <button type="button" x-show="! open" @click="open = true; $nextTick(() => $refs.confirmName.focus())" class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50" title="{{ __('Löscht die Organisation mit allen Personen, Projekten und Einstellungen. Nicht rückgängig zu machen.') }}">{{ __('Endgültig löschen …') }}</button>
+                                    <form x-show="open" x-cloak method="POST" action="{{ route('admin.kunden.purge', $selectedTenant) }}" class="flex items-center gap-2">
+                                        @csrf
+                                        @method('DELETE')
+                                        <input type="text" name="confirm_name" x-ref="confirmName" x-model="typed" autocomplete="off" placeholder="{{ __('Name der Organisation eintippen') }}" class="w-56 rounded-md border-gray-300 py-1 text-xs" title="{{ __('Zur Sicherheit: Tippen Sie den Namen „:name“ ein. Danach werden die Organisation und ALLE ihre Daten unwiderruflich gelöscht.', ['name' => $selectedTenant->name]) }}">
+                                        <button type="submit" :disabled="typed.trim() !== {{ \Illuminate\Support\Js::from($selectedTenant->name) }}" class="whitespace-nowrap rounded-md bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40">{{ __('Alles unwiderruflich löschen') }}</button>
+                                        <button type="button" @click="open = false; typed = ''" class="whitespace-nowrap rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">{{ __('Abbrechen') }}</button>
+                                    </form>
+                                </div>
+                            @endif
+                        @endcan
+                        @can('access-superadmin')
                             @unless ($selectedTenant->is_home_tenant)
                                 <button
                                     type="button"
