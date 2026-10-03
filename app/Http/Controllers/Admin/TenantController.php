@@ -50,10 +50,6 @@ class TenantController extends Controller
         $name = trim((string) $request->string('name'));
         abort_if($name === '', 422);
 
-        $sourceTenant = $request->filled('source_tenant_id')
-            ? Tenant::query()->find($request->integer('source_tenant_id'))
-            : null;
-
         $tenant = Tenant::query()->create([
             'name' => $name,
             'short_name' => $this->normalizedShortName($request, $name),
@@ -66,23 +62,13 @@ class TenantController extends Controller
             $tenant->update(['icon_filename' => $this->storeIcon($request->file('company_icon'), $tenant)]);
         }
 
-        if ($sourceTenant) {
-            // Ralf: "für den TR-DL brauchen wir eine Funktion, um Dinge von
-            // einem Kunden zum anderen kopieren zu können" (über 100 Kunden
-            // beim ehemaligen Arbeitgeber - jedes Mal alles neu anlegen wäre
-            // unzumutbar). Kopiert NUR Struktur/Konfiguration (Funktions-
-            // gruppen, Abteilungen, Geschäftsbereiche, Rollen, Workflows,
-            // Projektarten, Märkte), KEINE echten Daten.
-            $this->configCloner->clone($sourceTenant, $tenant);
-        }
-
         // Feste Projektattribut-Felder (Bezeichnung, Start, Workflow, ...) -
-        // jeder Mandant braucht sie, unabhängig davon, ob von einem
-        // Quell-Mandanten geklont wurde (Ralf, 2026-09-10: "frei mischbar
-        // mit Zusatzfeldern").
+        // jeder Mandant braucht sie (Ralf, 2026-09-10: "frei mischbar mit
+        // Zusatzfeldern"). Alles Weitere übernimmt man danach über
+        // "Konfiguration übernehmen".
         $this->configCloner->seedSystemAttributes($tenant);
 
-        $this->seedDefaultPermissionTemplates($tenant, $sourceTenant);
+        $this->seedDefaultPermissionTemplates($tenant);
 
         // Ralf: sonst könnte man unbemerkt im falschen (vorher aktiven)
         // Kunden weiterarbeiten - direkt nach dem Anlegen zum neuen Kunden
@@ -274,22 +260,15 @@ class TenantController extends Controller
      * selbst konsistent mit dem, was bestehende Kunden tatsächlich haben.
      * Fallback (keine bestehenden Kunden, z.B. Erstinstallation): Admin
      * bekommt alle aktuellen Rechte, User startet leer - gleiches
-     * Verhalten wie die ursprüngliche Seed-Migration. Wurde beim Anlegen
-     * explizit "als Kopie von" ein Referenz-Kunde gewählt, werden dessen
-     * eigene Sets 1:1 übernommen statt eines beliebigen anderen Kunden -
-     * konsistent mit dem, was sonst per TenantConfigCloner kopiert wird.
+     * Verhalten wie die ursprüngliche Seed-Migration.
      */
-    private function seedDefaultPermissionTemplates(Tenant $tenant, ?Tenant $preferredSource = null): void
+    private function seedDefaultPermissionTemplates(Tenant $tenant): void
     {
         foreach ([__('Alle Benutzerrechte') => true, __('User') => false] as $name => $allPermissions) {
             $reference = PermissionTemplate::query()
                 ->withoutGlobalScope('tenant')
                 ->where('name', $name)
-                ->when(
-                    $preferredSource,
-                    fn ($query) => $query->where('tenant_id', $preferredSource->id),
-                    fn ($query) => $query->where('tenant_id', '!=', $tenant->id),
-                )
+                ->where('tenant_id', '!=', $tenant->id)
                 ->orderBy('tenant_id')
                 ->orderBy('sort')
                 ->first();

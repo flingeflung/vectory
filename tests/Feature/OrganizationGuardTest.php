@@ -98,9 +98,6 @@ class OrganizationGuardTest extends TestCase
         'app/Services/PresetCopy/JobTypesArea.php::job_types' => 3,
         'app/Services/PresetCopy/ProjectTemplatesArea.php::project_template_function_group' => 3,
         'app/Services/PresetCopy/WorkflowsArea.php::workflow_step_function_group' => 2,
-        'app/Services/TenantConfigCloner.php::function_group_tenant' => 2,
-        'app/Services/TenantConfigCloner.php::project_template_function_group' => 2,
-        'app/Services/TenantConfigCloner.php::workflow_step_function_group' => 2,
         'app/Support/CurrentTenant.php::person_tenant' => 2,
     ];
 

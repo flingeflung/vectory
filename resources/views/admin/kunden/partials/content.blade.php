@@ -57,18 +57,6 @@
                         <input type="email" name="notification_email" required class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
                         <p class="mt-0.5 text-xs text-gray-400">{{ __('Pflichtfeld. Empfänger für automatische Mitteilungen an diesen Kunden, z. B. Projektanfragen und Rückmeldungen zu Freigaben. Wenn noch keine Sammel-Adresse existiert, tragen Sie zunächst irgendeine gültige Adresse ein - sie lässt sich jederzeit ändern.') }}</p>
                     </div>
-                    @if ($tenants->isNotEmpty())
-                        <div>
-                            <label class="block text-xs text-gray-500">{{ __('Als Kopie von') }}</label>
-                            <select name="source_tenant_id" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
-                                <option value="">{{ __('– Keine Vorlage –') }}</option>
-                                @foreach ($tenants as $tenant)
-                                    <option value="{{ $tenant->id }}">{{ $tenant->name }}</option>
-                                @endforeach
-                            </select>
-                            <p class="mt-1 text-xs text-gray-400">{{ __('Übernimmt Funktionsgruppen, Abteilungen, Geschäftsbereiche, Rollen, Workflows, Projektarten und Märkte des gewählten Kunden - keine Personen, Projekte oder Dienstleister.') }}</p>
-                        </div>
-                    @endif
                     <div class="flex justify-end gap-2">
                         <button type="button" @click="newTenant = false" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                             {{ __('Abbrechen') }}
