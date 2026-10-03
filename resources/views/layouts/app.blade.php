@@ -591,6 +591,19 @@
                 const scale = boxRect.width > 0 ? boxRect.width / box.offsetWidth : 1;
                 el.style.top = ((closeRect.top - boxRect.top + closeRect.height / 2) / scale - el.offsetHeight / 2) + 'px';
                 el.style.right = ((boxRect.right - closeRect.left) / scale + 12) + 'px';
+
+                // Innenfarbe wie die Kopfzeile, in der das Fragezeichen sitzt (grau bei verschiebbaren Dialogen).
+                let node = close.parentElement;
+                let background = '';
+                while (node && node !== box.parentElement) {
+                    const color = getComputedStyle(node).backgroundColor;
+                    if (color && color !== 'rgba(0, 0, 0, 0)' && color !== 'transparent') {
+                        background = color;
+                        break;
+                    }
+                    node = node.parentElement;
+                }
+                el.style.backgroundColor = background;
             };
 
             window.showManageSavedToast = function (toastId) {
