@@ -9,7 +9,7 @@
         <input type="checkbox" name="use_characteristics" value="1" x-model="on" class="rounded border-gray-300">
         {{ __('Merkmale dieser Schablone erfassen') }}
     </label>
-    <p x-show="!on" class="mt-0.5 text-xs text-gray-400">{{ __('Optional: Format, Komplexität, Entwicklungsstand u. Ä. beschreiben ein typisches Projekt. Für Verwaltungs- und andere Projekte meist nicht nötig.') }}</p>
+    <p x-show="!on" class="mt-0.5 text-xs text-gray-400">{{ __('Optional: Format, Komplexität, Entwicklungsstand u. Ä. beschreiben ein typisches Projekt. Für Verwaltungs- und andere Projekte meist nicht notwendig.') }}</p>
 
     <div x-show="on" x-cloak class="mt-3">
         <div class="mb-3">

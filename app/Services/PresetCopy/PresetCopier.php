@@ -20,6 +20,9 @@ class PresetCopier
             new AttributesArea,
             new WorkflowsArea,
             new ProjectTemplatesArea,
+            new ChecklistsArea,
+            new MailTemplatesArea,
+            new CopyTemplatesArea,
         ];
     }
 

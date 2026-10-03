@@ -308,4 +308,39 @@ class PresetCopyTest extends TestCase
         $this->assertSame('Print', \App\Models\Workflow::query()->withoutGlobalScope('tenant')->findOrFail($copy->workflow_id)->name);
         $this->assertSame($this->target->id, (int) \App\Models\Workflow::query()->withoutGlobalScope('tenant')->findOrFail($copy->workflow_id)->tenant_id);
     }
+
+    public function test_checklist_is_copied_and_overwrite_is_blocked_when_used(): void
+    {
+        $source = \App\Models\Checklist::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $this->source->id, 'name' => 'Freigabe', 'active' => true, 'sort' => 1]);
+        $section = \App\Models\ChecklistSection::query()->create(['checklist_id' => $source->id, 'title' => 'Inhalt', 'sort' => 1]);
+        \App\Models\ChecklistPoint::query()->create(['checklist_section_id' => $section->id, 'title' => 'Text geprüft', 'sort' => 1]);
+
+        $this->apply(['checklists' => ['c:'.$source->id => '1']]);
+
+        $copy = \App\Models\Checklist::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->firstOrFail();
+        $this->assertSame(1, $copy->load('sections.points')->pointsCount());
+
+        $project = Project::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $this->target->id, 'source_pn' => '2', 'title' => 'P', 'status' => 0]);
+        \App\Models\ProjectChecklist::query()->withoutGlobalScopes()->create(['tenant_id' => $this->target->id, 'project_id' => $project->id, 'checklist_id' => $copy->id]);
+        \App\Models\ChecklistPoint::query()->where('checklist_section_id', $section->id)->update(['title' => 'Geändert']);
+
+        $this->apply(['checklists' => ['c:'.$source->id => '1']], ['checklists' => ['c:'.$source->id => 'overwrite']]);
+        $this->assertSame('Text geprüft', $copy->fresh()->load('sections.points')->sections->first()->points->first()->title, 'Verwendete Checkliste darf nicht überschrieben werden.');
+    }
+
+    public function test_mail_template_and_copy_template_are_copied(): void
+    {
+        $mail = \App\Models\MailTemplate::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $this->source->id, 'name' => 'Start', 'subject' => 'Hallo', 'body' => 'Text {title}']);
+        $attr = $this->attribute($this->source, 'kopier_test');
+        $this->attribute($this->target, 'kopier_test');
+        $copyTemplate = \App\Models\CopyTemplate::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $this->source->id, 'name' => 'Standardkopie', 'sort' => 1]);
+        DB::table('copy_template_attribute')->insert(['copy_template_id' => $copyTemplate->id, 'attribute_id' => $attr->id, 'created_at' => now(), 'updated_at' => now()]);
+
+        $this->apply(['mail-templates' => ['m:'.$mail->id => '1'], 'copy-templates' => ['k:'.$copyTemplate->id => '1']]);
+
+        $this->assertSame('Text {title}', \App\Models\MailTemplate::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->value('body'));
+        $targetCopy = \App\Models\CopyTemplate::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->firstOrFail();
+        $this->assertSame(1, DB::table('copy_template_attribute')->where('copy_template_id', $targetCopy->id)->count());
+        \Illuminate\Support\Facades\Schema::table('projects', fn ($t) => $t->dropColumn('attributes_kopier_test'));
+    }
 }
