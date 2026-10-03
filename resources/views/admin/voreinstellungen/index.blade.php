@@ -88,7 +88,7 @@
 
                 <div class="flex shrink-0 justify-end gap-2 border-t border-gray-100 p-3">
                     <a href="{{ route('admin.voreinstellungen') }}" class="whitespace-nowrap rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">{{ __('Abbrechen') }}</a>
-                    <button type="submit" class="whitespace-nowrap rounded-md bg-gray-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700">{{ __('Übernehmen') }}</button>
+                    <button type="submit" class="whitespace-nowrap rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
                 </div>
             </form>
         @endif
