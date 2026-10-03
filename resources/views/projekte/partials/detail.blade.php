@@ -267,6 +267,16 @@
                     >
                         <x-icon name="time-tracking" class="h-5 w-5" />
                     </button>
+                    {{-- Platzhalter (Ralf, 2026-10-03): Aus-/Einchecken ist für den Testbetrieb noch nicht gebaut, der Button weist nur darauf hin. --}}
+                    <button
+                        type="button"
+                        @click="window.notifyDialog({{ \Illuminate\Support\Js::from(__('Das Aus- und Einchecken von Projekten ist geplant und steht in dieser Testversion noch nicht zur Verfügung.')) }})"
+                        class="{{ $iconBtn }} opacity-60"
+                        title="{{ __('Projekt aus-/einchecken (geplant)') }}"
+                        aria-label="{{ __('Projekt aus-/einchecken (geplant)') }}"
+                    >
+                        <x-icon name="checkout" class="h-5 w-5" />
+                    </button>
                     <button
                         type="button"
                         onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'project-error-check-{{ $project->id }}' }))"
