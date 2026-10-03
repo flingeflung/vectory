@@ -146,4 +146,23 @@ class PresetCopyTest extends TestCase
 
         $this->apply(['markets' => ['FR|fr' => '1']])->assertStatus(422);
     }
+
+    public function test_country_group_brings_its_markets_along(): void
+    {
+        $de = $this->market($this->source, 'DE', 'de', 'Deutschland');
+        $fr = $this->market($this->source, 'FR', 'fr', 'Frankreich');
+        $set = \App\Models\MarketSet::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $this->source->id, 'name' => 'DACH', 'sort' => 1]);
+        $set->markets()->sync([$de->id => ['tenant_id' => $this->source->id], $fr->id => ['tenant_id' => $this->source->id]]);
+
+        $this->apply(['market-sets' => ['g:'.$set->id => '1']]);
+
+        $targetSet = \App\Models\MarketSet::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->firstOrFail();
+        $this->assertSame('DACH', $targetSet->name);
+        $this->assertEqualsCanonicalizing(['DE', 'FR'], $targetSet->markets()->withoutGlobalScope('tenant')->pluck('country_iso')->all());
+        $this->assertSame(2, Market::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->count());
+
+        // Zweites Mal: Gleichnamiges wird übersprungen, nichts doppelt.
+        $this->apply(['market-sets' => ['g:'.$set->id => '1']]);
+        $this->assertSame(1, \App\Models\MarketSet::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->count());
+    }
 }

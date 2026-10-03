@@ -70,6 +70,11 @@ class MarketsArea implements PresetArea
         return Market::query()->withoutGlobalScope('tenant')->where('tenant_id', $tenantId)->get();
     }
 
+    public static function identityOf(Market $market): string
+    {
+        return $market->country_iso.'|'.strtolower($market->language_code);
+    }
+
     private function identity(Market $market): string
     {
         return $market->country_iso.'|'.strtolower($market->language_code);

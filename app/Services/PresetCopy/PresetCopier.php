@@ -16,6 +16,7 @@ class PresetCopier
     {
         return [
             new MarketsArea,
+            new MarketSetsArea,
             new ProjectTypesArea,
         ];
     }

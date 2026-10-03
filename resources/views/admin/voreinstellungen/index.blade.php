@@ -69,6 +69,9 @@
                                         <label class="flex min-w-0 flex-1 items-center gap-2">
                                             <input type="checkbox" name="sel[{{ $area['key'] }}][{{ $item['key'] }}]" value="1" class="rounded border-gray-300">
                                             <span class="truncate {{ $item['parent'] ? 'text-gray-700' : 'font-medium text-gray-900' }}">{{ $item['label'] }}</span>
+                                            @if ($item['note'])
+                                                <span class="shrink-0 text-xs text-gray-400">{{ $item['note'] }}</span>
+                                            @endif
                                         </label>
                                         @if ($item['conflict'])
                                             <span class="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800" title="{{ __('Im Ziel gibt es bereits einen Eintrag mit diesem Namen.') }}">{{ __('gibt es schon') }}</span>
