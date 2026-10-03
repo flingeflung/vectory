@@ -251,48 +251,61 @@
     </form>
     </div>
 
+    {{-- Fußzeile nach Windows-Konvention (Ralf, 2026-10-03): links Hilfsaktionen, rechts "Abbrechen" und
+         ganz außen der Hauptbutton. --}}
     <div class="flex flex-wrap items-center justify-between gap-2 border-t border-gray-200 px-6 py-4">
-        <button type="button" @click="$dispatch('close-modal', 'projektfilter')" class="rounded border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
-            {{ __('Abbrechen') }}
-        </button>
-
-        <button
-            type="button"
-            x-show="!savingOpen"
-            @click="savingOpen = true"
-            class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
-        >
-            {{ __('Filterset speichern') }}
-        </button>
-
-        <div x-show="savingOpen" x-cloak class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
             <button
                 type="button"
-                x-show="!savingAsNew"
-                @click="savingAsNew = true"
+                x-show="!savingOpen"
+                @click="savingOpen = true"
                 class="inline-flex items-center rounded-md border border-btn-secondary-border bg-btn-secondary whitespace-nowrap px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
             >
-                {{ __('Speichern unter') }}
+                {{ __('Filterset speichern') }}
             </button>
 
-            <template x-if="savingAsNew">
-                <input
-                    type="text"
-                    form="projektfilter-form"
-                    name="name"
-                    x-init="$nextTick(() => $el.focus())"
-                    placeholder="{{ __('Name des neuen Filtersets') }}"
-                    class="rounded-md border-gray-300 text-sm"
+            <div x-show="savingOpen" x-cloak class="flex items-center gap-2">
+                <button
+                    type="button"
+                    x-show="!savingAsNew"
+                    @click="savingAsNew = true"
+                    class="inline-flex items-center rounded-md border border-btn-secondary-border bg-btn-secondary whitespace-nowrap px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
                 >
-            </template>
+                    {{ __('Speichern unter') }}
+                </button>
+
+                <template x-if="savingAsNew">
+                    <input
+                        type="text"
+                        form="projektfilter-form"
+                        name="name"
+                        x-init="$nextTick(() => $el.focus())"
+                        placeholder="{{ __('Name des neuen Filtersets') }}"
+                        class="rounded-md border-gray-300 text-sm"
+                    >
+                </template>
+            </div>
+            <a
+                href="{{ route('projekte', array_filter(['sort' => $sort, 'direction' => $direction, 'projektfilter_submitted' => 1, 'reopen_filter' => 1])) }}"
+                class="inline-flex items-center rounded-md border border-btn-secondary-border bg-btn-secondary whitespace-nowrap px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+            >
+                {{ __('Alle Filter zurücksetzen') }}
+            </a>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+            <button type="button" @click="$dispatch('close-modal', 'projektfilter')" class="inline-flex items-center rounded-md border border-btn-secondary-border bg-btn-secondary whitespace-nowrap px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
+                {{ __('Abbrechen') }}
+            </button>
 
             <button
                 type="submit"
                 form="projektfilter-form"
                 formmethod="post"
                 formaction="{{ route('projekte.projektfilter.sets.store') }}"
-                x-show="savingAsNew"
-                class="inline-flex items-center rounded-md bg-btn-primary whitespace-nowrap px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover"
+                x-show="savingOpen && savingAsNew"
+                x-cloak
+                class="inline-flex items-center rounded-md border border-transparent bg-btn-primary whitespace-nowrap px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover"
             >
                 {{ __('Speichern unter') }}
             </button>
@@ -302,21 +315,12 @@
                 form="projektfilter-form"
                 formmethod="post"
                 formaction="{{ route('projekte.projektfilter.update') }}"
-                x-show="!savingAsNew"
-                class="inline-flex items-center rounded-md bg-btn-primary whitespace-nowrap px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover"
+                x-show="savingOpen && !savingAsNew"
+                class="inline-flex items-center rounded-md border border-transparent bg-btn-primary whitespace-nowrap px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover"
             >
                 {{ __('Speichern') }}
             </button>
-        </div>
-
-        <div class="flex items-center gap-2">
-            <a
-                href="{{ route('projekte', array_filter(['sort' => $sort, 'direction' => $direction, 'projektfilter_submitted' => 1, 'reopen_filter' => 1])) }}"
-                class="inline-flex items-center rounded-md border border-btn-secondary-border bg-btn-secondary whitespace-nowrap px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
-            >
-                {{ __('Alle Filter zurücksetzen') }}
-            </a>
-            <button type="submit" form="projektfilter-form" class="rounded-md bg-btn-primary whitespace-nowrap px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
+            <button type="submit" form="projektfilter-form" class="inline-flex items-center rounded-md border border-transparent bg-btn-primary whitespace-nowrap px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
                 {{ __('Filtern') }}
             </button>
         </div>

@@ -193,11 +193,11 @@
                     {{-- Ralf, 2026-09-27: Bestätigungs-Button einheitlich "Speichern" (siehe CLAUDE.md-
                          Konvention) - "Buchen" stand im Widerspruch zum Hinweistext direkt darunter,
                          der schon "Speichern ersetzt sie" sagte. --}}
-                    <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
-                        {{ __('Speichern') }}
-                    </button>
                     <button type="button" @click="adding = false" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                         {{ __('Abbrechen') }}
+                    </button>
+                    <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
+                        {{ __('Speichern') }}
                     </button>
                 </div>
 

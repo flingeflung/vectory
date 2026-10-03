@@ -36,12 +36,12 @@
                 <input type="date" name="due_date" class="mt-0.5 rounded border-gray-300 text-sm">
             </div>
         </div>
-        <div class="flex gap-2">
-            <button type="submit" class="rounded bg-btn-primary px-2.5 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
-                {{ __('Auftrag speichern') }}
-            </button>
+        <div class="flex justify-end gap-2">
             <button type="button" @click="showNew = false" class="rounded border border-btn-secondary-border bg-btn-secondary px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                 {{ __('Abbrechen') }}
+            </button>
+            <button type="submit" class="rounded bg-btn-primary px-2.5 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
+                {{ __('Speichern') }}
             </button>
         </div>
         @csrf

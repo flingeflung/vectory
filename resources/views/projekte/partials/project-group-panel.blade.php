@@ -110,11 +110,11 @@
                 @keydown.enter="await renameGroup(); renaming = false"
                 class="min-w-0 flex-1 rounded-md border-gray-300 py-1 text-xs"
             >
-            <button type="button" @click="await renameGroup(); renaming = false" class="shrink-0 rounded-md bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
-                {{ __('Speichern') }}
-            </button>
             <button type="button" @click="renaming = false" class="shrink-0 rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                 {{ __('Abbrechen') }}
+            </button>
+            <button type="button" @click="await renameGroup(); renaming = false" class="shrink-0 rounded-md bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
+                {{ __('Speichern') }}
             </button>
         </div>
     </div>
