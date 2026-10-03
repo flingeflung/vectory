@@ -43,7 +43,6 @@
                         <th class="px-3 py-1.5 text-left font-medium">{{ __('Dialog') }}</th>
                         <th class="px-3 py-1.5 text-left font-medium">{{ __('Titel') }}</th>
                         <th class="px-3 py-1.5 text-left font-medium">{{ __('Quelltext') }}</th>
-                        <th class="px-3 py-1.5 text-left font-medium">{{ __('Hilfeseite') }}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
@@ -61,16 +60,10 @@
                                 <span x-show="row.file" x-text="row.file"></span>
                                 <span x-show="!row.file" class="text-gray-400" title="{{ __('Name wird im Quelltext zusammengesetzt (z. B. mit Datensatz-Nummer)') }}">{{ __('dynamisch benannt') }}</span>
                             </td>
-                            <td class="px-3 py-1.5 text-xs">
-                                <template x-if="row.articles.length">
-                                    <a href="{{ route('admin.hilfeseiten') }}" class="text-indigo-600 hover:underline" x-text="row.articles.join(', ')"></a>
-                                </template>
-                                <span x-show="!row.articles.length" class="text-gray-400">–</span>
-                            </td>
                         </tr>
                     </template>
                     <tr x-show="shown.length === 0">
-                        <td colspan="5" class="px-3 py-4 text-center text-gray-400">{{ __('Keine Dialog-ID gefunden.') }}</td>
+                        <td colspan="4" class="px-3 py-4 text-center text-gray-400">{{ __('Keine Dialog-ID gefunden.') }}</td>
                     </tr>
                 </tbody>
             </table>

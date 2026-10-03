@@ -3,15 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\HelpArticle;
 use App\Support\DialogId;
 use Illuminate\Support\Facades\File;
 use Illuminate\View\View;
 
 /**
  * Support-Seite (Ralf, 2026-10-03): Ein Tester nennt die Dialog-ID aus der unteren linken Ecke eines
- * Dialogs - hier lässt sie sich dem Dialog zuordnen (technischer Name, Titel, Quelltext-Datei) und es
- * ist zu sehen, ob dazu schon ein Hilfeartikel existiert. Nur Super-Admin (wie die Hilfeverwaltung).
+ * Dialogs - hier lässt sie sich dem Dialog zuordnen (technischer Name, Titel, Quelltext-Datei). Nur Super-Admin (wie die Hilfeverwaltung).
  */
 class DialogIdController extends Controller
 {
@@ -40,24 +38,14 @@ class DialogIdController extends Controller
             }
         }
 
-        $helpIds = HelpArticle::query()->whereNotNull('route_names')->get()
-            ->flatMap(fn (HelpArticle $article) => collect($article->route_names)
-                ->filter(fn ($entry) => is_string($entry) && str_starts_with($entry, 'D-'))
-                ->map(fn ($id) => [$id, $article]))
-            ->groupBy(0)
-            ->map(fn ($pairs) => $pairs->pluck(1));
-
         $rows = collect((array) config('dialog-ids'))
-            ->map(function (string $id, string $name) use ($sources, $helpIds) {
-                $articles = $helpIds->get($id, collect());
-
+            ->map(function (string $id, string $name) use ($sources) {
                 return [
                     'id' => $id,
                     'name' => $name,
                     'title' => $sources[$name]['title'] ?? null,
                     'file' => $sources[$name]['file'] ?? null,
                     'dynamic' => ! isset($sources[$name]),
-                    'articles' => $articles->map(fn (HelpArticle $article) => $article->translation(app()->getLocale())?->title ?? $article->key)->values()->all(),
                 ];
             })
             ->sortBy('id')
