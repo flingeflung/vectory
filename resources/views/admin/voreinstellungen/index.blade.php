@@ -62,7 +62,7 @@
                             @endif
                             <ul>
                                 @foreach ($area['items'] as $item)
-                                    <li class="flex items-center gap-3 py-0.5 text-sm {{ $item['parent'] ? 'pl-7' : '' }}">
+                                    <li class="flex items-center gap-3 py-0.5 text-sm" @if ($item['parent']) style="padding-left: 1.75rem" @endif>
                                         <label class="flex min-w-0 flex-1 items-center gap-2">
                                             <input type="checkbox" name="sel[{{ $area['key'] }}][{{ $item['key'] }}]" value="1" class="rounded border-gray-300">
                                             <span class="truncate {{ $item['parent'] ? 'text-gray-700' : 'font-medium text-gray-900' }}">{{ $item['label'] }}</span>
