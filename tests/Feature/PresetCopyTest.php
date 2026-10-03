@@ -343,4 +343,13 @@ class PresetCopyTest extends TestCase
         $this->assertSame(1, DB::table('copy_template_attribute')->where('copy_template_id', $targetCopy->id)->count());
         \Illuminate\Support\Facades\Schema::table('projects', fn ($t) => $t->dropColumn('attributes_kopier_test'));
     }
+
+    public function test_source_and_target_are_remembered_per_user(): void
+    {
+        $this->get(route('admin.voreinstellungen', ['source' => $this->source->id, 'target' => $this->target->id]))->assertOk();
+
+        $this->get(route('admin.voreinstellungen'))->assertOk()
+            ->assertSee('value="'.$this->source->id.'" selected', false)
+            ->assertSee('value="'.$this->target->id.'" selected', false);
+    }
 }

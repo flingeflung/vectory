@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Tenant;
+use App\Models\UserPreference;
 use App\Services\PresetCopy\PresetCopier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,8 +18,16 @@ class PresetCopyController extends Controller
     public function index(Request $request): View
     {
         $tenants = Tenant::query()->active()->orderBy('name')->get();
-        $source = $tenants->firstWhere('id', $request->integer('source'));
-        $target = $tenants->firstWhere('id', $request->integer('target'));
+        // Quelle und Ziel merkt sich Vectory je Benutzer (Ralf, 2026-10-03: nicht bei jedem Besuch neu wählen).
+        $userId = $request->user()->id;
+        if ($request->has('source') || $request->has('target')) {
+            $choice = ['source' => $request->integer('source'), 'target' => $request->integer('target')];
+            UserPreference::persist($userId, UserPreference::PRESET_COPY, $choice);
+        } else {
+            $choice = UserPreference::configFor($userId, UserPreference::PRESET_COPY) + ['source' => 0, 'target' => 0];
+        }
+        $source = $tenants->firstWhere('id', (int) $choice['source']);
+        $target = $tenants->firstWhere('id', (int) $choice['target']);
         $ready = $source && $target && $source->id !== $target->id;
 
         $areas = $ready

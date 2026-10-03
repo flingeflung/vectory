@@ -18,6 +18,8 @@ class UserPreference extends Model
 
     public const PROJECT_PLANNING = 'project_planning';
 
+    public const PRESET_COPY = 'preset_copy';
+
     protected function casts(): array
     {
         return ['config' => 'array'];
