@@ -24,7 +24,6 @@ class AdminNav
                 ['route' => 'admin.personen', 'match' => 'admin.personen*', 'label' => __('Personen')],
                 ['route' => 'admin.rechte', 'match' => 'admin.rechte', 'label' => __('Rechte')],
                 ['route' => 'admin.function-groups', 'match' => 'admin.function-groups', 'label' => __('Funktionsgruppen')],
-                ['route' => 'admin.jobtypen', 'match' => 'admin.jobtypen*', 'label' => __('Zeiterfassung')],
             ],
             __('Projekt-Konfiguration') => [
                 ['route' => 'admin.projektkategorien', 'match' => 'admin.projektkategorien*', 'label' => __('Projektkategorien')],
@@ -35,6 +34,7 @@ class AdminNav
                 ['route' => 'admin.workflows', 'match' => 'admin.workflows*', 'label' => __('Workflows')],
                 ['route' => 'admin.checklisten', 'match' => 'admin.checklisten*', 'label' => __('Checklisten')],
                 ['route' => 'admin.papierformate', 'match' => 'admin.papierformate*', 'label' => __('Papierformate')],
+                ['route' => 'admin.jobtypen', 'match' => 'admin.jobtypen*', 'label' => __('Jobtypen (Zeiterfassung)')],
             ],
             __('Kommunikation') => [
                 ['route' => 'admin.mail-vorlagen', 'match' => 'admin.mail-vorlagen*', 'label' => __('Mail-Vorlagen')],
