@@ -13,6 +13,23 @@ class PresetReport
         $this->lines[] = ['area' => $area, 'label' => $label, 'outcome' => $outcome];
     }
 
+    /** @var list<callable> */
+    private array $deferred = [];
+
+    /** Arbeit, die erst nach dem Commit laufen darf (z.B. Datenbank-Spalten anlegen, das beendet Transaktionen). */
+    public function defer(callable $callback): void
+    {
+        $this->deferred[] = $callback;
+    }
+
+    public function runDeferred(): void
+    {
+        foreach ($this->deferred as $callback) {
+            $callback();
+        }
+        $this->deferred = [];
+    }
+
     /** @return list<array{area: string, label: string, outcome: string}> */
     public function lines(): array
     {

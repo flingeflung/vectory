@@ -17,6 +17,7 @@ class PresetCopier
         return [
             new MarketSetsArea,
             new ProjectTypesArea,
+            new AttributesArea,
         ];
     }
 
@@ -36,6 +37,8 @@ class PresetCopier
                 }
             }
         });
+
+        $report->runDeferred();
 
         return $report;
     }

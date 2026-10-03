@@ -9,6 +9,7 @@ use App\Models\SystemSetting;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class PresetCopyTest extends TestCase
@@ -173,5 +174,56 @@ class PresetCopyTest extends TestCase
         // Zweites Mal: Gleichnamiges wird übersprungen, nichts doppelt.
         $this->apply(['market-sets' => ['g:'.$set->id => '1']]);
         $this->assertSame(1, \App\Models\MarketSet::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->count());
+    }
+
+    private function attribute(Tenant $tenant, string $key, array $extra = []): \App\Models\Attribute
+    {
+        $attribute = \App\Models\Attribute::query()->withoutGlobalScope('tenant')->create($extra + [
+            'tenant_id' => $tenant->id, 'section' => 'stammdaten', 'key' => $key, 'label' => ucfirst($key),
+            'data_type' => \App\Models\Attribute::DATA_TYPE_TEXT, 'sort' => 1,
+        ]);
+        app(\App\Services\AttributeColumnManager::class)->ensureColumn($attribute);
+
+        return $attribute;
+    }
+
+    public function test_attribute_is_copied_with_options_and_project_type_assignment(): void
+    {
+        $main = $this->main($this->source, 'Dokumente');
+        $sub = $this->sub($this->source, $main, 'Handbuch');
+        $targetMain = $this->main($this->target, 'Dokumente');
+        $targetSub = $this->sub($this->target, $targetMain, 'Handbuch');
+        $attr = $this->attribute($this->source, 'farbigkeit_test', [
+            'data_type' => \App\Models\Attribute::DATA_TYPE_SELECT, 'applies_to_all_types' => false, 'unit' => 'mm', 'number_decimals' => 2,
+        ]);
+        \App\Models\AttributeOption::query()->create(['attribute_id' => $attr->id, 'value' => '4c', 'label' => '4-farbig', 'sort' => 1]);
+        DB::table('attribute_project_type')->insert(['attribute_id' => $attr->id, 'project_type_sub_id' => $sub->id, 'created_at' => now(), 'updated_at' => now()]);
+
+        $this->apply(['attributes' => ['a:farbigkeit_test' => '1']])->assertRedirect();
+
+        $copy = \App\Models\Attribute::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->where('key', 'farbigkeit_test')->firstOrFail();
+        $this->assertSame('mm', $copy->unit);
+        $this->assertSame(['4c'], $copy->options->pluck('value')->all());
+        $this->assertSame([$targetSub->id], DB::table('attribute_project_type')->where('attribute_id', $copy->id)->pluck('project_type_sub_id')->all());
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasColumn('projects', 'attributes_farbigkeit_test'));
+        \Illuminate\Support\Facades\Schema::table('projects', fn ($t) => $t->dropColumn('attributes_farbigkeit_test'));
+    }
+
+    public function test_same_key_can_be_renamed_and_overwrite_refuses_a_different_field_type(): void
+    {
+        $this->attribute($this->source, 'gleich_test', ['label' => 'Neu', 'data_type' => \App\Models\Attribute::DATA_TYPE_NUMBER]);
+        $existing = \App\Models\Attribute::query()->withoutGlobalScope('tenant')->create([
+            'tenant_id' => $this->target->id, 'section' => 'stammdaten', 'key' => 'gleich_test', 'label' => 'Alt',
+            'data_type' => \App\Models\Attribute::DATA_TYPE_TEXT, 'sort' => 1,
+        ]);
+
+        $this->apply(['attributes' => ['a:gleich_test' => '1']], ['attributes' => ['a:gleich_test' => 'overwrite']]);
+        $this->assertSame('Alt', $existing->fresh()->label, 'Anderer Feldtyp: Überschreiben darf nichts ändern.');
+
+        $this->apply(['attributes' => ['a:gleich_test' => '1']], ['attributes' => ['a:gleich_test' => 'rename']]);
+        $keys = \App\Models\Attribute::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->orderBy('id')->pluck('key')->all();
+        $this->assertSame(['gleich_test', 'gleich_test_kopie'], $keys);
+
+        \Illuminate\Support\Facades\Schema::table('projects', fn ($t) => $t->dropColumn(['attributes_gleich_test', 'attributes_gleich_test_kopie', 'attributes_gleich_test_sort', 'attributes_gleich_test_kopie_sort']));
     }
 }
