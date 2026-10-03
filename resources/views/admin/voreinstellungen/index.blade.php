@@ -32,7 +32,10 @@
         @if (! $ready)
             <p class="p-4 text-sm text-gray-500">{{ __('Wählen Sie Quelle und Ziel. Danach können Sie einzelne Voreinstellungen zum Übernehmen ankreuzen. Es wird nichts gelöscht; Gleichnamiges können Sie überschreiben, umbenennen oder überspringen.') }}</p>
         @else
-            <form method="POST" action="{{ route('admin.voreinstellungen.apply') }}" class="flex min-h-0 flex-1 flex-col">
+            <form method="POST" action="{{ route('admin.voreinstellungen.apply') }}" class="flex min-h-0 flex-1 flex-col"
+                x-data="{ n: 0, count() { this.n = this.$el.querySelectorAll('input[type=checkbox][name^=sel]:checked').length; } }"
+                x-init="count()"
+                @change="count()">
                 @csrf
                 <input type="hidden" name="source" value="{{ $source->id }}">
                 <input type="hidden" name="target" value="{{ $target->id }}">
@@ -54,8 +57,8 @@
                             <div class="mb-1 flex items-center gap-3 border-b border-gray-200 pb-1">
                                 <h3 class="text-sm font-semibold text-gray-800">{{ $area['label'] }}</h3>
                                 <span class="text-xs text-gray-400">{{ count($area['items']) }}</span>
-                                <button type="button" class="rounded border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-200" onclick="this.closest('section').querySelectorAll('input[type=checkbox]').forEach((c) => c.checked = true)">{{ __('Alle') }}</button>
-                                <button type="button" class="rounded border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-200" onclick="this.closest('section').querySelectorAll('input[type=checkbox]').forEach((c) => c.checked = false)">{{ __('Keine') }}</button>
+                                <button type="button" class="rounded border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-200" onclick="this.closest('section').querySelectorAll('input[type=checkbox]').forEach((c) => c.checked = true); this.closest('form').dispatchEvent(new Event('change', { bubbles: true }))">{{ __('Alle') }}</button>
+                                <button type="button" class="rounded border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-200" onclick="this.closest('section').querySelectorAll('input[type=checkbox]').forEach((c) => c.checked = false); this.closest('form').dispatchEvent(new Event('change', { bubbles: true }))">{{ __('Keine') }}</button>
                             </div>
                             @if ($area['items'] === [])
                                 <p class="py-2 text-xs text-gray-400">{{ __('Die Quelle hat hier keine Einträge.') }}</p>
@@ -86,8 +89,8 @@
                     <p class="text-xs text-gray-400">{{ __('Wenn Sie eine Unterart wählen, wird ihre Projektart bei Bedarf automatisch mit angelegt.') }}</p>
                 </div>
 
-                <div class="flex shrink-0 justify-end gap-2 border-t border-gray-100 p-3">
-                    <a href="{{ route('admin.voreinstellungen') }}" class="whitespace-nowrap rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">{{ __('Abbrechen') }}</a>
+                <div class="flex shrink-0 justify-end gap-2 border-t border-gray-100 p-3" x-show="n > 0" x-cloak>
+                    <button type="button" @click="$el.closest('form').querySelectorAll('input[type=checkbox]').forEach((c) => c.checked = false); count()" class="whitespace-nowrap rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">{{ __('Abbrechen') }}</button>
                     <button type="submit" class="whitespace-nowrap rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
                 </div>
             </form>
