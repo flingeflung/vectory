@@ -76,7 +76,7 @@
                                     @endif
                                     @php $previousGroup = $item['group'] ?? null; @endphp
                                     <li class="flex items-center gap-3 py-0.5 text-sm" @if (! empty($item['hint'])) title="{{ $item['hint'] }}" @endif @if ($item['parent']) style="padding-left: 1.75rem" @endif>
-                                        <label class="flex min-w-0 flex-1 items-center gap-2">
+                                        <label class="flex min-w-0 items-center gap-2">
                                             <input type="checkbox" name="sel[{{ $area['key'] }}][{{ $item['key'] }}]" value="1" class="rounded border-gray-300">
                                             <span class="truncate {{ $item['parent'] ? 'text-gray-700' : 'font-medium text-gray-900' }}">{{ $item['label'] }}</span>
                                             @if ($item['note'])
@@ -84,7 +84,7 @@
                                             @endif
                                         </label>
                                         @if ($item['conflict'])
-                                            <span class="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800" title="{{ __('Im Ziel gibt es bereits einen Eintrag mit diesem Namen.') }}">{{ __('gibt es schon') }}</span>
+                                            <span class="ml-auto shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800" title="{{ __('Im Ziel gibt es bereits einen Eintrag mit diesem Namen.') }}">{{ __('gibt es schon') }}</span>
                                             <select name="act[{{ $area['key'] }}][{{ $item['key'] }}]" class="w-36 shrink-0 rounded-md border-gray-300 py-0.5 text-xs" title="{{ __('Was soll mit dem vorhandenen Eintrag im Ziel geschehen?') }}">
                                                 <option value="copy">{{ __('Überspringen') }}</option>
                                                 @if ($item['renamable'])
