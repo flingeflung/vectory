@@ -26,6 +26,10 @@ class PresetCopier
             new PaperFormatsArea,
             new JobTypesArea,
             new HolidaysArea,
+            new CompaniesArea,
+            new DepartmentsArea,
+            new BusinessUnitsArea,
+            new LegacyRolesArea,
         ];
     }
 

@@ -382,6 +382,29 @@ class PresetCopyTest extends TestCase
         $this->assertSame(2, \App\Models\PaperFormat::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->count());
     }
 
+    public function test_master_data_catalogs_are_copied_renamed_and_overwritten(): void
+    {
+        $dept = \App\Models\Department::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $this->source->id, 'name' => 'Redaktion', 'short_name' => 'RED', 'active' => true, 'sort' => 1]);
+        \App\Models\Department::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $this->target->id, 'name' => 'Redaktion', 'short_name' => 'alt', 'active' => true, 'sort' => 1]);
+        $company = \App\Models\Company::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $this->source->id, 'name' => 'Übersetzer GmbH', 'short_name' => 'UEB', 'sort' => 1]);
+        $role = \App\Models\LegacyRole::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $this->source->id, 'name' => 'Lektor', 'sort' => 1]);
+        $unit = \App\Models\BusinessUnit::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $this->source->id, 'name' => 'Hausgeräte', 'active' => true, 'sort' => 1]);
+
+        $this->apply([
+            'companies' => ['r:'.$company->id => '1'], 'legacy-roles' => ['r:'.$role->id => '1'],
+            'business-units' => ['r:'.$unit->id => '1'], 'departments' => ['r:'.$dept->id => '1'],
+        ], ['departments' => ['r:'.$dept->id => 'rename']])->assertRedirect();
+
+        $names = fn (string $model) => $model::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->orderBy('id')->pluck('name')->all();
+        $this->assertSame(['Übersetzer GmbH'], $names(\App\Models\Company::class));
+        $this->assertSame(['Lektor'], $names(\App\Models\LegacyRole::class));
+        $this->assertSame(['Hausgeräte'], $names(\App\Models\BusinessUnit::class));
+        $this->assertSame(['Redaktion', 'Redaktion (Kopie)'], $names(\App\Models\Department::class));
+
+        $this->apply(['departments' => ['r:'.$dept->id => '1']], ['departments' => ['r:'.$dept->id => 'overwrite']]);
+        $this->assertSame('RED', \App\Models\Department::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->where('name', 'Redaktion')->value('short_name'));
+    }
+
     public function test_source_and_target_are_remembered_per_user(): void
     {
         $this->get(route('admin.voreinstellungen', ['source' => $this->source->id, 'target' => $this->target->id]))->assertOk();
