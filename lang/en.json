@@ -414,6 +414,7 @@
     "Diese Ländergruppe wirklich endgültig löschen? Die zugeordneten Märkte selbst bleiben erhalten.": "Delete this country group permanently? The assigned markets themselves will remain.",
     "Diese Mail-Vorlage wirklich endgültig löschen?": "Delete this email template permanently?",
     "Diese Organisation ist deaktiviert: Anmeldungen sind gesperrt und alle ihre Daten sind überall ausgeblendet. Es wurde nichts gelöscht - mit „Reaktivieren“ ist alles sofort wieder da.": "",
+    "Diese Organisation steht nicht zur Verfügung. Bitte laden Sie die Seite neu.": "",
     "Diese Person gehört zu :tenant und ist hier nur ausgeliehen - nur eingeschränkte Angaben sichtbar, keine Bearbeitung möglich.": "",
     "Diese Person gehört zum Kunden „:name\" und ist hier nur über eine Kundenzugriff-Freigabe sichtbar. Ihr Rechte-Set gilt für die ganze Person, nicht nur für diesen Kunden, und lässt sich deshalb nur bei „:name\" ändern.": "This person belongs to customer “:name\" and is visible here only through a customer access permission. Their permission set applies to the entire person, not just to this customer, and can therefore only be changed under “:name\".",
     "Diese Person hat bereits Daten und kann nicht gelöscht werden.": "This person already has data and cannot be deleted.",

@@ -24,9 +24,10 @@ class EnsureOrganizationIsActive
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            return redirect()->route('login')->withErrors([
-                'username' => __('Ihre Organisation ist in dieser Vectory-Installation nicht mehr aktiv. Sie wurden daher abgemeldet. Bitte wenden Sie sich bei Fragen an Ihre zuständige Administration.'),
-            ]);
+            // Hinweis über die Adresse statt als Einmal-Meldung der Sitzung: Bei einer Aktion im Hintergrund
+            // (fetch) lädt der Browser die Anmeldeseite erst unsichtbar und verbraucht dabei die Meldung -
+            // danach öffnet sich die Seite ohne Text (Ralf, 2026-10-03). Die Adresse überlebt das.
+            return redirect()->route('login', ['hinweis' => 'organisation-inaktiv']);
         }
 
         return $next($request);

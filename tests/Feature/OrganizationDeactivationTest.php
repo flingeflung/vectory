@@ -78,10 +78,14 @@ class OrganizationDeactivationTest extends TestCase
 
         $this->deactivate();
 
-        $this->get(route('dashboard'))
-            ->assertRedirect(route('login'))
-            ->assertSessionHasErrors(['username' => 'Ihre Organisation ist in dieser Vectory-Installation nicht mehr aktiv. Sie wurden daher abgemeldet. Bitte wenden Sie sich bei Fragen an Ihre zuständige Administration.']);
+        $this->get(route('dashboard'))->assertRedirect(route('login', ['hinweis' => 'organisation-inaktiv']));
         $this->assertGuest();
+
+        // Der Text kommt aus der Adresse und übersteht damit auch ein unsichtbares Vorladen durch fetch().
+        $this->get(route('login', ['hinweis' => 'organisation-inaktiv']))
+            ->assertOk()
+            ->assertSee('Sie wurden daher abgemeldet.');
+
     }
 
     public function test_deactivated_organization_is_not_selectable(): void
@@ -150,5 +154,15 @@ class OrganizationDeactivationTest extends TestCase
 
         // Vorher stürzte die Detailansicht ab (Zuordnung zeigte auf eine ausgeblendete Person).
         $this->withHeaders(['X-Overlay' => '1'])->get(route('projekte.show', $project))->assertOk()->assertDontSee('Zzzgeliehen');
+    }
+
+    public function test_switching_to_a_deactivated_organization_shows_a_notice(): void
+    {
+        $this->actingAs(User::factory()->create(['tenant_id' => $this->home->id, 'role' => 'central_admin']));
+        $this->deactivate();
+
+        $this->post(route('mandant.wechseln'), ['tenant_id' => $this->customer->id])
+            ->assertRedirect()
+            ->assertSessionHas('notice', 'Diese Organisation steht nicht zur Verfügung. Bitte laden Sie die Seite neu.');
     }
 }

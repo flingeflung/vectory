@@ -6,6 +6,12 @@
         @csrf
 
         <!-- Benutzername -->
+        @if (request('hinweis') === 'organisation-inaktiv')
+            <div class="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800" role="alert">
+                {{ __('Ihre Organisation ist in dieser Vectory-Installation nicht mehr aktiv. Sie wurden daher abgemeldet. Bitte wenden Sie sich bei Fragen an Ihre zuständige Administration.') }}
+            </div>
+        @endif
+
         <div>
             <x-input-label for="username" :value="__('Benutzername')" />
             <x-text-input id="username" class="block mt-1 w-full" type="text" name="username" :value="old('username')" required autofocus autocomplete="username" />

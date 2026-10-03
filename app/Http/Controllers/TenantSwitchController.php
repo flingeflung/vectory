@@ -20,7 +20,15 @@ class TenantSwitchController extends Controller
     {
         abort_unless(SystemSetting::multiTenantEnabled(), 403);
 
-        CurrentTenant::switchTo($request->integer('tenant_id'));
+        $tenantId = $request->integer('tenant_id');
+
+        // Eine Organisation, die inzwischen deaktiviert wurde (die Liste im Schalter stammt vom Laden der Seite),
+        // oder die man nicht erreichen darf: freundliche Meldung statt einer nackten Fehlerseite.
+        if (! $request->user() || ! CurrentTenant::userCanAccess($request->user(), $tenantId)) {
+            return back()->with('notice', __('Diese Organisation steht nicht zur Verfügung. Bitte laden Sie die Seite neu.'));
+        }
+
+        CurrentTenant::switchTo($tenantId);
 
         return back();
     }
