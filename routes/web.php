@@ -316,7 +316,6 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     Route::delete('/workflows/schritte/{step}', [WorkflowController::class, 'stepDestroy'])->name('workflows.schritte.destroy');
     Route::post('/workflows/{workflow}/neue-version', [WorkflowController::class, 'newVersion'])->name('workflows.new-version');
     Route::post('/workflows/{workflow}/kopieren', [WorkflowController::class, 'duplicate'])->name('workflows.duplicate');
-    Route::post('/workflows/{workflow}/kopieren-zu', [WorkflowController::class, 'copyToTenant'])->name('workflows.copy-to-tenant');
 
     Route::get('/checklisten', [ChecklistController::class, 'index'])->name('checklisten');
     Route::post('/checklisten', [ChecklistController::class, 'store'])->name('checklisten.store');
@@ -332,7 +331,6 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     Route::post('/checklisten/punkte/reorder', [ChecklistController::class, 'pointReorder'])->name('checklisten.punkte.reorder');
     Route::post('/checklisten/punkte/{point}', [ChecklistController::class, 'pointUpdate'])->name('checklisten.punkte.update');
     Route::delete('/checklisten/punkte/{point}', [ChecklistController::class, 'pointDestroy'])->name('checklisten.punkte.destroy');
-    Route::post('/checklisten/{checklist}/kopieren-zu', [ChecklistController::class, 'copyToTenant'])->name('checklisten.copy-to-tenant');
     Route::post('/checklisten/{checklist}', [ChecklistController::class, 'update'])->name('checklisten.update');
     Route::delete('/checklisten/{checklist}', [ChecklistController::class, 'destroy'])->name('checklisten.destroy');
 

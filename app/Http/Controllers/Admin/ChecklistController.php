@@ -38,7 +38,7 @@ class ChecklistController extends Controller
     }
 
     /**
-     * @return array{checklists: Collection, selectedChecklist: ?Checklist, otherTenants: Collection}
+     * @return array{checklists: Collection, selectedChecklist: ?Checklist}
      */
     private function buildIndexData(Request $request, ?int $checklistId): array
     {
@@ -50,19 +50,10 @@ class ChecklistController extends Controller
 
         $selectedChecklist = $checklistId ? $checklists->firstWhere('id', $checklistId) : null;
 
-        // "Zu anderem Kunden kopieren" bewusst nur für Zentral-Admin/
-        // Super-Admin (Ralf, 2026-09-18: "das darf ja wieder nur vom
-        // H-Admin aus möglich sein", gleiche Mandanten-Grenzen-Lücke wie
-        // bei Workflows/Projektschablonen entdeckt und hier nachgezogen).
-        $user = $request->user();
-        $otherTenants = SystemSetting::multiTenantEnabled() && $user->canAccessAllOrganizations()
-            ? CurrentTenant::availableTenants()->reject(fn (Tenant $t) => $t->id === $tenantId)->values()
-            : collect();
 
         return [
             'checklists' => $checklists,
             'selectedChecklist' => $selectedChecklist,
-            'otherTenants' => $otherTenants,
         ];
     }
 
@@ -220,73 +211,4 @@ class ChecklistController extends Controller
         return redirect()->route('admin.checklisten', ['checklist' => $section->checklist_id]);
     }
 
-    /**
-     * "Zu anderem Kunden kopieren" (Ralf, 2026-09-12: "Möglichkeit,
-     * Checklisten vom Kunden zum Kunden zu kopieren. Kopie innerhalb eines
-     * Kunden macht keinen Sinn.") - gleiches Muster wie
-     * WorkflowController::copyToTenant(), anders als dort aber inklusive
-     * ALLER Inhalte (Abschnitte+Punkte haben keine kundenspezifische
-     * Fremdreferenz wie Funktionsgruppen bei Workflow-Schritten, die man
-     * separat neu zuordnen müsste - eine Checkliste ist in sich
-     * abgeschlossen).
-     */
-    public function copyToTenant(Request $request, Checklist $checklist): RedirectResponse
-    {
-        abort_unless($checklist->tenant_id === CurrentTenant::id(), 404);
-        abort_unless(SystemSetting::multiTenantEnabled(), 403);
-
-        // Bewusst nur für Zentral-Admin/Super-Admin (Ralf, 2026-09-18) - siehe
-        // buildIndexData() oben, gleiche Begründung wie bei
-        // WorkflowController::copyToTenant().
-        $user = $request->user();
-        abort_unless($user->canAccessAllOrganizations(), 403);
-
-        $targetTenant = CurrentTenant::availableTenants()
-            ->reject(fn (Tenant $t) => $t->id === $checklist->tenant_id)
-            ->firstWhere('id', $request->integer('target_tenant_id'));
-        abort_if($targetTenant === null, 404);
-
-        DB::transaction(function () use ($checklist, $targetTenant) {
-            $nextSort = 1 + (int) Checklist::withoutGlobalScope('tenant')->where('tenant_id', $targetTenant->id)->max('sort');
-            $newChecklist = Checklist::query()->create([
-                'tenant_id' => $targetTenant->id,
-                'name' => $this->uniqueChecklistName($checklist->name, $targetTenant->id),
-                'active' => false,
-                'sort' => $nextSort,
-            ]);
-
-            $checklist->sections->each(function (ChecklistSection $section) use ($newChecklist) {
-                $newSection = ChecklistSection::query()->create([
-                    'checklist_id' => $newChecklist->id,
-                    'title' => $section->title,
-                    'sort' => $section->sort,
-                ]);
-
-                $section->points->each(fn (ChecklistPoint $point) => ChecklistPoint::query()->create([
-                    'checklist_section_id' => $newSection->id,
-                    'title' => $point->title,
-                    'sort' => $point->sort,
-                ]));
-            });
-        });
-
-        return redirect()->route('admin.checklisten', ['checklist' => $checklist->id])->with('status', 'checklist-copied-to-tenant');
-    }
-
-    /**
-     * Gleiches Windows-Schema wie bei Workflows: "Name" -> "Name (1)" -> ...
-     */
-    private function uniqueChecklistName(string $name, int $tenantId): string
-    {
-        if (! Checklist::withoutGlobalScope('tenant')->where('tenant_id', $tenantId)->where('name', $name)->exists()) {
-            return $name;
-        }
-
-        $counter = 1;
-        while (Checklist::withoutGlobalScope('tenant')->where('tenant_id', $tenantId)->where('name', "{$name} ({$counter})")->exists()) {
-            $counter++;
-        }
-
-        return "{$name} ({$counter})";
-    }
 }

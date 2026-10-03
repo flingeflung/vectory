@@ -99,10 +99,6 @@ class WorkflowController extends Controller
         // entdeckte Mandanten-Grenzen-Lücke, hier nachgezogen - vorher
         // konnte JEDER Admin, auch der eines einzelnen Kundekunden-
         // Mandanten, in JEDEN anderen Mandanten hineinkopieren).
-        $user = $request->user();
-        $otherTenants = SystemSetting::multiTenantEnabled() && $user->canAccessAllOrganizations()
-            ? CurrentTenant::availableTenants()->reject(fn (Tenant $t) => $t->id === $tenantId)->values()
-            : collect();
 
         return [
             'workflows' => $workflows,
@@ -114,7 +110,6 @@ class WorkflowController extends Controller
             'lifecycleColors' => WorkflowStep::LIFECYCLE_COLORS,
             'lifecycleStatusLabels' => WorkflowStep::LIFECYCLE_STATUS_LABELS,
             'missingLifecycleStatuses' => $missingLifecycleStatuses,
-            'otherTenants' => $otherTenants,
         ];
     }
 
@@ -347,92 +342,6 @@ class WorkflowController extends Controller
         });
 
         return redirect()->route('admin.workflows', ['workflow' => $newWorkflow->id])->with('status', 'workflows-updated');
-    }
-
-    /**
-     * "Zu anderem Kunden kopieren" (Ralf, 2026-09-10, ausgelöst durch den
-     * manuellen Umzug eines aus Vietto importierten WF nach _Standardkunde
-     * per Tinker - "die brauchen wir"). Bewusst OHNE Funktionsgruppen-
-     * Zuordnung an den Schritten: Namen/Sets unterscheiden sich je Kunde
-     * (unterschiedliche Kürzel, teils fehlende Gruppen), ein Namens-Mapping
-     * würde stillschweigend falsche Gruppen zuordnen können - der Admin
-     * weist sie im Zielkunden bewusst selbst neu zu, UI erklärt das vorher.
-     * Kein "(Kopie)"-Namenszusatz, da im Zielkunden kein Namenskonflikt
-     * droht. Bleibt nach dem Kopieren im aktuell aktiven (Quell-)Kunden -
-     * ein Wechsel des aktiven Mandanten wäre hier ein zu großer Nebeneffekt
-     * für eine reine Kopier-Aktion.
-     */
-    public function copyToTenant(Request $request, Workflow $workflow): RedirectResponse
-    {
-        abort_unless($workflow->tenant_id === CurrentTenant::id(), 404);
-        abort_unless(SystemSetting::multiTenantEnabled(), 403);
-
-        // Bewusst nur für Zentral-Admin/Super-Admin (Ralf, 2026-09-18) - siehe
-        // buildIndexData() oben. Ohne diesen Check hätte vorher jeder Admin
-        // eines beliebigen Kundekunden-Mandanten hier per direktem POST in
-        // JEDEN anderen Mandanten hineinkopieren können, unabhängig von der
-        // (nur clientseitigen) Sichtbarkeit der Auswahlliste.
-        $user = $request->user();
-        abort_unless($user->canAccessAllOrganizations(), 403);
-
-        $targetTenant = CurrentTenant::availableTenants()
-            ->reject(fn (Tenant $t) => $t->id === $workflow->tenant_id)
-            ->firstWhere('id', $request->integer('target_tenant_id'));
-        abort_if($targetTenant === null, 404);
-        $workflow->loadMissing('steps.functionGroups');
-        $availableTargetGroupIds = FunctionGroup::query()->availableForTenant($targetTenant->id, false)->pluck('id');
-
-        DB::transaction(function () use ($workflow, $targetTenant, $availableTargetGroupIds) {
-            // withoutGlobalScope('tenant') nötig: der automatische Scope
-            // filtert sonst zusätzlich auf CurrentTenant::id() (den QUELL-
-            // Kunden) - "tenant_id = Ziel AND tenant_id = Quelle" ist nie
-            // wahr, max()/exists() liefern dann immer null/false, egal was
-            // beim Zielkunden schon existiert (siehe uniqueWorkflowName()).
-            $nextSort = 1 + (int) Workflow::withoutGlobalScope('tenant')->where('tenant_id', $targetTenant->id)->max('sort');
-            $newWorkflow = Workflow::query()->create([
-                'tenant_id' => $targetTenant->id,
-                'short_name' => $workflow->short_name,
-                'name' => $this->uniqueWorkflowName($workflow->name, $targetTenant->id),
-                'description' => $workflow->description,
-                'active' => false,
-                'sort' => $nextSort,
-            ]);
-
-            $stepIdMap = [];
-            $workflow->steps->each(function (WorkflowStep $step) use ($targetTenant, $newWorkflow, $availableTargetGroupIds, &$stepIdMap) {
-                $newStep = WorkflowStep::query()->create([
-                    'tenant_id' => $targetTenant->id,
-                    'workflow_id' => $newWorkflow->id,
-                    'title' => $step->title,
-                    'short_title' => $step->short_title,
-                    'milestone_title' => $step->milestone_title,
-                    'sort' => $step->sort,
-                    'duration_days' => $step->duration_days,
-                    'is_active' => $step->is_active,
-                    'is_start' => $step->is_start,
-                    'is_end' => $step->is_end,
-                    'is_market_launch' => $step->is_market_launch,
-                    'has_due_date' => $step->has_due_date,
-                    'send_email' => $step->send_email,
-                    'show_in_translation' => $step->show_in_translation,
-                    'js_function' => $step->js_function,
-                    'description' => $step->description,
-                    'email_text' => $step->email_text,
-                    'lifecycle_status' => $step->lifecycle_status,
-                ]);
-                $stepIdMap[$step->id] = $newStep->id;
-
-                $groupIds = $step->functionGroups->pluck('id')->intersect($availableTargetGroupIds);
-                $newStep->functionGroups()->sync($groupIds->mapWithKeys(fn ($id) => [$id => ['tenant_id' => $targetTenant->id]]));
-            });
-
-            $workflow->steps->whereNotNull('after_freigabe_workflow_step_id')->each(function (WorkflowStep $step) use ($stepIdMap) {
-                WorkflowStep::query()->whereKey($stepIdMap[$step->id])
-                    ->update(['after_freigabe_workflow_step_id' => $stepIdMap[$step->after_freigabe_workflow_step_id] ?? null]);
-            });
-        });
-
-        return redirect()->route('admin.workflows', ['workflow' => $workflow->id])->with('status', 'workflow-copied-to-tenant');
     }
 
     /**

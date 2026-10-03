@@ -85,40 +85,6 @@
                 </form>
 
                 <div class="flex items-center justify-between gap-2" x-data>
-                    @if ($otherTenants->isNotEmpty())
-                        <form
-                            method="POST"
-                            action="{{ route('admin.checklisten.copy-to-tenant', $selectedChecklist) }}"
-                            x-data="{
-                                targetTenantId: '',
-                                async confirmAndSubmit(e) {
-                                    if (await window.confirmDialog({
-                                        title: {{ \Illuminate\Support\Js::from(__('Zu anderem Kunden kopieren')) }},
-                                        message: {{ \Illuminate\Support\Js::from(__('Legt eine eigenständige Kopie dieser Checkliste (inkl. aller Abschnitte und Punkte) beim gewählten Kunden an. Die Kopie startet inaktiv.')) }},
-                                        confirmLabel: {{ \Illuminate\Support\Js::from(__('Kopieren')) }},
-                                    })) {
-                                        e.target.submit();
-                                    }
-                                },
-                            }"
-                            @submit.prevent="confirmAndSubmit($event)"
-                            class="flex items-center gap-1"
-                        >
-                            @csrf
-                            <select name="target_tenant_id" x-model="targetTenantId" required class="rounded-md border-gray-300 text-xs">
-                                <option value="">{{ __('– Kunde wählen –') }}</option>
-                                @foreach ($otherTenants as $tenant)
-                                    <option value="{{ $tenant->id }}">{{ $tenant->name }}</option>
-                                @endforeach
-                            </select>
-                            <button type="submit" :disabled="!targetTenantId" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:opacity-40">
-                                {{ __('Zu Kunde kopieren') }}
-                            </button>
-                        </form>
-                    @else
-                        <span></span>
-                    @endif
-
                     <form method="POST" action="{{ route('admin.checklisten.destroy', $selectedChecklist) }}" x-ref="deleteChecklistForm" class="hidden">
                         @csrf
                         @method('DELETE')
