@@ -13,7 +13,7 @@ use Illuminate\Support\Collection;
  * Hilfeartikel des Hilfesystems (siehe Migration) - bewusst kein
  * BelongsToTenant, gilt für alle Mandanten gleich.
  */
-#[Fillable(['key', 'route_names', 'parent_id', 'position', 'visible_role'])]
+#[Fillable(['key', 'route_names', 'parent_id', 'position', 'visible_role', 'approved'])]
 class HelpArticle extends Model
 {
     /**
@@ -71,6 +71,7 @@ class HelpArticle extends Model
     {
         return [
             'route_names' => 'array',
+            'approved' => 'boolean',
         ];
     }
 

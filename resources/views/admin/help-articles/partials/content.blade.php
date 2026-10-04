@@ -72,6 +72,11 @@
                         <p class="mt-0.5 text-xs text-gray-400">{{ __('Gilt nur für diese Seite selbst, nicht für ihre Unterseiten.') }}</p>
                     </div>
 
+                    <label class="flex items-center gap-2 text-sm text-gray-700" title="{{ __('Nur eine Markierung für Sie: Sie zeigt in der Navigation links ein Schloss, sobald der Text geprüft ist. Sie sperrt nichts.') }}">
+                        <input type="checkbox" name="approved" value="1" @checked($selected->approved) class="rounded border-gray-300">
+                        {{ __('Freigegeben') }}
+                    </label>
+
                     <div class="border-b border-gray-200">
                         <div class="flex gap-3 text-xs">
                             @foreach ($locales as $localeCode => $localeLabel)

@@ -101,7 +101,7 @@ class HelpArticleController extends Controller
         $visibleRole = $request->string('visible_role')->toString() ?: null;
         abort_if($visibleRole !== null && ! array_key_exists($visibleRole, HelpArticle::VISIBILITY_LEVELS), 422);
 
-        $helpArticle->update(['route_names' => $routeNames, 'visible_role' => $visibleRole]);
+        $helpArticle->update(['route_names' => $routeNames, 'visible_role' => $visibleRole, 'approved' => $request->boolean('approved')]);
 
         foreach (HelpArticle::AVAILABLE_LOCALES as $locale => $label) {
             $title = trim((string) $request->string("translations.{$locale}.title"));

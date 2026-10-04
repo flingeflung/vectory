@@ -46,7 +46,10 @@
                         <span class="truncate">
                             {{ $nodeTitle }}
                             @if ($node->visible_role)
-                                <span class="text-gray-400" title="{{ __('Sichtbar für: :level', ['level' => \App\Models\HelpArticle::VISIBILITY_LEVELS[$node->visible_role]]) }}">🔒</span>
+                                <span title="{{ __('Sichtbar für: :level', ['level' => \App\Models\HelpArticle::VISIBILITY_LEVELS[$node->visible_role]]) }}"><x-icons.admin-shield /></span>
+                            @endif
+                            @if ($node->approved)
+                                <span class="text-gray-400" title="{{ __('Freigegeben') }}">🔒</span>
                             @endif
                         </span>
                         @if ($node->orphanedTabKeys())
