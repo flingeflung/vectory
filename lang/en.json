@@ -1827,6 +1827,7 @@
     "zuletzt verwendet, vorausgewählt": "",
     "{1} :count gespeicherter Feiertag für dieses Jahr, davon :active als aktiv markiert|[2,*] :count gespeicherte Feiertage für dieses Jahr, davon :active als aktiv markiert": "",
     "{1} :count gespeicherter Feiertag für dieses Jahr|[2,*] :count gespeicherte Feiertage für dieses Jahr": "",
+    "{1} Der individuelle Datensatz :names stammt aus einer inzwischen gelöschten Grundlastbasis. Setzen Sie seinen Wert bei Bedarf auf 0.|[2,*] Die individuellen Datensätze :names stammen aus inzwischen gelöschten Grundlastbasen. Setzen Sie deren Wert bei Bedarf auf 0.": "",
     "{1} Ein individueller Datensatz stammt aus einer inzwischen gelöschten Grundlastbasis. Setzen Sie seinen Wert bei Bedarf auf 0.|[2,*] :count individuelle Datensätze stammen aus inzwischen gelöschten Grundlastbasen. Setzen Sie deren Wert bei Bedarf auf 0.": "",
     "Ändern": "Change",
     "Änderung": "Change",

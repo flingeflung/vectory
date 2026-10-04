@@ -65,8 +65,11 @@
         </div>
 
         @if ($deletedBaseLoadCount > 0)
+            @php
+                $orphanNames = $personBaseLoads->whereNull('planning_base_load_id')->pluck('name')->map(fn ($name) => '„'.$name.'“')->join(', ');
+            @endphp
             <div class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                {{ trans_choice('{1} Ein individueller Datensatz stammt aus einer inzwischen gelöschten Grundlastbasis. Setzen Sie seinen Wert bei Bedarf auf 0.|[2,*] :count individuelle Datensätze stammen aus inzwischen gelöschten Grundlastbasen. Setzen Sie deren Wert bei Bedarf auf 0.', $deletedBaseLoadCount, ['count' => $deletedBaseLoadCount]) }}
+                {{ trans_choice('{1} Der individuelle Datensatz :names stammt aus einer inzwischen gelöschten Grundlastbasis. Setzen Sie seinen Wert bei Bedarf auf 0.|[2,*] Die individuellen Datensätze :names stammen aus inzwischen gelöschten Grundlastbasen. Setzen Sie deren Wert bei Bedarf auf 0.', $deletedBaseLoadCount, ['names' => $orphanNames]) }}
             </div>
         @endif
     </div>
@@ -79,7 +82,7 @@
                 x-data="{ dirty: false }"
                 @input="dirty = window.formIsDirty($el, window.__personBaseLoadDirtyForms)"
                 @submit.prevent="window.submitPersonBaseLoadForm($event)"
-                class="grid grid-cols-1 items-end gap-2 rounded-md border border-gray-200 p-2 md:grid-cols-[minmax(12rem,2fr)_minmax(10rem,1fr)_8rem_10rem_10rem_auto]"
+                class="grid grid-cols-1 items-end gap-2 rounded-md border border-gray-200 p-2 md:grid-cols-[minmax(12rem,2fr)_minmax(10rem,1fr)_8rem_10rem_10rem_6.5rem]"
             >
                 @csrf
                 @method('PUT')
@@ -106,7 +109,7 @@
                 <label class="text-xs text-gray-500">{{ __('Gültig bis') }}
                     <input type="date" name="valid_to" value="{{ $personBaseLoad->valid_to->format('Y-m-d') }}" min="{{ $year }}-01-01" max="{{ $year }}-12-31" required class="mt-0.5 w-full rounded-md border-gray-300 py-1 text-sm">
                 </label>
-                <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
+                <button type="submit" :class="dirty ? '' : 'invisible'" :tabindex="dirty ? 0 : -1" class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
             </form>
         @empty
             <div class="p-4 text-center text-sm text-gray-400">
