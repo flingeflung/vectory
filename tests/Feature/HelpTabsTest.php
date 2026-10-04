@@ -89,4 +89,11 @@ class HelpTabsTest extends TestCase
         $this->post(route('admin.hilfeseiten.update', $first), ['route_names' => 'D-ABCD#planung', 'translations' => ['de' => ['title' => 'Erste']]])
             ->assertSessionMissing('help_error');
     }
+
+    public function test_tab_keys_without_a_matching_tab_are_reported(): void
+    {
+        $dialogId = DialogId::for('project-overlay');
+        $this->assertSame([], $this->article('ok', [$dialogId.'#planung.auslastung', $dialogId, 'projekte'], 'x')->orphanedTabKeys());
+        $this->assertSame([$dialogId.'#planung.weg', 'D-ZZZZ#planung'], $this->article('kaputt', [$dialogId.'#planung.weg', 'D-ZZZZ#planung'], 'x')->orphanedTabKeys());
+    }
 }

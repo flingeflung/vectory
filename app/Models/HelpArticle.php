@@ -184,6 +184,30 @@ class HelpArticle extends Model
         return $keys;
     }
 
+    /**
+     * Reiter-Schlüssel ("D-1234#planung.auslastung") dieser Seite, die zu keinem Dialog oder Reiter mehr passen
+     * (Reiter verschoben/umbenannt, Dialog gelöscht) - die Seite würde sonst still nie mehr angezeigt.
+     *
+     * @return list<string>
+     */
+    public function orphanedTabKeys(): array
+    {
+        $dialogNames = array_flip(array_map(fn ($id) => $id, config('dialog-ids', [])));
+        $broken = [];
+        foreach ($this->route_names ?? [] as $entry) {
+            if (! is_string($entry) || ! str_starts_with($entry, 'D-') || ! str_contains($entry, '#')) {
+                continue;
+            }
+            [$dialogId, $tab] = explode('#', $entry, 2);
+            $name = $dialogNames[$dialogId] ?? null;
+            if ($name === null || ! array_key_exists($tab, config('help-tabs.'.$name, []))) {
+                $broken[] = $entry;
+            }
+        }
+
+        return $broken;
+    }
+
     public function isVisibleTo(?User $user): bool
     {
         return match ($this->visible_role) {

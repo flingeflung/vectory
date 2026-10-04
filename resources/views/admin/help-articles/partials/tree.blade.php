@@ -49,6 +49,9 @@
                                 <span class="text-gray-400" title="{{ __('Sichtbar für: :level', ['level' => \App\Models\HelpArticle::VISIBILITY_LEVELS[$node->visible_role]]) }}">🔒</span>
                             @endif
                         </span>
+                        @if ($node->orphanedTabKeys())
+                            <span class="text-xs font-normal text-red-600" title="{{ __('Dieser Reiter oder Dialog existiert nicht mehr. Die Hilfeseite wird deshalb nicht angezeigt. Bitte den Schlüssel bei „Seiten (Routennamen)“ anpassen.') }}">⚠ {{ __('Schlüssel passt zu keinem Reiter:') }} {{ implode(', ', $node->orphanedTabKeys()) }}</span>
+                        @endif
                         @if (empty($node->route_names))
                             <span class="text-xs font-normal text-gray-400">{{ __('kein Seitenbezug') }}</span>
                         @endif
