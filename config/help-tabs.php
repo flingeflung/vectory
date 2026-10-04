@@ -19,8 +19,8 @@ return [
         'planung.auslastung' => 'Planung › Auslastung',
         'planung.terminplan' => 'Planung › Terminplan',
         'zeiten' => 'Zeiten',
-        'zeiten.uebersicht' => 'Zeiten › Übersicht',
-        'zeiten.personen' => 'Zeiten › Nach Person & Tag',
-        'zeiten.gesamt' => 'Zeiten › Gesamtansicht',
+        'zeiten.uebersicht' => 'Zeiten › Projektstunden',
+        'zeiten.personen' => 'Zeiten › Personen & Tage',
+        'zeiten.gesamt' => 'Zeiten › Zeitverlauf',
     ],
 ];
