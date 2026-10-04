@@ -36,6 +36,13 @@
                 @endif
             </div>
         @endif
+        @if (($canManageHelp ?? false) && ($dialogId ?? '') !== '' && ($dialogHasArticle ?? false))
+            <div class="mb-2 flex items-center gap-1 rounded bg-gray-50 px-1.5 py-1 text-xs text-gray-500" title="{{ __('Schlüssel dieses Fensters bzw. des sichtbaren Reiters, für "Seiten (Routennamen)" in der Hilfeverwaltung') }}">
+                <span class="shrink-0">{{ __('Schlüssel:') }}</span>
+                <code class="flex-1 select-all font-mono text-gray-800">{{ $helpKey ?? $dialogId }}</code>
+                <x-copy-button :text="$helpKey ?? $dialogId" />
+            </div>
+        @endif
         @php($crumbs = array_values(array_filter($article->ancestors(), fn ($crumb) => $crumb->isVisibleTo(auth()->user()))))
         @if ($crumbs)
             <nav class="mb-2 flex flex-wrap items-center gap-x-1 text-xs text-gray-500" aria-label="{{ __('Pfad') }}">
