@@ -85,10 +85,10 @@
                 @endunless
             </span>
             <span class="flex flex-wrap items-center gap-x-4 gap-y-1">
-                <span><span class="mr-1.5 inline-block h-0.5 w-5 bg-green-600 align-middle"></span>{{ $isMonth ? __('Arbeitszeit') : __('Wochenarbeitszeit') }}</span>
-                <span><span class="mr-1.5 inline-block h-2.5 w-5 bg-[#94a3b8] align-middle"></span>{{ __('Grundlast') }}</span>
-                <span><span class="mr-1.5 inline-block h-2.5 w-5 bg-[#3b82f6] align-middle"></span>{{ __('Projekt') }}</span>
-                <span><span class="mr-1.5 inline-block h-2.5 w-5 bg-[#ef4444] align-middle"></span>{{ __('Überbuchung') }}</span>
+                <span><span class="mr-1.5 inline-block h-0.5 w-5 align-middle" style="background-color: #16a34a"></span>{{ $isMonth ? __('Arbeitszeit') : __('Wochenarbeitszeit') }}</span>
+                <span><span class="mr-1.5 inline-block h-2.5 w-5 align-middle" style="background-color: #94a3b8"></span>{{ __('Grundlast') }}</span>
+                <span><span class="mr-1.5 inline-block h-2.5 w-5 align-middle" style="background-color: #3b82f6"></span>{{ __('Projekt') }}</span>
+                <span><span class="mr-1.5 inline-block h-2.5 w-5 align-middle" style="background-color: #ef4444"></span>{{ __('Überbuchung') }}</span>
                 @if ($data['periods']->contains('today', true))
                     <span><span class="mr-1.5 inline-block h-2.5 w-3.5 rounded-sm border border-blue-300 bg-[#eff6ff] align-middle"></span>{{ $isMonth ? __('Heute') : __('Aktuelle Woche') }}</span>
                 @endif
