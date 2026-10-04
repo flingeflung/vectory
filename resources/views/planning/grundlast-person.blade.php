@@ -136,7 +136,7 @@
         @empty
             <div class="p-4 text-center text-sm text-gray-400">
                 @if ($person)
-                    {{ __('Für diese Person sind noch keine individuellen Grundlast-Datensätze vorhanden.') }}
+                    {!! __('Für diese Person sind noch keine individuellen :baseload-Datensätze vorhanden.', ['baseload' => \App\Models\GlossaryTerm::link('Grundlast')]) !!}
                 @else
                     {{ __('Keine Person für die Ressourcenplanung vorhanden.') }}
                 @endif

@@ -429,6 +429,10 @@ Route::middleware(['auth', 'verified', 'can:access-superadmin'])->prefix('admin'
 
 Route::middleware(['auth', 'verified', 'can:access-superadmin', RememberLastAdminPage::class])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dialog-ids', [\App\Http\Controllers\Admin\DialogIdController::class, 'index'])->name('dialog-ids');
+    Route::get('/begriffe', [\App\Http\Controllers\Admin\GlossaryTermController::class, 'index'])->name('begriffe');
+    Route::post('/begriffe', [\App\Http\Controllers\Admin\GlossaryTermController::class, 'store'])->name('begriffe.store');
+    Route::post('/begriffe/{glossaryTerm}', [\App\Http\Controllers\Admin\GlossaryTermController::class, 'update'])->name('begriffe.update');
+    Route::delete('/begriffe/{glossaryTerm}', [\App\Http\Controllers\Admin\GlossaryTermController::class, 'destroy'])->name('begriffe.destroy');
     Route::get('/hilfeseiten', [HelpArticleController::class, 'index'])->name('hilfeseiten');
     Route::post('/hilfeseiten', [HelpArticleController::class, 'store'])->name('hilfeseiten.store');
     Route::post('/hilfeseiten/reorder', [HelpArticleController::class, 'reorder'])->name('hilfeseiten.reorder');

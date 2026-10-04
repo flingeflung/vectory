@@ -109,6 +109,9 @@ class HelpArticleTranslation extends Model
             return '<span class="text-red-500 underline decoration-dotted" title="'.e(__('Keine Seite mit diesem Routennamen gefunden.')).'">'.$label.'</span>';
         }, $html);
 
+        // ((Begriff)) bzw. ((Begriff|Anzeigetext)) aus dem Begriffsverzeichnis
+        $html = (string) preg_replace_callback('/\(\(([^()|<>]+?)(?:\|([^()<>]+?))?\)\)/u', fn (array $match): string => GlossaryTerm::link($match[1], $match[2] ?? null), $html);
+
         return (string) preg_replace_callback(self::ARTICLE_LINK_PATTERN, function (array $match): string {
             $title = trim($match[1]);
 

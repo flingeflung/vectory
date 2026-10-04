@@ -81,7 +81,7 @@
         <div class="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-gray-600">
             <span class="text-gray-400">
                 @unless ($isMonth)
-                    {{ __('In Wochen mit Feiertagen ist die Arbeitszeit entsprechend reduziert') }}
+                    {!! __('In Wochen mit :holidays ist die Arbeitszeit entsprechend reduziert', ['holidays' => \App\Models\GlossaryTerm::link('Feiertage', __('Feiertagen'))]) !!}
                 @endunless
             </span>
             <span class="flex flex-wrap items-center gap-x-4 gap-y-1">
