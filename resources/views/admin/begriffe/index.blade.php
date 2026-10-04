@@ -21,7 +21,7 @@
 
         <div class="min-h-0 flex-1 overflow-y-auto">
             <datalist id="glossary-pages">@foreach ($pages as $page)<option value="{{ $page }}">@endforeach</datalist>
-            <datalist id="glossary-abilities">@foreach ($abilities as $ability)<option value="{{ $ability }}">@endforeach</datalist>
+            <datalist id="glossary-abilities">@foreach ($abilities as $abilityKey => $abilityLabel)<option value="{{ $abilityKey }}" label="{{ $abilityLabel }}">@endforeach</datalist>
 
             <form x-show="adding" x-cloak method="POST" action="{{ route('admin.begriffe.store') }}" class="grid grid-cols-12 items-end gap-2 border-b border-gray-100 bg-gray-50 p-3 text-sm">
                 @csrf
@@ -47,7 +47,7 @@
                                 <span class="text-xs text-red-600">{{ __('Diese Seite gibt es nicht (mehr).') }}</span>
                             @endif
                         </div>
-                        <div class="col-span-2"><label class="block text-xs text-gray-500">{{ __('Nötiges Recht') }}</label><input name="ability" value="{{ $term->ability }}" list="glossary-abilities" class="w-full rounded border-gray-300 py-1 text-sm"></div>
+                        <div class="col-span-2"><label class="block text-xs text-gray-500">{{ __('Nötiges Recht') }}</label><input name="ability" value="{{ $term->ability }}" list="glossary-abilities" class="w-full rounded border-gray-300 py-1 text-sm">@if ($term->ability && isset($abilities[$term->ability]))<span class="block text-xs text-gray-400">{{ $abilities[$term->ability] }}</span>@endif</div>
                         <div class="col-span-6"><label class="block text-xs text-gray-500">{{ __('Erklärung (ein Satz)') }}</label><textarea name="description" rows="2" class="w-full rounded border-gray-300 py-1 text-sm">{{ $term->description }}</textarea></div>
                         <div class="col-span-12 flex justify-end">
                             <button type="submit" x-show="dirty" x-cloak class="whitespace-nowrap rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700">{{ __('Speichern') }}</button>

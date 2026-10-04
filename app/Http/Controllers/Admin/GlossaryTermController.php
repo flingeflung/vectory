@@ -24,8 +24,13 @@ class GlossaryTermController extends Controller
             ->map(fn ($route) => $route->getName())
             ->unique()->sort()->values();
 
-        $abilities = Permission::query()->orderBy('key')->pluck('key')
-            ->merge(['access-admin', 'access-central-admin', 'access-superadmin'])->unique()->values();
+        // Schlüssel => Bezeichnung (wie auf der Rechte-Seite), dazu die Zugriffsstufen
+        $abilities = Permission::query()->orderBy('key')->pluck('label', 'key')->all()
+            + [
+                'access-admin' => __('Zugriffsstufe: mindestens Organisations-Admin'),
+                'access-central-admin' => __('Zugriffsstufe: mindestens Zentral-Admin'),
+                'access-superadmin' => __('Zugriffsstufe: Super-Admin'),
+            ];
 
         return view('admin.begriffe.index', [
             'terms' => GlossaryTerm::query()->orderBy('term')->get(),
