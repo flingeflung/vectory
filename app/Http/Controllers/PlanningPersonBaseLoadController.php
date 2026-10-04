@@ -77,6 +77,19 @@ class PlanningPersonBaseLoadController extends Controller
         return $this->redirectToSelection($year, $person->id, 'person-base-load-saved');
     }
 
+    /** Einzelnen individuellen Datensatz einer Person löschen (Ralf, 2026-10-04). */
+    public function destroy(Request $request, PlanningPersonBaseLoad $planningPersonBaseLoad): RedirectResponse
+    {
+        $this->authorizePlanning($request);
+        abort_unless($planningPersonBaseLoad->tenant_id === CurrentTenant::id(), 404);
+        [$person, $year] = $this->validatedSelection($request);
+        abort_unless($planningPersonBaseLoad->person_id === $person->id && $planningPersonBaseLoad->year === $year, 422);
+
+        $planningPersonBaseLoad->delete();
+
+        return $this->redirectToSelection($year, $person->id, 'person-base-load-deleted');
+    }
+
     /** @return array{Person, int} */
     private function validatedSelection(Request $request): array
     {

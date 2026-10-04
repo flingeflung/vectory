@@ -103,6 +103,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/planung/grundlast-person', [PlanningController::class, 'grundlastPerson'])->name('planung.grundlast-person');
     Route::post('/planung/grundlast-person/uebernehmen', [PlanningPersonBaseLoadController::class, 'inherit'])->name('planung.grundlast-person.inherit');
     Route::put('/planung/grundlast-person/{planningPersonBaseLoad}', [PlanningPersonBaseLoadController::class, 'update'])->name('planung.grundlast-person.update');
+    Route::delete('/planung/grundlast-person/{planningPersonBaseLoad}', [PlanningPersonBaseLoadController::class, 'destroy'])->name('planung.grundlast-person.destroy');
     Route::get('/planung/arbeitszeit', [PlanningController::class, 'arbeitszeit'])->name('planung.arbeitszeit');
     Route::get('/jobload', [JobloadController::class, 'index'])->name('jobload');
     Route::get('/jobload/uebersicht', [JobloadOverviewController::class, 'index'])->name('jobload.overview');
