@@ -21,15 +21,6 @@
     </p>
 @endif
 
-<div class="mb-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
-    <span><span class="mr-1 inline-block h-2.5 w-2.5 rounded-sm border border-blue-300 bg-[#eff6ff] align-middle"></span>{{ $isMonth ? __('Heute') : __('Aktuelle Woche') }}</span>
-    @if ($isMonth)
-        <span><span class="mr-1 inline-block h-2.5 w-2.5 rounded-sm border border-gray-200 bg-[#fffaeb] align-middle"></span>{{ __('Wochenende') }}</span>
-        <span><span class="mr-1 inline-block h-2.5 w-2.5 rounded-sm border border-gray-200 bg-[#fdf2f8] align-middle"></span>{{ __('Feiertag') }}</span>
-        <span><span class="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-amber-100 align-middle"></span>{{ __('Abwesenheit') }}</span>
-    @endif
-</div>
-
 @forelse ($data['people'] as $entry)
     @php
         $person = $entry['person'];
@@ -98,6 +89,14 @@
                 <span><span class="mr-1.5 inline-block h-2.5 w-5 bg-[#94a3b8] align-middle"></span>{{ __('Grundlast') }}</span>
                 <span><span class="mr-1.5 inline-block h-2.5 w-5 bg-[#3b82f6] align-middle"></span>{{ __('Projekt') }}</span>
                 <span><span class="mr-1.5 inline-block h-2.5 w-5 bg-[#ef4444] align-middle"></span>{{ __('Überbuchung') }}</span>
+                @if ($data['periods']->contains('today', true))
+                    <span><span class="mr-1.5 inline-block h-2.5 w-3.5 rounded-sm border border-blue-300 bg-[#eff6ff] align-middle"></span>{{ $isMonth ? __('Heute') : __('Aktuelle Woche') }}</span>
+                @endif
+                @if ($isMonth)
+                    <span><span class="mr-1.5 inline-block h-2.5 w-3.5 rounded-sm border border-gray-200 bg-[#fffaeb] align-middle"></span>{{ __('Wochenende') }}</span>
+                    <span><span class="mr-1.5 inline-block h-2.5 w-3.5 rounded-sm border border-gray-200 bg-[#fdf2f8] align-middle"></span>{{ __('Feiertag') }}</span>
+                    <span><span class="mr-1.5 inline-block h-2.5 w-3.5 rounded-sm bg-amber-100 align-middle"></span>{{ __('Abwesenheit') }}</span>
+                @endif
             </span>
         </div>
     </section>
