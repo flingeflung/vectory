@@ -34,7 +34,7 @@
             <svg class="h-3.5 w-3.5 shrink-0 transition-transform" :class="open ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
             {{ __('Einsatzplan') }}
         </button>
-        <span class="cursor-help font-normal text-gray-400" title="{{ __('Legt fest, von welchem bis zu welchem Schritt eine Funktionsgruppe gebraucht wird. Standard ist die ganze Breite. Gedacht für die Ressourcenplanung: Geplante Stunden sollen später nur über diesen Zeitraum verteilt werden, nicht über das ganze Projekt.') }}">ⓘ</span>
+        <span class="cursor-help font-normal text-gray-400" title="{{ __('Hier legen Sie fest, in welchem Zeitraum die geplanten Stunden in der Ressourcenplanung berücksichtigt werden.') }}">ⓘ</span>
     </div>
 
     <div x-show="open" x-cloak class="px-3 pb-3">
