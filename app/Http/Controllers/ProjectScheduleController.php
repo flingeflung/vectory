@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Holiday;
 use App\Models\Project;
 use App\Models\ProjectWorkflowStep;
 use App\Services\WorkflowScheduleCalculator;
@@ -56,7 +57,7 @@ class ProjectScheduleController extends Controller
         abort_if($reference === null, 422, __('Referenz-Schritt gehört nicht zu diesem Projekt oder hat keinen Termin.'));
         abort_if($reference->due_date === null, 422, __('Referenz-Schritt hat kein gültiges Datum.'));
 
-        $proposal = (new WorkflowScheduleCalculator)->recalculate($steps, $reference, $reference->due_date);
+        $proposal = $this->calculatorFor($project)->recalculate($steps, $reference, $reference->due_date);
 
         return view('projekte.partials.schedule-body', [
             'project' => $project,
@@ -84,7 +85,7 @@ class ProjectScheduleController extends Controller
         $reference = $steps->firstWhere('id', $validated['reference_step_id']);
         abort_if($reference === null || $reference->due_date === null, 422);
 
-        $proposal = (new WorkflowScheduleCalculator)->recalculate($steps, $reference, $reference->due_date);
+        $proposal = $this->calculatorFor($project)->recalculate($steps, $reference, $reference->due_date);
 
         // (int)-Cast noetig: $stepId aus $proposal ist ein echtes int (Model-
         // Key), $validated['apply_step_id'] eine numerische Zeichenkette aus
@@ -115,7 +116,7 @@ class ProjectScheduleController extends Controller
         $steps = $this->scheduleStepsFor($project);
         if ($toApply !== null) {
             $reference = $steps->firstWhere('id', $reference->id);
-            $proposal = (new WorkflowScheduleCalculator)->recalculate($steps, $reference, $reference->due_date);
+            $proposal = $this->calculatorFor($project)->recalculate($steps, $reference, $reference->due_date);
 
             return view('projekte.partials.schedule-body', [
                 'project' => $project,
@@ -182,6 +183,14 @@ class ProjectScheduleController extends Controller
         $projectWorkflowStep->update([$field => true]);
 
         return response()->json([$field => true]);
+    }
+
+    /** Rechner mit den aktiven Feiertagen der Organisation des Projekts. */
+    private function calculatorFor(Project $project): WorkflowScheduleCalculator
+    {
+        return new WorkflowScheduleCalculator(
+            Holiday::query()->withoutGlobalScope('tenant')->where('tenant_id', $project->tenant_id)->where('active', true)->pluck('date')
+        );
     }
 
     /**

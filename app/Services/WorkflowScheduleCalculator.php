@@ -14,24 +14,49 @@ use Illuminate\Support\Collection;
  * in Arbeitstagen neu berechnet.
  *
  * Zwei bewusste Abweichungen von Vietto (mit Ralf abgestimmt):
- * - Nur Wochenenden übersprungen, keine Feiertage - Viettos Feiertagsliste
- *   ist hart codiert auf Deutschland (teils sogar nur rheinischen Karneval),
- *   für ein international ausgerichtetes Vectory unpassend. Eigener
- *   Feiertagskalender pro Land/Mandant wäre ein separates, späteres Thema.
+ * - Feiertage kommen aus dem Feiertagskalender der Organisation (Admin > Feiertage), nicht aus
+ *   einer fest einprogrammierten Liste wie in Vietto (Ralf, 2026-10-04: "Wenn wir innerhalb der
+ *   Projekte mit konkreten Daten rechnen, müssen die Feiertage mit einfließen"). Wochenenden
+ *   und aktive Feiertage werden übersprungen.
  * - Rückwärtsrechnung nutzt die ECHTE Dauer des Folgeschritts, nicht wie in
  *   Vietto pauschal 1 Arbeitstag (dortiger Bug, vorwärts wird korrekt die
  *   echte Dauer verwendet - Ralf: "selbstverständlich ohne Bug").
  */
 class WorkflowScheduleCalculator
 {
-    public static function addWorkingDays(Carbon $date, int $days): Carbon
+    /** @var array<string, true> Feiertage als Y-m-d-Schlüssel */
+    private array $holidays;
+
+    /** @param  iterable<string>  $holidays  Feiertage der Organisation (Y-m-d) */
+    public function __construct(iterable $holidays = [])
     {
-        return $date->copy()->addWeekdays(max($days, 1));
+        $this->holidays = [];
+        foreach ($holidays as $date) {
+            $this->holidays[Carbon::parse($date)->toDateString()] = true;
+        }
     }
 
-    public static function subWorkingDays(Carbon $date, int $days): Carbon
+    public function addWorkingDays(Carbon $date, int $days): Carbon
     {
-        return $date->copy()->subWeekdays(max($days, 1));
+        return $this->shiftWorkingDays($date, max($days, 1), 1);
+    }
+
+    public function subWorkingDays(Carbon $date, int $days): Carbon
+    {
+        return $this->shiftWorkingDays($date, max($days, 1), -1);
+    }
+
+    private function shiftWorkingDays(Carbon $date, int $days, int $direction): Carbon
+    {
+        $cursor = $date->copy();
+        while ($days > 0) {
+            $cursor->addDays($direction);
+            if ($cursor->isWeekday() && ! isset($this->holidays[$cursor->toDateString()])) {
+                $days--;
+            }
+        }
+
+        return $cursor;
     }
 
     /**
@@ -49,14 +74,14 @@ class WorkflowScheduleCalculator
         for ($i = $refIndex + 1; $i < $ordered->count(); $i++) {
             $step = $ordered[$i];
             $previousDate = $dates[$ordered[$i - 1]->id];
-            $dates[$step->id] = self::addWorkingDays($previousDate, $step->effectiveDurationDays());
+            $dates[$step->id] = $this->addWorkingDays($previousDate, $step->effectiveDurationDays());
         }
 
         for ($i = $refIndex - 1; $i >= 0; $i--) {
             $step = $ordered[$i];
             $nextStep = $ordered[$i + 1];
             $nextDate = $dates[$nextStep->id];
-            $dates[$step->id] = self::subWorkingDays($nextDate, $nextStep->effectiveDurationDays());
+            $dates[$step->id] = $this->subWorkingDays($nextDate, $nextStep->effectiveDurationDays());
         }
 
         return $dates;

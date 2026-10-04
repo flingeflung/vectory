@@ -23,6 +23,8 @@ class ProjectPlanningCalculator
     /** @var array<string, Collection> */
     private array $personBaseLoadCache = [];
 
+    private ?ProjectStepTimeline $stepTimeline = null;
+
     public function prime(Collection $people, CarbonImmutable $start, CarbonImmutable $end): void
     {
         $tenantIds = $people->pluck('tenant_id')->unique()->values();
@@ -78,27 +80,75 @@ class ProjectPlanningCalculator
         $projectStart = CarbonImmutable::parse($project->start_date->toDateString());
         $projectEnd = CarbonImmutable::parse($project->end_date->toDateString());
         $holidays = $this->holidays($assignment->person->tenant_id, $projectStart->year, $projectEnd->year);
-        $eligibleDays = 0;
+
+        // Arbeitstage des Projekts (ohne Wochenenden und Feiertage), in Reihenfolge.
+        $eligible = [];
         for ($date = $projectStart; $date->lessThanOrEqualTo($projectEnd); $date = $date->addDay()) {
             if ($date->isWeekday() && ! $holidays->contains($date->toDateString())) {
-                $eligibleDays++;
+                $eligible[] = $date->toDateString();
             }
         }
+        $eligibleDays = count($eligible);
         if ($eligibleDays === 0) {
             return collect();
         }
 
-        $daily = (float) $assignment->planned_hours / $eligibleDays;
+        // Gewicht je Arbeitstag: ohne Einsatzplan gleichmäßig über das ganze Projekt, mit Einsatzplan nur im Zeitraum
+        // der Funktionsgruppe (Tage am Rand zählen anteilig).
+        $weights = array_fill(0, $eligibleDays, 1.0);
+        $timeline = $this->stepTimeline()->forProject($project, $eligibleDays);
+        if ($timeline !== null) {
+            [$from, $to] = $this->stepTimeline()->windowFor($timeline, $project, $assignment->function_group_id, $eligibleDays);
+            foreach ($weights as $index => $_) {
+                $weights[$index] = max(0.0, min($index + 1, $to) - max($index, $from));
+            }
+        }
+        $totalWeight = array_sum($weights);
+        if ($totalWeight <= 0) {
+            return collect();
+        }
+
         $result = collect();
-        $visibleStart = $projectStart->max($rangeStart);
-        $visibleEnd = $projectEnd->min($rangeEnd);
-        for ($date = $visibleStart; $date->lessThanOrEqualTo($visibleEnd); $date = $date->addDay()) {
-            if ($date->isWeekday() && ! $holidays->contains($date->toDateString())) {
-                $result->put($date->toDateString(), $daily);
+        foreach ($eligible as $index => $day) {
+            $date = CarbonImmutable::parse($day);
+            if ($weights[$index] > 0 && $date->greaterThanOrEqualTo($rangeStart) && $date->lessThanOrEqualTo($rangeEnd)) {
+                $result->put($day, (float) $assignment->planned_hours * $weights[$index] / $totalWeight);
             }
         }
 
         return $result;
+    }
+
+    /**
+     * Hinweis für die Projektansicht: Haben die Standarddauern der Schritte nicht in den Projektzeitraum gepasst,
+     * wurden sie verdichtet (Ralf, 2026-10-04).
+     *
+     * @return array{sum: float, available: int, factor: float}|null null = nicht verdichtet bzw. keine Zeitleiste
+     */
+    public function compressionNotice(\App\Models\Project $project): ?array
+    {
+        if (! $project->start_date || ! $project->end_date || $project->start_date->gt($project->end_date)) {
+            return null;
+        }
+        $start = CarbonImmutable::parse($project->start_date->toDateString());
+        $end = CarbonImmutable::parse($project->end_date->toDateString());
+        $holidays = $this->holidays((int) $project->tenant_id, $start->year, $end->year);
+        $days = 0;
+        for ($date = $start; $date->lessThanOrEqualTo($end); $date = $date->addDay()) {
+            if ($date->isWeekday() && ! $holidays->contains($date->toDateString())) {
+                $days++;
+            }
+        }
+        $timeline = $this->stepTimeline()->forProject($project, $days);
+
+        return $timeline !== null && $timeline['compressed']
+            ? ['sum' => $timeline['sum'], 'available' => $timeline['available'], 'factor' => $timeline['factor']]
+            : null;
+    }
+
+    private function stepTimeline(): ProjectStepTimeline
+    {
+        return $this->stepTimeline ??= new ProjectStepTimeline;
     }
 
     private function workHoursForDay(Person $person, CarbonImmutable $date): float

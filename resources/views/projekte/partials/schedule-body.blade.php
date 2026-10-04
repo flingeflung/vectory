@@ -152,7 +152,7 @@
         </table>
 
         <div class="mt-1 text-xs text-gray-400"><sup>1</sup> {{ __('Termine, die für das Projekt als Start- bzw. Enddatum gelten sollen.') }}</div>
-        <div class="text-xs text-gray-400">{{ __('Die Neuberechnung zählt nur Werktage (Mo-Fr) - Feiertage werden nicht berücksichtigt.') }}</div>
+        <div class="text-xs text-gray-400">{{ __('Die Neuberechnung zählt nur Werktage (Mo-Fr) und lässt die Feiertage der Organisation aus.') }}</div>
 
         <div class="mt-3 flex items-center justify-between border-t border-gray-200 pt-3">
             <button

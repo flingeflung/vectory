@@ -110,6 +110,12 @@
                         {{ __('Diesem Projekt ist keine Aufwandsschablone zugewiesen.') }}
                     @endif
                 </p>
+                @php $compression = app(\App\Services\ProjectPlanningCalculator::class)->compressionNotice($project); @endphp
+                @if ($compression)
+                    <p class="mt-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-800" title="{{ __('Die Dauern der Workflow-Schritte (in Arbeitstagen) ergeben zusammen mehr, als das Projekt zwischen Start und Ende hat. Die Ressourcenplanung rechnet deshalb mit proportional verkürzten Schritten.') }}">
+                        {{ __('Verdichtet: Die Schrittdauern (:sum AT) passen nicht in den Projektzeitraum (:available AT) und werden in der Ressourcenplanung entsprechend verdichtet.', ['sum' => number_format($compression['sum'], 0, ',', '.'), 'available' => $compression['available']]) }}
+                    </p>
+                @endif
                 <button
                     type="button"
                     title="{{ __('Stunden werden pro Funktionsgruppe automatisch auf alle Personen gleichmäßig verteilt') }}"
