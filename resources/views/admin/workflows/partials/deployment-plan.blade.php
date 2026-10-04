@@ -93,8 +93,10 @@
                     allFull() { this.rows.forEach((row) => this.full(row)); },
                     label(row) { return row.from === row.to ? 'S' + this.steps[row.from - 1].number : 'S' + this.steps[row.from - 1].number + ' – S' + this.steps[row.to - 1].number; },
                 }"
+                x-init="$watch('rows', () => { const open = window.__workflowsDirtyForms; if (open) { dirty ? open.add($el) : open.delete($el); } })"
                 @pointermove.window="move($event)"
                 @pointerup.window="end()"
+                @submit="window.__workflowsDirtyForms?.delete($el)"
             >
                 @csrf
                 <div class="overflow-x-auto">
