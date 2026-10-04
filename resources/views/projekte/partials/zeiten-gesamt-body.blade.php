@@ -10,6 +10,10 @@
     "– Alle –" im Personen-Dropdown schlüsselt stattdessen nach Personen auf
     (spiegelbildlich zu "Alle Jobs" im Modus "Jobs").
 --}}
+{{-- Ralf, 2026-09-28: "wenn ich oben blättere, lande ich immer auf Nach Personen" - jedes Projekt rendert die
+     Gesamtansicht serverseitig zunächst mit dem sicheren Standard-Modus "person" (siehe zeitenData()); ein zuvor
+     bewusst gewählter anderer Modus (gleiches window.*-Muster wie window.projectZeitenSubTab) wird im x-init unten
+     sofort per Reload nachgezogen. Kein Kommentar im x-init selbst: Alpine verträgt dort keine Zeilenkommentare am Anfang. --}}
 <div id="project-zeiten-gesamt-body">
     <div
         class="mb-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs"
@@ -21,12 +25,6 @@
             },
         }"
         x-init="
-            // Ralf, 2026-09-28: 'wenn ich oben blättere, lande ich immer auf Nach
-            // Personen' - jedes Projekt rendert die Gesamtansicht serverseitig
-            // zunächst mit dem sicheren Standard-Modus 'person' (siehe
-            // zeitenData()); ein zuvor bewusst gewählter anderer Modus (gleiches
-            // window.*-Muster wie window.projectZeitenSubTab) wird hier sofort per
-            // Reload nachgezogen, statt beim Blättern verloren zu gehen.
             if (window.projectZeitenGesamtMode && window.projectZeitenGesamtMode !== {{ \Illuminate\Support\Js::from($gesamt['mode'] ?? 'person') }}) {
                 reload({ mode: window.projectZeitenGesamtMode });
             }
