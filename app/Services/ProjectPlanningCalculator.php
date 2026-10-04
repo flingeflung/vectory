@@ -45,7 +45,9 @@ class ProjectPlanningCalculator
     }
 
     /**
-     * @return Collection<string, array{work: float, absence: float, base_load: float, available: float}>
+     * "holiday" = Stunden, die an einem Feiertag regulär anfielen (für die Darstellung; "work" ist dort 0).
+     *
+     * @return Collection<string, array{work: float, holiday: float, absence: float, base_load: float, available: float}>
      */
     public function capacityByDay(Person $person, CarbonImmutable $start, CarbonImmutable $end): Collection
     {
@@ -54,12 +56,14 @@ class ProjectPlanningCalculator
 
         for ($date = $start; $date->lessThanOrEqualTo($end); $date = $date->addDay()) {
             $work = $this->workHoursForDay($person, $date);
+            $holidayHours = $work > 0 ? 0.0 : $this->holidayHoursForDay($person, $date);
             $absence = $work > 0 && $person->calendarEntries->contains(fn (CalendarEntry $entry) => $entry->type === CalendarEntry::TYPE_ABSENCE
                 && $entry->starts_on->toImmutable()->startOfDay()->lessThanOrEqualTo($date)
                 && $entry->ends_on->toImmutable()->startOfDay()->greaterThanOrEqualTo($date)) ? $work : 0.0;
             $baseLoad = $work > 0 ? $this->baseLoadForDay($person, $date) : 0.0;
             $result->put($date->toDateString(), [
                 'work' => $work,
+                'holiday' => $holidayHours,
                 'absence' => $absence,
                 'base_load' => $baseLoad,
                 'available' => max(0, $work - $absence - $baseLoad),
@@ -153,10 +157,25 @@ class ProjectPlanningCalculator
 
     private function workHoursForDay(Person $person, CarbonImmutable $date): float
     {
+        return $this->holidays($person->tenant_id, $date->year, $date->year)->contains($date->toDateString())
+            ? 0.0
+            : $this->regularHoursForDay($person, $date);
+    }
+
+    /** Stunden, die an einem Feiertag regulär anfielen (Wochentag, im Beschäftigungszeitraum), sonst 0. */
+    private function holidayHoursForDay(Person $person, CarbonImmutable $date): float
+    {
+        return $this->holidays($person->tenant_id, $date->year, $date->year)->contains($date->toDateString())
+            ? $this->regularHoursForDay($person, $date)
+            : 0.0;
+    }
+
+    /** Reguläre Tagesstunden ohne Rücksicht auf Feiertage: Wochenende 0, außerhalb der Beschäftigung 0. */
+    private function regularHoursForDay(Person $person, CarbonImmutable $date): float
+    {
         if ($date->isWeekend()
             || ($person->start_date && $date->lt(CarbonImmutable::parse($person->start_date->toDateString())))
-            || ($person->end_date && $date->gt(CarbonImmutable::parse($person->end_date->toDateString())))
-            || $this->holidays($person->tenant_id, $date->year, $date->year)->contains($date->toDateString())) {
+            || ($person->end_date && $date->gt(CarbonImmutable::parse($person->end_date->toDateString())))) {
             return 0.0;
         }
 

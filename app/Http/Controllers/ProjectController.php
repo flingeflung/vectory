@@ -34,10 +34,12 @@ use App\Models\WorkflowStep;
 use App\Services\CriticalProjects\CriticalProjectEvaluator;
 use App\Services\ProjectDirectoryLocator;
 use App\Services\ProjectNumberAllocator;
+use App\Services\ProjectPlanningCalculator;
 use App\Support\CurrentTenant;
 use App\Support\ProjectColumnCatalog;
 use App\Support\ProjectFilterCatalog;
 use App\Support\ProjectPlanningGroups;
+use App\Support\ProjectUtilization;
 use App\Support\StammId;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -566,6 +568,42 @@ class ProjectController extends Controller
             ])->render(),
             'planned' => $data['plannedValues'],
             'values' => $data['personValues'],
+        ]);
+    }
+
+    /**
+     * Auslastung der Projektbeteiligten nur mit den Stunden dieses Projekts (bei einem Hauptprojekt zusammen mit
+     * allen Unterprojekten, Ralf 2026-10-04). Liefert den fertigen Block (Diagramm + Tabelle je Person) als HTML;
+     * Monats- oder Jahresansicht, alle Personen oder eine einzelne.
+     */
+    public function planningUtilization(Request $request, Project $project, ProjectPlanningCalculator $calculator): JsonResponse
+    {
+        abort_unless($request->user()->can('project.view') && $request->user()->can('planning.view'), 403);
+
+        $data = ProjectUtilization::for(
+            $project,
+            $calculator,
+            (string) $request->query('view', 'month'),
+            $request->integer('year', (int) now()->year),
+            min(12, max(1, $request->integer('month', (int) now()->month))),
+            $request->filled('person') ? $request->integer('person') : null,
+        );
+
+        return response()->json([
+            'html' => view('projekte.partials.utilization', [
+                'project' => $project,
+                'data' => $data,
+                'metricLabels' => [
+                    'work' => __('Arbeitszeit'),
+                    'absence' => __('Abwesenheit'),
+                    'base_load' => __('Grundlast'),
+                    'available' => __('Für Projekte verfügbar'),
+                    'project' => __('Geplante Projektstunden'),
+                    'remaining' => __('Restkapazität'),
+                    'utilization' => __('Auslastung %'),
+                ],
+            ])->render(),
+            'people' => $data['allPeople'],
         ]);
     }
 
