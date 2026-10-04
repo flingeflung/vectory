@@ -279,7 +279,7 @@
                 <template x-for="person in util.people" :key="person.id"><option :value="person.id" x-text="person.name"></option></template>
             </select>
             <span x-show="util.loading" x-cloak><x-loading-spinner class="h-4 w-4" /></span>
-            <span class="text-gray-400">{{ __('Die folgenden Planungsdaten gelten ausschließlich für dieses Projekt bzw. bei einem Hauptprojekt dieses mit allen Unterprojekten. Für Gesamtübersicht aller Projekte siehe Hauptnavigation: Planung') }}</span>
+            <span class="text-gray-400">{{ __('Die folgenden Planungsdaten gelten ausschließlich für dieses Projekt bzw. bei einem Hauptprojekt für dieses mit allen Unterprojekten. Für die Gesamtübersicht aller Projekte siehe Hauptnavigation: Planung.') }}</span>
         </div>
         <div x-ref="utilBody"></div>
     </div>
