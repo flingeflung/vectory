@@ -135,8 +135,25 @@
                     </div>
                 </div>
 
-                <div class="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
-                    <div class="text-xs font-semibold text-gray-500">{{ __('Schritte') }}</div>
+                @include('admin.workflows.partials.deployment-plan')
+
+                <div class="flex-1 min-h-0 overflow-y-auto p-3 space-y-2" x-data="{
+                        stepsOpen: {{ $viewState['schritte'] ? 'true' : 'false' }},
+                        toggleSteps() {
+                            this.stepsOpen = ! this.stepsOpen;
+                            fetch({{ \Illuminate\Support\Js::from(route('admin.workflows.view-state')) }}, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                                body: JSON.stringify({ section: 'schritte', open: this.stepsOpen }),
+                            });
+                        },
+                        
+                    }">
+                    <button type="button" @click="toggleSteps()" class="flex items-center gap-2 text-left text-xs font-semibold text-gray-500 hover:text-gray-700" :aria-expanded="stepsOpen">
+                            <svg class="h-3.5 w-3.5 shrink-0 transition-transform" :class="stepsOpen ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+                            {{ __('Schritte') }}
+                        </button>
+                    <div x-show="stepsOpen" class="space-y-2">
                     @forelse ($steps as $step)
                         <div class="flex items-center gap-3 rounded-md border border-gray-200 p-2 text-sm">
                             <span class="h-3 w-3 shrink-0 rounded-full border border-gray-300" style="background-color: {{ $lifecycleColors[$step->lifecycle_status] ?? $lifecycleColors[2] }}"></span>
@@ -151,6 +168,7 @@
                     @empty
                         <div class="rounded-md border border-dashed border-gray-200 p-3 text-sm text-gray-400">{{ __('Keine Schritte vorhanden.') }}</div>
                     @endforelse
+                    </div>
                 </div>
             @else
                 {{-- Entwurf: voll editierbar. --}}
@@ -206,10 +224,26 @@
                     @include('admin.workflows.partials.lifecycle-coverage-warning')
                 </div>
 
-                <div class="flex-1 min-h-0 overflow-y-auto p-3 space-y-2" x-data="{ newStep: false }">
+                @include('admin.workflows.partials.deployment-plan')
+
+                <div class="flex-1 min-h-0 overflow-y-auto p-3 space-y-2" x-data="{
+                        stepsOpen: {{ $viewState['schritte'] ? 'true' : 'false' }},
+                        toggleSteps() {
+                            this.stepsOpen = ! this.stepsOpen;
+                            fetch({{ \Illuminate\Support\Js::from(route('admin.workflows.view-state')) }}, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                                body: JSON.stringify({ section: 'schritte', open: this.stepsOpen }),
+                            });
+                        },
+                        newStep: false,
+                    }">
                     <div class="flex items-center justify-between">
-                        <div class="text-xs font-semibold text-gray-500">{{ __('Schritte') }}</div>
-                        <div class="flex items-center gap-1">
+                        <button type="button" @click="toggleSteps()" class="flex items-center gap-2 text-left text-xs font-semibold text-gray-500 hover:text-gray-700" :aria-expanded="stepsOpen">
+                            <svg class="h-3.5 w-3.5 shrink-0 transition-transform" :class="stepsOpen ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+                            {{ __('Schritte') }}
+                        </button>
+                        <div class="flex items-center gap-1" x-show="stepsOpen">
                             @if ($steps->isNotEmpty())
                                 <button type="button" @click="window.dispatchEvent(new CustomEvent('workflow-steps-expand-all'))" class="inline-flex items-center rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                                     {{ __('Alle ausklappen') }}
@@ -224,6 +258,7 @@
                         </div>
                     </div>
 
+                    <div x-show="stepsOpen" class="space-y-2">
                     <form x-show="newStep" x-cloak method="POST" action="{{ route('admin.workflows.schritte.store') }}" class="flex items-center gap-2 rounded-md border border-gray-200 p-2">
                         @csrf
                         <input type="hidden" name="workflow_id" value="{{ $selectedWorkflow->id }}">
@@ -436,6 +471,7 @@
                             </form>
                         @endforeach
                     @endif
+                    </div>
                 </div>
                 </div>
 

@@ -467,6 +467,28 @@ class PresetCopyTest extends TestCase
         $this->assertTrue($group->fresh()->isAvailableForTenant($this->source->id), 'Quelle behält ihre Freigabe.');
     }
 
+    public function test_workflow_deployment_plan_is_copied_with_the_workflow(): void
+    {
+        $workflow = $this->workflow($this->source, 'Print', 4);
+        \App\Models\WorkflowStep::query()->withoutGlobalScope('tenant')->where('workflow_id', $workflow->id)->update(['lifecycle_status' => 2]);
+        $steps = \App\Models\WorkflowStep::query()->withoutGlobalScope('tenant')->where('workflow_id', $workflow->id)->orderBy('sort')->pluck('id');
+        $home = Tenant::query()->where('is_home_tenant', true)->firstOrFail();
+        $group = \App\Models\FunctionGroup::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $home->id, 'name' => 'Lektorat', 'short_name' => 'LEK', 'sort' => 1, 'active' => true]);
+        $group->availableTenants()->attach([$this->source->id, $this->target->id]);
+        \App\Models\WorkflowGroupWindow::query()->withoutGlobalScope('tenant')->create([
+            'tenant_id' => $this->source->id, 'workflow_id' => $workflow->id, 'function_group_id' => $group->id,
+            'from_step_id' => $steps[1], 'to_step_id' => $steps[2],
+        ]);
+
+        $this->apply(['workflows' => ['w:'.$workflow->id => '1']]);
+
+        $copy = \App\Models\Workflow::query()->withoutGlobalScope('tenant')->where('tenant_id', $this->target->id)->firstOrFail();
+        $copySteps = \App\Models\WorkflowStep::query()->withoutGlobalScope('tenant')->where('workflow_id', $copy->id)->orderBy('sort')->pluck('id');
+        $window = \App\Models\WorkflowGroupWindow::query()->withoutGlobalScope('tenant')->where('workflow_id', $copy->id)->firstOrFail();
+        $this->assertSame($copySteps[1], $window->from_step_id);
+        $this->assertSame($copySteps[2], $window->to_step_id);
+    }
+
     public function test_source_and_target_are_remembered_per_user(): void
     {
         $this->get(route('admin.voreinstellungen', ['source' => $this->source->id, 'target' => $this->target->id]))->assertOk();

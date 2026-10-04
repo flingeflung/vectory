@@ -314,6 +314,8 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     Route::post('/workflows/schritte/reorder', [WorkflowController::class, 'stepReorder'])->name('workflows.schritte.reorder');
     Route::post('/workflows/schritte/speichern', [WorkflowController::class, 'stepsBulkUpdate'])->name('workflows.schritte.bulk-update');
     Route::delete('/workflows/schritte/{step}', [WorkflowController::class, 'stepDestroy'])->name('workflows.schritte.destroy');
+    Route::post('/workflows/ansicht', [WorkflowController::class, 'saveViewState'])->name('workflows.view-state');
+    Route::post('/workflows/{workflow}/einsatzplan', [WorkflowController::class, 'saveDeploymentPlan'])->name('workflows.deployment-plan');
     Route::post('/workflows/{workflow}/neue-version', [WorkflowController::class, 'newVersion'])->name('workflows.new-version');
     Route::post('/workflows/{workflow}/kopieren', [WorkflowController::class, 'duplicate'])->name('workflows.duplicate');
 

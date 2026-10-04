@@ -20,6 +20,8 @@ class UserPreference extends Model
 
     public const PRESET_COPY = 'preset_copy';
 
+    public const WORKFLOW_VIEW = 'workflow_view';
+
     protected function casts(): array
     {
         return ['config' => 'array'];

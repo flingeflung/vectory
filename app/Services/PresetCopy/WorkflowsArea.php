@@ -6,6 +6,7 @@ use App\Models\FunctionGroup;
 use App\Models\Project;
 use App\Models\ProjectWorkflowStep;
 use App\Models\Workflow;
+use App\Models\WorkflowGroupWindow;
 use App\Models\WorkflowStep;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -82,6 +83,7 @@ class WorkflowsArea implements PresetArea
 
                     continue;
                 }
+                WorkflowGroupWindow::query()->withoutGlobalScope('tenant')->where('workflow_id', $existing->id)->delete();
                 WorkflowStep::query()->withoutGlobalScope('tenant')->where('workflow_id', $existing->id)->delete();
                 $existing->update($source->only(['short_name', 'description', 'active', 'published_at']));
                 $notes = $this->copySteps($source, $existing, $targetTenantId);
@@ -166,6 +168,9 @@ class WorkflowsArea implements PresetArea
                 WorkflowStep::query()->withoutGlobalScope('tenant')->whereKey($stepMap[$step->id])->update(['after_freigabe_workflow_step_id' => $stepMap[$step->after_freigabe_workflow_step_id]]);
             }
         }
+
+        // Einsatzplan (von/bis-Schritt je Funktionsgruppe) mitnehmen, nur für im Ziel freigeschaltete Gruppen.
+        WorkflowGroupWindow::copyToWorkflow($source, $target, $stepMap, $available);
 
         return array_values($missing);
     }

@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\FunctionGroup;
 use App\Models\SystemSetting;
 use App\Models\Tenant;
+use App\Models\UserPreference;
 use App\Models\Workflow;
+use App\Models\WorkflowGroupWindow;
 use App\Models\WorkflowStep;
 use App\Support\CurrentTenant;
 use Illuminate\Http\RedirectResponse;
@@ -100,9 +102,28 @@ class WorkflowController extends Controller
         // konnte JEDER Admin, auch der eines einzelnen Kundekunden-
         // Mandanten, in JEDEN anderen Mandanten hineinkopieren).
 
+        // Einsatzplan: nur "In Bearbeitung"-Schritte haben einen Zeitanteil; Zeilen = Funktionsgruppen, die dort zuständig sind.
+        $workSteps = $steps->where('lifecycle_status', WorkflowGroupWindow::WORK_LIFECYCLE_STATUS)->values();
+        $windows = $selectedWorkflow
+            ? WorkflowGroupWindow::query()->where('workflow_id', $selectedWorkflow->id)->get()->keyBy('function_group_id')
+            : collect();
+        $stepIndex = $workSteps->pluck('id')->flip();
+        $deploymentRows = $workSteps->flatMap->functionGroups->unique('id')->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)->values()
+            ->map(function ($group) use ($windows, $stepIndex, $workSteps) {
+                $window = $windows->get($group->id);
+                $from = $window?->from_step_id !== null && $stepIndex->has($window->from_step_id) ? $stepIndex[$window->from_step_id] + 1 : 1;
+                $to = $window?->to_step_id !== null && $stepIndex->has($window->to_step_id) ? $stepIndex[$window->to_step_id] + 1 : $workSteps->count();
+
+                return ['id' => $group->id, 'name' => $group->name, 'from' => min($from, $to), 'to' => max($from, $to)];
+            });
+        $viewState = UserPreference::configFor((int) auth()->id(), UserPreference::WORKFLOW_VIEW) + ['einsatzplan' => true, 'schritte' => true];
+
         return [
             'workflows' => $workflows,
             'selectedWorkflow' => $selectedWorkflow,
+            'workSteps' => $workSteps,
+            'deploymentRows' => $deploymentRows,
+            'viewState' => $viewState,
             'steps' => $steps,
             'isPublished' => $isPublished,
             'functionGroups' => $functionGroups,
@@ -116,6 +137,63 @@ class WorkflowController extends Controller
     private function isOverlayRequest(Request $request): bool
     {
         return $request->header('X-Overlay') === '1';
+    }
+
+    /**
+     * Einsatzplan speichern (Ralf, 2026-10-04): je Funktionsgruppe von/bis-Schritt. Die ganze Breite ist der
+     * Standard und wird nicht gespeichert (Eintrag gelöscht). Eingefroren wie der Rest des Workflows, sobald er
+     * veröffentlicht ist.
+     */
+    public function saveDeploymentPlan(Request $request, Workflow $workflow): RedirectResponse
+    {
+        abort_unless($workflow->tenant_id === CurrentTenant::id(), 404);
+        abort_if($workflow->isPublished(), 422, __('Dieser Workflow ist veröffentlicht - der Einsatzplan lässt sich nur über eine neue Version ändern.'));
+
+        $workSteps = WorkflowStep::query()->where('workflow_id', $workflow->id)
+            ->where('lifecycle_status', WorkflowGroupWindow::WORK_LIFECYCLE_STATUS)->orderBy('sort')->with('functionGroups')->get();
+        $position = $workSteps->pluck('id')->flip();
+        $allowedGroups = $workSteps->flatMap->functionGroups->pluck('id')->unique();
+        $input = (array) $request->input('windows', []);
+
+        DB::transaction(function () use ($workflow, $workSteps, $position, $allowedGroups, $input) {
+            WorkflowGroupWindow::query()->where('workflow_id', $workflow->id)->whereNotIn('function_group_id', $allowedGroups)->delete();
+
+            foreach ($allowedGroups as $groupId) {
+                $from = (int) data_get($input, "$groupId.from");
+                $to = (int) data_get($input, "$groupId.to");
+                if (! $position->has($from) || ! $position->has($to) || $position[$from] > $position[$to]) {
+                    continue; // unvollständige oder ungültige Zeile: bisherigen Stand beibehalten
+                }
+
+                $isFullWidth = $from === $workSteps->first()->id && $to === $workSteps->last()->id;
+                if ($isFullWidth) {
+                    WorkflowGroupWindow::query()->where('workflow_id', $workflow->id)->where('function_group_id', $groupId)->delete();
+
+                    continue;
+                }
+                WorkflowGroupWindow::query()->updateOrCreate(
+                    ['workflow_id' => $workflow->id, 'function_group_id' => $groupId],
+                    ['tenant_id' => $workflow->tenant_id, 'from_step_id' => $from, 'to_step_id' => $to],
+                );
+            }
+        });
+
+        return redirect()->route('admin.workflows', ['workflow' => $workflow->id])->with('status', 'workflows-updated');
+    }
+
+    /** Auf-/Zuklappzustand der beiden Bereiche (Einsatzplan, Schritte) je Benutzer merken. */
+    public function saveViewState(Request $request): Response
+    {
+        $data = $request->validate([
+            'section' => ['required', Rule::in(['einsatzplan', 'schritte'])],
+            'open' => ['required', 'boolean'],
+        ]);
+        $userId = $request->user()->id;
+        $state = UserPreference::configFor($userId, UserPreference::WORKFLOW_VIEW);
+        $state[$data['section']] = (bool) $data['open'];
+        UserPreference::persist($userId, UserPreference::WORKFLOW_VIEW, $state);
+
+        return response()->noContent();
     }
 
     public function reorder(Request $request): RedirectResponse
@@ -271,6 +349,8 @@ class WorkflowController extends Controller
                     ->update(['after_freigabe_workflow_step_id' => $stepIdMap[$step->after_freigabe_workflow_step_id] ?? null]);
             });
 
+            WorkflowGroupWindow::copyToWorkflow($workflow, $newWorkflow, $stepIdMap);
+
             $workflow->update(['superseded_by_id' => $newWorkflow->id, 'active' => false]);
 
             return $newWorkflow;
@@ -337,6 +417,8 @@ class WorkflowController extends Controller
                 WorkflowStep::query()->whereKey($stepIdMap[$step->id])
                     ->update(['after_freigabe_workflow_step_id' => $stepIdMap[$step->after_freigabe_workflow_step_id] ?? null]);
             });
+
+            WorkflowGroupWindow::copyToWorkflow($workflow, $newWorkflow, $stepIdMap);
 
             return $newWorkflow;
         });
