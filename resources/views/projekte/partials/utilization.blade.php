@@ -22,7 +22,6 @@
 @endif
 
 <div class="mb-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
-    <span><span class="mr-1 inline-block h-0.5 w-5 bg-green-600 align-middle"></span>{{ __('Arbeitszeit (verfügbar)') }}</span>
     <span><span class="mr-1 inline-block h-2.5 w-2.5 rounded-sm border border-blue-300 bg-[#eff6ff] align-middle"></span>{{ $isMonth ? __('Heute') : __('Aktuelle Woche') }}</span>
     @if ($isMonth)
         <span><span class="mr-1 inline-block h-2.5 w-2.5 rounded-sm border border-gray-200 bg-[#fffaeb] align-middle"></span>{{ __('Wochenende') }}</span>
@@ -85,6 +84,21 @@
                     </tbody>
                 </table>
             </div>
+        </div>
+
+        {{-- Legende (außerhalb des Scrollbereichs, damit sie immer sichtbar bleibt); in der Jahresansicht links der Hinweis zu den Feiertagen --}}
+        <div class="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-gray-600">
+            <span class="text-gray-400">
+                @unless ($isMonth)
+                    {{ __('In Wochen mit Feiertagen ist die Arbeitszeit entsprechend reduziert') }}
+                @endunless
+            </span>
+            <span class="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <span><span class="mr-1.5 inline-block h-0.5 w-5 bg-green-600 align-middle"></span>{{ $isMonth ? __('Arbeitszeit') : __('Wochenarbeitszeit') }}</span>
+                <span><span class="mr-1.5 inline-block h-2.5 w-5 bg-[#94a3b8] align-middle"></span>{{ __('Grundlast') }}</span>
+                <span><span class="mr-1.5 inline-block h-2.5 w-5 bg-[#3b82f6] align-middle"></span>{{ __('Projekt') }}</span>
+                <span><span class="mr-1.5 inline-block h-2.5 w-5 bg-[#ef4444] align-middle"></span>{{ __('Überbuchung') }}</span>
+            </span>
         </div>
     </section>
 @empty

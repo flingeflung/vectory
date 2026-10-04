@@ -187,7 +187,7 @@
                             },
                         },
                         plugins: {
-                            legend: { position: 'bottom' },
+                            legend: { display: false },
                             tooltip: { filter: (item) => Math.abs(item.raw[1] - item.raw[0]) > 0.0001, callbacks: { label: (item) => item.dataset.label + ': ' + (item.raw[1] - item.raw[0]).toFixed(2), footer: (items) => names.capacity + ': ' + d.capacity[items[0].dataIndex], title: (items) => weekly ? names.week + ' ' + items[0].label + ' (' + d.subs[items[0].dataIndex] + ')' : d.subs[items[0].dataIndex] + ' ' + items[0].label } },
                         },
                     },
