@@ -110,7 +110,7 @@
                         });
                     },
                 };
-                // Verfügbare Arbeitszeit als waagerechte Linie je Tag (wie im Reiter Arbeitszeit); Tage ohne Arbeitszeit bleiben leer
+                // Verfügbare Arbeitszeit als waagerechte Linie (wie im Reiter Arbeitszeit); ohne Arbeitszeit liegt sie auf 0, nur Wochenenden und Feiertage bleiben leer
                 const capacityLine = {
                     id: 'capacityLine',
                     afterDatasetsDraw(chart) {
@@ -121,7 +121,7 @@
                         ctx.lineWidth = 2.5;
                         ctx.lineCap = 'butt';
                         d.capacity.forEach((hours, index) => {
-                            if (! hours) return;
+                            if (! hours && ['weekend', 'holiday'].includes(d.flags[index])) return;
                             const left = x.getPixelForValue(index) - width / 2;
                             const top = y.getPixelForValue(hours);
                             ctx.beginPath();
