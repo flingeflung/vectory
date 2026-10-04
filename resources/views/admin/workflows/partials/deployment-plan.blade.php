@@ -144,7 +144,7 @@
                 </div>
 
                 <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
-                    <p class="text-xs text-gray-400">{{ __('Näherung: Die Dauer der einzelnen Schritte steht nicht fest, deshalb dient der Plan nur als grobe Verteilung.') }}</p>
+                    <span></span>
                     @if ($editable)
                         <div class="flex items-center gap-2">
                             <button type="button" @click="fromResponsibilities()" title="{{ __('Setzt jede Funktionsgruppe von ihrem ersten bis zu ihrem letzten Schritt, bei dem sie als zuständig eingetragen ist.') }}" class="whitespace-nowrap rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Vorbelegen') }}</button>
