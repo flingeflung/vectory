@@ -22,6 +22,7 @@
 
 <div class="mb-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
     <span><span class="mr-1 inline-block h-0.5 w-5 bg-green-600 align-middle"></span>{{ __('Arbeitszeit (verfügbar)') }}</span>
+    <span><span class="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-blue-200 align-middle"></span>{{ $isMonth ? __('Heute') : __('Aktuelle Woche') }}</span>
     @if ($isMonth)
         <span><span class="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-gray-200 align-middle"></span>{{ __('Wochenende') }}</span>
         <span><span class="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-violet-200 align-middle"></span>{{ __('Feiertag') }}</span>
@@ -47,9 +48,9 @@
                     <div></div>
                     @foreach ($data['periods'] as $period)
                         @php $flag = $absenceFlags[$loop->index] ?? ''; @endphp
-                        <div class="border-b border-gray-200 py-0.5 {{ $cellClass($period) }} {{ $flag === 'absence' ? 'bg-amber-50' : '' }}" title="{{ $period['holiday'] ?? $period['sub'] }}">
+                        <div class="py-0.5 {{ $period['today'] ? 'border-b-2 border-blue-600 bg-blue-100 text-blue-800' : 'border-b border-gray-200 '.$cellClass($period).' '.($flag === 'absence' ? 'bg-amber-50' : '') }}" title="{{ $period['today'] ? __('Heute').($period['holiday'] ? ': '.$period['holiday'] : '') : ($period['holiday'] ?? $period['sub']) }}">
                             <div>{{ $period['sub'] }}</div>
-                            <div class="font-semibold tabular-nums text-gray-700">{{ $period['label'] }}</div>
+                            <div class="font-semibold tabular-nums {{ $period['today'] ? 'text-blue-800' : 'text-gray-700' }}">{{ $period['label'] }}</div>
                         </div>
                     @endforeach
                 </div>
@@ -76,7 +77,7 @@
                                         $overloaded = in_array($metric, ['remaining', 'utilization'], true) && $values['remaining'] < -0.005;
                                         $flag = $absenceFlags[$loop->index] ?? '';
                                     @endphp
-                                    <td class="h-6 border-r border-gray-100 px-0.5 text-right tabular-nums {{ $overloaded ? 'bg-red-50 text-red-700' : ($flag === 'absence' ? 'bg-amber-50' : $cellClass($period)) }}">{{ $metric === 'utilization' ? number_format($value, 0, ',', '.').'%' : number_format($value, 2, ',', '.') }}</td>
+                                    <td class="h-6 border-r border-gray-100 px-0.5 text-right tabular-nums {{ $overloaded ? 'bg-red-50 text-red-700' : ($period['today'] ? 'bg-blue-50' : ($flag === 'absence' ? 'bg-amber-50' : $cellClass($period))) }}">{{ $metric === 'utilization' ? number_format($value, 0, ',', '.').'%' : number_format($value, 2, ',', '.') }}</td>
                                 @endforeach
                             </tr>
                         @endforeach

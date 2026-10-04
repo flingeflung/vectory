@@ -100,11 +100,11 @@
                     beforeDatasetsDraw(chart) {
                         const { ctx, chartArea, scales: { x } } = chart;
                         d.flags.forEach((flag, index) => {
-                            if (! flag) return;
+                            if (! flag && index !== d.today) return;
                             const left = x.getPixelForValue(index) - (x.getPixelForValue(1) - x.getPixelForValue(0)) / 2;
                             const width = x.getPixelForValue(1) - x.getPixelForValue(0);
                             ctx.save();
-                            ctx.fillStyle = bandColors[flag];
+                            ctx.fillStyle = index === d.today ? '#dbeafe' : bandColors[flag];
                             ctx.fillRect(left, chartArea.top, width, chartArea.bottom - chartArea.top);
                             ctx.restore();
                         });

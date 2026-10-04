@@ -100,6 +100,7 @@ final class ProjectUtilization
                 'sub' => $p['sub'],
                 'weekend' => $mode === 'month' && CarbonImmutable::parse($p['days'][0])->isWeekend(),
                 'holiday' => $mode === 'month' ? ($holidayNames[$p['days'][0]] ?? null) : null,
+                'today' => in_array(CarbonImmutable::today()->toDateString(), $p['days'], true),
             ]),
             'people' => $result,
             'allPeople' => $allPeople,
@@ -157,6 +158,7 @@ final class ProjectUtilization
             'base_load' => $series(fn ($r) => $r['base_load']),
             'project_in' => $series(fn ($r) => $r['project_in']),
             'project_over' => $series(fn ($r) => $r['project_over']),
+            'today' => $periods->search(fn (array $p) => in_array(CarbonImmutable::today()->toDateString(), $p['days'], true)),
             'flags' => $periods->map(function (array $p) use ($rows, $mode, $holidayNames) {
                 if ($mode !== 'month') {
                     return '';
