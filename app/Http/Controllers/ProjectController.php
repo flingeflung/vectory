@@ -1957,6 +1957,19 @@ class ProjectController extends Controller
      */
     private function adjacentProject(?string $sort, string $direction, array $filters, Project $current, string $way): ?Project
     {
+        // Blättern folgt EXAKT der Reihenfolge der Übersicht (Ralf, 2026-10-04: "Die Reihenfolge beim Blättern stimmt immer noch
+        // nicht mit der in der Übersicht überein"): dieselbe sortierte Abfrage wie die Liste, Nachbar = Nachbar in dieser Liste.
+        // Die frühere Rechnung über Sortierwerte kannte die Verbund-Gruppierung nicht und sprang bei gleichen oder
+        // dazwischenliegenden Werten (z.B. Unterprojekte) an falsche Stellen.
+        $orderedIds = $this->orderedQuery($sort, $direction, $filters)->pluck('projects.id')->values();
+        $position = $orderedIds->search($current->id);
+        if ($position !== false) {
+            $neighbourId = $orderedIds->get($way === 'next' ? $position + 1 : $position - 1);
+
+            return $neighbourId !== null ? Project::query()->find($neighbourId) : null;
+        }
+
+        // Aktuelles Projekt steht nicht in der gefilterten Liste (z.B. direkt per Link geöffnet): bisherige Näherung über Sortierwerte.
         [$direct, $current, $excludeIds] = $this->verbundAdjacentDetour($current, $way);
         if ($direct !== false) {
             return $direct;
