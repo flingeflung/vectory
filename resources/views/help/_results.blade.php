@@ -36,11 +36,12 @@
                 @endif
             </div>
         @endif
-        @if (($canManageHelp ?? false) && ($dialogId ?? '') !== '' && ($dialogHasArticle ?? false))
-            <div class="mb-2 flex items-center gap-1 rounded bg-gray-50 px-1.5 py-1 text-xs text-gray-500" title="{{ __('Schlüssel dieses Fensters bzw. des sichtbaren Reiters, für "Seiten (Routennamen)" in der Hilfeverwaltung') }}">
-                <span class="shrink-0">{{ __('Schlüssel:') }}</span>
-                <code class="flex-1 select-all font-mono text-gray-800">{{ $helpKey ?? $dialogId }}</code>
-                <x-copy-button :text="$helpKey ?? $dialogId" />
+        @php($ownKey = ($dialogId ?? '') !== '' ? ($helpKey ?? $dialogId) : ($routeName ?? ''))
+        @if (($canManageHelp ?? false) && $ownKey !== '')
+            <div class="mb-2 flex items-center gap-1 rounded bg-gray-50 px-1.5 py-1 text-xs text-gray-500" title="{{ __('Schlüssel dieses Fensters bzw. Reiters oder Name dieser Seite, für "Seiten (Routennamen)" in der Hilfeverwaltung') }}">
+                <span class="shrink-0">{{ ($dialogId ?? '') !== '' ? __('Schlüssel:') : __('Seite:') }}</span>
+                <code class="flex-1 select-all font-mono text-gray-800">{{ $ownKey }}</code>
+                <x-copy-button :text="$ownKey" />
             </div>
         @endif
         @php($crumbs = array_values(array_filter($article->ancestors(), fn ($crumb) => $crumb->isVisibleTo(auth()->user()))))
