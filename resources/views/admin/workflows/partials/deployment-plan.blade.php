@@ -11,6 +11,7 @@
         'number' => $steps->search(fn ($s) => $s->id === $step->id) + 1,
         'title' => $step->title,
         'groups' => $step->functionGroups->pluck('id')->all(),
+        'shorts' => $step->functionGroups->map(fn ($g) => $g->short_name ?: $g->name)->values()->all(),
         'color' => $lifecycleColors[$step->lifecycle_status] ?? $lifecycleColors[2],
     ])->values();
 @endphp
@@ -33,7 +34,7 @@
             <svg class="h-3.5 w-3.5 shrink-0 transition-transform" :class="open ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
             {{ __('Einsatzplan') }}
         </button>
-        <span class="cursor-help font-normal text-gray-400" title="{{ __('Von welchem bis zu welchem Schritt eine Funktionsgruppe gebraucht wird. Die Ressourcenplanung verteilt ihre Stunden nur über diesen Zeitraum.') }}">ⓘ</span>
+        <span class="cursor-help font-normal text-gray-400" title="{{ __('Legt fest, von welchem bis zu welchem Schritt eine Funktionsgruppe gebraucht wird. Standard ist die ganze Breite. Gedacht für die Ressourcenplanung: Geplante Stunden sollen später nur über diesen Zeitraum verteilt werden, nicht über das ganze Projekt.') }}">ⓘ</span>
     </div>
 
     <div x-show="open" x-cloak class="px-3 pb-3">
@@ -124,9 +125,14 @@
                             <div class="w-36 shrink-0"></div>
                             <div class="grid flex-1 gap-0.5" :style="'grid-template-columns: repeat(' + steps.length + ', minmax(0, 1fr))'">
                                 <template x-for="step in steps" :key="step.id">
-                                    <div class="min-w-0 rounded-md border border-green-600/40 px-1 py-1 text-center" :style="'background-color: ' + step.color">
-                                        <div class="truncate text-[11px] font-medium leading-tight text-gray-800" x-text="step.title" :title="step.title"></div>
-                                        <div class="text-[10px] text-gray-500" x-text="'S' + step.number"></div>
+                                    <div class="min-w-0">
+                                        <div class="rounded-md border border-green-600/40 px-1 py-1 text-center" :style="'background-color: ' + step.color">
+                                            <div class="truncate text-[11px] font-medium leading-tight text-gray-800" x-text="step.title" :title="step.title"></div>
+                                            <div class="text-[10px] text-gray-500" x-text="'S' + step.number"></div>
+                                        </div>
+                                        <div class="mt-0.5 text-center text-[11px] font-medium leading-tight text-gray-700">
+                                            <template x-for="short in step.shorts" :key="short"><div class="truncate" x-text="short" :title="short"></div></template>
+                                        </div>
                                     </div>
                                 </template>
                             </div>
@@ -139,7 +145,7 @@
                     <p class="text-xs text-gray-400">{{ __('Näherung: Die Dauer der einzelnen Schritte steht nicht fest, deshalb dient der Plan nur als grobe Verteilung.') }}</p>
                     @if ($editable)
                         <div class="flex items-center gap-2">
-                            <button type="button" @click="fromResponsibilities()" title="{{ __('Setzt jede Funktionsgruppe von ihrem ersten bis zu ihrem letzten zuständigen Schritt.') }}" class="whitespace-nowrap rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Aus Zuständigkeiten vorbelegen') }}</button>
+                            <button type="button" @click="fromResponsibilities()" title="{{ __('Setzt jede Funktionsgruppe von ihrem ersten bis zu ihrem letzten Schritt, bei dem sie als zuständig eingetragen ist.') }}" class="whitespace-nowrap rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Vorbelegen') }}</button>
                             <button type="button" @click="allFull()" class="whitespace-nowrap rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Ganze Breite') }}</button>
                             <button type="submit" x-show="dirty" x-cloak class="whitespace-nowrap rounded-md bg-btn-primary px-3 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
                         </div>
