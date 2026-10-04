@@ -2580,10 +2580,20 @@
                         return;
                     }
 
+                    // Scrollpositionen der Liste merken (Ralf, 2026-10-04): Das Austauschen des Inhalts setzt sie sonst auf den Anfang zurück.
+                    const scrollerSelector = '.overflow-auto, .overflow-y-auto, .overflow-x-auto';
+                    const positions = [...current.querySelectorAll(scrollerSelector)].map((el) => [el.scrollTop, el.scrollLeft]);
+
                     const html = await fetch(window.location.href).then((r) => r.text());
                     const fresh = new DOMParser().parseFromString(html, 'text/html').getElementById('projekte-content');
                     if (fresh) {
                         current.innerHTML = fresh.innerHTML;
+                        [...current.querySelectorAll(scrollerSelector)].forEach((el, index) => {
+                            if (positions[index]) {
+                                el.scrollTop = positions[index][0];
+                                el.scrollLeft = positions[index][1];
+                            }
+                        });
                     }
                 };
             })();
