@@ -320,7 +320,7 @@ $dialogId = $helpId ? \App\Support\DialogId::for($name) : null;
     x-on:open-modal.window="$event.detail == '{{ $name }}' ? (show ? null : (resizable ? openPositioned() : (dragPos = null)), show = true, resizable && watchResize()) : null"
     x-on:close-modal.window="$event.detail == '{{ $name }}' ? requestClose() : null"
     x-on:close.stop="requestClose()"
-    x-on:keydown.escape.window="(window.__modalStack || [])[(window.__modalStack || []).length - 1] === '{{ $name }}' && requestClose()"
+    x-on:keydown.escape.window="if (! $event.__escapeHandled && (window.__modalStack || [])[(window.__modalStack || []).length - 1] === '{{ $name }}') { $event.__escapeHandled = true; requestClose(); }"
     x-on:keydown.tab.prevent="$event.shiftKey || nextFocusable().focus()"
     x-on:keydown.shift.tab.prevent="prevFocusable().focus()"
     x-show="show"
