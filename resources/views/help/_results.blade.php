@@ -36,6 +36,16 @@
                 @endif
             </div>
         @endif
+        @php($crumbs = array_values(array_filter($article->ancestors(), fn ($crumb) => $crumb->isVisibleTo(auth()->user()))))
+        @if ($crumbs)
+            <nav class="mb-2 flex flex-wrap items-center gap-x-1 text-xs text-gray-500" aria-label="{{ __('Pfad') }}">
+                @foreach ($crumbs as $crumb)
+                    <a href="#" data-help-key="{{ $crumb->key }}" class="text-indigo-600 hover:underline">{{ $crumb->translation(app()->getLocale())?->title ?? $crumb->key }}</a>
+                    <span aria-hidden="true">›</span>
+                @endforeach
+                <span class="text-gray-700">{{ $translation->title }}</span>
+            </nav>
+        @endif
         <span hidden data-help-current-key="{{ $article->key }}"></span>
         @include('help._article', ['translation' => $translation])
     @else

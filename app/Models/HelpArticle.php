@@ -185,6 +185,22 @@ class HelpArticle extends Model
     }
 
     /**
+     * Übergeordnete Seiten von oben nach unten (für den Brotkrumenpfad im Hilfe-Panel).
+     *
+     * @return list<self>
+     */
+    public function ancestors(): array
+    {
+        $chain = [];
+        $current = $this;
+        while ($current->parent_id !== null && ($current = $current->parent()->with('translations')->first())) {
+            array_unshift($chain, $current);
+        }
+
+        return $chain;
+    }
+
+    /**
      * Reiter-Schlüssel ("D-1234#planung.auslastung") dieser Seite, die zu keinem Dialog oder Reiter mehr passen
      * (Reiter verschoben/umbenannt, Dialog gelöscht) - die Seite würde sonst still nie mehr angezeigt.
      *

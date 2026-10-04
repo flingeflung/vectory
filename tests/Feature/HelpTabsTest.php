@@ -96,4 +96,18 @@ class HelpTabsTest extends TestCase
         $this->assertSame([], $this->article('ok', [$dialogId.'#planung.auslastung', $dialogId, 'projekte'], 'x')->orphanedTabKeys());
         $this->assertSame([$dialogId.'#planung.weg', 'D-ZZZZ#planung'], $this->article('kaputt', [$dialogId.'#planung.weg', 'D-ZZZZ#planung'], 'x')->orphanedTabKeys());
     }
+
+    public function test_a_nested_article_shows_a_breadcrumb_path(): void
+    {
+        $this->actingAs(User::factory()->create(['tenant_id' => Tenant::query()->firstOrFail()->id, 'role' => 'super_admin']));
+        $top = $this->article('oben', [], 'o');
+        $mid = $this->article('mitte', [], 'm');
+        $leaf = $this->article('blatt', ['seite-x'], 'b');
+        $mid->update(['parent_id' => $top->id]);
+        $leaf->update(['parent_id' => $mid->id]);
+
+        $this->get(route('hilfe', ['route' => 'seite-x']))->assertOk()
+            ->assertSee('data-help-key="oben"', false)->assertSee('data-help-key="mitte"', false);
+        $this->get(route('hilfe', ['route' => 'oben-gibt-es-nicht']))->assertOk()->assertDontSee('aria-label="Pfad"', false);
+    }
 }
