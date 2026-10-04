@@ -23,7 +23,7 @@
             <datalist id="glossary-pages">@foreach ($pages as $page)<option value="{{ $page }}">@endforeach</datalist>
             <datalist id="glossary-abilities">@foreach ($abilities as $abilityKey => $abilityLabel)<option value="{{ $abilityKey }}" label="{{ $abilityLabel }}">@endforeach</datalist>
 
-            <form x-show="adding" x-cloak method="POST" action="{{ route('admin.begriffe.store') }}" class="grid grid-cols-12 items-end gap-2 border-b border-gray-100 bg-gray-50 p-3 text-sm">
+            <form x-show="adding" x-cloak method="POST" action="{{ route('admin.begriffe.store') }}" class="grid grid-cols-12 items-start gap-2 border-b border-gray-100 bg-gray-50 p-3 text-sm">
                 @csrf
                 <div class="col-span-2"><label class="block text-xs text-gray-500">{{ __('Begriff') }}</label><input x-ref="newTerm" name="term" required class="w-full rounded border-gray-300 py-1 text-sm"></div>
                 <div class="col-span-2"><label class="block text-xs text-gray-500">{{ __('Zielseite (Routenname)') }}</label><input name="route_name" list="glossary-pages" required class="w-full rounded border-gray-300 py-1 text-sm"></div>
@@ -37,7 +37,7 @@
 
             @foreach ($terms as $term)
                 <div class="border-b border-gray-100 p-3 text-sm" x-data="{ dirty: false }">
-                    <form method="POST" action="{{ route('admin.begriffe.update', $term) }}" @input="dirty = true" class="grid grid-cols-12 items-end gap-2">
+                    <form method="POST" action="{{ route('admin.begriffe.update', $term) }}" @input="dirty = true" class="grid grid-cols-12 items-start gap-2">
                         @csrf
                         <div class="col-span-2"><label class="block text-xs text-gray-500">{{ __('Begriff') }}</label><input name="term" value="{{ $term->term }}" required class="w-full rounded border-gray-300 py-1 text-sm"></div>
                         <div class="col-span-2">
