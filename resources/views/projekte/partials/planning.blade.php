@@ -246,7 +246,7 @@
         <button type="button" @click="subTab = 'terminplan'" :class="subTab === 'terminplan' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700'" class="border-b-2 px-3 py-1.5 text-xs font-medium">{{ __('Terminplan') }}</button>
     </div>
 
-    <div x-show="subTab === 'planstunden'" class="{{ $isOverlay ? 'flex min-h-0 flex-1 flex-col gap-2' : 'space-y-2' }}">
+    <div x-show="subTab === 'planstunden'" data-help-tab="planung.planstunden" class="{{ $isOverlay ? 'flex min-h-0 flex-1 flex-col gap-2' : 'space-y-2' }}">
         @include('projekte.partials.planned-hours-editor')
 
         @can('planning.view')
@@ -291,7 +291,7 @@
     </div>
 
     @can('planning.view')
-    <div x-show="subTab === 'auslastung'" x-cloak class="{{ $isOverlay ? 'min-h-0 flex-1 overflow-y-auto' : '' }}">
+    <div x-show="subTab === 'auslastung'" x-cloak data-help-tab="planung.auslastung" class="{{ $isOverlay ? 'min-h-0 flex-1 overflow-y-auto' : '' }}">
         <div class="mb-2 flex flex-wrap items-center gap-2 text-xs">
             <div class="inline-flex overflow-hidden rounded-md border border-gray-300">
                 <button type="button" @click="util.view = 'month'; loadUtilization()" :class="util.view === 'month' ? 'bg-btn-primary text-white' : 'bg-btn-secondary text-gray-700 hover:bg-btn-secondary-hover'" class="px-3 py-1 font-medium">{{ __('Monat') }}</button>
@@ -326,7 +326,7 @@
     </div>
     @endcan
 
-    <div x-show="subTab === 'terminplan'" x-cloak class="{{ $isOverlay ? 'min-h-0 flex-1 overflow-y-auto' : '' }}">
+    <div x-show="subTab === 'terminplan'" x-cloak data-help-tab="planung.terminplan" class="{{ $isOverlay ? 'min-h-0 flex-1 overflow-y-auto' : '' }}">
         @include('projekte.partials.terminplan')
     </div>
 </div>

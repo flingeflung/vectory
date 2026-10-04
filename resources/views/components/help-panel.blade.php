@@ -23,6 +23,7 @@
                     const params = new URLSearchParams({
                         route: window.currentHelpKey || '',
                         dialog: window.currentHelpDialog || '',
+                        tab: window.currentHelpTab || '',
                         q: this.$refs.searchInput.value,
                     });
                     const html = await fetch({{ \Illuminate\Support\Js::from(route('hilfe')) }} + '?' + params.toString()).then((r) => r.text());

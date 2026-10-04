@@ -571,8 +571,15 @@
             })();
 
             {{-- Hilfe zu einem bestimmten Dialog (Klick auf die Dialog-ID, siehe components/modal.blade.php). --}}
-            window.openDialogHelp = function (dialogId) {
+            window.openDialogHelp = function (dialogId, trigger) {
                 window.currentHelpDialog = dialogId;
+                // Sichtbarer Reiter im Dialog (genauester Eintrag mit data-help-tab, z.B. "planung.auslastung"):
+                // das "?" bleibt eines je Dialog, die Hilfe richtet sich nach dem Reiter.
+                const panel = trigger && trigger.parentElement;
+                const visibleTabs = panel
+                    ? [...panel.querySelectorAll('[data-help-tab]')].filter((el) => el.getClientRects().length > 0).map((el) => el.dataset.helpTab)
+                    : [];
+                window.currentHelpTab = visibleTabs.sort((a, b) => b.length - a.length)[0] || '';
                 window.dispatchEvent(new CustomEvent('open-modal', { detail: 'help-panel' }));
             };
 

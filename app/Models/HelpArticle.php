@@ -162,6 +162,28 @@ class HelpArticle extends Model
             ?? $byLocale->first();
     }
 
+    /**
+     * Schlüssel, unter denen Hilfe für einen Dialog gesucht wird, vom genauesten zum gröbsten: bei Dialog "D-1234" und
+     * Reiter "planung.auslastung" also "D-1234#planung.auslastung", "D-1234#planung", "D-1234". So bleibt das "?" ein
+     * einziges je Dialog, zeigt aber die Hilfe des gerade sichtbaren Reiters (Ralf, 2026-10-04).
+     *
+     * @return list<string>
+     */
+    public static function dialogKeys(string $dialogId, string $tab = ''): array
+    {
+        if ($dialogId === '') {
+            return [];
+        }
+        $keys = [];
+        $parts = array_values(array_filter(explode('.', $tab), fn ($part) => $part !== ''));
+        for ($length = count($parts); $length >= 1; $length--) {
+            $keys[] = $dialogId.'#'.implode('.', array_slice($parts, 0, $length));
+        }
+        $keys[] = $dialogId;
+
+        return $keys;
+    }
+
     public function isVisibleTo(?User $user): bool
     {
         return match ($this->visible_role) {

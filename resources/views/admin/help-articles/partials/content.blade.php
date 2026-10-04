@@ -57,7 +57,7 @@
                 @csrf
                 <div class="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
                     <div>
-                        <label class="block text-xs text-gray-500">{{ __('Seiten (Routennamen) oder Dialoge (Dialog-IDs wie D-3F2A), zu denen dieser Artikel angezeigt wird') }}</label>
+                        <label class="block text-xs text-gray-500">{{ __('Seiten (Routennamen) oder Dialoge (Dialog-IDs wie D-3F2A, für einen einzelnen Reiter mit Zusatz wie D-3F2A#planung.auslastung), zu denen dieser Artikel angezeigt wird') }}</label>
                         <input type="text" name="route_names" value="{{ implode(', ', $selected->route_names ?? []) }}" placeholder="{{ __('z. B. admin.kunden, D-3F2A') }}" class="mt-0.5 w-full rounded-md border-gray-300 font-mono text-sm">
                     </div>
 

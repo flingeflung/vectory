@@ -41,13 +41,19 @@ class HelpController extends Controller
 
         $routeName = (string) $request->query('route', '');
         $dialogId = (string) $request->query('dialog', '');
+        $tab = (string) $request->query('tab', '');
 
-        // Zuerst der Artikel zum Dialog (Dialog-ID steht in route_names), sonst der zur Seite.
-        $dialogArticle = $dialogId !== ''
-            ? HelpArticle::query()->forRoute($dialogId)->with('translations')->first()
-            : null;
-        if ($dialogArticle && ! $dialogArticle->isVisibleTo($request->user())) {
-            $dialogArticle = null;
+        // Zuerst der Artikel zum Reiter des Dialogs ("D-1234#planung.auslastung", dann ein Reiter weiter oben "D-1234#planung"),
+        // dann der zum Dialog selbst (Dialog-ID steht in route_names), sonst der zur Seite.
+        $dialogArticle = null;
+        if ($dialogId !== '') {
+            foreach (HelpArticle::dialogKeys($dialogId, $tab) as $key) {
+                $candidate = HelpArticle::query()->forRoute($key)->with('translations')->first();
+                if ($candidate && $candidate->isVisibleTo($request->user())) {
+                    $dialogArticle = $candidate;
+                    break;
+                }
+            }
         }
         $article = $dialogArticle
             ?? ($routeName !== '' ? HelpArticle::query()->forRoute($routeName)->with('translations')->first() : null);
@@ -68,6 +74,7 @@ class HelpController extends Controller
             // müsste er dafür jedes Mal fragen, welche Route das gerade ist.
             'routeName' => $routeName,
             'dialogId' => $dialogId,
+            'helpKey' => HelpArticle::dialogKeys($dialogId, $tab)[0] ?? $dialogId,
             'dialogHasArticle' => $dialogArticle !== null,
             'canManageHelp' => $request->user()?->isSuperAdmin(),
         ]);

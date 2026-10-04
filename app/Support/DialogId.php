@@ -61,6 +61,8 @@ final class DialogId
             ->filter(fn (HelpArticle $article) => $article->isVisibleTo($user))
             ->flatMap(fn (HelpArticle $article) => $article->route_names ?? [])
             ->filter(fn ($entry) => is_string($entry) && str_starts_with($entry, 'D-'))
+            // "D-1234#reiter" gehört zum Dialog D-1234: das "?" soll auch erscheinen, wenn nur Reiter-Artikel existieren
+            ->map(fn (string $entry) => strstr($entry, '#', true) ?: $entry)
             ->unique()
             ->values()
             ->all();

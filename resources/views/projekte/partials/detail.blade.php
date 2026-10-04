@@ -299,7 +299,7 @@
             class="{{ $isOverlay ? 'min-h-0 flex-1 px-4 pt-1 pb-3' : '' }}"
             @if ($isOverlay) :class="activeTab === 'planung' ? 'overflow-hidden' : 'overflow-y-auto'" @endif
         >
-        <div x-show="activeTab === 'details'">
+        <div x-show="activeTab === 'details'" data-help-tab="details">
         <form id="project-detail-form" method="POST" action="{{ route('projekte.update', $project) }}" class="space-y-4 text-sm">
         <div>
         <div class="text-[11px] font-medium" style="color: var(--detail-caption, #999)">{{ __('Stammdaten') }}</div>
@@ -421,6 +421,7 @@
         @endphp
         <div
             x-show="activeTab === 'vorgaenge'"
+            data-help-tab="vorgaenge"
             x-cloak
             x-data="{ activeCategories: {{ \Illuminate\Support\Js::from($activityCategories->pluck('value')->all()) }} }"
             class="text-xs text-gray-600"
@@ -453,7 +454,7 @@
             </div>
         </div>
 
-        <div x-show="activeTab === 'workflow_steps'" x-cloak class="text-sm">
+        <div x-show="activeTab === 'workflow_steps'" x-cloak class="text-sm" data-help-tab="workflow">
             @if (! $project->workflow)
                 <div class="text-gray-400">&ndash; {{ __('Kein Workflow zugewiesen') }} &ndash;</div>
             @else
@@ -722,11 +723,11 @@
             @endif
         </div>
 
-        <div x-show="activeTab === 'planung'" x-cloak class="h-full min-h-0">
+        <div x-show="activeTab === 'planung'" x-cloak class="h-full min-h-0" data-help-tab="planung">
             @include('projekte.partials.planning')
         </div>
 
-        <div x-show="activeTab === 'zeiten'" x-cloak>
+        <div x-show="activeTab === 'zeiten'" x-cloak data-help-tab="zeiten">
             @include('projekte.partials.zeiten-body')
         </div>
 

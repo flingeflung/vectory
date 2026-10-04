@@ -30,8 +30,8 @@
                 {{ __('Zu diesem Dialog (:id) gibt es noch keine eigene Hilfeseite. Hier die Hilfe zur Seite dahinter:', ['id' => $dialogId]) }}
                 @if ($canManageHelp ?? false)
                     <div class="mt-1 flex items-center gap-1 rounded bg-white px-1.5 py-1">
-                        <code class="flex-1 select-all font-mono text-gray-800">{{ $dialogId }}</code>
-                        <x-copy-button :text="$dialogId" />
+                        <code class="flex-1 select-all font-mono text-gray-800">{{ $helpKey ?? $dialogId }}</code>
+                        <x-copy-button :text="$helpKey ?? $dialogId" />
                     </div>
                 @endif
             </div>
@@ -42,10 +42,10 @@
             <div>{{ __('Für diese Seite gibt\'s noch keine Hilfeseite - oben suchen findet vielleicht trotzdem etwas Passendes.') }}</div>
             @if (($canManageHelp ?? false) && ($dialogId ?? '') !== '')
                 <div class="rounded-md border border-gray-200 bg-gray-50 p-2 text-xs text-gray-600">
-                    {{ __('Dialog-ID dieses Fensters (bei "Seiten (Routennamen)" eintragen, um eine eigene Hilfeseite dafür anzulegen):') }}
+                    {{ __('Schlüssel dieses Fensters bzw. des sichtbaren Reiters (bei "Seiten (Routennamen)" eintragen, um eine eigene Hilfeseite dafür anzulegen; nur die Dialog-ID vor dem # gilt für alle Reiter):') }}
                     <div class="mt-1 flex items-center gap-1 rounded bg-white px-1.5 py-1">
-                        <code class="flex-1 select-all font-mono text-gray-800">{{ $dialogId }}</code>
-                        <x-copy-button :text="$dialogId" />
+                        <code class="flex-1 select-all font-mono text-gray-800">{{ $helpKey ?? $dialogId }}</code>
+                        <x-copy-button :text="$helpKey ?? $dialogId" />
                     </div>
                 </div>
             @endif

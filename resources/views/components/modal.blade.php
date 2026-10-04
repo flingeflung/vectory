@@ -399,7 +399,7 @@ $dialogId = $helpId ? \App\Support\DialogId::for($name) : null;
                      weil die Kopfzeilen unterschiedlich hoch sind; statische Werte nur als Rückfall. --}}
                 <button
                     type="button"
-                    x-on:click.stop="window.openDialogHelp && window.openDialogHelp('{{ $dialogId }}')"
+                    x-on:click.stop="window.openDialogHelp && window.openDialogHelp('{{ $dialogId }}', $el)"
                     data-dialog-help
                     class="absolute right-12 top-3 z-20 flex h-6 w-6 items-center justify-center rounded-md border border-gray-400 bg-white text-xs font-medium leading-none text-gray-400 hover:border-gray-500 hover:text-gray-600"
                     title="{{ __('Hilfe zu diesem Dialog') }}"

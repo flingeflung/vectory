@@ -46,6 +46,9 @@ class DialogIdController extends Controller
                     'title' => $sources[$name]['title'] ?? null,
                     'file' => $sources[$name]['file'] ?? null,
                     'dynamic' => ! isset($sources[$name]),
+                    // Reiter mit möglicher eigener Hilfeseite (config/help-tabs.php): Schlüssel "D-1234#reiter"
+                    'tabs' => collect((array) config('help-tabs.'.$name, []))
+                        ->map(fn (string $label, string $key) => ['key' => $id.'#'.$key, 'label' => $label])->values()->all(),
                 ];
             })
             ->sortBy('id')

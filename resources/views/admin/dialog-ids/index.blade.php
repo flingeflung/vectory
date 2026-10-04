@@ -13,7 +13,7 @@
             matches(row) {
                 const needle = this.norm(this.q).replace(/^d-/, '');
                 if (needle === '') return true;
-                return [row.id.replace(/^D-/, ''), row.name, row.title, row.file].some((field) => this.norm(field).includes(needle));
+                return [row.id.replace(/^D-/, ''), row.name, row.title, row.file, ...(row.tabs || []).flatMap((tab) => [tab.key, tab.label])].some((field) => this.norm(field).includes(needle));
             },
             get shown() { return this.rows.filter((row) => this.matches(row)); },
         }"
@@ -55,7 +55,17 @@
                                 </button>
                             </td>
                             <td class="px-3 py-1.5 font-mono text-xs text-gray-700" x-text="row.name"></td>
-                            <td class="px-3 py-1.5 text-gray-700" x-text="row.title || '–'"></td>
+                            <td class="px-3 py-1.5 text-gray-700">
+                                <span x-text="row.title || '–'"></span>
+                                <template x-if="row.tabs && row.tabs.length">
+                                    <div class="mt-1 space-y-0.5 text-xs text-gray-500">
+                                        <div class="text-gray-400">{{ __('Reiter mit eigener Hilfeseite möglich (Schlüssel bei „Seiten (Routennamen)“ eintragen):') }}</div>
+                                        <template x-for="tab in row.tabs" :key="tab.key">
+                                            <div class="flex items-center gap-2"><code class="select-all font-mono text-gray-700" x-text="tab.key"></code><span x-text="tab.label"></span></div>
+                                        </template>
+                                    </div>
+                                </template>
+                            </td>
                             <td class="px-3 py-1.5 font-mono text-xs text-gray-500">
                                 <span x-show="row.file" x-text="row.file"></span>
                                 <span x-show="!row.file" class="text-gray-400" title="{{ __('Name wird im Quelltext zusammengesetzt (z. B. mit Datensatz-Nummer)') }}">{{ __('dynamisch benannt') }}</span>

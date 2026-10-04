@@ -40,7 +40,7 @@
             <button type="button" @click="subTab = 'gesamt'" :class="subTab === 'gesamt' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700'" class="border-b-2 px-2 pb-1.5 text-xs font-medium">{{ __('Zeitverlauf') }}</button>
         </div>
 
-    <div x-show="subTab === 'uebersicht'">
+    <div x-show="subTab === 'uebersicht'" data-help-tab="zeiten.uebersicht">
         <p class="mb-1 text-[11px] text-gray-400">
             @if ($project->verbund_rolle === 1)
                 {{ __('Bezieht sich auf das Hauptprojekt „:project“ und alle zugehörigen Unterprojekte.', ['project' => $project->source_pn.' – '.$project->title]) }}
@@ -198,11 +198,11 @@
     </div>
 
     @can('planning.view')
-        <div x-show="subTab === 'personen'" x-cloak>
+        <div x-show="subTab === 'personen'" x-cloak data-help-tab="zeiten.personen">
             @include('projekte.partials.zeiten-personen-body', ['week' => $zeiten['personBreakdownWeek'], 'sortBy' => $zeiten['personBreakdownSort'], 'breakdown' => $zeiten['personBreakdown']])
         </div>
     @endcan
-    <div x-show="subTab === 'gesamt'" x-cloak>
+    <div x-show="subTab === 'gesamt'" x-cloak data-help-tab="zeiten.gesamt">
         @include('projekte.partials.zeiten-gesamt-body', ['gesamt' => $zeiten['gesamtansicht'], 'canViewPeople' => auth()->user()->can('planning.view')])
     </div>
 </div>
