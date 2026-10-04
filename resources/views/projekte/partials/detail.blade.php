@@ -514,6 +514,15 @@
                                             </div>
                                         @endif
 
+                                        @php $duration = (int) $pws->effectiveDurationDays(); @endphp
+                                        <div class="mt-0.5 text-xs {{ $duration > 0 ? 'text-gray-600' : 'text-gray-400' }}" title="{{ __('Dauer in Arbeitstagen (AT) - wie in „Termine berechnen“') }}">
+                                            @if ($duration > 0)
+                                                {{ __('Dauer') }}: {{ $duration }} {{ __('AT') }}
+                                            @else
+                                                {{ __('keine Dauer eingetragen') }}
+                                            @endif
+                                        </div>
+
                                         @if ($step->has_due_date && $step->milestone_title)
                                             <div
                                                 x-data="{ value: {{ \Illuminate\Support\Js::from($pws->due_date?->format('Y-m-d')) }}, saving: false }"
