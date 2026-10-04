@@ -37,15 +37,3 @@
         </select>
     </div>
 </div>
-
-@if ($hasCurrentWfsStep && ($progress = $project->progressPercent()) !== null)
-    <div class="mt-1.5">
-        <div class="mb-0.5 flex items-center justify-between text-xs text-gray-500">
-            <span>{{ __('Fortschritt') }}</span>
-            <span>{{ $progress }} %</span>
-        </div>
-        <div class="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
-            <div class="h-full rounded-full bg-blue-500" style="width: {{ $progress }}%"></div>
-        </div>
-    </div>
-@endif

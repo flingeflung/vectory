@@ -1,7 +1,7 @@
 {{--
-    Ralf, 2026-09-11: bewusst kein eigener Wert - reines Duplikat der schon
-    in Stammdaten/Status berechneten Fortschrittsanzeige (Project::progressPercent()),
-    nur zusätzlich hier in Ablaufdaten sichtbar. Nicht editierbar.
+    Ralf, 2026-09-11: bewusst kein eigener Wert - reine Anzeige der berechneten
+    Fortschrittsanzeige (Project::progressPercent()); die frühere Doppelanzeige in
+    Stammdaten/Status wurde entfernt (Ralf, 2026-10-04). Nicht editierbar.
 --}}
 @php
     $hasCurrentWfsStep = $project->projectWorkflowSteps->contains('is_current', true);
