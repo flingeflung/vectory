@@ -2448,12 +2448,16 @@
 
                 const serializeForm = (form) => form ? new URLSearchParams(new FormData(form)).toString() : null;
 
+                // Immer das eigentliche Projektformular prüfen: Davor stehen im Overlay weitere Formulare (z.B. das Checklisten-Modal),
+                // die als "erstes Formular" nie als geändert galten - dann fehlte der Speichern-Button.
+                const mainForm = () => body().querySelector('#project-detail-form') || body().querySelector('form');
+
                 const snapshot = () => {
-                    savedSnapshot = serializeForm(body().querySelector('form'));
+                    savedSnapshot = serializeForm(mainForm());
                 };
 
                 window.projectOverlayIsDirty = () => {
-                    const current = serializeForm(body().querySelector('form'));
+                    const current = serializeForm(mainForm());
                     return current !== null && current !== savedSnapshot;
                 };
 
