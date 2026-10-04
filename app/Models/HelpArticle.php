@@ -42,12 +42,12 @@ class HelpArticle extends Model
     ];
 
     /**
-     * "3-Ebenen-Hilfestruktur" (Ralf, 2026-09-15): mehr Verschachtelung
+     * "3-Ebenen-Hilfestruktur" (Ralf, 2026-09-15), seit 2026-10-04 vier Ebenen (Reiter-Unterreiter der Projektdetails): mehr Verschachtelung
      * würde die Navigation links im Hilfe-Panel unübersichtlich machen -
      * wird in der Verwaltung beim Einrücken durchgesetzt (siehe
      * Admin\HelpArticleController::indent()).
      */
-    public const MAX_DEPTH = 3;
+    public const MAX_DEPTH = 4;
 
     /**
      * Sprachen, für die die Verwaltung Reiter anbietet - "de" ist die
@@ -114,7 +114,7 @@ class HelpArticle extends Model
      * Alle Artikel (inkl. Übersetzungen) als verschachtelter Baum,
      * gruppiert nach parent_id/position - eine Abfrage statt rekursiver
      * Eager-Loads, bei der zu erwartenden Artikelmenge unproblematisch.
-     * Jeder Knoten bekommt zusätzlich 'depth' (1-3) für Einrück-Darstellung
+     * Jeder Knoten bekommt zusätzlich 'depth' (1-4) für Einrück-Darstellung
      * und Einrücken-Button-Sperre in der Verwaltung.
      *
      * @return Collection<int, self>
