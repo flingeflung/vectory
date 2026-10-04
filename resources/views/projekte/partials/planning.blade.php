@@ -13,6 +13,7 @@
         planned: {{ \Illuminate\Support\Js::from($plannedValues) }},
         values: {{ \Illuminate\Support\Js::from($personValues) }},
         distributing: false,
+        utilBounds: { minYear: {{ min(2026, (int) ($project->start_date?->year ?? 2026)) }}, maxYear: {{ (int) now()->year + 5 }}, startYear: {{ $project->start_date?->year ?? 'null' }}, startMonth: {{ $project->start_date?->month ?? 'null' }} },
         util: { view: 'month', year: {{ now()->year }}, month: {{ now()->month }}, person: '', loading: false, loaded: false, people: [] },
         subTab: window.projectPlanungSubTab || 'planstunden',
         init() {
@@ -48,6 +49,33 @@
             this.values = merged;
             this.planned = data.planned;
             window.resnapshotProjectOverlay?.();
+        },
+        shiftUtil(step) {
+            if (this.util.view === 'month') {
+                let month = this.util.month + step;
+                let year = this.util.year;
+                if (month < 1) { month = 12; year -= 1; }
+                if (month > 12) { month = 1; year += 1; }
+                if (year < this.utilBounds.minYear || year > this.utilBounds.maxYear) return;
+                this.util.month = month;
+                this.util.year = year;
+            } else {
+                const year = this.util.year + step;
+                if (year < this.utilBounds.minYear || year > this.utilBounds.maxYear) return;
+                this.util.year = year;
+            }
+            this.loadUtilization();
+        },
+        utilToday() {
+            this.util.year = {{ now()->year }};
+            this.util.month = {{ now()->month }};
+            this.loadUtilization();
+        },
+        utilProjectStart() {
+            if (this.utilBounds.startYear === null) return;
+            this.util.year = this.utilBounds.startYear;
+            this.util.month = this.utilBounds.startMonth;
+            this.loadUtilization();
         },
         async loadUtilization() {
             const container = this.$refs.utilBody;
@@ -91,7 +119,7 @@
             const Chart = await window.loadChartJs();
             const names = {{ \Illuminate\Support\Js::from(['capacity' => __('Arbeitszeit (verfügbar)'), 'base' => __('Grundlast'), 'project' => __('Projekt'), 'over' => __('Überbuchung'), 'week' => __('KW')]) }};
             const weekly = this.util.view === 'year';
-            const bandColors = { weekend: '#f3f4f6', holiday: '#ede9fe', absence: '#fef3c7' };
+            const bandColors = { weekend: '#fffaeb', holiday: '#fdf2f8', absence: '#fef3c7' };
             container.querySelectorAll('canvas[data-chart]').forEach((canvas) => {
                 const d = JSON.parse(canvas.dataset.chart);
                 const labelWidth = Number(canvas.dataset.labelWidth || 0);
@@ -104,8 +132,13 @@
                             const left = x.getPixelForValue(index) - (x.getPixelForValue(1) - x.getPixelForValue(0)) / 2;
                             const width = x.getPixelForValue(1) - x.getPixelForValue(0);
                             ctx.save();
-                            ctx.fillStyle = index === d.today ? '#dbeafe' : bandColors[flag];
+                            ctx.fillStyle = index === d.today ? '#eff6ff' : bandColors[flag];
                             ctx.fillRect(left, chartArea.top, width, chartArea.bottom - chartArea.top);
+                            if (index === d.today) {
+                                ctx.strokeStyle = '#93c5fd';
+                                ctx.lineWidth = 1;
+                                ctx.strokeRect(left + 0.5, chartArea.top, width - 1, chartArea.bottom - chartArea.top);
+                            }
                             ctx.restore();
                         });
                     },
@@ -264,16 +297,24 @@
                 <button type="button" @click="util.view = 'month'; loadUtilization()" :class="util.view === 'month' ? 'bg-btn-primary text-white' : 'bg-btn-secondary text-gray-700 hover:bg-btn-secondary-hover'" class="px-3 py-1 font-medium">{{ __('Monat') }}</button>
                 <button type="button" @click="util.view = 'year'; loadUtilization()" :class="util.view === 'year' ? 'bg-btn-primary text-white' : 'bg-btn-secondary text-gray-700 hover:bg-btn-secondary-hover'" class="border-l border-gray-300 px-3 py-1 font-medium">{{ __('Jahr') }}</button>
             </div>
+            <button type="button" @click="shiftUtil(-1)" title="{{ __('Zurück') }}" aria-label="{{ __('Zurück') }}" class="rounded-md border border-gray-300 bg-btn-secondary p-1 text-gray-600 hover:bg-btn-secondary-hover">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+            </button>
             <select x-show="util.view === 'month'" x-model.number="util.month" @change="loadUtilization()" class="rounded-md border-gray-300 py-1 text-xs">
                 @foreach (range(1, 12) as $monthNumber)
                     <option value="{{ $monthNumber }}">{{ \Carbon\CarbonImmutable::create(2000, $monthNumber, 1)->translatedFormat('F') }}</option>
                 @endforeach
             </select>
             <select x-model.number="util.year" @change="loadUtilization()" class="rounded-md border-gray-300 py-1 text-xs">
-                @foreach (range(2026, (int) now()->year + 5) as $yearNumber)
+                @foreach (range(min(2026, (int) ($project->start_date?->year ?? 2026)), (int) now()->year + 5) as $yearNumber)
                     <option value="{{ $yearNumber }}">{{ $yearNumber }}</option>
                 @endforeach
             </select>
+            <button type="button" @click="shiftUtil(1)" title="{{ __('Vor') }}" aria-label="{{ __('Vor') }}" class="rounded-md border border-gray-300 bg-btn-secondary p-1 text-gray-600 hover:bg-btn-secondary-hover">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+            </button>
+            <button type="button" @click="utilToday()" class="rounded-md border border-gray-300 bg-btn-secondary px-2 py-1 font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Heute') }}</button>
+            <button type="button" @click="utilProjectStart()" :disabled="utilBounds.startYear === null" title="{{ $project->start_date ? __('Springt zum Monat bzw. Jahr des Projektstarts') : __('Für dieses Projekt ist noch kein Startdatum eingetragen') }}" class="rounded-md border border-gray-300 bg-btn-secondary px-2 py-1 font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:cursor-not-allowed disabled:opacity-50">{{ __('Projektanfang') }}</button>
             <select x-model="util.person" @change="loadUtilization()" class="rounded-md border-gray-300 py-1 text-xs">
                 <option value="">{{ __('Alle Personen') }}</option>
                 <template x-for="person in util.people" :key="person.id"><option :value="person.id" x-text="person.name"></option></template>
