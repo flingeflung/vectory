@@ -28,11 +28,13 @@
         },
     }"
 >
-    <button type="button" @click="toggle()" class="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-gray-500 hover:bg-gray-50" :aria-expanded="open">
-        <svg class="h-3.5 w-3.5 shrink-0 transition-transform" :class="open ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
-        {{ __('Einsatzplan') }}
-        <span class="font-normal text-gray-400" title="{{ __('Von welchem bis zu welchem Schritt eine Funktionsgruppe gebraucht wird. Die Ressourcenplanung verteilt ihre Stunden nur über diesen Zeitraum.') }}">ⓘ</span>
-    </button>
+    <div class="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-gray-500">
+        <button type="button" @click="toggle()" class="flex items-center gap-2 text-left hover:text-gray-700" :aria-expanded="open">
+            <svg class="h-3.5 w-3.5 shrink-0 transition-transform" :class="open ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+            {{ __('Einsatzplan') }}
+        </button>
+        <span class="cursor-help font-normal text-gray-400" title="{{ __('Von welchem bis zu welchem Schritt eine Funktionsgruppe gebraucht wird. Die Ressourcenplanung verteilt ihre Stunden nur über diesen Zeitraum.') }}">ⓘ</span>
+    </div>
 
     <div x-show="open" x-cloak class="px-3 pb-3">
         @if ($workSteps->isEmpty() || $deploymentRows->isEmpty())
@@ -42,6 +44,9 @@
                     : __('Der Einsatzplan erscheint, sobald bei den Schritten Funktionsgruppen als zuständig eingetragen sind.') }}
             </p>
         @else
+            @unless ($editable)
+                <p class="mb-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-800">{{ __('Der Einsatzplan ist eingefroren, weil der Workflow veröffentlicht ist. Für Änderungen bitte eine neue Version erstellen.') }}</p>
+            @endunless
             <form
                 method="POST"
                 action="{{ route('admin.workflows.deployment-plan', $selectedWorkflow) }}"
@@ -105,8 +110,8 @@
                                     title="{{ $editable ? __('Enden ziehen oder in die Leiste klicken. Doppelklick = ganze Breite.') : __('Eingefroren, weil der Workflow veröffentlicht ist.') }}"
                                 >
                                     <div class="relative h-4 rounded-sm bg-sky-500" :style="'grid-column: ' + row.from + ' / ' + (row.to + 1)" :class="editable ? '' : 'opacity-70'" @click.stop>
-                                        <span x-show="editable" class="absolute inset-y-0 left-0 w-2 cursor-ew-resize rounded-l-sm bg-sky-700/60" @pointerdown.stop.prevent="start($event, row, 'from', $el.closest('.grid'))"></span>
-                                        <span x-show="editable" class="absolute inset-y-0 right-0 w-2 cursor-ew-resize rounded-r-sm bg-sky-700/60" @pointerdown.stop.prevent="start($event, row, 'to', $el.closest('.grid'))"></span>
+                                        <span x-show="editable" class="absolute inset-y-0 left-0 w-3 cursor-ew-resize rounded-l-sm bg-sky-800/70 hover:bg-sky-900" @pointerdown.stop.prevent="start($event, row, 'from', $el.closest('.grid'))"></span>
+                                        <span x-show="editable" class="absolute inset-y-0 right-0 w-3 cursor-ew-resize rounded-r-sm bg-sky-800/70 hover:bg-sky-900" @pointerdown.stop.prevent="start($event, row, 'to', $el.closest('.grid'))"></span>
                                     </div>
                                 </div>
                                 <div class="w-20 shrink-0 text-right text-xs tabular-nums text-gray-400" x-text="label(row)"></div>

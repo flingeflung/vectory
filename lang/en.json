@@ -341,6 +341,7 @@
     "Deine E-Mail-Adresse ist nicht bestätigt.": "Your email address has not been confirmed.",
     "Der Einsatzplan erscheint, sobald bei den Schritten Funktionsgruppen als zuständig eingetragen sind.": "",
     "Der Einsatzplan erscheint, sobald der Workflow Schritte „In Bearbeitung“ hat.": "",
+    "Der Einsatzplan ist eingefroren, weil der Workflow veröffentlicht ist. Für Änderungen bitte eine neue Version erstellen.": "",
     "Der Folge-WFS muss später in der Reihenfolge liegen als dieser Schritt.": "",
     "Der Gültigkeitszeitraum muss vollständig im gewählten Jahr liegen.": "",
     "Der Schritt konnte nicht aktiviert werden.": "",
