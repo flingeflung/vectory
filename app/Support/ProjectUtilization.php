@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Holiday;
 use App\Models\Person;
 use App\Models\Project;
 use App\Models\ProjectPerson;
@@ -46,8 +47,13 @@ final class ProjectUtilization
             ? self::monthPeriods($year, $month)
             : self::yearPeriods($year);
 
+        $holidayNames = Holiday::query()->withoutGlobalScope('tenant')
+            ->where('tenant_id', $project->tenant_id)->where('active', true)
+            ->whereBetween('date', [$rangeStart->toDateString(), $rangeEnd->toDateString()])
+            ->get()->mapWithKeys(fn (Holiday $holiday) => [$holiday->date->toDateString() => $holiday->name]);
+
         $calculator->prime($people, $rangeStart, $rangeEnd);
-        $result = $people->map(function (Person $person) use ($assignments, $calculator, $periods, $rangeStart, $rangeEnd, $mode) {
+        $result = $people->map(function (Person $person) use ($assignments, $calculator, $periods, $rangeStart, $rangeEnd, $mode, $holidayNames) {
             $capacity = $calculator->capacityByDay($person, $rangeStart, $rangeEnd);
             $planned = [];
             foreach ($assignments->where('person_id', $person->id) as $assignment) {
@@ -80,7 +86,7 @@ final class ProjectUtilization
             return [
                 'person' => $person,
                 'rows' => $rows,
-                'chart' => self::chartData($periods, $rows),
+                'chart' => self::chartData($periods, $rows, $mode, $holidayNames),
             ];
         });
 
@@ -88,7 +94,13 @@ final class ProjectUtilization
             'mode' => $mode,
             'year' => $year,
             'month' => $month,
-            'periods' => $periods->map(fn (array $p) => ['key' => $p['key'], 'label' => $p['label'], 'sub' => $p['sub']]),
+            'periods' => $periods->map(fn (array $p) => [
+                'key' => $p['key'],
+                'label' => $p['label'],
+                'sub' => $p['sub'],
+                'weekend' => $mode === 'month' && CarbonImmutable::parse($p['days'][0])->isWeekend(),
+                'holiday' => $mode === 'month' ? ($holidayNames[$p['days'][0]] ?? null) : null,
+            ]),
             'people' => $result,
             'allPeople' => $allPeople,
             'members' => $members,
@@ -127,24 +139,38 @@ final class ProjectUtilization
     }
 
     /**
-     * Zwei Säulen je Abschnitt: links die Arbeitszeit (verfügbar, Abwesenheit, Feiertag), rechts Grundlast und
-     * Projektstunden, darin die Überbuchung.
+     * Diagramm: Säulen für die Belegung (Grundlast, Projektstunden, darin die Überbuchung), dazu eine Linie für die
+     * verfügbare Arbeitszeit (Arbeitszeit minus Abwesenheit) - wie im Reiter "Arbeitszeit". Wochenenden, Feiertage und
+     * Abwesenheit (nur Monatsansicht) kommen als Kennzeichen je Abschnitt und werden als Hintergrundstreifen gemalt.
      *
+     * @param  Collection<string, string>  $holidayNames
      * @return array<string, mixed>
      */
-    private static function chartData(Collection $periods, array $rows): array
+    private static function chartData(Collection $periods, array $rows, string $mode, Collection $holidayNames): array
     {
         $series = fn (callable $value) => $periods->map(fn (array $p) => round($value($rows[$p['key']]), 2))->values()->all();
 
         return [
             'labels' => $periods->map(fn (array $p) => $p['label'])->values()->all(),
             'subs' => $periods->map(fn (array $p) => $p['sub'])->values()->all(),
-            'work' => $series(fn ($r) => max(0, $r['work'] - $r['absence'])),
-            'absence' => $series(fn ($r) => $r['absence']),
-            'holiday' => $series(fn ($r) => $r['holiday']),
+            'capacity' => $series(fn ($r) => max(0, $r['work'] - $r['absence'])),
             'base_load' => $series(fn ($r) => $r['base_load']),
             'project_in' => $series(fn ($r) => $r['project_in']),
             'project_over' => $series(fn ($r) => $r['project_over']),
+            'flags' => $periods->map(function (array $p) use ($rows, $mode, $holidayNames) {
+                if ($mode !== 'month') {
+                    return '';
+                }
+                $day = $p['days'][0];
+                if ($holidayNames->has($day)) {
+                    return 'holiday';
+                }
+                if (CarbonImmutable::parse($day)->isWeekend()) {
+                    return 'weekend';
+                }
+
+                return $rows[$p['key']]['absence'] > 0 ? 'absence' : '';
+            })->values()->all(),
         ];
     }
 }

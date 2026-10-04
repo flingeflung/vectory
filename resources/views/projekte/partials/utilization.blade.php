@@ -1,10 +1,16 @@
 {{--
     Auslastung der Projektbeteiligten, nur mit den Stunden dieses Projekts (Ralf, 2026-10-04). Je Person ein
-    Diagramm (links Arbeitszeit, rechts Grundlast + Projektstunden, Überbuchung rot) und darunter dieselben Zahlen
-    wie in der Planungsseite. Die Diagramme zeichnet der Projekt-Tab nach dem Laden (canvas[data-chart]).
+    Diagramm (Säulen: Grundlast + Projektstunden, Überbuchung rot; Linie: verfügbare Arbeitszeit) und darunter dieselben
+    Zahlen wie in der Planungsseite. Kopfzeile, Diagramm und Tabelle teilen sich dieselbe Spaltenbreite, damit die Tage
+    senkrecht untereinander stehen. Die Diagramme zeichnet der Projekt-Tab nach dem Laden (canvas[data-chart]).
 --}}
 @php
     $isMonth = $data['mode'] === 'month';
+    $labelWidth = 170;
+    $columnWidth = $isMonth ? 34 : 40;
+    $periodCount = $data['periods']->count();
+    $totalWidth = $labelWidth + $periodCount * $columnWidth;
+    $cellClass = fn (array $period) => $period['holiday'] ? 'bg-violet-50' : ($period['weekend'] ? 'bg-gray-100' : '');
 @endphp
 
 @if ($data['members']->count() > 1)
@@ -14,46 +20,69 @@
     </p>
 @endif
 
+<div class="mb-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
+    <span><span class="mr-1 inline-block h-0.5 w-5 bg-green-600 align-middle"></span>{{ __('Arbeitszeit (verfügbar)') }}</span>
+    @if ($isMonth)
+        <span><span class="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-gray-200 align-middle"></span>{{ __('Wochenende') }}</span>
+        <span><span class="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-violet-200 align-middle"></span>{{ __('Feiertag') }}</span>
+        <span><span class="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-amber-200 align-middle"></span>{{ __('Abwesenheit') }}</span>
+    @endif
+</div>
+
 @forelse ($data['people'] as $entry)
     @php
         $person = $entry['person'];
         $rows = $entry['rows'];
+        $absenceFlags = $entry['chart']['flags'];
     @endphp
     <section class="mb-5 rounded-lg border border-gray-200 bg-white p-3">
         <h4 class="mb-2 text-sm font-semibold text-gray-900">
             {{ $person->fullName() }}@if ($person->short_name) <span class="font-normal text-gray-400">({{ $person->short_name }})</span>@endif
         </h4>
 
-        <div class="relative h-56">
-            <canvas data-chart='@json($entry['chart'])' data-unit="{{ __('Std.') }}"></canvas>
-        </div>
-
-        <div class="mt-3 overflow-x-auto">
-            <table class="min-w-full text-xs">
-                <thead>
-                    <tr class="border-b border-gray-200 text-gray-500">
-                        <th class="sticky left-0 z-[1] bg-white py-1 pr-2 text-left font-medium"></th>
-                        @foreach ($data['periods'] as $period)
-                            <th class="px-1 py-1 text-right font-medium tabular-nums" title="{{ $period['sub'] }}">{{ $period['label'] }}</th>
-                        @endforeach
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($metricLabels as $metric => $metricLabel)
-                        <tr class="border-b border-gray-100 {{ in_array($metric, ['available', 'remaining'], true) ? 'font-semibold' : '' }}">
-                            <td class="sticky left-0 z-[1] whitespace-nowrap border-r border-gray-200 bg-white py-1 pr-2 text-gray-600">{{ $metricLabel }}</td>
-                            @foreach ($data['periods'] as $period)
-                                @php
-                                    $values = $rows[$period['key']];
-                                    $value = (float) $values[$metric];
-                                    $overloaded = in_array($metric, ['remaining', 'utilization'], true) && $values['remaining'] < -0.005;
-                                @endphp
-                                <td class="h-6 border-r border-gray-100 px-1 text-right tabular-nums {{ $overloaded ? 'bg-red-50 text-red-700' : '' }}">{{ $metric === 'utilization' ? number_format($value, 0, ',', '.').' %' : number_format($value, 2, ',', '.') }}</td>
-                            @endforeach
-                        </tr>
+        <div class="overflow-x-auto">
+            <div style="width: {{ $totalWidth }}px">
+                {{-- Kopfzeile: Tag bzw. Woche, Wochentag, Wochenende und Feiertag hervorgehoben --}}
+                <div class="grid text-center text-[11px] leading-tight text-gray-500" style="grid-template-columns: {{ $labelWidth }}px repeat({{ $periodCount }}, {{ $columnWidth }}px)">
+                    <div></div>
+                    @foreach ($data['periods'] as $period)
+                        @php $flag = $absenceFlags[$loop->index] ?? ''; @endphp
+                        <div class="border-b border-gray-200 py-0.5 {{ $cellClass($period) }} {{ $flag === 'absence' ? 'bg-amber-50' : '' }}" title="{{ $period['holiday'] ?? $period['sub'] }}">
+                            <div>{{ $period['sub'] }}</div>
+                            <div class="font-semibold tabular-nums text-gray-700">{{ $period['label'] }}</div>
+                        </div>
                     @endforeach
-                </tbody>
-            </table>
+                </div>
+
+                <div class="relative h-56" style="width: {{ $totalWidth }}px">
+                    <canvas data-chart='@json($entry['chart'])' data-unit="{{ __('Std.') }}" data-label-width="{{ $labelWidth }}"></canvas>
+                </div>
+
+                <table class="text-xs" style="table-layout: fixed; width: {{ $totalWidth }}px">
+                    <colgroup>
+                        <col style="width: {{ $labelWidth }}px">
+                        @foreach ($data['periods'] as $period)
+                            <col style="width: {{ $columnWidth }}px">
+                        @endforeach
+                    </colgroup>
+                    <tbody>
+                        @foreach ($metricLabels as $metric => $metricLabel)
+                            <tr class="border-b border-gray-100 {{ in_array($metric, ['available', 'remaining'], true) ? 'font-semibold' : '' }}">
+                                <td class="truncate border-r border-gray-200 py-1 pr-2 text-gray-600" title="{{ $metricLabel }}">{{ $metricLabel }}</td>
+                                @foreach ($data['periods'] as $period)
+                                    @php
+                                        $values = $rows[$period['key']];
+                                        $value = (float) $values[$metric];
+                                        $overloaded = in_array($metric, ['remaining', 'utilization'], true) && $values['remaining'] < -0.005;
+                                        $flag = $absenceFlags[$loop->index] ?? '';
+                                    @endphp
+                                    <td class="h-6 border-r border-gray-100 px-0.5 text-right tabular-nums {{ $overloaded ? 'bg-red-50 text-red-700' : ($flag === 'absence' ? 'bg-amber-50' : $cellClass($period)) }}">{{ $metric === 'utilization' ? number_format($value, 0, ',', '.').'%' : number_format($value, 2, ',', '.') }}</td>
+                                @endforeach
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
         </div>
     </section>
 @empty

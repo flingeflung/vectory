@@ -14,10 +14,10 @@
         values: {{ \Illuminate\Support\Js::from($personValues) }},
         distributing: false,
         util: { view: 'month', year: {{ now()->year }}, month: {{ now()->month }}, person: '', loading: false, loaded: false, people: [] },
-        utilCharts: [],
         subTab: window.projectPlanungSubTab || 'planstunden',
         init() {
             this.$watch('subTab', (value) => window.projectPlanungSubTab = value);
+            if (this.subTab === 'auslastung') this.$nextTick(() => this.loadUtilization());
             this.onPeopleChanged = (e) => {
                 if (e.detail.projectId === {{ $project->id }}) this.refreshPeople();
             };
@@ -26,6 +26,7 @@
             window.addEventListener('project-planned-hours-changed', this.onPlannedHoursChanged);
         },
         destroy() {
+            this.destroyUtilCharts();
             window.removeEventListener('project-people-changed', this.onPeopleChanged);
             window.removeEventListener('project-planned-hours-changed', this.onPlannedHoursChanged);
         },
@@ -56,47 +57,108 @@
             if (this.util.person) query.set('person', this.util.person);
             try {
                 const response = await fetch({{ \Illuminate\Support\Js::from(route('projekte.planung.auslastung', $project)) }} + '?' + query.toString(), { headers: { 'Accept': 'application/json' } });
-                if (! response.ok) return;
+                if (! response.ok) {
+                    this.showUtilError({{ \Illuminate\Support\Js::from(__('Die Auslastung konnte nicht geladen werden.')) }} + ' (' + response.status + ')');
+                    return;
+                }
                 const data = await response.json();
-                this.utilCharts.forEach((chart) => chart.destroy());
-                this.utilCharts = [];
+                this.destroyUtilCharts();
                 container.innerHTML = data.html;
                 this.util.people = data.people;
                 this.util.loaded = true;
                 await this.drawUtilizationCharts(container);
+            } catch (error) {
+                this.showUtilError({{ \Illuminate\Support\Js::from(__('Die Auslastung konnte nicht geladen werden.')) }} + ' ' + String(error?.message || error));
             } finally {
                 this.util.loading = false;
             }
         },
+        // Chart-Objekte bewusst NICHT im Alpine-Zustand halten (Proxy-Umhüllung führte zu einem Überlauf beim Neuladen)
+        utilChartStore() {
+            window.__projectUtilCharts = window.__projectUtilCharts || {};
+            return window.__projectUtilCharts[{{ $project->id }}] = window.__projectUtilCharts[{{ $project->id }}] || [];
+        },
+        destroyUtilCharts() {
+            this.utilChartStore().splice(0).forEach((chart) => chart.destroy());
+        },
+        showUtilError(message) {
+            const note = document.createElement('p');
+            note.className = 'rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700';
+            note.textContent = message;
+            this.$refs.utilBody.replaceChildren(note);
+        },
         async drawUtilizationCharts(container) {
             const Chart = await window.loadChartJs();
-            const names = {{ \Illuminate\Support\Js::from(['work' => __('Arbeitszeit'), 'absence' => __('Abwesenheit'), 'holiday' => __('Feiertag'), 'base' => __('Grundlast'), 'project' => __('Projekt'), 'over' => __('Überbuchung'), 'week' => __('KW')]) }};
+            const names = {{ \Illuminate\Support\Js::from(['capacity' => __('Arbeitszeit (verfügbar)'), 'base' => __('Grundlast'), 'project' => __('Projekt'), 'over' => __('Überbuchung'), 'week' => __('KW')]) }};
             const weekly = this.util.view === 'year';
+            const bandColors = { weekend: '#f3f4f6', holiday: '#ede9fe', absence: '#fef3c7' };
             container.querySelectorAll('canvas[data-chart]').forEach((canvas) => {
                 const d = JSON.parse(canvas.dataset.chart);
-                const set = (label, data, color, stack) => ({ label, data, backgroundColor: color, stack, borderWidth: 0, categoryPercentage: 0.92, barPercentage: 1 });
-                this.utilCharts.push(new Chart(canvas, {
+                const labelWidth = Number(canvas.dataset.labelWidth || 0);
+                const bands = {
+                    id: 'bands',
+                    beforeDatasetsDraw(chart) {
+                        const { ctx, chartArea, scales: { x } } = chart;
+                        d.flags.forEach((flag, index) => {
+                            if (! flag) return;
+                            const left = x.getPixelForValue(index) - (x.getPixelForValue(1) - x.getPixelForValue(0)) / 2;
+                            const width = x.getPixelForValue(1) - x.getPixelForValue(0);
+                            ctx.save();
+                            ctx.fillStyle = bandColors[flag];
+                            ctx.fillRect(left, chartArea.top, width, chartArea.bottom - chartArea.top);
+                            ctx.restore();
+                        });
+                    },
+                };
+                // Verfügbare Arbeitszeit als waagerechte Linie je Tag (wie im Reiter Arbeitszeit); Tage ohne Arbeitszeit bleiben leer
+                const capacityLine = {
+                    id: 'capacityLine',
+                    afterDatasetsDraw(chart) {
+                        const { ctx, scales: { x, y } } = chart;
+                        const width = x.getPixelForValue(1) - x.getPixelForValue(0);
+                        ctx.save();
+                        ctx.strokeStyle = '#16a34a';
+                        ctx.lineWidth = 2.5;
+                        ctx.lineCap = 'butt';
+                        d.capacity.forEach((hours, index) => {
+                            if (! hours) return;
+                            const left = x.getPixelForValue(index) - width / 2;
+                            const top = y.getPixelForValue(hours);
+                            ctx.beginPath();
+                            ctx.moveTo(left + 1, top);
+                            ctx.lineTo(left + width - 1, top);
+                            ctx.stroke();
+                        });
+                        ctx.restore();
+                    },
+                };
+                this.utilChartStore().push(new Chart(canvas, {
                     type: 'bar',
                     data: { labels: d.labels, datasets: [
-                        set(names.work, d.work, '#4ade80', 'kapazitaet'),
-                        set(names.absence, d.absence, '#fbbf24', 'kapazitaet'),
-                        set(names.holiday, d.holiday, '#a5b4fc', 'kapazitaet'),
-                        set(names.base, d.base_load, '#94a3b8', 'belegung'),
-                        set(names.project, d.project_in, '#3b82f6', 'belegung'),
-                        set(names.over, d.project_over, '#ef4444', 'belegung'),
+                        { label: names.base, data: d.base_load.map((v) => [0, v]), backgroundColor: '#94a3b8', borderWidth: 0, categoryPercentage: 0.9, barPercentage: 0.8, grouped: false },
+                        { label: names.project, data: d.project_in.map((v, i) => [d.base_load[i], d.base_load[i] + v]), backgroundColor: '#3b82f6', borderWidth: 0, categoryPercentage: 0.9, barPercentage: 0.8, grouped: false },
+                        { label: names.over, data: d.project_over.map((v, i) => [d.base_load[i] + d.project_in[i], d.base_load[i] + d.project_in[i] + v]), backgroundColor: '#ef4444', borderWidth: 0, categoryPercentage: 0.9, barPercentage: 0.8, grouped: false },
                     ] },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        layout: { padding: { right: 0 } },
                         scales: {
-                            x: { stacked: true, grid: { display: false } },
-                            y: { stacked: true, beginAtZero: true, title: { display: true, text: canvas.dataset.unit } },
+                            x: { display: false, grid: { display: false } },
+                            y: {
+                                beginAtZero: true,
+                                suggestedMax: Math.max(...d.capacity, 1),
+                                title: { display: true, text: canvas.dataset.unit },
+                                // gleiche Breite wie die Beschriftungsspalte der Tabelle, damit die Tage senkrecht fluchten
+                                afterFit(scale) { if (labelWidth) scale.width = labelWidth; },
+                            },
                         },
                         plugins: {
                             legend: { position: 'bottom' },
-                            tooltip: { callbacks: { title: (items) => weekly ? names.week + ' ' + items[0].label + ' (' + d.subs[items[0].dataIndex] + ')' : d.subs[items[0].dataIndex] + ' ' + items[0].label } },
+                            tooltip: { filter: (item) => Math.abs(item.raw[1] - item.raw[0]) > 0.0001, callbacks: { label: (item) => item.dataset.label + ': ' + (item.raw[1] - item.raw[0]).toFixed(2), footer: (items) => names.capacity + ': ' + d.capacity[items[0].dataIndex], title: (items) => weekly ? names.week + ' ' + items[0].label + ' (' + d.subs[items[0].dataIndex] + ')' : d.subs[items[0].dataIndex] + ' ' + items[0].label } },
                         },
                     },
+                    plugins: [bands, capacityLine],
                 }));
             });
         },
