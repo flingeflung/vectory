@@ -400,6 +400,7 @@
     "Die Zugriffsstufe legt den administrativen Bereich fest und ist unabhängig von der fachlichen Rolle und dem Rechte-Set.": "The access level defines the administrative scope and is independent of the functional role and permission set.",
     "Die bisherige Auswahl wird bei jedem Projekt komplett durch die hier gewählten Werte ersetzt.": "The previous selection is completely replaced by the values selected here for each project.",
     "Die derzeit hinterlegten Prüfregeln haben keine Befunde ergeben.": "",
+    "Die folgenden Planungsdaten gelten ausschließlich für dieses Projekt bzw. bei einem Hauptprojekt dieses mit allen Unterprojekten. Für Gesamtübersicht aller Projekte siehe Hauptnavigation: Planung": "",
     "Die für dieses Projekt verknüpften Jobs sind alle inaktiv - buchen können Sie deshalb hier nicht.": "",
     "Die gebuchten Stunden liegen über den Planstunden des Projekts.": "",
     "Die gewählte Quelle „:path“ wurde nicht gefunden.": "",
