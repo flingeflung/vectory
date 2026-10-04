@@ -84,6 +84,20 @@ class HelpArticleController extends Controller
             ->values()
             ->all();
 
+        // Dialog-IDs/Reiter-Schlüssel (D-...) dürfen nur bei EINER Hilfeseite stehen, sonst gewinnt still die erste.
+        foreach ($routeNames as $name) {
+            if (! str_starts_with($name, 'D-')) {
+                continue;
+            }
+            $other = HelpArticle::query()->forRoute($name)->whereKeyNot($helpArticle->id)->with('translations')->first();
+            if ($other) {
+                $title = $other->translations->firstWhere('locale', HelpArticle::PRIMARY_LOCALE)?->title ?? $other->key;
+
+                return redirect()->route('admin.hilfeseiten', ['article' => $helpArticle->id])
+                    ->with('help_error', __('Der Schlüssel :key ist schon bei der Hilfeseite „:title“ eingetragen. Ein Schlüssel darf nur bei einer Hilfeseite stehen. Es wurde nichts gespeichert.', ['key' => $name, 'title' => $title]));
+            }
+        }
+
         $visibleRole = $request->string('visible_role')->toString() ?: null;
         abort_if($visibleRole !== null && ! array_key_exists($visibleRole, HelpArticle::VISIBILITY_LEVELS), 422);
 

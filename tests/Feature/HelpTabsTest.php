@@ -75,4 +75,18 @@ class HelpTabsTest extends TestCase
 
         $this->assertSame($registered, $marked, 'config/help-tabs.php und die data-help-tab-Markierungen im Projekt-Overlay müssen übereinstimmen.');
     }
+
+    public function test_the_same_dialog_key_cannot_be_saved_on_two_help_articles(): void
+    {
+        $this->actingAs(User::factory()->create(['tenant_id' => Tenant::query()->firstOrFail()->id, 'role' => 'super_admin']));
+        $first = $this->article('erste', ['D-ABCD#planung'], 'A');
+        $second = $this->article('zweite', [], 'B');
+
+        $this->post(route('admin.hilfeseiten.update', $second), ['route_names' => 'D-ABCD#planung', 'translations' => ['de' => ['title' => 'Zweite']]])
+            ->assertSessionHas('help_error');
+        $this->assertSame([], $second->fresh()->route_names);
+
+        $this->post(route('admin.hilfeseiten.update', $first), ['route_names' => 'D-ABCD#planung', 'translations' => ['de' => ['title' => 'Erste']]])
+            ->assertSessionMissing('help_error');
+    }
 }

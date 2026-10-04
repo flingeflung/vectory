@@ -36,6 +36,7 @@
                 @endif
             </div>
         @endif
+        <span hidden data-help-current-key="{{ $article->key }}"></span>
         @include('help._article', ['translation' => $translation])
     @else
         <div class="space-y-2 px-1 py-2 text-sm text-gray-400">

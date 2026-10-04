@@ -31,6 +31,7 @@
                     const current = document.getElementById('help-results');
                     if (fresh && current) {
                         current.innerHTML = fresh.innerHTML;
+                        window.helpMarkNav();
                     }
                 }, delay);
             },
@@ -108,6 +109,19 @@
         const current = document.getElementById('help-results');
         if (fresh && current) {
             current.innerHTML = fresh.innerHTML;
+            window.helpMarkNav();
         }
+    };
+    // Markiert in der Navigation links die gerade angezeigte Hilfeseite.
+    window.helpMarkNav = function () {
+        const key = document.querySelector('#help-results [data-help-current-key]')?.dataset.helpCurrentKey;
+        document.querySelectorAll('a[data-help-key]').forEach((link) => {
+            const active = key !== undefined && link.dataset.helpKey === key;
+            link.classList.toggle('bg-indigo-50', active);
+            link.classList.toggle('font-semibold', active);
+            link.classList.toggle('text-indigo-700', active);
+            link.classList.toggle('text-gray-700', ! active);
+            active ? link.setAttribute('aria-current', 'page') : link.removeAttribute('aria-current');
+        });
     };
 </script>

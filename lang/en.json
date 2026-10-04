@@ -353,6 +353,7 @@
     "Der Einsatzplan ist eingefroren, weil der Workflow veröffentlicht ist. Für Änderungen bitte eine neue Version erstellen.": "",
     "Der Folge-WFS muss später in der Reihenfolge liegen als dieser Schritt.": "",
     "Der Gültigkeitszeitraum muss vollständig im gewählten Jahr liegen.": "",
+    "Der Schlüssel :key ist schon bei der Hilfeseite „:title“ eingetragen. Ein Schlüssel darf nur bei einer Hilfeseite stehen. Es wurde nichts gespeichert.": "",
     "Der Schritt konnte nicht aktiviert werden.": "",
     "Der Stand hat sich inzwischen geändert (z. B. wurde die Freigabe bereits per E-Mail erteilt). Die Ansicht wird aktualisiert.": "",
     "Der Start muss nach dem Start des bisher letzten Datensatzes liegen (:date).": "",
