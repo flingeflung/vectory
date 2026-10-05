@@ -56,6 +56,12 @@
                 >
                 @csrf
                 <div class="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
+                    <div class="flex items-center gap-2 text-xs text-gray-500" title="{{ __('Mit dieser Nummer verlinken andere Hilfeseiten auf diese Seite. Sie bleibt gleich, auch wenn die Seite umbenannt oder verschoben wird.') }}">
+                        <span>{{ __('Hilfe-Nr.') }} <b class="font-mono text-gray-800">{{ $selected->id }}</b></span>
+                        <span class="text-gray-300">|</span>
+                        <span>{{ __('Verweis:') }} <code class="select-all font-mono text-gray-800">[[{{ $selected->id }}]]</code></span>
+                        <x-copy-button :text="'[['.$selected->id.']]'" />
+                    </div>
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('Seiten (Routennamen) oder Dialoge (Dialog-IDs wie D-3F2A, für einen einzelnen Reiter mit Zusatz wie D-3F2A#planung.auslastung), zu denen dieser Artikel angezeigt wird') }}</label>
                         <input type="text" name="route_names" value="{{ implode(', ', $selected->route_names ?? []) }}" placeholder="{{ __('z. B. admin.kunden, D-3F2A') }}" class="mt-0.5 w-full rounded-md border-gray-300 font-mono text-sm">
@@ -114,7 +120,7 @@
                                     {{ __('Bild einfügen: Datei nach public/images/hilfe/ legen, dann im Text z. B. :placeholder schreiben - erscheint als eigener Block, Folgetext kommt automatisch darunter. Empfohlene Bildgröße: max. ca. 1200 px breit, unter 500 KB (wird angezeigt verkleinert, bei Klick in Originalgröße).', ['placeholder' => '[screenshot_dashboard1.png]']) }}
                                 </p>
                                 <p class="mt-1 text-xs text-gray-400">
-                                    {{ __('Zu einer anderen Hilfeseite verlinken: :placeholder schreiben, genau der Titel der Zielseite (wie links in der Liste zu sehen) - springt beim Klick direkt dorthin.', ['placeholder' => '[[Kunden klonen]]']) }}
+                                    {{ __('Zu einer anderen Hilfeseite verlinken: :placeholder schreiben (Hilfe-Nr. der Zielseite, steht dort oben im Editor), für einen eigenen Linktext :alias. Der Klick springt direkt dorthin. Ältere Verweise mit dem Titel funktionieren weiter, solange der Titel nur einmal vorkommt.', ['placeholder' => '[[42]]', 'alias' => '[[42|siehe dort]]']) }}
                                 </p>
                                 <p class="mt-1 text-xs text-gray-400">
                                     {{ __('Zu einer echten Seite im Tool verlinken: :placeholder - der Routenname ist derselbe technische Wert, den dieses Panel zeigt, wenn für eine Seite noch keine Hilfeseite existiert. Kein fest eingetippter Pfad, funktioniert dadurch in jeder Umgebung.', ['placeholder' => '[Zur Kundenverwaltung](route:admin.kunden)']) }}

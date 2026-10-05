@@ -113,22 +113,39 @@ class HelpArticleTranslation extends Model
         $html = (string) preg_replace_callback('/\(\(([^()|<>]+?)(?:\|([^()<>]+?))?\)\)/u', fn (array $match): string => GlossaryTerm::link($match[1], $match[2] ?? null), $html);
 
         return (string) preg_replace_callback(self::ARTICLE_LINK_PATTERN, function (array $match): string {
-            $title = trim($match[1]);
+            // "[[42]]" / "[[42|Linktext]]" (Hilfe-Nr. der Zielseite, Ralf, 2026-10-05) oder wie bisher "[[Titel]]" / "[[Titel|Linktext]]"
+            [$reference, $alias] = array_pad(explode('|', $match[1], 2), 2, null);
+            $reference = trim($reference);
+            $alias = $alias !== null && trim($alias) !== '' ? trim($alias) : null;
+            $notFound = fn (string $label, string $hint): string => '<span class="text-red-500 underline decoration-dotted" title="'.e($hint).'">'.e($label).'</span>';
 
-            $target = self::query()->where('locale', $this->locale)
-                ->whereRaw('LOWER(title) = ?', [mb_strtolower($title)])
-                ->with('article')
-                ->first();
+            if (ctype_digit($reference)) {
+                $article = HelpArticle::query()->with('translations')->find((int) $reference);
+                $targetTranslation = $article?->translation($this->locale) ?? $article?->translation(HelpArticle::PRIMARY_LOCALE);
+                if (! $article || ! $article->isVisibleTo(auth()->user())) {
+                    return $notFound($alias ?? $reference, __('Keine Hilfeseite mit dieser Nummer gefunden.'));
+                }
 
-            // Auch, wenn der Zielartikel existiert, aber für den gerade
-            // lesenden Nutzer nicht sichtbar ist (visible_role) - genauso
-            // behandelt wie "nicht gefunden", kein Hinweis auf die Existenz
-            // einer für ihn gesperrten Seite.
-            if (! $target || ! $target->article->isVisibleTo(auth()->user())) {
-                return '<span class="text-red-500 underline decoration-dotted" title="'.e(__('Kein Hilfeartikel mit diesem Titel gefunden.')).'">'.e($title).'</span>';
+                return '<a href="#" data-help-key="'.e($article->key).'">'.e($alias ?? $targetTranslation?->title ?? $article->key).'</a>';
             }
 
-            return '<a href="#" data-help-key="'.e($target->article->key).'">'.e($title).'</a>';
+            $targets = self::query()->where('locale', $this->locale)
+                ->whereRaw('LOWER(title) = ?', [mb_strtolower($reference)])
+                ->with('article')
+                ->get();
+
+            // Auch, wenn der Zielartikel existiert, aber für den gerade lesenden Nutzer nicht sichtbar ist
+            // (visible_role) - genauso behandelt wie "nicht gefunden", kein Hinweis auf die Existenz einer
+            // für ihn gesperrten Seite.
+            $targets = $targets->filter(fn (self $target) => $target->article->isVisibleTo(auth()->user()))->values();
+            if ($targets->count() > 1) {
+                return $notFound($alias ?? $reference, __('Dieser Titel kommt mehrfach vor. Bitte statt des Titels die Hilfe-Nr. der Zielseite verwenden.'));
+            }
+            if ($targets->isEmpty()) {
+                return $notFound($alias ?? $reference, __('Kein Hilfeartikel mit diesem Titel gefunden.'));
+            }
+
+            return '<a href="#" data-help-key="'.e($targets->first()->article->key).'">'.e($alias ?? $reference).'</a>';
         }, $html);
     }
 

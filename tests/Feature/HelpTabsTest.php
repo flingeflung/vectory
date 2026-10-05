@@ -136,4 +136,23 @@ class HelpTabsTest extends TestCase
         $this->post(route('admin.hilfeseiten.store'), ['title' => 'Zu tief', 'after' => $deep->id, 'mode' => 'child']);
         $this->assertSame($before, HelpArticle::query()->count());
     }
+
+    public function test_help_links_by_number_or_by_unique_title_and_flag_ambiguous_titles(): void
+    {
+        $this->actingAs(User::factory()->create(['tenant_id' => Tenant::query()->firstOrFail()->id, 'role' => 'super_admin']));
+        $one = $this->article('eins', [], 'x');
+        $two = HelpArticle::query()->create(['key' => 'zwei', 'route_names' => []]);
+        HelpArticleTranslation::query()->create(['help_article_id' => $two->id, 'locale' => 'de', 'title' => 'Titel eins', 'body' => 'y']);
+        $unique = $this->article('einzig', [], 'z');
+        $unique->translations()->update(['title' => 'Nur einmal']);
+
+        $body = "[[{$one->id}]] [[{$two->id}|Eigener Text]] [[Titel eins]] [[Nur einmal]] [[9999]]";
+        $html = (new HelpArticleTranslation(['locale' => 'de', 'title' => 'T', 'body' => $body]))->bodyHtml();
+
+        $this->assertStringContainsString('data-help-key="eins">Titel eins</a>', $html);
+        $this->assertStringContainsString('data-help-key="zwei">Eigener Text</a>', $html);
+        $this->assertStringContainsString('data-help-key="einzig">Nur einmal</a>', $html);
+        $this->assertStringContainsString('mehrfach vor', $html);
+        $this->assertStringContainsString('Keine Hilfeseite mit dieser Nummer', $html);
+    }
 }
