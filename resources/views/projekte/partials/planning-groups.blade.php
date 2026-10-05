@@ -50,7 +50,7 @@
             </div>
         </section>
     @empty
-        <div class="rounded-md border border-gray-200 bg-gray-50 px-4 py-6 text-center text-gray-500">{{ __('Keine Planstunden oder Projektbeteiligten vorhanden.') }}</div>
+        <div class="rounded-md border border-gray-200 bg-gray-50 px-4 py-6 text-center text-gray-500">{{ __('Keine Planstunden oder Projektbeteiligte vorhanden.') }}</div>
     @endforelse
     </div>
 
