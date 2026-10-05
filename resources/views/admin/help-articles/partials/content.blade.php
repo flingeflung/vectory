@@ -110,12 +110,54 @@
                                 <label class="block text-xs text-gray-500">{{ __('Zusätzliche Suchbegriffe (Komma-getrennt, optional)') }}</label>
                                 <input type="text" name="translations[{{ $localeCode }}][keywords]" value="{{ $t?->keywords }}" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                             </div>
-                            <div>
-                                <label class="block text-xs text-gray-500">{{ __('Text (Markdown)') }}</label>
+                            <div
+                                class="relative"
+                                x-data="{
+                                    pickerOpen: false,
+                                    q: '',
+                                    pages: {{ \Illuminate\Support\Js::from($pickerPages) }},
+                                    selfId: {{ $selected->id }},
+                                    get shown() {
+                                        const needle = this.q.trim().toLowerCase();
+                                        return this.pages.filter((page) => page.id !== this.selfId && (needle === '' || (page.title + ' ' + page.path + ' ' + page.id).toLowerCase().includes(needle))).slice(0, 60);
+                                    },
+                                    open() {
+                                        this.pickerOpen = true;
+                                        this.q = '';
+                                        this.$nextTick(() => this.$refs.pickerSearch.focus());
+                                    },
+                                    insert(page) {
+                                        const area = this.$refs.body;
+                                        const start = area.selectionStart ?? area.value.length;
+                                        const end = area.selectionEnd ?? start;
+                                        const label = area.value.slice(start, end) || page.title;
+                                        area.setRangeText('[[' + page.id + '|' + label + ']]', start, end, 'end');
+                                        area.dispatchEvent(new Event('input', { bubbles: true }));
+                                        this.pickerOpen = false;
+                                        area.focus();
+                                    },
+                                }"
+                            >
+                                <div class="flex items-center justify-between">
+                                    <label class="block text-xs text-gray-500">{{ __('Text (Markdown)') }}</label>
+                                    <button type="button" @click="open()" class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200" title="{{ __('Fügt an der Cursorstelle einen Verweis auf eine andere Hilfeseite ein. Ist Text markiert, wird er zum Linktext.') }}">{{ __('Verweis einfügen') }}</button>
+                                </div>
+                                <div x-show="pickerOpen" x-cloak @click.outside="pickerOpen = false" @keydown.escape.stop="pickerOpen = false" class="absolute right-0 z-20 mt-1 w-96 rounded-md border border-gray-200 bg-white p-2 shadow-lg">
+                                    <input type="text" x-ref="pickerSearch" x-model="q" @keydown.enter.prevent="shown.length && insert(shown[0])" placeholder="{{ __('Hilfeseite suchen (Titel, Pfad oder Nummer)') }}" autocomplete="off" class="w-full rounded-md border-gray-300 text-sm">
+                                    <div class="mt-1 max-h-64 overflow-y-auto text-sm">
+                                        <template x-for="page in shown" :key="page.id">
+                                            <button type="button" @click="insert(page)" class="block w-full rounded px-2 py-1 text-left hover:bg-gray-100">
+                                                <span class="text-gray-800" x-text="page.title"></span>
+                                                <span class="block truncate text-xs text-gray-400" x-text="(page.path ? page.path + ' · ' : '') + 'Nr. ' + page.id"></span>
+                                            </button>
+                                        </template>
+                                        <div x-show="shown.length === 0" class="px-2 py-2 text-xs text-gray-400">{{ __('Keine Hilfeseite gefunden.') }}</div>
+                                    </div>
+                                </div>
                                 <p class="mt-0.5 text-xs text-gray-400">
                                     {{ __('# Überschrift · ## Unterüberschrift · **fett** · *kursiv* · - Punkt (Liste) · 1. Punkt (nummeriert) · [Linktext](https://…) · > Zitat · :button für einen Button/UI-Element wie im Tool', ['button' => '{+Neu}']) }}
                                 </p>
-                                <textarea name="translations[{{ $localeCode }}][body]" rows="14" class="mt-0.5 w-full rounded-md border-gray-300 font-mono text-sm">{{ $t?->body }}</textarea>
+                                <textarea x-ref="body" name="translations[{{ $localeCode }}][body]" rows="14" class="mt-0.5 w-full rounded-md border-gray-300 font-mono text-sm">{{ $t?->body }}</textarea>
                                 <p class="mt-1 text-xs text-gray-400">
                                     {{ __('Bild einfügen: Datei nach public/images/hilfe/ legen, dann im Text z. B. :placeholder schreiben - erscheint als eigener Block, Folgetext kommt automatisch darunter. Empfohlene Bildgröße: max. ca. 1200 px breit, unter 500 KB (wird angezeigt verkleinert, bei Klick in Originalgröße).', ['placeholder' => '[screenshot_dashboard1.png]']) }}
                                 </p>

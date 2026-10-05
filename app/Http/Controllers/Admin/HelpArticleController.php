@@ -37,8 +37,20 @@ class HelpArticleController extends Controller
             $collapsed = array_values(array_diff($collapsed, [$ancestor]));
         }
 
+        // Alle Seiten mit Pfad für "Verweis einfügen" (Suche im Editor)
+        $pickerPages = [];
+        $collect = function ($nodes, array $path) use (&$collect, &$pickerPages) {
+            foreach ($nodes as $node) {
+                $title = $node->translation(HelpArticle::PRIMARY_LOCALE)?->title ?? $node->key;
+                $pickerPages[] = ['id' => $node->id, 'title' => $title, 'path' => implode(' › ', $path)];
+                $collect($node->children, [...$path, $title]);
+            }
+        };
+        $collect($tree, []);
+
         return view('admin.help-articles.index', [
             'tree' => $tree,
+            'pickerPages' => $pickerPages,
             'collapsed' => $collapsed,
             'selected' => $selected,
             'locales' => HelpArticle::AVAILABLE_LOCALES,
