@@ -158,7 +158,7 @@
                                         this.pickerOpen = false;
                                         area.focus();
                                     },
-                                    markUi() {
+                                    wrapSel(before, after, placeholder) {
                                         const area = this.$refs.body;
                                         const start = area.selectionStart ?? area.value.length;
                                         const end = area.selectionEnd ?? start;
@@ -166,13 +166,33 @@
                                         const trailing = selected.match(/\s+$/)?.[0] ?? '';
                                         const core = selected.slice(0, selected.length - trailing.length);
                                         if (core === '') {
-                                            area.setRangeText('{}', start, end, 'end');
-                                            area.setSelectionRange(start + 1, start + 1);
+                                            area.setRangeText(before + (placeholder || '') + after, start, end, 'end');
+                                            area.setSelectionRange(start + before.length, start + before.length + (placeholder || '').length);
                                         } else {
-                                            area.setRangeText('{' + core + '}' + trailing, start, end, 'end');
+                                            area.setRangeText(before + core + after + trailing, start, end, 'end');
                                         }
                                         area.dispatchEvent(new Event('input', { bubbles: true }));
                                         area.focus();
+                                    },
+                                    prefixLines(prefix, numbered) {
+                                        const area = this.$refs.body;
+                                        const value = area.value;
+                                        const start = area.selectionStart ?? value.length;
+                                        const end = area.selectionEnd ?? start;
+                                        const from = value.lastIndexOf('\n', start - 1) + 1;
+                                        let to = value.indexOf('\n', end);
+                                        if (to === -1) to = value.length;
+                                        const lines = value.slice(from, to).split('\n').map((line, index) => (numbered ? (index + 1) + '. ' : prefix) + line);
+                                        area.setRangeText(lines.join('\n'), from, to, 'end');
+                                        area.dispatchEvent(new Event('input', { bubbles: true }));
+                                        area.focus();
+                                    },
+                                    markupAction(data) {
+                                        if (data.action === 'wrap') this.wrapSel(data.a1, data.a2, data.part);
+                                        else if (data.action === 'prefix') this.prefixLines(data.a1, false);
+                                        else if (data.action === 'numbered') this.prefixLines('', true);
+                                        else if (data.action === 'link') this.wrapSel('[', '](https://)', data.part);
+                                        else this.insertSnippet(data.a1, data.part);
                                     },
                                     insertSnippet(text, part) {
                                         const area = this.$refs.body;
@@ -191,9 +211,6 @@
                                 <div class="flex items-center justify-between">
                                     <label class="block text-xs text-gray-500">{{ __('Text (Markdown)') }}</label>
                                     <div class="flex items-center gap-1.5">
-                                    <button type="button" @click="markUi()" class="inline-flex h-6 w-6 items-center justify-center rounded-md border border-gray-300 bg-gray-100 text-gray-700 hover:bg-gray-200" title="{{ __('Markierten Text als Button/UI-Element kennzeichnen ({Text}). Ohne Markierung wird {} an der Cursorstelle eingefügt.') }}" aria-label="{{ __('Als Button/UI-Element kennzeichnen') }}">
-                                        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15.5 3.5l5 5-8 8-5-5z" /><path d="M7.5 11.5l5 5-5 1.5a1 1 0 01-1.5-1.5z" /><path d="M3 21h18" /></svg>
-                                    </button>
                                     <button type="button" @click="open()" class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200" title="{{ __('Fügt an der Cursorstelle einen Verweis auf eine andere Hilfeseite ein. Ist Text markiert, wird er zum Linktext.') }}">{{ __('Verweis einfügen') }}</button>
                                     </div>
                                 </div>
@@ -209,18 +226,26 @@
                                         <div x-show="shown.length === 0" class="px-2 py-2 text-xs text-gray-400">{{ __('Keine Hilfeseite gefunden.') }}</div>
                                     </div>
                                 </div>
-                                <p class="mt-0.5 text-xs text-gray-400">
-                                    {{ __('# Überschrift · ## Unterüberschrift · **fett** · *kursiv* · - Punkt (Liste) · 1. Punkt (nummeriert) · [Linktext](https://…) · > Zitat · :button für einen Button/UI-Element wie im Tool', ['button' => '{+Neu}']) }}
+                                <p class="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-gray-500">
+                                    <x-help-markup :label="'# '.__('Überschrift')" action="prefix" a1="# " /> ·
+                                    <x-help-markup :label="'## '.__('Unterüberschrift')" action="prefix" a1="## " /> ·
+                                    <x-help-markup :label="'**'.__('fett').'**'" action="wrap" a1="**" a2="**" :part="__('fett')" /> ·
+                                    <x-help-markup :label="'*'.__('kursiv').'*'" action="wrap" a1="*" a2="*" :part="__('kursiv')" /> ·
+                                    <x-help-markup :label="'- '.__('Punkt (Liste)')" action="prefix" a1="- " /> ·
+                                    <x-help-markup :label="'1. '.__('Punkt (nummeriert)')" action="numbered" /> ·
+                                    <x-help-markup :label="'['.__('Linktext').'](https://…)'" action="link" :part="__('Linktext')" /> ·
+                                    <x-help-markup :label="'> '.__('Zitat')" action="prefix" a1="> " /> ·
+                                    <x-help-markup label="{+Neu}" action="wrap" a1="{" a2="}" part="+Neu" /> {{ __('für einen Button/UI-Element wie im Tool') }}
                                 </p>
                                 <textarea x-ref="body" name="translations[{{ $localeCode }}][body]" rows="14" class="mt-0.5 w-full rounded-md border-gray-300 font-mono text-sm">{{ $t?->body }}</textarea>
                                 <p class="mt-1 text-xs text-gray-500">
-                                    {!! __('Bild einfügen: Datei nach public/images/hilfe/ legen, dann im Text z. B. :placeholder schreiben - erscheint als eigener Block, Folgetext kommt automatisch darunter. Empfohlene Bildgröße: max. ca. 1200 px breit, unter 500 KB (wird angezeigt verkleinert, bei Klick in Originalgröße).', ['placeholder' => view('components.help-snippet', ['text' => '[screenshot_dashboard1.png]', 'part' => 'screenshot_dashboard1.png'])->render()]) !!}
+                                    {!! __('Bild einfügen: Datei nach public/images/hilfe/ legen, dann im Text z. B. :placeholder schreiben - erscheint als eigener Block, Folgetext kommt automatisch darunter. Empfohlene Bildgröße: max. ca. 1200 px breit, unter 500 KB (wird angezeigt verkleinert, bei Klick in Originalgröße).', ['placeholder' => view('components.help-markup', ['label' => '[screenshot_dashboard1.png]', 'action' => 'insert', 'a1' => '[screenshot_dashboard1.png]', 'part' => 'screenshot_dashboard1.png'])->render()]) !!}
                                 </p>
                                 <p class="mt-1 text-xs text-gray-500">
-                                    {!! __('Zu einer anderen Hilfeseite verlinken: :placeholder schreiben (Hilfe-Nr. der Zielseite, steht dort oben im Editor), für einen eigenen Linktext :alias. Der Klick springt direkt dorthin. Ältere Verweise mit dem Titel funktionieren weiter, solange der Titel nur einmal vorkommt.', ['placeholder' => view('components.help-snippet', ['text' => '[[42]]', 'part' => '42'])->render(), 'alias' => view('components.help-snippet', ['text' => '[[42|siehe dort]]', 'part' => '42'])->render()]) !!}
+                                    {!! __('Zu einer anderen Hilfeseite verlinken: :placeholder schreiben (Hilfe-Nr. der Zielseite, steht dort oben im Editor), für einen eigenen Linktext :alias. Der Klick springt direkt dorthin. Ältere Verweise mit dem Titel funktionieren weiter, solange der Titel nur einmal vorkommt.', ['placeholder' => view('components.help-markup', ['label' => '[[42]]', 'action' => 'insert', 'a1' => '[[42]]', 'part' => '42'])->render(), 'alias' => view('components.help-markup', ['label' => '[[42|siehe dort]]', 'action' => 'insert', 'a1' => '[[42|siehe dort]]', 'part' => '42'])->render()]) !!}
                                 </p>
                                 <p class="mt-1 text-xs text-gray-500">
-                                    {!! __('Zu einer echten Seite im Tool verlinken: :placeholder - der Routenname ist derselbe technische Wert, den dieses Panel zeigt, wenn für eine Seite noch keine Hilfeseite existiert. Kein fest eingetippter Pfad, funktioniert dadurch in jeder Umgebung.', ['placeholder' => view('components.help-snippet', ['text' => '[Zur Kundenverwaltung](route:admin.kunden)', 'part' => 'admin.kunden'])->render()]) !!}
+                                    {!! __('Zu einer echten Seite im Tool verlinken: :placeholder - der Routenname ist derselbe technische Wert, den dieses Panel zeigt, wenn für eine Seite noch keine Hilfeseite existiert. Kein fest eingetippter Pfad, funktioniert dadurch in jeder Umgebung.', ['placeholder' => view('components.help-markup', ['label' => '[Zur Kundenverwaltung](route:admin.kunden)', 'action' => 'insert', 'a1' => '[Zur Kundenverwaltung](route:admin.kunden)', 'part' => 'admin.kunden'])->render()]) !!}
                                 </p>
                             </div>
                         </div>

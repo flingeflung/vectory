@@ -1,3 +1,0 @@
-@props(['text', 'part' => ''])
-{{-- Klickbares Beispiel unter dem Hilfetext-Feld (Ralf, 2026-10-05): fügt den Baustein an der Cursorstelle ein und markiert den Teil, der zu ersetzen ist. Nutzt insertSnippet() des Editors. --}}
-<button type="button" data-snippet="{{ $text }}" data-part="{{ $part }}" @click="insertSnippet($el.dataset.snippet, $el.dataset.part)" class="mx-0.5 cursor-pointer rounded border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 align-baseline font-mono text-xs font-medium text-indigo-700 hover:bg-indigo-100" title="{{ __('Klick fügt das Beispiel an der Cursorstelle ein') }}">{{ $text }}</button>
