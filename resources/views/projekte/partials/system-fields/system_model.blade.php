@@ -20,13 +20,22 @@
         <x-edit-icon-button modal="produkte-verknuepfen-{{ $project->id }}" :title="__('Verknüpfte Produkte verwalten')" />
     </div>
     <div class="mt-0.5 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-gray-700">
-        @forelse ($project->products as $product)
+        {{-- Ralf, 2026-10-05: nach Produktgruppen gruppiert (Gruppe voran, dezent grau), Produkte ohne Gruppe zuletzt --}}
+        @php
+            $groupedProducts = $project->products
+                ->groupBy(fn ($product) => $product->productGroup?->id ?? 0)
+                ->sortBy(fn ($items, $groupId) => $groupId === 0 ? "\u{10FFFF}" : mb_strtolower($items->first()->productGroup->number.' '.$items->first()->productGroup->name));
+        @endphp
+        @forelse ($groupedProducts as $groupProducts)
+            @php($isLastGroup = $loop->last)
+            <span class="inline-flex flex-wrap items-center gap-x-1">
+            @if ($groupProducts->first()->productGroup)
+                <span class="text-xs text-gray-400">{{ $groupProducts->first()->productGroup->number }} {{ $groupProducts->first()->productGroup->name }}:</span>
+            @endif
+            @foreach ($groupProducts as $product)
             @php($otherProjects = $product->projects->where('id', '!=', $project->id)->values())
             <span class="inline-flex items-center gap-0.5">
                 {{ $product->name }} ({{ $product->product_number }})
-                @if ($product->productGroup)
-                    <span class="text-xs text-gray-400">({{ $product->productGroup->number }} {{ $product->productGroup->name }})</span>
-                @endif
                 @if ($otherProjects->isNotEmpty())
                     <span x-data="{ open: false }" class="relative inline-block">
                         <button
@@ -56,6 +65,9 @@
                     </span>
                 @endif
                 {{ ! $loop->last ? ',' : '' }}
+            </span>
+            @endforeach
+            {{ ! $isLastGroup ? ';' : '' }}
             </span>
         @empty
             <span class="text-gray-400">{{ __('– nicht zugewiesen –') }}</span>
