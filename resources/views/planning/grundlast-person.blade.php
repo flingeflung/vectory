@@ -83,7 +83,7 @@
                 x-data="{ dirty: false }"
                 @input="dirty = window.formIsDirty($el, window.__personBaseLoadDirtyForms)"
                 @submit.prevent="window.submitPersonBaseLoadForm($event)"
-                class="grid grid-cols-1 items-end gap-2 rounded-md border border-gray-200 p-2 md:grid-cols-[minmax(12rem,2fr)_minmax(10rem,1fr)_8rem_10rem_10rem_9.5rem]"
+                class="grid grid-cols-1 items-start gap-2 rounded-md border border-gray-200 p-2 md:grid-cols-[minmax(12rem,2fr)_minmax(10rem,1fr)_8rem_10rem_10rem_9.5rem]"
             >
                 @csrf
                 @method('PUT')
@@ -110,7 +110,7 @@
                 <label class="text-xs text-gray-500">{{ __('Gültig bis') }}
                     <input type="date" name="valid_to" value="{{ $personBaseLoad->valid_to->format('Y-m-d') }}" min="{{ $year }}-01-01" max="{{ $year }}-12-31" required class="mt-0.5 w-full rounded-md border-gray-300 py-1 text-sm">
                 </label>
-                <div class="flex items-center justify-end gap-1.5">
+                <div class="flex items-center justify-end gap-1.5 md:mt-[1.125rem]">
                     <button type="submit" :class="dirty ? '' : 'invisible'" :tabindex="dirty ? 0 : -1" class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
                     <button
                         type="button"

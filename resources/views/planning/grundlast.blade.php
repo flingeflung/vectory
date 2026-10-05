@@ -82,7 +82,7 @@
             x-init="if (createDirty) window.__baseLoadDirtyForms.add($el)"
             @input="createDirty = window.formIsDirty($el, window.__baseLoadDirtyForms)"
             @submit.prevent="window.submitBaseLoadForm($event)"
-            class="grid grid-cols-1 items-end gap-2 rounded-md border border-gray-200 bg-white p-3 md:grid-cols-[minmax(12rem,2fr)_minmax(10rem,1fr)_8rem_10rem_10rem_auto_auto]"
+            class="grid grid-cols-1 items-start gap-2 rounded-md border border-gray-200 bg-white p-3 md:grid-cols-[minmax(12rem,2fr)_minmax(10rem,1fr)_8rem_10rem_10rem_auto_auto]"
         >
             @csrf
             <input type="hidden" name="_form" value="create">
@@ -105,14 +105,14 @@
             <label class="text-xs text-gray-500">{{ __('Gültig bis') }}
                 <input type="date" name="valid_to" value="{{ old('valid_to', $year.'-12-31') }}" min="{{ $year }}-01-01" max="{{ $year }}-12-31" required class="mt-0.5 w-full rounded-md border-gray-300 py-1 text-sm">
             </label>
-            <button type="button" @click="window.__baseLoadDirtyForms.delete($el.closest('form')); $el.closest('form').reset(); createDirty = false; creating = false" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Abbrechen') }}</button>
-            <button type="submit" x-show="createDirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
+            <button type="button" @click="window.__baseLoadDirtyForms.delete($el.closest('form')); $el.closest('form').reset(); createDirty = false; creating = false" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover md:mt-[1.125rem]">{{ __('Abbrechen') }}</button>
+            <button type="submit" x-show="createDirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 md:mt-[1.125rem] text-sm font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
         </form>
     </div>
 
     <div class="min-h-0 flex-1 space-y-2 overflow-y-auto rounded-lg border border-gray-200 bg-white p-3">
         @forelse ($baseLoads as $baseLoad)
-            <div class="flex items-end gap-2 rounded-md border border-gray-200 p-2" x-data>
+            <div class="flex items-start gap-2 rounded-md border border-gray-200 p-2" x-data>
                 <form
                     method="POST"
                     action="{{ route('planung.grundlast.update', $baseLoad) }}"
@@ -120,7 +120,7 @@
                     x-data="{ dirty: false }"
                     @input="dirty = window.formIsDirty($el, window.__baseLoadDirtyForms)"
                     @submit.prevent="window.submitBaseLoadForm($event)"
-                    class="grid min-w-0 flex-1 grid-cols-1 items-end gap-2 md:grid-cols-[minmax(12rem,2fr)_minmax(10rem,1fr)_8rem_10rem_10rem_auto]"
+                    class="grid min-w-0 flex-1 grid-cols-1 items-start gap-2 md:grid-cols-[minmax(12rem,2fr)_minmax(10rem,1fr)_8rem_10rem_10rem_auto]"
                 >
                     @csrf
                     @method('PUT')
@@ -144,7 +144,7 @@
                     <label class="text-xs text-gray-500">{{ __('Gültig bis') }}
                         <input type="date" name="valid_to" value="{{ $baseLoad->valid_to->format('Y-m-d') }}" min="{{ $year }}-01-01" max="{{ $year }}-12-31" required class="mt-0.5 w-full rounded-md border-gray-300 py-1 text-sm">
                     </label>
-                    <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
+                    <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 md:mt-[1.125rem] text-sm font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
                 </form>
 
                 <form method="POST" action="{{ route('planung.grundlast.destroy', $baseLoad) }}" x-ref="deleteForm{{ $baseLoad->id }}" class="hidden">
@@ -154,7 +154,7 @@
                 <button
                     type="button"
                     @click="if (await window.confirmDialog({ title: {{ \Illuminate\Support\Js::from(__('Grundlast löschen')) }}, message: {{ \Illuminate\Support\Js::from(__('Diesen Grundlast-Datensatz wirklich endgültig löschen?')) }}, confirmLabel: {{ \Illuminate\Support\Js::from(__('Löschen')) }} })) $refs.deleteForm{{ $baseLoad->id }}.submit()"
-                    class="rounded-md border border-red-300 px-2 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                    class="rounded-md border border-red-300 px-2 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 md:mt-[1.125rem]"
                 >{{ __('Löschen') }}</button>
             </div>
         @empty
