@@ -634,7 +634,8 @@
                 if (idButton && box.offsetWidth > 0) {
                     const boxRect = box.getBoundingClientRect();
                     const idRect = idButton.getBoundingClientRect();
-                    const probeY = boxRect.bottom - 19;
+                    // Messpunkte knapp über der ID (3 bis 15 px über ihrer Oberkante): Inhalt, der dort endet, wirkt zu dicht.
+                    const probes = [3, 7, 11, 15].map((gap) => idRect.top - gap);
                     const leaf = 'button, a, input, select, textarea, img, svg, path, p, span, td, th, li, h1, h2, h3, h4, h5, h6, code, strong, em';
                     // Behälter (div, form, label …) zählen nur, wenn ein eigener Text genau an dieser Stelle steht.
                     const isContent = (el, x, y) => {
@@ -650,12 +651,12 @@
                             return [...range.getClientRects()].some((rect) => x >= rect.left - 2 && x <= rect.right + 2 && y >= rect.top - 2 && y <= rect.bottom + 2);
                         });
                     };
-                    const crowded = [4, 24, 44].some((offset) => {
+                    const crowded = [4, 24, 44].some((offset) => probes.some((probeY) => {
                         const x = idRect.left + offset;
                         const hit = document.elementsFromPoint(x, probeY)
                             .find((el) => el !== idButton && el !== box && box.contains(el));
                         return hit && isContent(hit, x, probeY);
-                    });
+                    }));
                     if (crowded) {
                         box.style.paddingBottom = '14px';
                     }
