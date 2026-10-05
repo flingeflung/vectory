@@ -25,7 +25,12 @@
         @foreach ($nodes as $node)
             @php($nodeTitle = $node->translation(\App\Models\HelpArticle::PRIMARY_LOCALE)?->title ?? $node->key)
             <div x-sort:item="{{ $node->id }}">
-                <div class="flex items-center gap-0.5 rounded {{ $selected?->id === $node->id ? 'bg-indigo-50' : 'hover:bg-gray-50' }}">
+                <div @contextmenu.prevent="$store.helpTree.openMenu($event, {{ $node->id }}, {{ $node->depth() }})" class="group flex items-center gap-0.5 rounded {{ $selected?->id === $node->id ? 'bg-indigo-50' : 'hover:bg-gray-50' }}">
+                    @if ($node->children->isNotEmpty())
+                        <button type="button" @click="$store.helpTree.toggle({{ $node->id }})" class="w-4 shrink-0 text-xs text-gray-400 hover:text-gray-700" :title="$store.helpTree.isCollapsed({{ $node->id }}) ? @js(__('Aufklappen')) : @js(__('Zuklappen'))" x-text="$store.helpTree.isCollapsed({{ $node->id }}) ? '▸' : '▾'"></button>
+                    @else
+                        <span class="w-4 shrink-0"></span>
+                    @endif
                     <span x-sort:handle class="cursor-move px-1 text-gray-300 hover:text-gray-500 shrink-0" title="{{ __('Verschieben') }}">⠿</span>
                     <div class="flex shrink-0">
                         <form method="POST" action="{{ route('admin.hilfeseiten.ausruecken', $node) }}">
@@ -59,8 +64,9 @@
                             <span class="text-xs font-normal text-gray-400">{{ __('kein Seitenbezug') }}</span>
                         @endif
                     </a>
+                    <button type="button" @click.stop="$store.helpTree.openMenuAt($el, {{ $node->id }}, {{ $node->depth() }})" class="shrink-0 rounded px-1 text-gray-300 hover:bg-gray-200 hover:text-gray-700" title="{{ __('Neue Seite darunter einfügen') }}">+</button>
                 </div>
-                <div class="pl-4">
+                <div class="pl-4" x-show="! $store.helpTree.isCollapsed({{ $node->id }})">
                     @include('admin.help-articles.partials.tree', ['nodes' => $node->children, 'parentId' => $node->id, 'selected' => $selected])
                 </div>
             </div>

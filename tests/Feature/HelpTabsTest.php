@@ -110,4 +110,30 @@ class HelpTabsTest extends TestCase
             ->assertSee('data-help-key="oben"', false)->assertSee('data-help-key="mitte"', false);
         $this->get(route('hilfe', ['route' => 'oben-gibt-es-nicht']))->assertOk()->assertDontSee('aria-label="Pfad"', false);
     }
+
+    public function test_new_pages_can_be_inserted_below_a_node_as_sibling_or_as_first_child(): void
+    {
+        $this->actingAs(User::factory()->create(['tenant_id' => Tenant::query()->firstOrFail()->id, 'role' => 'super_admin']));
+        $a = HelpArticle::query()->create(['key' => 'a', 'route_names' => [], 'position' => 0]);
+        $b = HelpArticle::query()->create(['key' => 'b', 'route_names' => [], 'position' => 1]);
+        $a1 = HelpArticle::query()->create(['key' => 'a1', 'route_names' => [], 'parent_id' => $a->id, 'position' => 0]);
+
+        $this->post(route('admin.hilfeseiten.store'), ['title' => 'Kind', 'after' => $a->id, 'mode' => 'child'])->assertRedirect();
+        $child = HelpArticle::query()->where('parent_id', $a->id)->orderBy('position')->first();
+        $this->assertSame('kind', $child->key);
+        $this->assertSame(0, $child->position);
+        $this->assertSame(1, $a1->fresh()->position);
+
+        $this->post(route('admin.hilfeseiten.store'), ['title' => 'Nachbar', 'after' => $a->id, 'mode' => 'sibling'])->assertRedirect();
+        $neighbour = HelpArticle::query()->where('key', 'nachbar')->first();
+        $this->assertNull($neighbour->parent_id);
+        $this->assertSame(1, $neighbour->position);
+        $this->assertSame(2, $b->fresh()->position);
+
+        $deep = $this->article('tief', [], 'x');
+        $deep->update(['parent_id' => HelpArticle::query()->create(['key' => 'e3', 'route_names' => [], 'position' => 9, 'parent_id' => HelpArticle::query()->create(['key' => 'e2', 'route_names' => [], 'position' => 9, 'parent_id' => $a->id])->id])->id]);
+        $before = HelpArticle::query()->count();
+        $this->post(route('admin.hilfeseiten.store'), ['title' => 'Zu tief', 'after' => $deep->id, 'mode' => 'child']);
+        $this->assertSame($before, HelpArticle::query()->count());
+    }
 }

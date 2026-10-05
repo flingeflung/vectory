@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\HelpArticle;
 use App\Models\HelpArticleTranslation;
+use App\Models\UserPreference;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -30,8 +31,15 @@ class HelpArticleController extends Controller
             ? $flat->firstWhere('id', (int) $request->query('article'))
             : null;
 
+        // Eingeklappte Äste je Benutzer; die Vorfahren der geöffneten Seite sind immer aufgeklappt, damit man sie im Baum findet.
+        $collapsed = array_map('intval', UserPreference::configFor((int) $request->user()->id, UserPreference::HELP_TREE)['collapsed'] ?? []);
+        for ($ancestor = $selected?->parent_id; $ancestor !== null; $ancestor = $flat->firstWhere('id', $ancestor)?->parent_id) {
+            $collapsed = array_values(array_diff($collapsed, [$ancestor]));
+        }
+
         return view('admin.help-articles.index', [
             'tree' => $tree,
+            'collapsed' => $collapsed,
             'selected' => $selected,
             'locales' => HelpArticle::AVAILABLE_LOCALES,
         ]);
@@ -47,14 +55,35 @@ class HelpArticleController extends Controller
         $title = trim((string) $request->string('title'));
         abort_if($title === '', 422);
 
-        $nextPosition = 1 + (int) HelpArticle::query()->whereNull('parent_id')->max('position');
+        // Einfügen neben/unter einer vorhandenen Seite (Rechtsklick im Baum): "sibling" = nächster Nachbar auf gleicher
+        // Ebene, "child" = erster Unterpunkt (eine Ebene tiefer). Ohne Bezug: ans Ende der obersten Ebene.
+        $reference = $request->filled('after') ? HelpArticle::query()->findOrFail($request->integer('after')) : null;
+        $mode = $request->string('mode')->toString() === 'child' ? 'child' : 'sibling';
 
-        $article = HelpArticle::query()->create([
-            'key' => $this->uniqueKey($title),
-            'route_names' => [],
-            'parent_id' => null,
-            'position' => $nextPosition,
-        ]);
+        if ($reference && $mode === 'child') {
+            abort_if($reference->depth() >= HelpArticle::MAX_DEPTH, 422);
+            $parentId = $reference->id;
+            $position = 0;
+        } elseif ($reference) {
+            $parentId = $reference->parent_id;
+            $position = $reference->position + 1;
+        } else {
+            $parentId = null;
+            $position = 1 + (int) HelpArticle::query()->whereNull('parent_id')->max('position');
+        }
+
+        $article = DB::transaction(function () use ($title, $parentId, $position, $reference) {
+            if ($reference) {
+                HelpArticle::query()->where('parent_id', $parentId)->where('position', '>=', $position)->increment('position');
+            }
+
+            return HelpArticle::query()->create([
+                'key' => $this->uniqueKey($title),
+                'route_names' => [],
+                'parent_id' => $parentId,
+                'position' => $position,
+            ]);
+        });
 
         $article->translations()->create([
             'locale' => HelpArticle::PRIMARY_LOCALE,
@@ -62,7 +91,16 @@ class HelpArticleController extends Controller
             'body' => '',
         ]);
 
-        return redirect()->route('admin.hilfeseiten', ['article' => $article->id])->with('status', 'help-article-updated');
+        return redirect()->route('admin.hilfeseiten', ['article' => $article->id, 'neu' => $reference ? 1 : null])->with('status', 'help-article-updated');
+    }
+
+    /** Eingeklappte Äste des Navigationsbaums merken (je Benutzer). */
+    public function saveTreeState(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $ids = collect($request->array('collapsed'))->map(fn ($id) => (int) $id)->filter()->unique()->values()->all();
+        UserPreference::persist((int) $request->user()->id, UserPreference::HELP_TREE, ['collapsed' => $ids]);
+
+        return response()->json(['ok' => true]);
     }
 
     /**

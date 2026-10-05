@@ -98,7 +98,7 @@
                         <div x-show="locale === {{ \Illuminate\Support\Js::from($localeCode) }}" x-cloak class="space-y-3">
                             <div>
                                 <label class="block text-xs text-gray-500">{{ __('Titel') }}</label>
-                                <input type="text" name="translations[{{ $localeCode }}][title]" value="{{ $t?->title }}" @if ($localeCode === \App\Models\HelpArticle::PRIMARY_LOCALE) required @endif class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                                <input type="text" name="translations[{{ $localeCode }}][title]" value="{{ $t?->title }}" @if ($localeCode === \App\Models\HelpArticle::PRIMARY_LOCALE) required @if (request()->boolean('neu')) x-init="$nextTick(() => { $el.focus(); $el.select(); })" @endif @endif class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                             </div>
                             <div>
                                 <label class="block text-xs text-gray-500">{{ __('Zusätzliche Suchbegriffe (Komma-getrennt, optional)') }}</label>

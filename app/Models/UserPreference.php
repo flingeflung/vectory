@@ -22,6 +22,8 @@ class UserPreference extends Model
 
     public const WORKFLOW_VIEW = 'workflow_view';
 
+    public const HELP_TREE = 'help_tree';
+
     protected function casts(): array
     {
         return ['config' => 'array'];
