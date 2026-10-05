@@ -150,8 +150,10 @@
                                         const area = this.$refs.body;
                                         const start = area.selectionStart ?? area.value.length;
                                         const end = area.selectionEnd ?? start;
-                                        const label = area.value.slice(start, end) || page.title;
-                                        area.setRangeText('[[' + page.id + '|' + label + ']]', start, end, 'end');
+                                        const selected = area.value.slice(start, end);
+                                        const trailing = selected.match(/\s+$/)?.[0] ?? '';
+                                        const label = selected.slice(0, selected.length - trailing.length) || page.title;
+                                        area.setRangeText('[[' + page.id + '|' + label + ']]' + (selected.trim() === '' ? '' : trailing), start, end, 'end');
                                         area.dispatchEvent(new Event('input', { bubbles: true }));
                                         this.pickerOpen = false;
                                         area.focus();
