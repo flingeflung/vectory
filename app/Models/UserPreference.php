@@ -24,6 +24,8 @@ class UserPreference extends Model
 
     public const HELP_TREE = 'help_tree';
 
+    public const PROJECT_TIMES = 'project_times';
+
     protected function casts(): array
     {
         return ['config' => 'array'];

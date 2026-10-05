@@ -27,6 +27,7 @@ use App\Models\ProjectWorkflowStepPerson;
 use App\Models\RecentlyViewedProject;
 use App\Models\Setting;
 use App\Models\SystemSetting;
+use App\Models\UserPreference;
 use App\Models\UserTablePreference;
 use App\Models\Tenant;
 use App\Models\Workflow;
@@ -1248,10 +1249,10 @@ class ProjectController extends Controller
             // wird im View ohnehin nicht gerendert). auth() statt eines durchgereichten
             // Request, da zeitenData() auch aus plannedHoursEditorResponse() (kein Request-Param)
             // aufgerufen wird.
-            'personBreakdownWeek' => CarbonImmutable::today()->startOfWeek(),
+            'personBreakdownWeek' => $this->rememberedPersonWeek(),
             'personBreakdownSort' => 'person',
             'personBreakdown' => auth()->user()?->can('planning.view')
-                ? $this->zeitenPersonBreakdownData($project, CarbonImmutable::today()->startOfWeek())
+                ? $this->zeitenPersonBreakdownData($project, $this->rememberedPersonWeek())
                 : null,
             // "Zeitverlauf" startet aggregiert nach Projekten; personenbezogene Modi
             // sind in zeitenGesamtansicht() durch planning.view geschützt.
@@ -1272,7 +1273,15 @@ class ProjectController extends Controller
         abort_unless($request->user()->can('project.view'), 403);
         abort_unless($request->user()->can('planning.view'), 403);
 
-        $week = $this->parseIsoWeek($request->query('week'));
+        // Die gewählte Woche wird je Benutzer gemerkt (Ralf, 2026-10-05), damit sie beim Blättern zwischen Projekten
+        // erhalten bleibt; die aktuelle Woche zählt als "nichts gemerkt" (sie wandert ja mit der Zeit mit).
+        $week = $request->has('week') ? $this->parseIsoWeek($request->query('week')) : $this->rememberedPersonWeek();
+        if ($request->has('week')) {
+            $userId = (int) $request->user()->id;
+            $config = UserPreference::configFor($userId, UserPreference::PROJECT_TIMES);
+            $config['personen_week'] = $week->equalTo(CarbonImmutable::today()->startOfWeek()) ? null : sprintf('%04d-W%02d', $week->isoWeekYear(), $week->isoWeek());
+            UserPreference::persist($userId, UserPreference::PROJECT_TIMES, $config);
+        }
         $sortBy = $request->query('sort') === 'project' ? 'project' : 'person';
 
         return response(view('projekte.partials.zeiten-personen-body', [
@@ -1589,6 +1598,14 @@ class ProjectController extends Controller
             'weekTotals' => $weekTotals, 'total' => $total, 'hourDecimals' => $hourDecimals,
             'milestonesByProjectWeek' => $milestonesByProjectWeek,
         ];
+    }
+
+    /** Die zuletzt gewählte Woche des Reiters "Personen & Tage" (je Benutzer), sonst die aktuelle. */
+    private function rememberedPersonWeek(): CarbonImmutable
+    {
+        $stored = UserPreference::configFor((int) auth()->id(), UserPreference::PROJECT_TIMES)['personen_week'] ?? null;
+
+        return $this->parseIsoWeek(is_string($stored) ? $stored : null);
     }
 
     private function parseIsoWeek(?string $value): CarbonImmutable

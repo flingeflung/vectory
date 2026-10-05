@@ -33,6 +33,7 @@
         <button type="button" @click="reload({{ \Illuminate\Support\Js::from($prevWeekValue) }}, {{ \Illuminate\Support\Js::from($sortBy) }})" class="rounded border border-gray-300 px-2 py-0.5 hover:bg-gray-50" aria-label="{{ __('Vorherige Woche') }}">←</button>
         <input type="week" value="{{ $weekValue }}" @change="reload($event.target.value, {{ \Illuminate\Support\Js::from($sortBy) }})" class="rounded-md border-gray-300 py-0.5 text-xs">
         <button type="button" @click="reload({{ \Illuminate\Support\Js::from($nextWeekValue) }}, {{ \Illuminate\Support\Js::from($sortBy) }})" class="rounded border border-gray-300 px-2 py-0.5 hover:bg-gray-50" aria-label="{{ __('Nächste Woche') }}">→</button>
+        <button type="button" @click="reload({{ \Illuminate\Support\Js::from(sprintf('%04d-W%02d', now()->isoWeekYear(), now()->isoWeek())) }}, {{ \Illuminate\Support\Js::from($sortBy) }})" class="rounded border border-gray-300 px-2 py-0.5 hover:bg-gray-50" title="{{ __('Springt zur aktuellen Woche. Die gewählte Woche bleibt sonst auch beim Wechsel zu anderen Projekten erhalten.') }}">{{ __('Diese Woche') }}</button>
         <span class="text-gray-500">{{ $week->format('d.m.Y') }} – {{ $week->addDays(6)->format('d.m.Y') }}</span>
 
         @if ($breakdown['isHauptprojekt'])
