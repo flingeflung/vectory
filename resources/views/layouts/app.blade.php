@@ -551,6 +551,54 @@
             eingegebenen Werte), das wirkte wie "passiert nichts".
         --}}
         <script>
+            {{-- Kalenderwoche hinter jedem Datumsfeld (Ralf, 2026-10-05: "bei allen derartigen Datumswählern"). Das Browser-Fenster
+                 zum Datumsfeld kann keine KW zeigen, deshalb steht sie als kleiner Text direkt hinter dem Feld und folgt dem Wert.
+                 Gilt auch für später nachgeladene Dialoge. Ausnahme: data-no-kw am Feld. --}}
+            (function () {
+                const isoWeek = (value) => {
+                    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || '');
+                    if (! match) return '';
+                    const date = new Date(Date.UTC(+match[1], +match[2] - 1, +match[3]));
+                    const dayNumber = (date.getUTCDay() + 6) % 7;
+                    date.setUTCDate(date.getUTCDate() - dayNumber + 3);
+                    const firstThursday = new Date(Date.UTC(date.getUTCFullYear(), 0, 4));
+                    const week = 1 + Math.round(((date - firstThursday) / 86400000 - 3 + ((firstThursday.getUTCDay() + 6) % 7)) / 7);
+                    return 'KW ' + week;
+                };
+                const refresh = (input) => {
+                    const badge = input.__kwBadge;
+                    if (badge && badge.__shown !== input.value) {
+                        badge.__shown = input.value;
+                        badge.textContent = isoWeek(input.value);
+                    }
+                };
+                const decorate = (input) => {
+                    if (input.__kwBadge || input.hasAttribute('data-no-kw')) return;
+                    const badge = document.createElement('span');
+                    badge.className = 'ml-1.5 whitespace-nowrap text-xs text-gray-500 select-none';
+                    badge.title = {{ \Illuminate\Support\Js::from(__('Kalenderwoche')) }};
+                    badge.setAttribute('data-kw-badge', '');
+                    input.after(badge);
+                    input.__kwBadge = badge;
+                    refresh(input);
+                    ['input', 'change'].forEach((name) => input.addEventListener(name, () => refresh(input)));
+                };
+                const scan = (root) => (root.querySelectorAll ? root.querySelectorAll('input[type="date"]') : []).forEach(decorate);
+                const start = () => {
+                    scan(document);
+                    new MutationObserver((records) => records.forEach((record) => record.addedNodes.forEach((node) => {
+                        if (node.nodeType !== 1) return;
+                        if (node.matches && node.matches('input[type="date"]')) decorate(node);
+                        scan(node);
+                    }))).observe(document.body, { childList: true, subtree: true });
+                    // Werte, die per Skript gesetzt werden (z. B. Alpine x-model), lösen kein Ereignis aus.
+                    setInterval(() => document.querySelectorAll('input[type="date"]').forEach(refresh), 700);
+                };
+                if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+            })();
+        </script>
+
+        <script>
             {{-- Globale Kurzmeldung oben über allem (Ralf, 2026-10-03: Meldung soll nichts mehr
                  verschieben). showManageSavedToast() bleibt für die bestehenden Aufrufer erhalten;
                  der Text kommt aus dem (dauerhaft ausgeblendeten) Meldungs-Element dort. --}}
