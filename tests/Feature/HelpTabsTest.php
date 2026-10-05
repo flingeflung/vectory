@@ -209,4 +209,18 @@ class HelpTabsTest extends TestCase
         $this->get(route('hilfe', ['route' => 'admin.rechte']))
             ->assertOk()->assertSee('Administratoren (Organisations-, Zentral- und Super-Admin)');
     }
+
+    public function test_help_access_descriptions_only_name_existing_rights_and_pages(): void
+    {
+        $rights = \App\Models\Permission::query()->pluck('key')->all();
+        foreach (config('help-access') as $key => $text) {
+            preg_match_all('/\(([a-z_]+(?:\.[a-z_]+)+)\)/', $text, $matches);
+            foreach ($matches[1] as $right) {
+                $this->assertContains($right, $rights, "config/help-access.php nennt das Recht {$right} (bei {$key}), das es nicht gibt.");
+            }
+            if (! str_starts_with($key, 'D-')) {
+                $this->assertTrue(\Illuminate\Support\Facades\Route::has($key), "config/help-access.php: die Seite {$key} gibt es nicht.");
+            }
+        }
+    }
 }
