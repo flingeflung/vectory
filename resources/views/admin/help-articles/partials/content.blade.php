@@ -158,11 +158,44 @@
                                         this.pickerOpen = false;
                                         area.focus();
                                     },
+                                    markUi() {
+                                        const area = this.$refs.body;
+                                        const start = area.selectionStart ?? area.value.length;
+                                        const end = area.selectionEnd ?? start;
+                                        const selected = area.value.slice(start, end);
+                                        const trailing = selected.match(/\s+$/)?.[0] ?? '';
+                                        const core = selected.slice(0, selected.length - trailing.length);
+                                        if (core === '') {
+                                            area.setRangeText('{}', start, end, 'end');
+                                            area.setSelectionRange(start + 1, start + 1);
+                                        } else {
+                                            area.setRangeText('{' + core + '}' + trailing, start, end, 'end');
+                                        }
+                                        area.dispatchEvent(new Event('input', { bubbles: true }));
+                                        area.focus();
+                                    },
+                                    insertSnippet(text, part) {
+                                        const area = this.$refs.body;
+                                        const start = area.selectionStart ?? area.value.length;
+                                        const end = area.selectionEnd ?? start;
+                                        area.setRangeText(text, start, end, 'end');
+                                        const offset = part ? text.indexOf(part) : -1;
+                                        if (offset >= 0) {
+                                            area.setSelectionRange(start + offset, start + offset + part.length);
+                                        }
+                                        area.dispatchEvent(new Event('input', { bubbles: true }));
+                                        area.focus();
+                                    },
                                 }"
                             >
                                 <div class="flex items-center justify-between">
                                     <label class="block text-xs text-gray-500">{{ __('Text (Markdown)') }}</label>
+                                    <div class="flex items-center gap-1.5">
+                                    <button type="button" @click="markUi()" class="inline-flex h-6 w-6 items-center justify-center rounded-md border border-gray-300 bg-gray-100 text-gray-700 hover:bg-gray-200" title="{{ __('Markierten Text als Button/UI-Element kennzeichnen ({Text}). Ohne Markierung wird {} an der Cursorstelle eingefügt.') }}" aria-label="{{ __('Als Button/UI-Element kennzeichnen') }}">
+                                        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15.5 3.5l5 5-8 8-5-5z" /><path d="M7.5 11.5l5 5-5 1.5a1 1 0 01-1.5-1.5z" /><path d="M3 21h18" /></svg>
+                                    </button>
                                     <button type="button" @click="open()" class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200" title="{{ __('Fügt an der Cursorstelle einen Verweis auf eine andere Hilfeseite ein. Ist Text markiert, wird er zum Linktext.') }}">{{ __('Verweis einfügen') }}</button>
+                                    </div>
                                 </div>
                                 <div x-show="pickerOpen" x-cloak @click.outside="pickerOpen = false" @keydown.escape.stop="pickerOpen = false" class="absolute right-0 z-20 mt-1 w-96 rounded-md border border-gray-200 bg-white p-2 shadow-lg">
                                     <input type="text" x-ref="pickerSearch" x-model="q" @keydown.enter.prevent="shown.length && insert(shown[0])" placeholder="{{ __('Hilfeseite suchen (Titel, Pfad oder Nummer)') }}" autocomplete="off" class="w-full rounded-md border-gray-300 text-sm">
@@ -180,14 +213,14 @@
                                     {{ __('# Überschrift · ## Unterüberschrift · **fett** · *kursiv* · - Punkt (Liste) · 1. Punkt (nummeriert) · [Linktext](https://…) · > Zitat · :button für einen Button/UI-Element wie im Tool', ['button' => '{+Neu}']) }}
                                 </p>
                                 <textarea x-ref="body" name="translations[{{ $localeCode }}][body]" rows="14" class="mt-0.5 w-full rounded-md border-gray-300 font-mono text-sm">{{ $t?->body }}</textarea>
-                                <p class="mt-1 text-xs text-gray-400">
-                                    {{ __('Bild einfügen: Datei nach public/images/hilfe/ legen, dann im Text z. B. :placeholder schreiben - erscheint als eigener Block, Folgetext kommt automatisch darunter. Empfohlene Bildgröße: max. ca. 1200 px breit, unter 500 KB (wird angezeigt verkleinert, bei Klick in Originalgröße).', ['placeholder' => '[screenshot_dashboard1.png]']) }}
+                                <p class="mt-1 text-xs text-gray-500">
+                                    {!! __('Bild einfügen: Datei nach public/images/hilfe/ legen, dann im Text z. B. :placeholder schreiben - erscheint als eigener Block, Folgetext kommt automatisch darunter. Empfohlene Bildgröße: max. ca. 1200 px breit, unter 500 KB (wird angezeigt verkleinert, bei Klick in Originalgröße).', ['placeholder' => view('components.help-snippet', ['text' => '[screenshot_dashboard1.png]', 'part' => 'screenshot_dashboard1.png'])->render()]) !!}
                                 </p>
-                                <p class="mt-1 text-xs text-gray-400">
-                                    {{ __('Zu einer anderen Hilfeseite verlinken: :placeholder schreiben (Hilfe-Nr. der Zielseite, steht dort oben im Editor), für einen eigenen Linktext :alias. Der Klick springt direkt dorthin. Ältere Verweise mit dem Titel funktionieren weiter, solange der Titel nur einmal vorkommt.', ['placeholder' => '[[42]]', 'alias' => '[[42|siehe dort]]']) }}
+                                <p class="mt-1 text-xs text-gray-500">
+                                    {!! __('Zu einer anderen Hilfeseite verlinken: :placeholder schreiben (Hilfe-Nr. der Zielseite, steht dort oben im Editor), für einen eigenen Linktext :alias. Der Klick springt direkt dorthin. Ältere Verweise mit dem Titel funktionieren weiter, solange der Titel nur einmal vorkommt.', ['placeholder' => view('components.help-snippet', ['text' => '[[42]]', 'part' => '42'])->render(), 'alias' => view('components.help-snippet', ['text' => '[[42|siehe dort]]', 'part' => '42'])->render()]) !!}
                                 </p>
-                                <p class="mt-1 text-xs text-gray-400">
-                                    {{ __('Zu einer echten Seite im Tool verlinken: :placeholder - der Routenname ist derselbe technische Wert, den dieses Panel zeigt, wenn für eine Seite noch keine Hilfeseite existiert. Kein fest eingetippter Pfad, funktioniert dadurch in jeder Umgebung.', ['placeholder' => '[Zur Kundenverwaltung](route:admin.kunden)']) }}
+                                <p class="mt-1 text-xs text-gray-500">
+                                    {!! __('Zu einer echten Seite im Tool verlinken: :placeholder - der Routenname ist derselbe technische Wert, den dieses Panel zeigt, wenn für eine Seite noch keine Hilfeseite existiert. Kein fest eingetippter Pfad, funktioniert dadurch in jeder Umgebung.', ['placeholder' => view('components.help-snippet', ['text' => '[Zur Kundenverwaltung](route:admin.kunden)', 'part' => 'admin.kunden'])->render()]) !!}
                                 </p>
                             </div>
                         </div>
