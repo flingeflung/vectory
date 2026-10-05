@@ -247,6 +247,9 @@ class ProjectController extends Controller
         if (array_any($visibleColumns, fn (array $column) => $column['key'] === 'workflow')) {
             $query->with('workflow');
         }
+        if (array_any($visibleColumns, fn (array $column) => $column['key'] === 'project_template')) {
+            $query->with('projectTemplate');
+        }
         if (array_any($visibleColumns, fn (array $column) => in_array($column['key'], ['progress', 'workflow'], true))) {
             $query->with('projectWorkflowSteps.workflowStep');
         }

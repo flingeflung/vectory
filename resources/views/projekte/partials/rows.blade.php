@@ -115,6 +115,12 @@
                     @else
                         <span class="text-gray-400" title="{{ __('– Kein Workflow zugewiesen –') }}">&ndash;</span>
                     @endif
+                @elseif ($column['key'] === 'project_template')
+                    @if ($project->projectTemplate)
+                        <div title="{{ $project->projectTemplate->name }}">{{ $project->projectTemplate->name }}</div>
+                    @else
+                        <span class="text-gray-400" title="{{ __('Diesem Projekt ist kein Aufwandsprofil zugewiesen.') }}">&ndash;</span>
+                    @endif
                 @elseif ($column['key'] === 'system_model')
                     @if ($project->products->isEmpty())
                         <span class="text-gray-400">&ndash;</span>
