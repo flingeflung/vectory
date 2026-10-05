@@ -42,7 +42,7 @@ class HelpArticleController extends Controller
         $collect = function ($nodes, array $path) use (&$collect, &$pickerPages) {
             foreach ($nodes as $node) {
                 $title = $node->translation(HelpArticle::PRIMARY_LOCALE)?->title ?? $node->key;
-                $pickerPages[] = ['id' => $node->id, 'title' => $title, 'path' => implode(' › ', $path)];
+                $pickerPages[] = ['id' => $node->id, 'title' => $title, 'path' => implode(' › ', $path), 'depth' => count($path)];
                 $collect($node->children, [...$path, $title]);
             }
         };

@@ -216,7 +216,7 @@
                                     <input type="text" x-ref="pickerSearch" x-model="q" @keydown.enter.prevent="shown.length && insert(shown[0])" placeholder="{{ __('Hilfeseite suchen (Titel, Pfad oder Nummer)') }}" autocomplete="off" class="w-full rounded-md border-gray-300 text-sm">
                                     <div class="mt-1 max-h-64 overflow-y-auto text-sm">
                                         <template x-for="page in shown" :key="page.id">
-                                            <button type="button" @click="insert(page)" class="block w-full rounded px-2 py-1 text-left hover:bg-gray-100">
+                                            <button type="button" @click="insert(page)" :style="'padding-left: ' + (0.5 + page.depth * 1) + 'rem'" class="block w-full rounded py-1 pr-2 text-left hover:bg-gray-100">
                                                 <span class="text-gray-800" x-text="page.title"></span>
                                                 <span class="block truncate text-xs text-gray-400" x-text="(page.path ? page.path + ' · ' : '') + 'Nr. ' + page.id"></span>
                                             </button>
