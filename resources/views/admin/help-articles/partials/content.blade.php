@@ -192,7 +192,8 @@
                                         else if (data.action === 'prefix') this.prefixLines(data.a1, false);
                                         else if (data.action === 'numbered') this.prefixLines('', true);
                                         else if (data.action === 'link') this.wrapSel('[', '](https://)', data.part);
-                                        else this.insertSnippet(data.a1, data.part);
+                                        else if (data.action === 'page') this.open();
+                                    else this.insertSnippet(data.a1, data.part);
                                     },
                                     insertSnippet(text, part) {
                                         const area = this.$refs.body;
@@ -210,9 +211,6 @@
                             >
                                 <div class="flex items-center justify-between">
                                     <label class="block text-xs text-gray-500">{{ __('Text (Markdown)') }}</label>
-                                    <div class="flex items-center gap-1.5">
-                                    <button type="button" @click="open()" class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200" title="{{ __('Fügt an der Cursorstelle einen Verweis auf eine andere Hilfeseite ein. Ist Text markiert, wird er zum Linktext.') }}">{{ __('Verweis einfügen') }}</button>
-                                    </div>
                                 </div>
                                 <div x-show="pickerOpen" x-cloak @click.outside="pickerOpen = false" @keydown.escape.stop="pickerOpen = false" class="absolute right-0 z-20 mt-1 w-96 rounded-md border border-gray-200 bg-white p-2 shadow-lg">
                                     <input type="text" x-ref="pickerSearch" x-model="q" @keydown.enter.prevent="shown.length && insert(shown[0])" placeholder="{{ __('Hilfeseite suchen (Titel, Pfad oder Nummer)') }}" autocomplete="off" class="w-full rounded-md border-gray-300 text-sm">
@@ -235,6 +233,7 @@
                                     <x-help-markup :label="'1. '.__('Punkt (nummeriert)')" action="numbered" /> ·
                                     <x-help-markup :label="'['.__('Linktext').'](https://…)'" action="link" :part="__('Linktext')" /> ·
                                     <x-help-markup :label="'> '.__('Zitat')" action="prefix" a1="> " /> ·
+                                    <x-help-markup :label="'[['.__('Hilfeseite').']]'" action="page" /> ·
                                     <x-help-markup label="{+Neu}" action="wrap" a1="{" a2="}" part="+Neu" /> {{ __('für einen Button/UI-Element wie im Tool') }}
                                 </p>
                                 <textarea x-ref="body" name="translations[{{ $localeCode }}][body]" rows="14" class="mt-0.5 w-full rounded-md border-gray-300 font-mono text-sm">{{ $t?->body }}</textarea>
