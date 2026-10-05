@@ -24,6 +24,9 @@
             @php($otherProjects = $product->projects->where('id', '!=', $project->id)->values())
             <span class="inline-flex items-center gap-0.5">
                 {{ $product->name }} ({{ $product->product_number }})
+                @if ($product->productGroup)
+                    <span class="text-xs text-gray-400">({{ $product->productGroup->number }} {{ $product->productGroup->name }})</span>
+                @endif
                 @if ($otherProjects->isNotEmpty())
                     <span x-data="{ open: false }" class="relative inline-block">
                         <button
