@@ -255,11 +255,11 @@
                 <h3 class="font-semibold text-gray-900">{{ __('Planstunden und Verteilung auf Projektbeteiligte') }}</h3>
                 <p class="text-xs text-gray-500">
                     @if ($project->functionGroupHours->isNotEmpty())
-                        {{ __('Die Planstunden wurden von der Aufwandsschablone gelöst und gelten nur für dieses Projekt.') }}
+                        {{ __('Die Planstunden wurden vom Aufwandsprofil gelöst und gelten nur für dieses Projekt.') }}
                     @elseif ($project->projectTemplate)
-                        {{ __('Grundlage: Aufwandsschablone „:name“', ['name' => $project->projectTemplate->name]) }}
+                        {{ __('Grundlage: Aufwandsprofil „:name“', ['name' => $project->projectTemplate->name]) }}
                     @else
-                        {{ __('Diesem Projekt ist keine Aufwandsschablone zugewiesen.') }}
+                        {{ __('Diesem Projekt ist kein Aufwandsprofil zugewiesen.') }}
                     @endif
                 </p>
                 @php $compression = app(\App\Services\ProjectPlanningCalculator::class)->compressionNotice($project); @endphp

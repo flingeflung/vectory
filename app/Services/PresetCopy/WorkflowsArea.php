@@ -108,7 +108,7 @@ class WorkflowsArea implements PresetArea
     }
 
     /**
-     * Für andere Bereiche (z.B. Aufwandsschablonen): den gleichnamigen Workflow im Ziel verwenden oder, falls es
+     * Für andere Bereiche (z.B. Aufwandsprofile): den gleichnamigen Workflow im Ziel verwenden oder, falls es
      * ihn dort nicht gibt, als Voraussetzung anlegen.
      */
     public function ensureInTarget(Workflow $source, int $targetTenantId, PresetReport $report): int

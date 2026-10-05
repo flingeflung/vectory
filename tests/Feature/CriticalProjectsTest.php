@@ -508,7 +508,7 @@ class CriticalProjectsTest extends TestCase
 
         $template = ProjectTemplate::withoutGlobalScope('tenant')->create([
             'tenant_id' => $otherTenant->id,
-            'name' => 'Fremde Aufwandsschablone',
+            'name' => 'Fremdes Aufwandsprofil',
             'format' => 1,
             'reusable_content_share' => 1,
             'languages_count' => 1,

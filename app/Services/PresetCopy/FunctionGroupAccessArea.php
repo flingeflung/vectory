@@ -8,7 +8,7 @@ use Illuminate\Support\Collection;
 /**
  * Freigaben der Funktionsgruppen: Die Gruppen selbst verwaltet die Heimat-Organisation, jede andere Organisation
  * bekommt nur die freigeschaltet, die sie nutzen darf. Hier werden Freigaben der Quelle ins Ziel übertragen, damit
- * Workflows und Aufwandsschablonen dort keine Gruppen verlieren. Es werden nur Freigaben ergänzt, nie entzogen
+ * Workflows und Aufwandsprofile dort keine Gruppen verlieren. Es werden nur Freigaben ergänzt, nie entzogen
  * (daher kein Überschreiben). Für die Heimat-Organisation als Ziel gibt es nichts zu tun - sie sieht alle Gruppen.
  */
 class FunctionGroupAccessArea implements PresetArea

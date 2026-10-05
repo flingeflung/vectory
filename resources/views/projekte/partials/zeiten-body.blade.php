@@ -6,7 +6,7 @@
     (Projektleiter-Sicht), nicht nur die eigenen Buchungen wie im Zeiterfassung-Overlay.
 
     Die Planstunden werden hier nur noch kompakt den gebuchten Stunden gegenübergestellt.
-    Bearbeitung, Aufschlüsselung und das Lösen von der Aufwandsschablone liegen im Reiter
+    Bearbeitung, Aufschlüsselung und das Lösen vom Aufwandsprofil liegen im Reiter
     "Planung" (planned-hours-editor.blade.php).
 --}}
 {{-- Ralf, 2026-09-28: "wenn ich oben blättere, soll der Sub-Reiter bestehen

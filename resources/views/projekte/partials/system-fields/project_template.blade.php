@@ -59,7 +59,7 @@
             }
             if (! await window.confirmDialog({
                 title: {{ \Illuminate\Support\Js::from(__('Schablonen-Verbindung wiederherstellen?')) }},
-                message: {{ \Illuminate\Support\Js::from(__('Wenn Sie fortfahren, kann diesem Projekt wieder eine Aufwandsschablone zugewiesen werden. Beim nächsten Speichern werden dabei die eigenen, geänderten Planstunden je Funktionsgruppe überschrieben.')) }},
+                message: {{ \Illuminate\Support\Js::from(__('Wenn Sie fortfahren, kann diesem Projekt wieder ein Aufwandsprofil zugewiesen werden. Beim nächsten Speichern werden dabei die eigenen, geänderten Planstunden je Funktionsgruppe überschrieben.')) }},
                 confirmLabel: {{ \Illuminate\Support\Js::from(__('Fortfahren')) }},
                 cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
             })) { return; }
@@ -86,7 +86,7 @@
     x-on:planstunden-linked-state-changed.window="syncAfterExternalRelink()"
 >
     <div class="flex items-center gap-1.5">
-        <label class="block text-xs text-gray-500">{{ __('Aufwandsschablone') }}</label>
+        <label class="block text-xs text-gray-500">{{ __('Aufwandsprofil') }}</label>
         <x-info-icon-button
             x-show="templateId"
             x-cloak

@@ -7,7 +7,7 @@
 
 ## Mandantenfähiges System
 
-Funktionsgruppen werden nur beim Heimatmandanten angelegt, benannt, geändert, deaktiviert oder gelöscht. Dieselbe Funktionsgruppen-ID wird organisationsübergreifend in Personen, Workflows, Aufwandsschablonen, Projekten, Aufgaben und Planstunden verwendet.
+Funktionsgruppen werden nur beim Heimatmandanten angelegt, benannt, geändert, deaktiviert oder gelöscht. Dieselbe Funktionsgruppen-ID wird organisationsübergreifend in Personen, Workflows, Aufwandsprofile, Projekten, Aufgaben und Planstunden verwendet.
 
 Eine Matrix in **Admin > Personen & Rechte > Funktionsgruppen** legt fest, welche zentralen Funktionsgruppen bei welchem Kunden verfügbar sind. Die Matrix erzeugt keine kundenspezifischen Kopien und erlaubt keine abweichenden Kundenbezeichnungen.
 

@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Planstunden-Korrektur (Ralf, 2026-09-27, siehe Roadmap-Backlog): ein
- * einzelner Gesamt-Wert nach dem "Lösen" von der Aufwandsschablone reicht
+ * einzelner Gesamt-Wert nach dem "Lösen" vom Aufwandsprofil reicht
  * nicht - "dadurch habe ich keine Möglichkeit mehr, zu erkennen, aus
  * welchen Stundenpaketen es sich rekrutiert." Ersetzt projects.
  * planned_hours_override (aus der vorherigen Migration, noch nicht

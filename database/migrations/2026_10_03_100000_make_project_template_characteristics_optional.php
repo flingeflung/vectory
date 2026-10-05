@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Ralf, 2026-10-03: Die Merkmale einer Aufwandsschablone (Produktkomplexität, Entwicklungsstand
+     * Ralf, 2026-10-03: Die Merkmale eines Aufwandsprofils (Produktkomplexität, Entwicklungsstand
      * usw.) sind auf Anleitungen ausgerichtet und für Verwaltungsprojekte u. Ä. unpassend. Sie sind
      * jetzt pro Schablone optional (Schalter use_characteristics); abgewählte Werte bleiben erhalten,
      * werden aber nicht mehr angezeigt oder angewendet. Bestehende Schablonen behalten ihre Merkmale

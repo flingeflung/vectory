@@ -10,7 +10,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Aufwandsschablonen mit ihren geplanten Stunden je Funktionsgruppe (Identität = Name).
+ * Aufwandsprofile mit ihren geplanten Stunden je Funktionsgruppe (Identität = Name).
  * Der zugeordnete Workflow wird über den Namen ins Ziel übersetzt; gibt es ihn dort nicht, wird er als
  * Voraussetzung mit angelegt. Überschreiben nur, solange die Schablone im Ziel von keinem Projekt verwendet wird.
  */
@@ -29,7 +29,7 @@ class ProjectTemplatesArea implements PresetArea
 
     public function label(): string
     {
-        return __('Aufwandsschablonen');
+        return __('Aufwandsprofile');
     }
 
     public function items(int $sourceTenantId, int $targetTenantId): array

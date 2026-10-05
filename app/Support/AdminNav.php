@@ -30,7 +30,7 @@ class AdminNav
                 ['route' => 'admin.projektattribute', 'match' => 'admin.projektattribute*', 'label' => __('Projektattribute')],
                 ['route' => 'admin.projektkopie-vorlagen', 'match' => 'admin.projektkopie-vorlagen*', 'label' => __('Projektkopie-Vorlagen')],
                 ['route' => 'admin.workflows', 'match' => 'admin.workflows*', 'label' => __('Workflows')],
-                ['route' => 'admin.projektschablonen', 'match' => 'admin.projektschablonen*', 'label' => __('Aufwandsschablonen')],
+                ['route' => 'admin.projektschablonen', 'match' => 'admin.projektschablonen*', 'label' => __('Aufwandsprofile')],
                 ['route' => 'admin.maerkte', 'match' => 'admin.maerkte*', 'label' => __('Märkte')],
                 ['route' => 'admin.jobtypen', 'match' => 'admin.jobtypen*', 'label' => __('Jobtypen (Zeiterfassung)')],
                 ['route' => 'admin.checklisten', 'match' => 'admin.checklisten*', 'label' => __('Checklisten')],

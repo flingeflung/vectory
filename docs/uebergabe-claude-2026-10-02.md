@@ -55,7 +55,7 @@ Die Dokumentation liegt in `docs/zugriffsstufen-und-rechte.md`.
 - Funktionsgruppen werden zentral bei der Heimat- beziehungsweise zentralen Organisation gepflegt.
 - Eine Matrix steuert ihre Verfügbarkeit bei Kundenorganisationen.
 - Projektbeteiligte Funktionsgruppen stammen nicht mehr aus kundenspezifischen Taxonomien.
-- Die Sichtbarkeit im Projekt ist grundsätzlich von Aufwandsschablone und Workflow unabhängig; der Workflow markiert lediglich fachlich relevante Gruppen.
+- Die Sichtbarkeit im Projekt ist grundsätzlich von Aufwandsprofil und Workflow unabhängig; der Workflow markiert lediglich fachlich relevante Gruppen.
 - Das Flag für Illustrationsfunktionsgruppen bleibt erhalten, weil es den Navigationspunkt Illustrationen steuert.
 - Im Admin-Bereich beschreibt der Hinweis die gültige Organisation und verweist bei Kunden auf die zentrale Konfiguration.
 

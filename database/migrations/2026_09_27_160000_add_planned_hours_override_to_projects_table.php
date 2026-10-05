@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Planstunden vs. Ist im "Zeiten"-Reiter (Ralf, 2026-09-27, siehe Roadmap-
  * Backlog): solange NULL, gilt live der Wert aus der verknüpften
- * Aufwandsschablone (Summe project_template_function_group.planned_hours).
+ * Aufwandsprofil (Summe project_template_function_group.planned_hours).
  * Ein Projektleiter kann die "Vererbung aufbrechen" - ab dann steht hier ein
  * eigener, frei änderbarer Wert, der Vorrang vor der Schablone hat. Einweg:
  * keine Rückkehr zur Schablonen-Verknüpfung vorgesehen. Ändert NIE die
