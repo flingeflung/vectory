@@ -94,7 +94,7 @@ class Project extends Model
             get: fn () => match ($this->verbund_rolle) {
                 1 => __('Hauptprojekt'),
                 2 => __('Unterprojekt'),
-                default => null,
+                default => __('Einzelprojekt'),
             },
         );
     }

@@ -95,7 +95,7 @@ class ProjectFilterCatalog
             ['key' => 'project_person', 'label' => __('Projektbeteiligte Person'), 'type' => 'person_group', 'options' => self::projectPersonOptions($tenantId)],
             ['key' => 'verbund', 'label' => __('Verbund'), 'type' => 'select', 'options' => [
                 'ja' => __('nur Verbundprojekte'),
-                'nein' => __('keine Verbundprojekte'),
+                'nein' => __('nur Einzelprojekte'),
                 'haupt' => __('nur Hauptprojekte'),
             ]],
             ['key' => 'remarks', 'label' => __('Bemerkungen'), 'type' => 'text'],
