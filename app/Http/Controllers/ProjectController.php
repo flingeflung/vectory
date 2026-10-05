@@ -1811,6 +1811,12 @@ class ProjectController extends Controller
                 continue;
             }
 
+            if ($key === 'project_template_id') {
+                $query->where('project_template_id', $value);
+
+                continue;
+            }
+
             if ($key === 'system_model') {
                 $query->whereHas('products', fn (Builder $query) => $query->where('name', 'like', "%{$value}%")->orWhere('product_number', 'like', "%{$value}%"));
 

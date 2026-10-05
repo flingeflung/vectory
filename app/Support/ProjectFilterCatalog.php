@@ -8,6 +8,7 @@ use App\Models\ProductGroup;
 use App\Models\Project;
 use App\Models\ProjectFilterSet;
 use App\Models\ProjectGroup;
+use App\Models\ProjectTemplate;
 use App\Models\ProjectTypeMain;
 use App\Models\User;
 use App\Models\Workflow;
@@ -75,6 +76,7 @@ class ProjectFilterCatalog
                 'leer' => __('nicht gesetzt'),
             ]],
             ['key' => 'workflow_id', 'label' => __('Workflow'), 'type' => 'select', 'options' => self::workflowOptions($tenantId)],
+            ['key' => 'project_template_id', 'label' => __('Aufwandsprofil'), 'type' => 'select', 'options' => self::projectTemplateOptions($tenantId)],
             // Ralf, 2026-09-13: label_editable-System-Feld, aber eine echte
             // n:m-Produktverknüpfung statt Freitext - eigener fester
             // Eintrag statt über die generische attribute:-Schleife unten,
@@ -179,6 +181,22 @@ class ProjectFilterCatalog
             })
             ->sort(fn ($a, $b) => $collator->compare($a['label'], $b['label']))
             ->values()
+            ->all();
+    }
+
+    private static function projectTemplateOptions(int $tenantId): array
+    {
+        return ProjectTemplate::query()
+            ->where('tenant_id', $tenantId)
+            ->orderBy('sort')
+            ->orderBy('name')
+            ->get()
+            ->mapWithKeys(fn (ProjectTemplate $template) => [
+                $template->id => [
+                    'label' => $template->name.(! $template->active ? ' [i]' : ''),
+                    'inactive' => ! $template->active,
+                ],
+            ])
             ->all();
     }
 

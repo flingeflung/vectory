@@ -42,4 +42,24 @@ class ProjectTemplateColumnTest extends TestCase
 
         $this->get(route('projekte'))->assertOk()->assertSee('Aufwandsprofil')->assertSee('Kurzes Print-Profil');
     }
+
+    public function test_the_project_filter_can_select_a_profile(): void
+    {
+        $tenant = Tenant::query()->firstOrFail();
+        $this->actingAs(User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'super_admin']));
+        $make = fn (string $name) => ProjectTemplate::query()->create([
+            'tenant_id' => $tenant->id, 'name' => $name, 'format' => 1, 'reusable_content_share' => 1, 'languages_count' => 1,
+            'product_maturity' => 1, 'product_change_delays' => 1, 'contact_availability' => 1, 'localizer_availability' => 1,
+            'software_share' => 1, 'product_complexity' => 1, 'print_variants_count' => 1, 'images_count' => 1,
+            'duration_value' => 1, 'duration_unit' => 'weeks',
+        ]);
+        $short = $make('Kurzprofil');
+        $long = $make('Langprofil');
+        Project::query()->create(['tenant_id' => $tenant->id, 'source_pn' => '280010', 'title' => 'Projekt Kurz', 'status' => 0, 'project_template_id' => $short->id]);
+        Project::query()->create(['tenant_id' => $tenant->id, 'source_pn' => '280011', 'title' => 'Projekt Lang', 'status' => 0, 'project_template_id' => $long->id]);
+
+        $this->assertContains('project_template_id', array_column(\App\Support\ProjectFilterCatalog::available($tenant->id), 'key'));
+        $this->get(route('projekte', ['filter' => ['project_template_id' => $short->id]]))
+            ->assertOk()->assertSee('Projekt Kurz')->assertDontSee('Projekt Lang');
+    }
 }
