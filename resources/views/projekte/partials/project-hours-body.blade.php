@@ -9,7 +9,7 @@
     Submit-/Klick-Handler dort.
 --}}
 @include('projekte.partials.project-time-tracking-header')
-<div class="flex gap-1 border-b border-gray-200 px-4 pt-2">
+<div data-help-tab="buchungen" class="flex gap-1 border-b border-gray-200 px-4 pt-2">
     {{-- Ralf, 2026-09-28: "Verknüpfte Jobs" jetzt IMMER sichtbar (auch nur lesend
          ohne project.jobload.manage, siehe project-jobs-body.blade.php) - bisher
          war der Reiter ohne project.edit komplett verborgen. --}}

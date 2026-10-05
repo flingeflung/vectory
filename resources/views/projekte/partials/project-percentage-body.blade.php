@@ -15,7 +15,7 @@
     dieselbe Funktion - Ziehen und Tippen sind gleichwertig.
 --}}
 @include('projekte.partials.project-time-tracking-header')
-<div class="flex gap-1 border-b border-gray-200 px-4 pt-2">
+<div data-help-tab="aufteilung" class="flex gap-1 border-b border-gray-200 px-4 pt-2">
     <button
         type="button"
         onclick="window.switchProjectTimeTrackingTab({{ $project->id }}, 'jobs')"

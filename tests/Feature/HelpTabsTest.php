@@ -185,4 +185,16 @@ class HelpTabsTest extends TestCase
         $this->postJson(route('admin.hilfeseiten.metazustand'), ['id' => $one->id, 'open' => true])->assertOk();
         $this->assertSame([], \App\Models\UserPreference::configFor($user->id, \App\Models\UserPreference::HELP_TREE)['meta_collapsed']);
     }
+
+    public function test_the_time_tracking_dialog_tabs_match_the_config(): void
+    {
+        $marked = collect(['project-hours-body', 'project-jobs-body', 'project-percentage-body'])
+            ->map(function (string $file) {
+                preg_match('/data-help-tab="([^"]+)"/', file_get_contents(resource_path("views/projekte/partials/{$file}.blade.php")), $match);
+
+                return $match[1] ?? null;
+            })->sort()->values()->all();
+
+        $this->assertSame(collect(array_keys(config('help-tabs.project-time-tracking')))->sort()->values()->all(), $marked);
+    }
 }

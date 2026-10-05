@@ -23,4 +23,10 @@ return [
         'zeiten.personen' => 'Zeiten › Personen & Tage',
         'zeiten.gesamt' => 'Zeiten › Zeitverlauf',
     ],
+    // Dialog "Zeiterfassung" am Projekt (Stunden buchen); die Reiter sind einzeln nachgeladene Fragmente
+    'project-time-tracking' => [
+        'jobs' => 'Verknüpfte Jobs',
+        'aufteilung' => 'Prozentuale Aufteilung',
+        'buchungen' => 'Buchungen',
+    ],
 ];
