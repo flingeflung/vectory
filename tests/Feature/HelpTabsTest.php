@@ -155,4 +155,13 @@ class HelpTabsTest extends TestCase
         $this->assertStringContainsString('mehrfach vor', $html);
         $this->assertStringContainsString('Keine Hilfeseite mit dieser Nummer', $html);
     }
+
+    public function test_code_examples_in_help_text_stay_plain_text(): void
+    {
+        $this->actingAs(User::factory()->create(['tenant_id' => Tenant::query()->firstOrFail()->id, 'role' => 'super_admin']));
+        $html = (new HelpArticleTranslation(['locale' => 'de', 'title' => 'T', 'body' => 'Schreiben Sie `[[42]]` oder `((Grundlast))`.']))->bodyHtml();
+
+        $this->assertStringContainsString('<code>[[42]]</code>', $html);
+        $this->assertStringContainsString('<code>((Grundlast))</code>', $html);
+    }
 }

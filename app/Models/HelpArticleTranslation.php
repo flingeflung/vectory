@@ -87,6 +87,14 @@ class HelpArticleTranslation extends Model
 
         $html = (string) Str::markdown($body, ['html_input' => 'strip']);
 
+        // Codebeispiele ("`[[42]]`", "`((Begriff))`") sollen als Text stehen bleiben und nicht zu Links werden.
+        $codeBlocks = [];
+        $html = (string) preg_replace_callback('/<code>.*?<\/code>/s', function (array $match) use (&$codeBlocks): string {
+            $codeBlocks[] = $match[0];
+
+            return '@@CODE'.(count($codeBlocks) - 1).'@@';
+        }, $html);
+
         $html = (string) preg_replace(
             self::BUTTON_QUOTE_PATTERN,
             '<span class="'.self::BUTTON_QUOTE_CLASSES.'">$1</span>',
@@ -112,7 +120,7 @@ class HelpArticleTranslation extends Model
         // ((Begriff)) bzw. ((Begriff|Anzeigetext)) aus dem Begriffsverzeichnis
         $html = (string) preg_replace_callback('/\(\(([^()|<>]+?)(?:\|([^()<>]+?))?\)\)/u', fn (array $match): string => GlossaryTerm::link($match[1], $match[2] ?? null), $html);
 
-        return (string) preg_replace_callback(self::ARTICLE_LINK_PATTERN, function (array $match): string {
+        $html = (string) preg_replace_callback(self::ARTICLE_LINK_PATTERN, function (array $match): string {
             // "[[42]]" / "[[42|Linktext]]" (Hilfe-Nr. der Zielseite, Ralf, 2026-10-05) oder wie bisher "[[Titel]]" / "[[Titel|Linktext]]"
             [$reference, $alias] = array_pad(explode('|', $match[1], 2), 2, null);
             $reference = trim($reference);
@@ -147,6 +155,8 @@ class HelpArticleTranslation extends Model
 
             return '<a href="#" data-help-key="'.e($targets->first()->article->key).'">'.e($alias ?? $reference).'</a>';
         }, $html);
+
+        return (string) preg_replace_callback('/@@CODE(\d+)@@/', fn (array $match): string => $codeBlocks[(int) $match[1]], $html);
     }
 
     private function imageBaseUrl(): string
