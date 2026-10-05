@@ -218,19 +218,39 @@
                                         else if (data.action === 'prefix') this.prefixLines(data.a1, false);
                                         else if (data.action === 'numbered') this.prefixLines('', true);
                                         else if (data.action === 'link') this.wrapSel('[', '](https://)', data.part);
-                                        else if (data.action === 'page') this.open();
+                                        else if (data.action === 'routelink') this.linkSnippet('[', '](route:admin.kunden)', data.a1, data.part);
+                                    else if (data.action === 'aliaslink') this.linkSnippet('[[42|', ']]', data.a1, data.part);
+                                    else if (data.action === 'page') this.open();
                                     else if (data.action === 'glossary') this.openTerm();
                                     else this.insertSnippet(data.a1, data.part);
                                     },
                                     insertSnippet(text, part) {
                                         const area = this.$refs.body;
-                                        const start = area.selectionStart ?? area.value.length;
-                                        const end = area.selectionEnd ?? start;
-                                        area.setRangeText(text, start, end, 'end');
+                                        const position = area.selectionEnd ?? area.value.length;
+                                        area.setRangeText(text, position, position, 'end');
                                         const offset = part ? text.indexOf(part) : -1;
                                         if (offset >= 0) {
-                                            area.setSelectionRange(start + offset, start + offset + part.length);
+                                            area.setSelectionRange(position + offset, position + offset + part.length);
                                         }
+                                        area.dispatchEvent(new Event('input', { bubbles: true }));
+                                        area.focus();
+                                    },
+                                    linkSnippet(prefix, suffix, example, part) {
+                                        const area = this.$refs.body;
+                                        const start = area.selectionStart ?? area.value.length;
+                                        const end = area.selectionEnd ?? start;
+                                        const selected = area.value.slice(start, end);
+                                        const trailing = selected.match(/\s+$/)?.[0] ?? '';
+                                        const core = selected.slice(0, selected.length - trailing.length);
+                                        if (core === '') {
+                                            this.insertSnippet(example, part);
+                                            return;
+                                        }
+                                        const text = prefix + core + suffix;
+                                        area.setRangeText(text + trailing, start, end, 'end');
+                                        const inPrefix = prefix.indexOf(part);
+                                        const offset = inPrefix >= 0 ? inPrefix : text.indexOf(part, prefix.length + core.length);
+                                        area.setSelectionRange(start + (offset >= 0 ? offset : 0), start + (offset >= 0 ? offset : 0) + part.length);
                                         area.dispatchEvent(new Event('input', { bubbles: true }));
                                         area.focus();
                                     },
@@ -281,10 +301,10 @@
                                     {!! __('Bild einfügen: Datei nach public/images/hilfe/ legen, dann im Text z. B. :placeholder schreiben - erscheint als eigener Block, Folgetext kommt automatisch darunter. Empfohlene Bildgröße: max. ca. 1200 px breit, unter 500 KB (wird angezeigt verkleinert, bei Klick in Originalgröße).', ['placeholder' => view('components.help-markup', ['label' => '[screenshot_dashboard1.png]', 'action' => 'insert', 'a1' => '[screenshot_dashboard1.png]', 'part' => 'screenshot_dashboard1.png'])->render()]) !!}
                                 </p>
                                 <p class="mt-1 text-xs text-gray-500">
-                                    {!! __('Zu einer anderen Hilfeseite verlinken: :placeholder schreiben (Hilfe-Nr. der Zielseite, steht dort oben im Editor), für einen eigenen Linktext :alias. Der Klick springt direkt dorthin. Ältere Verweise mit dem Titel funktionieren weiter, solange der Titel nur einmal vorkommt.', ['placeholder' => view('components.help-markup', ['label' => '[[42]]', 'action' => 'insert', 'a1' => '[[42]]', 'part' => '42'])->render(), 'alias' => view('components.help-markup', ['label' => '[[42|siehe dort]]', 'action' => 'insert', 'a1' => '[[42|siehe dort]]', 'part' => '42'])->render()]) !!}
+                                    {!! __('Zu einer anderen Hilfeseite verlinken: :placeholder schreiben (Hilfe-Nr. der Zielseite, steht dort oben im Editor), für einen eigenen Linktext :alias. Der Klick springt direkt dorthin. Ältere Verweise mit dem Titel funktionieren weiter, solange der Titel nur einmal vorkommt.', ['placeholder' => view('components.help-markup', ['label' => '[[42]]', 'action' => 'insert', 'a1' => '[[42]]', 'part' => '42'])->render(), 'alias' => view('components.help-markup', ['label' => '[[42|siehe dort]]', 'action' => 'aliaslink', 'a1' => '[[42|siehe dort]]', 'part' => '42'])->render()]) !!}
                                 </p>
                                 <p class="mt-1 text-xs text-gray-500">
-                                    {!! __('Zu einer echten Seite im Tool verlinken: :placeholder - der Routenname ist derselbe technische Wert, den dieses Panel zeigt, wenn für eine Seite noch keine Hilfeseite existiert. Kein fest eingetippter Pfad, funktioniert dadurch in jeder Umgebung.', ['placeholder' => view('components.help-markup', ['label' => '[Zur Kundenverwaltung](route:admin.kunden)', 'action' => 'insert', 'a1' => '[Zur Kundenverwaltung](route:admin.kunden)', 'part' => 'admin.kunden'])->render()]) !!}
+                                    {!! __('Zu einer echten Seite im Tool verlinken: :placeholder - der Routenname ist derselbe technische Wert, den dieses Panel zeigt, wenn für eine Seite noch keine Hilfeseite existiert. Kein fest eingetippter Pfad, funktioniert dadurch in jeder Umgebung.', ['placeholder' => view('components.help-markup', ['label' => '[Zur Kundenverwaltung](route:admin.kunden)', 'action' => 'routelink', 'a1' => '[Zur Kundenverwaltung](route:admin.kunden)', 'part' => 'admin.kunden'])->render()]) !!}
                                 </p>
                             </div>
                         </div>
