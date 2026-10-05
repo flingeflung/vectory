@@ -7,7 +7,7 @@
 <div class="mt-4 border-t border-gray-100 pt-3" x-data="{ on: {{ \Illuminate\Support\Js::from((bool) ($template->use_characteristics ?? false)) }} }">
     <label class="inline-flex items-center gap-2 text-xs font-medium text-gray-700">
         <input type="checkbox" name="use_characteristics" value="1" x-model="on" class="rounded border-gray-300">
-        {{ __('Merkmale dieser Schablone erfassen') }}
+        {{ __('Merkmale dieses Aufwandsprofils erfassen') }}
     </label>
     <p x-show="!on" class="mt-0.5 text-xs text-gray-400">{{ __('Optional: Format, Komplexität, Entwicklungsstand u. Ä. beschreiben ein typisches Projekt. Für Verwaltungs- und andere Projekte meist nicht notwendig.') }}</p>
 

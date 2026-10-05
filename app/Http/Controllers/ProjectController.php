@@ -802,11 +802,11 @@ class ProjectController extends Controller
             $project->functionGroupHours()->sync([]);
 
             Activity::log($project, ActivityType::PlannedHoursChanged, $project->project_template_id
-                ? __('Planstunden wieder mit der Schablone „:template" verknüpft (eigene Werte, :hours h, verworfen).', [
+                ? __('Planstunden wieder mit dem Aufwandsprofil „:template" verknüpft (eigene Werte, :hours h, verworfen).', [
                     'template' => $project->projectTemplate->name,
                     'hours' => number_format($discarded ?? 0, 2, ',', '.'),
                 ])
-                : __('Eigene Planstunden (:hours h) verworfen, keine Schablone mehr zugewiesen.', [
+                : __('Eigene Planstunden (:hours h) verworfen, kein Aufwandsprofil mehr zugewiesen.', [
                     'hours' => number_format($discarded ?? 0, 2, ',', '.'),
                 ]));
         }
@@ -1625,7 +1625,7 @@ class ProjectController extends Controller
         $project->functionGroupHours()->sync($syncData);
 
         Activity::log($project, ActivityType::PlannedHoursChanged, __(
-            'Planstunden von der Schablone „:template" gelöst (:hours h übernommen) - ab jetzt unabhängig je Funktionsgruppe änderbar.',
+            'Planstunden vom Aufwandsprofil „:template" gelöst (:hours h übernommen) - ab jetzt unabhängig je Funktionsgruppe änderbar.',
             ['template' => $templateName, 'hours' => number_format($previous ?? 0, 2, ',', '.')]
         ));
 

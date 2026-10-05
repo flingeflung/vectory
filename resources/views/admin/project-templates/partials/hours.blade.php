@@ -3,19 +3,19 @@
     Haupt-Formulars der Schablone (ein Speichern) und direkt unter den Hauptfeldern, weil sie das
     sind, was ein Projekt tatsächlich von seiner Schablone übernimmt. Welche Funktionsgruppen hier
     stehen, bestimmt der gekoppelte Workflow (ProjectTemplate::relevantFunctionGroups()); eine
-    Sammelprojekt-Schablone zeigt den vollen Katalog. Erwartet $template und die Alpine-Variable
+    Sammelprojekt-Aufwandsprofil zeigt den vollen Katalog. Erwartet $template und die Alpine-Variable
     "hours" im umgebenden Formular.
 --}}
 @php($relevantFunctionGroups = $template->relevantFunctionGroups())
 <div class="mt-4 border-t border-gray-100 pt-3">
     @if (! $template->workflow_id && ! $template->unrestricted_function_groups)
-        <p class="text-xs text-gray-400">{{ __('Erst einen Workflow koppeln, um Stunden je Funktionsgruppe zu planen (oder als Sammelprojekt-Schablone markieren).') }}</p>
+        <p class="text-xs text-gray-400">{{ __('Erst einen Workflow koppeln, um die Planstunden je Funktionsgruppe festzulegen (oder als Sammelprojekt-Aufwandsprofil markieren).') }}</p>
     @elseif ($relevantFunctionGroups->isEmpty())
         <p class="text-xs text-gray-400">{{ __('Der gekoppelte Workflow hat noch keinen Schritten Funktionsgruppen zugeordnet.') }}</p>
     @else
         <input type="hidden" name="hours_present" value="1">
         <div class="flex items-center justify-between">
-            <p class="text-sm font-medium text-gray-800">{{ __('Stunden je Funktionsgruppe') }}</p>
+            <p class="text-sm font-medium text-gray-800">{{ __('Planstunden je Funktionsgruppe') }}</p>
             <p class="text-xs text-gray-500">
                 {{ __('Summe') }}: <span class="font-medium" x-text="Object.values(hours).reduce((sum, v) => sum + (parseFloat(v) || 0), 0).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })"></span> h
             </p>

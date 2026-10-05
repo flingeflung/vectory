@@ -321,7 +321,7 @@ class MultichangeFieldCatalog
             'type' => 'select',
             'required' => true,
             'options' => $templates,
-            'hint' => __('Die Schablone wird den Projekten nur zugeordnet, es werden keine Werte aus der Schablone in die Projekte übernommen.'),
+            'hint' => __('Das Aufwandsprofil wird den Projekten nur zugeordnet, es werden keine Werte aus dem Aufwandsprofil in die Projekte übernommen.'),
         ]];
     }
 

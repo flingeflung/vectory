@@ -48,7 +48,7 @@
 
     @if ($template->functionGroups->isNotEmpty())
         <div class="border-t border-gray-100 pt-2">
-            <div class="text-xs font-medium text-gray-600">{{ __('Stunden je Funktionsgruppe') }}</div>
+            <div class="text-xs font-medium text-gray-600">{{ __('Planstunden je Funktionsgruppe') }}</div>
             <div class="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-3">
                 @foreach ($template->functionGroups as $fg)
                     <div class="flex items-center justify-between gap-1 rounded-md border border-gray-200 px-1.5 py-1 text-xs text-gray-600">

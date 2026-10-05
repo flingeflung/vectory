@@ -88,7 +88,7 @@
             >
                 @csrf
                 @include('admin.project-templates.partials.fields-main', ['template' => null])
-                <p class="mt-3 text-xs text-gray-400">{{ __('Die Stunden je Funktionsgruppe tragen Sie nach dem Speichern ein, sobald ein Workflow gekoppelt ist.') }}</p>
+                <p class="mt-3 text-xs text-gray-400">{{ __('Die Planstunden je Funktionsgruppe tragen Sie nach dem Speichern ein, sobald ein Workflow gekoppelt ist.') }}</p>
                 @include('admin.project-templates.partials.fields-characteristics', ['template' => null])
                 @include('admin.project-templates.partials.fields-remarks', ['template' => null])
                 <div class="mt-3 flex justify-end gap-2">
@@ -113,8 +113,8 @@
                     <button
                         type="button"
                         @click="window.deleteWithConfirm($refs.duplicateForm, {
-                            title: {{ \Illuminate\Support\Js::from(__('Schablone klonen')) }},
-                            message: {{ \Illuminate\Support\Js::from(__('Legt eine vollständige Kopie dieser Schablone (inkl. Workflow-Kopplung und Stunden je Funktionsgruppe) an. Die Kopie startet inaktiv.')) }},
+                            title: {{ \Illuminate\Support\Js::from(__('Aufwandsprofil klonen')) }},
+                            message: {{ \Illuminate\Support\Js::from(__('Legt eine vollständige Kopie dieses Aufwandsprofils (inkl. Workflow-Kopplung und Planstunden je Funktionsgruppe) an. Die Kopie startet inaktiv.')) }},
                             confirmLabel: {{ \Illuminate\Support\Js::from(__('Klonen')) }},
                         })"
                         class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
@@ -166,7 +166,7 @@
         @else
             <div class="shrink-0 border-b border-gray-100 p-3">
                 <div class="text-sm font-medium text-gray-900">{{ __('Aufwandsprofile') }}</div>
-                <p class="text-xs text-gray-400">{{ __('Wähle links eine Schablone aus, um sie zu bearbeiten, oder lege eine neue an.') }}</p>
+                <p class="text-xs text-gray-400">{{ __('Wählen Sie links ein Aufwandsprofil aus, um es zu bearbeiten, oder legen Sie ein neues an.') }}</p>
             </div>
         @endif
     </div>

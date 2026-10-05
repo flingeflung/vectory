@@ -83,7 +83,7 @@ class ProjectTemplate extends Model
      * ein WF gekoppelt werden, erst dadurch ergeben sich die Fktgrps").
      * Erwartet workflow.steps.functionGroups vorgeladen (siehe Controller).
      *
-     * Ausnahme (Ralf, 2026-09-28): eine Sammelprojekt-Schablone (Plan fürs
+     * Ausnahme (Ralf, 2026-09-28): ein Sammelprojekt-Aufwandsprofil (Plan fürs
      * Hauptprojekt eines Verbunds mit Unterprojekten unterschiedlicher
      * Workflows) lässt sich nicht sinnvoll an EINEN Workflow koppeln, ohne
      * sich dadurch Fktgrp anderer im Verbund vorkommender Workflows zu

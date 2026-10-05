@@ -101,7 +101,7 @@
                                  Symbol, Schablonen-Wert bleibt neutral grau. --}}
                             <td class="px-3 py-1 whitespace-nowrap text-right tabular-nums {{ $row['plan'] === null ? 'text-gray-400' : ($row['planLinked'] ? 'text-gray-500' : 'text-amber-700') }}">
                                 @if ($row['plan'] !== null && ! $row['planLinked'])
-                                    <span title="{{ __('Eigener Wert - nicht mehr mit der Schablone verbunden') }}" class="mr-0.5 inline-block h-1.5 w-1.5 rounded-full bg-amber-500 align-middle"></span>
+                                    <span title="{{ __('Eigener Wert - nicht mehr mit dem Aufwandsprofil verbunden') }}" class="mr-0.5 inline-block h-1.5 w-1.5 rounded-full bg-amber-500 align-middle"></span>
                                 @endif
                                 {{ $row['plan'] !== null ? $fmt($row['plan']) : '–' }}
                             </td>
@@ -123,7 +123,7 @@
             @if ($zeiten['hasDetachedProjectPlan'])
                 <p class="mb-4 -mt-4 flex items-center gap-1 text-[11px] text-gray-400">
                     <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
-                    {{ __('Eigener Wert, nicht mehr mit der Schablone verbunden') }}
+                    {{ __('Eigener Wert, nicht mehr mit dem Aufwandsprofil verbunden') }}
                 </p>
             @endif
         @endif

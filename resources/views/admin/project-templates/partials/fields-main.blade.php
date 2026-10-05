@@ -17,7 +17,7 @@
     <div>
         <span class="flex items-center gap-1">
             <label class="block text-xs text-gray-500">{{ __('Workflow') }}</label>
-            <span class="shrink-0 text-gray-400" title="{{ __('Bestimmt die für diese Schablone verfügbaren Funktionsgruppen: Sie ergeben sich aus den Schritten des gewählten Workflows. Ohne Workflow sind keine Funktionsgruppen zuweisbar. Ausnahme: Bei einer Sammelprojekt-Schablone (siehe Häkchen rechts) ist dieses Feld rein informativ.') }}">
+            <span class="shrink-0 text-gray-400" title="{{ __('Bestimmt die für dieses Aufwandsprofil verfügbaren Funktionsgruppen: Sie ergeben sich aus den Schritten des gewählten Workflows. Ohne Workflow sind keine Funktionsgruppen zuweisbar. Ausnahme: Bei einer Sammelprojekt-Aufwandsprofil (siehe Häkchen rechts) ist dieses Feld rein informativ.') }}">
                 <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             </span>
         </span>
@@ -50,7 +50,7 @@
                 <input type="checkbox" name="unrestricted_function_groups" value="1" @checked($template->unrestricted_function_groups ?? false) class="rounded border-gray-300">
                 {{ __('Sammelprojekt') }}
             </label>
-            <span class="text-gray-400" title="{{ __('Für Schablonen, die ein Hauptprojekt mit Unterprojekten unterschiedlicher Workflows abdecken: Funktionsgruppen sind dann frei aus dem ganzen Katalog wählbar, unabhängig von einer Workflow-Kopplung.') }}">
+            <span class="text-gray-400" title="{{ __('Für Aufwandsprofile, die ein Hauptprojekt mit Unterprojekten unterschiedlicher Workflows abdecken: Funktionsgruppen sind dann frei aus dem ganzen Katalog wählbar, unabhängig von einer Workflow-Kopplung.') }}">
                 <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             </span>
         </span>

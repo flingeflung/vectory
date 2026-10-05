@@ -58,7 +58,7 @@
                 return;
             }
             if (! await window.confirmDialog({
-                title: {{ \Illuminate\Support\Js::from(__('Schablonen-Verbindung wiederherstellen?')) }},
+                title: {{ \Illuminate\Support\Js::from(__('Aufwandsprofil-Verbindung wiederherstellen?')) }},
                 message: {{ \Illuminate\Support\Js::from(__('Wenn Sie fortfahren, kann diesem Projekt wieder ein Aufwandsprofil zugewiesen werden. Beim nächsten Speichern werden dabei die eigenen, geänderten Planstunden je Funktionsgruppe überschrieben.')) }},
                 confirmLabel: {{ \Illuminate\Support\Js::from(__('Fortfahren')) }},
                 cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
@@ -91,7 +91,7 @@
             x-show="templateId"
             x-cloak
             @click="window.openProjectTemplateInfo(templateId)"
-            :title="__('Merkmale der gewählten Schablone ansehen')"
+            :title="__('Merkmale des gewählten Aufwandsprofils ansehen')"
         />
         {{-- Schloss-Icon nur relevant, wenn es überhaupt eigene (gelöste) Planstunden gibt -
              als <template x-if>, damit es auch ohne Neuladen erscheinen kann (siehe oben). --}}
@@ -101,7 +101,7 @@
                 @click="toggleLock()"
                 :class="locked ? 'bg-gray-100 text-gray-400 hover:bg-gray-200' : 'bg-indigo-600 text-white'"
                 class="flex h-4 w-4 shrink-0 items-center justify-center rounded"
-                :title="locked ? {{ \Illuminate\Support\Js::from(__('Von der Schablone gelöst - Auswahl gesperrt. Klicken zum Aufschließen.')) }} : {{ \Illuminate\Support\Js::from(__('Aufgeschlossen - beim Speichern wird die Schablone wieder verknüpft.')) }}"
+                :title="locked ? {{ \Illuminate\Support\Js::from(__('Vom Aufwandsprofil gelöst - Auswahl gesperrt. Klicken zum Aufschließen.')) }} : {{ \Illuminate\Support\Js::from(__('Aufgeschlossen - beim Speichern wird das Aufwandsprofil wieder verknüpft.')) }}"
             >
                 <svg x-show="locked" class="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 2a4 4 0 00-4 4v2H5a1 1 0 00-1 1v8a1 1 0 001 1h10a1 1 0 001-1V9a1 1 0 00-1-1h-1V6a4 4 0 00-4-4zm2 6V6a2 2 0 10-4 0v2h4z" clip-rule="evenodd" />

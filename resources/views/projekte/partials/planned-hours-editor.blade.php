@@ -10,8 +10,8 @@
         x-data="{
             async loesen() {
                 if (! await window.confirmDialog({
-                    title: {{ Illuminate\Support\Js::from(__('Verbindung zur Schablone lösen?')) }},
-                    message: {{ Illuminate\Support\Js::from(__('Die Verbindung zur Schablone wird für dieses Projekt endgültig gelöst - eine spätere Rückkehr zur Schablonen-Verknüpfung ist nicht mehr möglich. Die Schablone selbst bleibt unverändert. Die aktuelle Aufschlüsselung je Funktionsgruppe wird als Startpunkt übernommen und bleibt danach unabhängig änderbar.')) }},
+                    title: {{ Illuminate\Support\Js::from(__('Verbindung zum Aufwandsprofil lösen?')) }},
+                    message: {{ Illuminate\Support\Js::from(__('Die Verbindung zum Aufwandsprofil wird für dieses Projekt endgültig gelöst - eine spätere Rückkehr zur Aufwandsprofil-Verknüpfung ist nicht mehr möglich. Das Aufwandsprofil selbst bleibt unverändert. Die aktuelle Aufschlüsselung je Funktionsgruppe wird als Startpunkt übernommen und bleibt danach unabhängig änderbar.')) }},
                     confirmLabel: {{ Illuminate\Support\Js::from(__('Lösen')) }},
                     cancelLabel: {{ Illuminate\Support\Js::from(__('Abbrechen')) }},
                 })) { return; }
@@ -37,7 +37,7 @@
         <div class="flex flex-wrap items-center gap-2">
             <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('Planstunden dieses Projekts') }}</span>
             <span class="font-semibold tabular-nums">{{ $fmt($zeiten['ownPlan']) }} h</span>
-            <span class="text-gray-400">{{ __('(aus Schablone „:name")', ['name' => $zeiten['ownTemplateName']]) }}</span>
+            <span class="text-gray-400">{{ __('(aus Aufwandsprofil „:name")', ['name' => $zeiten['ownTemplateName']]) }}</span>
             @if ($canManagePlanning)
             <button
                 type="button"
@@ -95,7 +95,7 @@
              Tabelle auch hier auf der Kopfzeile selbst - "gelöst" (dieser Block) amber,
              noch verknüpft (Block oben) bleibt neutral grau. --}}
         <div class="flex items-center justify-between">
-            <p class="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-amber-700" title="{{ __('Eigener Wert - nicht mehr mit der Schablone verbunden') }}">
+            <p class="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-amber-700" title="{{ __('Eigener Wert - nicht mehr mit dem Aufwandsprofil verbunden') }}">
                 <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
                 {{ __('Planstunden je Funktionsgruppe') }}
             </p>
