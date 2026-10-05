@@ -27,7 +27,7 @@
             <div x-sort:item="{{ $node->id }}">
                 <div @contextmenu.prevent="$store.helpTree.openMenu($event, {{ $node->id }}, {{ $node->depth() }})" class="group flex items-center gap-0.5 rounded {{ $selected?->id === $node->id ? 'bg-indigo-50' : 'hover:bg-gray-50' }}">
                     @if ($node->children->isNotEmpty())
-                        <button type="button" @click="$store.helpTree.toggle({{ $node->id }})" class="w-4 shrink-0 text-xs text-gray-400 hover:text-gray-700" :title="$store.helpTree.isCollapsed({{ $node->id }}) ? @js(__('Aufklappen')) : @js(__('Zuklappen'))" x-text="$store.helpTree.isCollapsed({{ $node->id }}) ? '▸' : '▾'"></button>
+                        <button type="button" @click="$store.helpTree.toggle({{ $node->id }})" class="flex w-4 shrink-0 items-center justify-center text-gray-400 hover:text-gray-600" :title="$store.helpTree.isCollapsed({{ $node->id }}) ? @js(__('Aufklappen')) : @js(__('Zuklappen'))"><svg class="h-3 w-3 transition-transform" :class="{ '-rotate-90': $store.helpTree.isCollapsed({{ $node->id }}) }" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg></button>
                     @else
                         <span class="w-4 shrink-0"></span>
                     @endif

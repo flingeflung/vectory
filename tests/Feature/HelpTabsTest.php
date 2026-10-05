@@ -164,4 +164,25 @@ class HelpTabsTest extends TestCase
         $this->assertStringContainsString('<code>[[42]]</code>', $html);
         $this->assertStringContainsString('<code>((Grundlast))</code>', $html);
     }
+
+    public function test_the_collapsed_state_of_the_properties_is_remembered_per_page_and_user(): void
+    {
+        $user = User::factory()->create(['tenant_id' => Tenant::query()->firstOrFail()->id, 'role' => 'super_admin']);
+        $this->actingAs($user);
+        $one = $this->article('eins', [], 'x');
+        $two = $this->article('zwei', [], 'y');
+
+        $this->postJson(route('admin.hilfeseiten.metazustand'), ['id' => $one->id, 'open' => false])->assertOk();
+        $this->postJson(route('admin.hilfeseiten.baumzustand'), ['collapsed' => [$two->id]])->assertOk();
+
+        $config = \App\Models\UserPreference::configFor($user->id, \App\Models\UserPreference::HELP_TREE);
+        $this->assertSame([$one->id], $config['meta_collapsed']);
+        $this->assertSame([$two->id], $config['collapsed']);
+
+        $this->get(route('admin.hilfeseiten', ['article' => $one->id]))->assertOk()->assertSee('metaOpen: false', false);
+        $this->get(route('admin.hilfeseiten', ['article' => $two->id]))->assertOk()->assertSee('metaOpen: true', false);
+
+        $this->postJson(route('admin.hilfeseiten.metazustand'), ['id' => $one->id, 'open' => true])->assertOk();
+        $this->assertSame([], \App\Models\UserPreference::configFor($user->id, \App\Models\UserPreference::HELP_TREE)['meta_collapsed']);
+    }
 }

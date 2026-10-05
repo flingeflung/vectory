@@ -51,6 +51,7 @@ class HelpArticleController extends Controller
         return view('admin.help-articles.index', [
             'tree' => $tree,
             'pickerPages' => $pickerPages,
+            'metaCollapsed' => array_map('intval', UserPreference::configFor((int) $request->user()->id, UserPreference::HELP_TREE)['meta_collapsed'] ?? []),
             'collapsed' => $collapsed,
             'selected' => $selected,
             'locales' => HelpArticle::AVAILABLE_LOCALES,
@@ -110,7 +111,23 @@ class HelpArticleController extends Controller
     public function saveTreeState(Request $request): \Illuminate\Http\JsonResponse
     {
         $ids = collect($request->array('collapsed'))->map(fn ($id) => (int) $id)->filter()->unique()->values()->all();
-        UserPreference::persist((int) $request->user()->id, UserPreference::HELP_TREE, ['collapsed' => $ids]);
+        $userId = (int) $request->user()->id;
+        UserPreference::persist($userId, UserPreference::HELP_TREE, ['collapsed' => $ids] + UserPreference::configFor($userId, UserPreference::HELP_TREE));
+
+        return response()->json(['ok' => true]);
+    }
+
+    /** Merkt je Hilfeseite und Benutzer, ob der Kopfbereich (Eigenschaften) zugeklappt ist. */
+    public function saveMetaState(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $userId = (int) $request->user()->id;
+        $config = UserPreference::configFor($userId, UserPreference::HELP_TREE);
+        $collapsed = array_map('intval', $config['meta_collapsed'] ?? []);
+        $id = $request->integer('id');
+        $collapsed = $request->boolean('open')
+            ? array_values(array_diff($collapsed, [$id]))
+            : array_values(array_unique([...$collapsed, $id]));
+        UserPreference::persist($userId, UserPreference::HELP_TREE, ['meta_collapsed' => $collapsed] + $config);
 
         return response()->json(['ok' => true]);
     }
