@@ -38,10 +38,16 @@
         @endif
         @php($ownKey = ($dialogId ?? '') !== '' ? ($helpKey ?? $dialogId) : ($routeName ?? ''))
         @if (($canManageHelp ?? false) && $ownKey !== '')
-            <div class="mb-2 flex items-center gap-1 rounded bg-gray-50 px-1.5 py-1 text-xs text-gray-500" title="{{ __('Schlüssel dieses Fensters bzw. Reiters oder Name dieser Seite, für "Seiten (Routennamen)" in der Hilfeverwaltung') }}">
-                <span class="shrink-0">{{ ($dialogId ?? '') !== '' ? __('Schlüssel:') : __('Seite:') }}</span>
-                <code class="flex-1 select-all font-mono text-gray-800">{{ $ownKey }}</code>
-                <x-copy-button :text="$ownKey" />
+            <div class="mb-2 rounded bg-gray-50 px-1.5 py-1 text-xs text-gray-500">
+                <div class="flex items-center gap-1" title="{{ __('Schlüssel dieses Fensters bzw. Reiters oder Name dieser Seite, für "Seiten (Routennamen)" in der Hilfeverwaltung') }}">
+                    <span class="shrink-0">{{ ($dialogId ?? '') !== '' ? __('Schlüssel:') : __('Seite:') }}</span>
+                    <code class="flex-1 select-all font-mono text-gray-800">{{ $ownKey }}</code>
+                    <x-copy-button :text="$ownKey" />
+                </div>
+                <div class="mt-0.5" title="{{ __('Nur für den Super-Admin sichtbar. Gepflegt in config/help-access.php; die tatsächliche Prüfung steht im Code.') }}">
+                    <span class="font-medium">{{ __('Hauptseite sichtbar für:') }}</span>
+                    {{ $accessInfo ?? __('noch nicht hinterlegt') }}
+                </div>
             </div>
         @endif
         @php($crumbs = array_values(array_filter($article->ancestors(), fn ($crumb) => $crumb->isVisibleTo(auth()->user()))))

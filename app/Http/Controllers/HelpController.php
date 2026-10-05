@@ -77,6 +77,7 @@ class HelpController extends Controller
             'helpKey' => HelpArticle::dialogKeys($dialogId, $tab)[0] ?? $dialogId,
             'dialogHasArticle' => $dialogArticle !== null,
             'canManageHelp' => $request->user()?->isSuperAdmin(),
+            'accessInfo' => $request->user()?->isSuperAdmin() ? \App\Support\HelpAccess::describe(HelpArticle::dialogKeys($dialogId, $tab), $routeName) : null,
         ]);
     }
 

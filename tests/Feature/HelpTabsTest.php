@@ -197,4 +197,16 @@ class HelpTabsTest extends TestCase
 
         $this->assertSame(collect(array_keys(config('help-tabs.project-time-tracking')))->sort()->values()->all(), $marked);
     }
+
+    public function test_the_super_admin_sees_who_can_open_the_main_page(): void
+    {
+        $this->actingAs(User::factory()->create(['tenant_id' => Tenant::query()->firstOrFail()->id, 'role' => 'super_admin']));
+        $this->article('stunden', ['D-78FH#buchungen'], 'x');
+        $this->article('regeln', ['admin.rechte'], 'y');
+
+        $this->get(route('hilfe', ['route' => 'projekte', 'dialog' => 'D-78FH', 'tab' => 'buchungen']))
+            ->assertOk()->assertSee('Hauptseite sichtbar für:')->assertSee('nur ihre eigenen Buchungen', false);
+        $this->get(route('hilfe', ['route' => 'admin.rechte']))
+            ->assertOk()->assertSee('Administratoren (Organisations-, Zentral- und Super-Admin)');
+    }
 }
