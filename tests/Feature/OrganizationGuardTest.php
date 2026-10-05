@@ -74,7 +74,7 @@ class OrganizationGuardTest extends TestCase
         'app/Http/Controllers/MultichangeController.php::project_people' => 4,
         'app/Http/Controllers/PlanningController.php::person_tenant' => 1,
         'app/Http/Controllers/PlanningController.php::person_weekly_hours' => 1,
-        'app/Http/Controllers/ProjectController.php::job_hours' => 6,
+        'app/Http/Controllers/ProjectController.php::job_hours' => 7,
         'app/Http/Controllers/ProjectController.php::people' => 1,
         'app/Http/Controllers/ProjectController.php::person_tenant' => 1,
         'app/Http/Controllers/ProjectController.php::project_job_types' => 1,

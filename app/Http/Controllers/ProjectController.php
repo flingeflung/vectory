@@ -1430,9 +1430,12 @@ class ProjectController extends Controller
         // Zeitraum: frühestes Start- bis spätestes Enddatum unter den beteiligten
         // Projekten (Ralf, 2026-09-28: "Start ist der erste Tag, der in einem der
         // beteiligten Projekte als Startdatum eingetragen ist, analog das Ende").
+        // Ralf, 2026-10-05: zusätzlich die gebuchten Tage einrechnen - Buchungen vor dem frühesten Projektstart oder nach dem
+        // spätesten Projektende dürfen nicht herausfallen.
         $dates = Project::withoutGlobalScope('tenant')->whereIn('id', $participantIds)->get(['start_date', 'end_date']);
-        $starts = $dates->pluck('start_date')->filter();
-        $ends = $dates->pluck('end_date')->filter();
+        $bookedRange = DB::table('job_hours')->whereIn('project_id', $participantIds)->selectRaw('MIN(work_date) as first_day, MAX(work_date) as last_day')->first();
+        $starts = $dates->pluck('start_date')->filter()->map(fn ($date) => (string) $date)->push($bookedRange->first_day)->filter();
+        $ends = $dates->pluck('end_date')->filter()->map(fn ($date) => (string) $date)->push($bookedRange->last_day)->filter();
         if ($starts->isEmpty() || $ends->isEmpty()) {
             return ['hasRange' => false];
         }
