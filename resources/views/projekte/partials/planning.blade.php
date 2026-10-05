@@ -270,13 +270,14 @@
                 @endif
                 <button
                     type="button"
+                    x-show="Object.keys(planned).length > 0"
                     title="{{ __('Stunden werden pro Funktionsgruppe automatisch auf alle Personen gleichmäßig verteilt') }}"
                     :disabled="distributing"
                     @click="distributeHours()"
                     class="mt-1.5 rounded-md border border-btn-secondary-border bg-btn-secondary px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:cursor-wait disabled:opacity-50"
                 >{{ __('Std. verteilen') }}</button>
             </div>
-            <div class="flex shrink-0 gap-2.5 text-xs text-gray-500">
+            <div x-show="Object.keys(planned).length > 0" class="flex shrink-0 gap-2.5 text-xs text-gray-500">
                 <span><span class="mr-1 inline-block h-2 w-2 rounded-full bg-amber-400"></span>{{ __('Noch zu verteilen') }}</span>
                 <span><span class="mr-1 inline-block h-2 w-2 rounded-full bg-green-400"></span>{{ __('Vollständig verteilt') }}</span>
                 <span><span class="mr-1 inline-block h-2 w-2 rounded-full bg-red-400"></span>{{ __('Mehr als geplant verteilt') }}</span>
