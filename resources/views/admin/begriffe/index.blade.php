@@ -1,6 +1,6 @@
 <x-admin-layout>
     {{--
-        Begriffsverzeichnis (Ralf, 2026-10-04): Zuordnung Begriff -> Seite, in Hilfetexten als ((Begriff)),
+        Glossar-Links (Ralf, 2026-10-04; vorher "Begriffsverzeichnis"): Zuordnung Begriff -> Seite, in Hilfetexten als ((Begriff)),
         in Oberflächentexten als <x-term>Begriff</x-term>. Links öffnen in einem neuen Browser-Tab.
     --}}
     @if (session('status') === 'saved')
@@ -15,8 +15,8 @@
 
     <div class="flex min-h-0 flex-1 flex-col rounded-lg border border-gray-200 bg-white" x-data="{ adding: false }">
         <div class="flex shrink-0 items-center justify-between border-b border-gray-100 p-3">
-            <p class="text-xs text-gray-500">{{ __('Ein Begriff führt zur Seite, auf der man ihn ändert. In Hilfetexten schreiben Sie ((Begriff)) oder ((Begriff|Anzeigetext)).') }}</p>
-            <button type="button" x-show="! adding" @click="adding = true; $nextTick(() => $refs.newTerm.focus())" class="inline-flex shrink-0 items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200">{{ __('+ Neuer Begriff') }}</button>
+            <p class="text-xs text-gray-500">{{ __('Ein Glossar-Link führt vom Begriff zur Seite, auf der man ihn ändert. In Hilfetexten schreiben Sie ((Begriff)) oder ((Begriff|Anzeigetext)); im Editor fügt das Symbol hinter ((Glossar-Link)) ihn aus einer Liste ein.') }}</p>
+            <button type="button" x-show="! adding" @click="adding = true; $nextTick(() => $refs.newTerm.focus())" class="inline-flex shrink-0 items-center rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200">{{ __('+ Neuer Glossar-Link') }}</button>
         </div>
 
         <div class="min-h-0 flex-1 overflow-y-auto">
@@ -53,7 +53,7 @@
                             <button type="submit" x-show="dirty" x-cloak class="whitespace-nowrap rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700">{{ __('Speichern') }}</button>
                         </div>
                     </form>
-                    <form method="POST" action="{{ route('admin.begriffe.destroy', $term) }}" class="mt-1" x-data="{ async go(e) { if (await window.confirmDialog({ title: @js(__('Begriff löschen')), message: @js(__('Der Begriff wird aus dem Verzeichnis entfernt. Texte, die ihn verwenden, zeigen ihn danach ohne Link.')), confirmLabel: @js(__('Löschen')), cancelLabel: @js(__('Abbrechen')) })) { e.target.submit(); } } }" @submit.prevent="go($event)">
+                    <form method="POST" action="{{ route('admin.begriffe.destroy', $term) }}" class="mt-1" x-data="{ async go(e) { if (await window.confirmDialog({ title: @js(__('Glossar-Link löschen')), message: @js(__('Der Glossar-Link wird entfernt. Texte, die den Begriff verwenden, zeigen ihn danach ohne Link.')), confirmLabel: @js(__('Löschen')), cancelLabel: @js(__('Abbrechen')) })) { e.target.submit(); } } }" @submit.prevent="go($event)">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="text-xs text-gray-400 hover:text-red-600">{{ __('Löschen') }}</button>

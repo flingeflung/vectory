@@ -51,6 +51,8 @@ class HelpArticleController extends Controller
         return view('admin.help-articles.index', [
             'tree' => $tree,
             'pickerPages' => $pickerPages,
+            'glossaryTerms' => \App\Models\GlossaryTerm::query()->orderBy('term')->get(['term', 'description'])
+                ->map(fn ($row) => ['term' => $row->term, 'description' => (string) $row->description])->values()->all(),
             'metaCollapsed' => array_map('intval', UserPreference::configFor((int) $request->user()->id, UserPreference::HELP_TREE)['meta_collapsed'] ?? []),
             'collapsed' => $collapsed,
             'selected' => $selected,

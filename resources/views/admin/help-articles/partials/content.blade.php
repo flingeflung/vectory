@@ -137,6 +137,32 @@
                                     q: '',
                                     pages: {{ \Illuminate\Support\Js::from($pickerPages) }},
                                     selfId: {{ $selected->id }},
+                                    terms: {{ \Illuminate\Support\Js::from($glossaryTerms) }},
+                                    termOpen: false,
+                                    tq: '',
+                                    get shownTerms() {
+                                        const needle = this.tq.trim().toLowerCase();
+                                        return this.terms.filter((entry) => needle === '' || (entry.term + ' ' + entry.description).toLowerCase().includes(needle));
+                                    },
+                                    openTerm() {
+                                        this.termOpen = true;
+                                        this.tq = '';
+                                        this.$nextTick(() => this.$refs.termSearch.focus());
+                                    },
+                                    insertTerm(entry) {
+                                        const area = this.$refs.body;
+                                        const start = area.selectionStart ?? area.value.length;
+                                        const end = area.selectionEnd ?? start;
+                                        const selected = area.value.slice(start, end);
+                                        const trailing = selected.match(/\s+$/)?.[0] ?? '';
+                                        const core = selected.slice(0, selected.length - trailing.length);
+                                        const same = core.toLowerCase() === entry.term.toLowerCase();
+                                        const markup = core === '' || same ? '((' + entry.term + '))' : '((' + entry.term + '|' + core + '))';
+                                        area.setRangeText(markup + trailing, start, end, 'end');
+                                        area.dispatchEvent(new Event('input', { bubbles: true }));
+                                        this.termOpen = false;
+                                        area.focus();
+                                    },
                                     get shown() {
                                         const needle = this.q.trim().toLowerCase();
                                         return this.pages.filter((page) => page.id !== this.selfId && (needle === '' || (page.title + ' ' + page.path + ' ' + page.id).toLowerCase().includes(needle))).slice(0, 60);
@@ -193,6 +219,7 @@
                                         else if (data.action === 'numbered') this.prefixLines('', true);
                                         else if (data.action === 'link') this.wrapSel('[', '](https://)', data.part);
                                         else if (data.action === 'page') this.open();
+                                    else if (data.action === 'glossary') this.openTerm();
                                     else this.insertSnippet(data.a1, data.part);
                                     },
                                     insertSnippet(text, part) {
@@ -211,6 +238,18 @@
                             >
                                 <div class="flex items-center justify-between">
                                     <label class="block text-xs text-gray-500">{{ __('Text (Markdown)') }}</label>
+                                </div>
+                                <div x-show="termOpen" x-cloak @click.outside="termOpen = false" @keydown.escape.stop="termOpen = false" class="absolute right-0 z-20 mt-1 w-96 rounded-md border border-gray-200 bg-white p-2 shadow-lg">
+                                    <input type="text" x-ref="termSearch" x-model="tq" @keydown.enter.prevent="shownTerms.length && insertTerm(shownTerms[0])" placeholder="{{ __('Glossar-Link suchen') }}" autocomplete="off" class="w-full rounded-md border-gray-300 text-sm">
+                                    <div class="mt-1 max-h-64 overflow-y-auto text-sm">
+                                        <template x-for="entry in shownTerms" :key="entry.term">
+                                            <button type="button" @click="insertTerm(entry)" class="block w-full rounded px-2 py-1 text-left hover:bg-gray-100">
+                                                <span class="font-medium text-gray-800" x-text="entry.term"></span>
+                                                <span class="block truncate text-xs text-gray-400" x-text="entry.description"></span>
+                                            </button>
+                                        </template>
+                                        <div x-show="shownTerms.length === 0" class="px-2 py-2 text-xs text-gray-400">{{ __('Kein Glossar-Link gefunden.') }}</div>
+                                    </div>
                                 </div>
                                 <div x-show="pickerOpen" x-cloak @click.outside="pickerOpen = false" @keydown.escape.stop="pickerOpen = false" class="absolute right-0 z-20 mt-1 w-96 rounded-md border border-gray-200 bg-white p-2 shadow-lg">
                                     <input type="text" x-ref="pickerSearch" x-model="q" @keydown.enter.prevent="shown.length && insert(shown[0])" placeholder="{{ __('Hilfeseite suchen (Titel, Pfad oder Nummer)') }}" autocomplete="off" class="w-full rounded-md border-gray-300 text-sm">
@@ -234,6 +273,7 @@
                                     <x-help-markup :label="'['.__('Linktext').'](https://…)'" action="link" :part="__('Linktext')" /> ·
                                     <x-help-markup :label="'> '.__('Zitat')" action="prefix" a1="> " /> ·
                                     <x-help-markup :label="'[['.__('Hilfeseite').']]'" action="page" /> ·
+                                    <x-help-markup :label="'(('.__('Glossar-Link').'))'" action="glossary" /> ·
                                     <x-help-markup label="{+Neu}" action="wrap" a1="{" a2="}" part="+Neu" /> {{ __('für einen Button/UI-Element wie im Tool') }}
                                 </p>
                                 <textarea x-ref="body" name="translations[{{ $localeCode }}][body]" rows="14" class="mt-0.5 w-full rounded-md border-gray-300 font-mono text-sm">{{ $t?->body }}</textarea>
