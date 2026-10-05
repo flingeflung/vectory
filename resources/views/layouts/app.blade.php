@@ -708,6 +708,19 @@
                     if (crowded) {
                         box.style.paddingBottom = '14px';
                     }
+                    // Läuft scrollender Inhalt hinter der ID entlang, soll der Text nicht durch sie hindurchscheinen: die ID
+                    // bekommt die Hintergrundfarbe dessen, was unter ihr liegt (meist Weiß) als kleine Fußleiste.
+                    const beneath = document.elementsFromPoint(idRect.left + idRect.width / 2, idRect.top + idRect.height / 2)
+                        .find((el) => el !== idButton && box.contains(el));
+                    let background = '';
+                    for (let node = beneath; node && node !== box.parentElement; node = node.parentElement) {
+                        const color = getComputedStyle(node).backgroundColor;
+                        if (color && color !== 'rgba(0, 0, 0, 0)' && color !== 'transparent') {
+                            background = color;
+                            break;
+                        }
+                    }
+                    idButton.style.backgroundColor = background || '#ffffff';
                 }
 
                 const help = box.querySelector('[data-dialog-help]');

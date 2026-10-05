@@ -391,7 +391,7 @@ $dialogId = $helpId ? \App\Support\DialogId::for($name) : null;
                 type="button"
                 data-dialog-id
                 x-on:click.stop="window.copyToClipboard('{{ $dialogId }}').then((ok) => window.showToast && window.showToast(ok ? '{{ __('Dialog-ID :id kopiert', ['id' => $dialogId]) }}' : '{{ __('Kopieren nicht möglich - ID bitte abtippen: :id', ['id' => $dialogId]) }}'))"
-                class="absolute bottom-1 left-1.5 z-20 cursor-copy rounded px-0.5 font-mono text-[9px] leading-none text-gray-300 hover:bg-gray-100 hover:text-gray-600"
+                class="absolute bottom-0 left-0 z-20 cursor-copy rounded-bl-lg rounded-tr-md px-1.5 pb-1 pt-0.5 font-mono text-[9px] leading-none text-gray-300 hover:text-gray-600"
                 title="{{ __('Dialog-ID :id - Klick kopiert sie in die Zwischenablage. Bei Rückfragen bitte nennen.', ['id' => $dialogId]) }}"
             >{{ $dialogId }}</button>
             @if (in_array($dialogId, \App\Support\DialogId::withHelpArticle(), true))
