@@ -63,7 +63,7 @@
                     @endif
                     </div>
                 </div>
-                <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => $el.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' }))">
+                <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => window.keepListScroll($el, 'list-scroll:function-groups'))">
                     @if ($canManageCatalog)
                     <form x-show="newGroup" x-cloak method="POST" action="{{ route('admin.function-groups.store') }}" class="mb-2 flex gap-1.5 rounded border border-gray-200 p-2">
                         <input type="text" name="name" x-ref="newGroupName" placeholder="{{ __('Name') }}" class="w-full min-w-0 flex-1 rounded-md border-gray-300 text-xs" required>
@@ -146,7 +146,7 @@
                         </button>
                     @endif
                 </div>
-                <div x-ref="personList" class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => $el.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' }))">
+                <div x-ref="personList" class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => window.keepListScroll($el, 'list-scroll:function-groups-people'))">
                 @if ($selectedGroup)
                     <form
                         id="member-assign-form"

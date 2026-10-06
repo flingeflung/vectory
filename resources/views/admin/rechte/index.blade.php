@@ -65,7 +65,7 @@
                         + {{ __('Neu') }}
                     </button>
                 </div>
-                <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => $el.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' }))">
+                <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => window.keepListScroll($el, 'list-scroll:rechte-1'))">
                     <form x-show="newSet" x-cloak method="POST" action="{{ route('admin.rechte.sets.store') }}" class="mb-2 space-y-1.5 rounded border border-gray-200 p-2">
                         {{-- Ralf, 2026-09-28: bewusst "Kopiervorlage", nicht "Basis" - das
                              hier ist eine EINMALIGE Kopie beim Anlegen, keine lebende
@@ -137,7 +137,7 @@
                         + {{ __('Neu') }}
                     </button>
                 </div>
-                <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => $el.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' }))">
+                <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => window.keepListScroll($el, 'list-scroll:rechte-2'))">
                     <form x-show="newBaustein" x-cloak method="POST" action="{{ route('admin.rechte.sets.store') }}" class="mb-2 space-y-1.5 rounded border border-gray-200 p-2">
                         <input type="hidden" name="is_baustein" value="1">
                         {{-- base_id bewusst NICHT required - anders als bei einem neuen Set
@@ -226,7 +226,7 @@
                         </button>
                     @endif
                 </div>
-                <div x-ref="personList" class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => $el.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' }))">
+                <div x-ref="personList" class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => window.keepListScroll($el, 'list-scroll:rechte-3'))">
                 @if ($selectedTemplate && ! $selectedTemplate->is_baustein)
                     {{-- Bulk-Zuordnung: nur unzugeordnete Personen sind hier
                          anklickbar (leer). Wer schon einem Set angehört -

@@ -1859,6 +1859,35 @@
                 // manuelle Eingabe. Global (nicht Overlay-Closure), weil das
                 // Feld auch auf der normalen Vollseite (nicht nur im Overlay)
                 // vorkommt.
+                // Scrollposition einer Auswahlliste über das Neuladen der Seite hinweg behalten (Ralf, 2026-10-06): Ein Klick auf einen
+                // Eintrag lädt die Seite neu; ohne das springt die Liste so, dass der gewählte Eintrag ganz unten steht.
+                // Nur wenn der gewählte Eintrag danach nicht sichtbar ist, wird er in den sichtbaren Bereich geholt.
+                window.keepListScroll = function (list, key) {
+                    try {
+                        const saved = sessionStorage.getItem(key);
+                        if (saved !== null) {
+                            list.scrollTop = Number(saved);
+                        }
+                    } catch (error) {
+                        // ohne Speicher: keine gemerkte Position
+                    }
+                    const selected = list.querySelector('[data-selected]');
+                    if (selected) {
+                        const item = selected.getBoundingClientRect();
+                        const box = list.getBoundingClientRect();
+                        if (item.top < box.top || item.bottom > box.bottom) {
+                            selected.scrollIntoView({ block: 'nearest' });
+                        }
+                    }
+                    list.addEventListener('scroll', () => {
+                        try {
+                            sessionStorage.setItem(key, String(list.scrollTop));
+                        } catch (error) {
+                            // egal
+                        }
+                    }, { passive: true });
+                };
+
                 // Feldprüfung beim Verlassen des Feldes (Kürzel, E-Mail): Hinweis direkt unter dem Feld, gespeichert wird nichts.
                 window.clearPersonFieldHint = function (input) {
                     const hint = input.parentElement.querySelector('[data-field-hint]');

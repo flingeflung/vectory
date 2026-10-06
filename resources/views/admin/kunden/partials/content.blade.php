@@ -17,7 +17,7 @@
                     + {{ __('Neu') }}
                 </button>
             </div>
-            <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => $el.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' }))">
+            <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => window.keepListScroll($el, 'list-scroll:kunden'))">
                 <form x-show="newTenant" x-cloak method="POST" action="{{ route('admin.kunden.store') }}" enctype="multipart/form-data" x-data="{ logoPreview: null, logoName: '' }" class="mb-2 space-y-2 rounded border border-gray-200 p-2" @input="window.__tenantsDirtyForms.add($el)" @submit="window.__tenantsDirtyForms.delete($el)">
                     @csrf
                     <div class="rounded-md border border-gray-200 bg-gray-50 p-2">

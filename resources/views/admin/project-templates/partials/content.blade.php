@@ -44,7 +44,7 @@
                         });
                     },
                 }"
-                x-init="$nextTick(() => $el.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' }))"
+                x-init="$nextTick(() => window.keepListScroll($el, 'list-scroll:project-templates'))"
                 x-sort="saveOrder()"
             >
                 @forelse ($templates as $template)

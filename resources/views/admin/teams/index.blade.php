@@ -15,7 +15,7 @@
                     + {{ __('Neu') }}
                 </button>
             </div>
-            <div class="min-h-0 flex-1 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => $el.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' }))">
+            <div class="min-h-0 flex-1 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => window.keepListScroll($el, 'list-scroll:teams'))">
                 <form x-show="newTeam" x-cloak method="POST" action="{{ route('admin.teams.store') }}" class="mb-2 flex gap-1.5 rounded border border-gray-200 p-2">
                     @csrf
                     <input type="text" name="name" x-ref="newTeamName" value="{{ $selected ? '' : old('name') }}" placeholder="{{ __('Bezeichnung') }}" class="w-full min-w-0 flex-1 rounded-md border-gray-300 text-xs" required>

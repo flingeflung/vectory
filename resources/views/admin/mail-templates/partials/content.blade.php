@@ -17,7 +17,7 @@
                     + {{ __('Neu') }}
                 </button>
             </div>
-            <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => $el.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' }))">
+            <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => window.keepListScroll($el, 'list-scroll:mail-templates'))">
                 <form x-show="newTemplate" x-cloak method="POST" action="{{ route('admin.mail-vorlagen.store') }}" class="mb-2 flex gap-1.5 rounded border border-gray-200 p-2">
                     <input type="text" name="name" x-ref="newTemplateName" placeholder="{{ __('Name der Vorlage') }}" class="w-full min-w-0 flex-1 rounded-md border-gray-300 text-xs" required>
                     @csrf
