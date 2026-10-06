@@ -41,7 +41,7 @@
         teamBoxes: [],
         canGrant: {{ \Illuminate\Support\Js::from($canGrantRelease) }},
         orgName: {{ \Illuminate\Support\Js::from($project->tenant?->short_name ?? $project->tenant?->name) }},
-        grantRelease: false,
+        granting: false,
         // Freigabe erteilen: schaltet die noch nicht freigegebenen Mitglieder des gewählten Teams für die Organisation des Projekts frei
         // (gilt sofort, nicht erst mit dem Speichern), lädt danach die Personenauswahl neu und merkt das Team erneut vor.
         async grantReleases() {
@@ -53,15 +53,15 @@
                 confirmLabel: {{ \Illuminate\Support\Js::from(__('Freigabe erteilen')) }},
                 cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
             })) {
-                this.grantRelease = false;
                 return;
             }
+            this.granting = true;
             const response = await fetch({{ \Illuminate\Support\Js::from(route('projekte.projektbeteiligte.release', $project)) }}, {
                 method: 'POST',
                 headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
                 body: JSON.stringify({ team_id: this.teamId }),
             });
-            this.grantRelease = false;
+            this.granting = false;
             if (! response.ok) {
                 await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Die Freigabe konnte nicht erteilt werden.')) }});
                 return;
@@ -262,10 +262,9 @@
                         </select>
                         <div x-show="teamHint" x-cloak class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-amber-700">
                             <span x-text="teamHint"></span>
-                            <label x-show="canGrant" class="inline-flex items-center gap-1 whitespace-nowrap text-gray-700" title="{{ __('Schaltet diese Personen sofort für die Organisation des Projekts frei (Organisationszugriff in den Personendetails).') }}">
-                                <input type="checkbox" x-model="grantRelease" @change="if (grantRelease) grantReleases()" class="rounded border-gray-300">
+                            <button type="button" x-show="canGrant" @click="grantReleases()" :disabled="granting" class="whitespace-nowrap rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-[11px] font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:cursor-wait disabled:opacity-50" title="{{ __('Schaltet diese Personen sofort für die Organisation des Projekts frei (Organisationszugriff in den Personendetails).') }}">
                                 {{ __('Freigabe erteilen') }}
-                            </label>
+                            </button>
                         </div>
                     </div>
                 @endif
