@@ -717,7 +717,7 @@ class PersonController extends Controller
             'short_name.unique' => __('Kürzel wird bereits verwendet'),
             'short_name.min' => __('Das Kürzel braucht 2 bis 4 Zeichen'),
             'short_name.max' => __('Das Kürzel braucht 2 bis 4 Zeichen'),
-            'email.email' => __('Die E-Mail-Adresse ist ungültig'),
+            'email.email' => __('Das Feld muss eine gültige E-Mail-Adresse enthalten.'),
         ];
     }
 

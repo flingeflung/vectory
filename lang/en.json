@@ -396,7 +396,7 @@
     "Die Auswahl ist durch die gewählte Heftungsart eingeschränkt.": "The selection is restricted by the selected binding type.",
     "Die Datei ist zu groß (maximal 40 MB).": "",
     "Die Dauern der Workflow-Schritte (in Arbeitstagen) ergeben zusammen mehr, als das Projekt zwischen Start und Ende hat. Die Ressourcenplanung rechnet deshalb mit proportional verkürzten Schritten.": "",
-    "Die E-Mail-Adresse ist ungültig": "The email address is invalid",
+    "Das Feld muss eine gültige E-Mail-Adresse enthalten.": "The field must contain a valid email address.",
     "Die Freigabe wurde bereits erteilt. Vielen Dank.": "",
     "Die Funktionsgruppe wird bei diesem Kunden bereits verwendet und kann nicht ausgeblendet werden.": "This function group is already in use by this customer and cannot be hidden.",
     "Die Funktionsgruppen dieser Person werden bei ihrer eigenen Organisation gepflegt.": "This person's function groups are managed within their own organization.",
