@@ -210,6 +210,8 @@
     </div>
 
     <div x-show="subTab === 'planstunden'" data-help-tab="planung.planstunden" class="{{ $isOverlay ? 'flex min-h-0 flex-1 flex-col gap-2' : 'space-y-2' }}">
+        {{-- Oberer Teil scrollt für sich, wenn der Platz knapp wird (Ralf, 2026-10-07); die Gruppenliste darunter behält mindestens 12 rem --}}
+        <div class="{{ $isOverlay ? 'min-h-0 space-y-2 overflow-y-auto pr-1' : 'space-y-2' }}">
         <div class="shrink-0">
             <button type="button" @click="toggleSection('bedarf')" class="flex items-center gap-1.5 text-left" :aria-expanded="sections.bedarf">
                 <svg class="h-4 w-4 shrink-0 text-gray-500 transition-transform" :class="sections.bedarf ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
@@ -259,6 +261,8 @@
                     <p class="rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-500">{{ __('Für das Diagramm braucht das Projekt einen Workflow mit Arbeitsschritten sowie einen Projektstart und ein Projektende.') }}</p>
                 @endif
             </div>
+        </div>
+
         </div>
 
         @can('planning.view')
