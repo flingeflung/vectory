@@ -215,36 +215,11 @@
         <div class="shrink-0">
             <button type="button" @click="toggleSection('bedarf')" class="flex items-center gap-1.5 text-left" :aria-expanded="sections.bedarf">
                 <svg class="h-4 w-4 shrink-0 text-gray-500 transition-transform" :class="sections.bedarf ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
-                <h3 class="font-semibold text-gray-900">{{ __('Zeitbedarf und Planstunden') }}</h3>
+                <h3 class="font-semibold text-gray-900">{{ __('Planstunden') }}</h3>
             </button>
         </div>
         <div x-show="sections.bedarf" class="flex shrink-0 flex-col gap-2">
         @php $timeNeed = app(\App\Services\ProjectPlanningCalculator::class)->timeNeed($project); @endphp
-        @if ($timeNeed['state'] === 'no_workflow')
-            <p class="shrink-0 rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-500">{{ __('Für dieses Projekt ist kein Workflow zugewiesen.') }}</p>
-        @else
-            @php
-                $needTooltip = collect($timeNeed['steps'])->map(fn ($step) => $step['title'].': '.$step['days'].' '.__('AT').($step['default_used'] ? ' ('.__('keine Dauer eingetragen, zählt 1 Tag').')' : ''))->join("\n");
-            @endphp
-            <p class="shrink-0 rounded-md border px-2 py-1 text-xs {{ $timeNeed['state'] === 'over' ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-gray-200 bg-gray-50 text-gray-600' }}" title="{{ __('Summe der Dauern der Workflow-Schritte „In Bearbeitung“ (in Arbeitstagen):')."\n".$needTooltip }}">
-                {{ __('Zeitbedarf laut Workflow') }}: <span class="font-semibold">{{ $timeNeed['sum'] }} {{ __('AT') }}</span>
-                &middot; {{ __('Projektzeitraum') }}:
-                @if ($timeNeed['available'] !== null)
-                    <span class="font-semibold">{{ $timeNeed['available'] }} {{ __('AT') }}</span>
-                    @if ($timeNeed['state'] === 'over')
-                        &middot; {{ __('Faktor') }} {{ number_format($timeNeed['factor'], 2, ',', '.') }}
-                    @endif
-                @else
-                    <span class="font-semibold">{{ __('unvollständig (Start oder Ende fehlt)') }}</span>
-                @endif
-                @if ($timeNeed['available'] !== null && $timeNeed['available'] > 0 && $timeNeed['sum'] !== $timeNeed['available'] && auth()->user()->can('workflow_step.due_date'))
-                    <button type="button" @click="adjustDurations({{ $timeNeed['has_overrides'] ? 'true' : 'false' }})" :disabled="adjusting" class="ml-2 rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-[11px] font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:cursor-wait disabled:opacity-50" title="{{ __('Rechnet die Dauern der Schritte mit dem Faktor auf den Projektzeitraum um und speichert sie am Projekt. Der Workflow selbst bleibt unverändert.') }}">
-                        {{ __('Dauern an Projektzeitraum anpassen') }}
-                    </button>
-                @endif
-            </p>
-        @endif
-
         @include('projekte.partials.planned-hours-editor')
         </div>
 
@@ -253,10 +228,15 @@
             <button type="button" @click="toggleSection('zeitraum')" class="flex items-center gap-1.5 text-left" :aria-expanded="sections.zeitraum">
                 <svg class="h-4 w-4 shrink-0 text-gray-500 transition-transform" :class="sections.zeitraum ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
                 <h3 class="font-semibold text-gray-900">{{ __('Zeitraum') }}</h3>
+                @if ($periodChart && $periodChart['period']['mode'] !== 'match')
+                    <span class="rounded px-1.5 py-0.5 text-[11px] font-normal {{ $periodChart['period']['mode'] === 'overflow' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-600' }}">
+                        {{ $periodChart['period']['mode'] === 'overflow' ? __('Es fehlen :days AT', ['days' => $periodChart['period']['diff']]) : __('Puffer: :days AT', ['days' => $periodChart['period']['diff']]) }}
+                    </span>
+                @endif
             </button>
             <div x-show="sections.zeitraum" class="mt-1">
                 @if ($periodChart)
-                    @include('projekte.partials.period-chart', ['chart' => $periodChart])
+                    @include('projekte.partials.period-chart', ['chart' => $periodChart, 'hasOverrides' => (bool) ($timeNeed['has_overrides'] ?? false), 'canEditPeriod' => auth()->user()->can('workflow_step.due_date')])
                 @else
                     <p class="rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-500">{{ __('Für das Diagramm braucht das Projekt einen Workflow mit Arbeitsschritten sowie einen Projektstart und ein Projektende.') }}</p>
                 @endif

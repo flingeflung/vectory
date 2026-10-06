@@ -175,7 +175,7 @@ class ProjectPlanningCalculator
      * Zeitraum umgerechneten (wie beim Knopf "Dauern an Projektzeitraum anpassen"), damit die Balken die Breite genau füllen.
      * Schritte ohne eingetragene Dauer zählen 1 Tag.
      *
-     * @return array{groups: list<array{id: int, name: string, from: int, to: int}>, workdays: list<string>, calendar: list<string>, holidays: object, steps: list<array{id: int, title: string, days: int, workflow_days: int, fixed: bool}>, sum: int, available: int, compressed: bool}|null
+     * @return array{groups: list<array{id: int, name: string, from: int, to: int}>, workdays: list<string>, calendar: list<string>, holidays: object, steps: list<array{id: int, title: string, days: int, workflow_days: int, fixed: bool}>, sum: int, available: int, period: array<string, mixed>}|null
      */
     public function periodChart(\App\Models\Project $project): ?array
     {
@@ -186,24 +186,61 @@ class ProjectPlanningCalculator
         }
 
         $available = count($workdays);
-        $matches = $breakdown['sum'] === $available;
-        $scaled = $matches ? [] : ($this->stepTimeline()->scaledDurations($project, $available) ?? []);
+        $need = (int) $breakdown['sum'];
         $steps = [];
         foreach ($breakdown['steps'] as $row) {
-            $days = $matches || $row['default_used'] ? $row['days'] : ($scaled[$row['id']] ?? $row['days']);
-            $steps[] = ['id' => $row['id'], 'title' => $row['title'], 'days' => $days, 'workflow_days' => $row['days'], 'fixed' => $row['default_used']];
+            $steps[] = ['id' => $row['id'], 'title' => $row['title'], 'days' => $row['days'], 'workflow_days' => $row['days'], 'fixed' => $row['default_used']];
         }
 
-        // Kalender von Projektstart bis -ende mit allen Tagen (auch Wochenenden, Feiertage) für das Raster im Hintergrund
+        // Kalender von Projektstart bis -ende mit allen Tagen (auch Wochenenden, Feiertage) für das Raster im Hintergrund.
+        // Braucht der Workflow mehr Arbeitstage als der Zeitraum hat, wird Arbeitstag für Arbeitstag über das Projektende hinaus verlängert.
         $start = CarbonImmutable::parse($project->start_date->toDateString());
         $end = CarbonImmutable::parse($project->end_date->toDateString());
+        $holidays = $this->holidays((int) $project->tenant_id, $start->year - 1, $end->year + 3);
+        $isFree = fn (CarbonImmutable $date) => $date->isWeekend() || $holidays->contains($date->toDateString());
         $calendar = [];
         for ($date = $start; $date->lessThanOrEqualTo($end); $date = $date->addDay()) {
             $calendar[] = $date->toDateString();
         }
+        $chartEnd = $end;
+        for ($missing = $need - $available; $missing > 0; $chartEnd = $chartEnd->addDay()) {
+            $next = $chartEnd->addDay();
+            $calendar[] = $next->toDateString();
+            if (! $isFree($next)) {
+                $workdays[] = $next->toDateString();
+                $missing--;
+            }
+        }
+
+        // Vorschläge für "Zeitraum anpassen": neues Ende bei festem Start, neuer Start bei festem Ende
+        $newEnd = $need > 0 ? ($workdays[$need - 1] ?? null) : null;
+        $newStart = null;
+        if ($need > 0 && $need <= $available) {
+            $newStart = $workdays[$available - $need];
+        } elseif ($need > $available) {
+            $cursor = CarbonImmutable::parse($workdays[0]);
+            for ($back = $need - $available; $back > 0;) {
+                $cursor = $cursor->subDay();
+                if (! $isFree($cursor)) {
+                    $back--;
+                }
+            }
+            $newStart = $cursor->toDateString();
+        }
+        $period = [
+            'mode' => $need === $available ? 'match' : ($need < $available ? 'buffer' : 'overflow'),
+            'need' => $need,
+            'available' => $available,
+            'diff' => abs($need - $available),
+            'project_start' => $start->toDateString(),
+            'project_end' => $end->toDateString(),
+            'new_end' => $need === $available ? null : $newEnd,
+            'new_start' => $need === $available ? null : $newStart,
+        ];
+
         $holidayNames = Holiday::query()->withoutGlobalScope('tenant')
             ->where('tenant_id', $project->tenant_id)->where('active', true)
-            ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
+            ->whereBetween('date', [$start->toDateString(), $chartEnd->toDateString()])
             ->get(['date', 'name'])
             ->mapWithKeys(fn (Holiday $holiday) => [$holiday->date->toDateString() => (string) $holiday->name])
             ->all();
@@ -229,9 +266,9 @@ class ProjectPlanningCalculator
             'calendar' => $calendar,
             'holidays' => (object) $holidayNames,
             'steps' => $steps,
-            'sum' => $breakdown['sum'],
+            'sum' => $need,
             'available' => $available,
-            'compressed' => ! $matches,
+            'period' => $period,
         ];
     }
 

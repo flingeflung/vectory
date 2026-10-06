@@ -203,4 +203,53 @@ class ProjectStepTimelineTest extends TestCase
         $this->assertSame('2027-03-10', $ends[$this->steps[2]->id]->toDateString());   // Mi (Mindestwert 1 Tag)
         $this->assertArrayNotHasKey($this->steps[3]->id, $ends);                        // nicht "In Bearbeitung"
     }
+
+    public function test_period_chart_shows_buffer_or_overflow_with_suggested_dates(): void
+    {
+        // Zeitraum Mo 1.3. bis Fr 12.3.2027 = 10 Arbeitstage
+        $this->steps([[2, 4], [2, 3]]);
+        $project = $this->assignment()->project;
+        $chart = app(ProjectPlanningCalculator::class)->periodChart($project);
+
+        // Bedarf 7 < 10: Puffer 3 AT; Ende bei festem Start Dienstag 9.3., Start bei festem Ende Donnerstag 4.3.
+        $this->assertSame(['buffer', 7, 10, 3, '2027-03-09', '2027-03-04'], [$chart['period']['mode'], $chart['period']['need'], $chart['period']['available'], $chart['period']['diff'], $chart['period']['new_end'], $chart['period']['new_start']]);
+        $this->assertSame([4, 3], array_column($chart['steps'], 'days'));   // Dauern bleiben unverändert
+
+        // Bedarf 13 > 10: Kalender und Arbeitstage werden über das Projektende hinaus verlängert
+        $this->steps[0]->update(['duration_days' => 8]);
+        $this->steps[1]->update(['duration_days' => 5]);
+        $chart = app(ProjectPlanningCalculator::class)->periodChart($project->fresh());
+        $this->assertSame('overflow', $chart['period']['mode']);
+        $this->assertCount(13, $chart['workdays']);
+        $this->assertSame('2027-03-17', end($chart['calendar']));
+        $this->assertSame('2027-03-17', $chart['period']['new_end']);
+        $this->assertSame('2027-02-24', $chart['period']['new_start']);   // 3 Arbeitstage vor Mo 1.3.
+
+        // passt genau
+        $this->steps[1]->update(['duration_days' => 2]);
+        $this->assertSame('match', app(ProjectPlanningCalculator::class)->periodChart($project->fresh())['period']['mode']);
+    }
+
+    public function test_set_period_moves_project_dates_or_the_marked_schedule_step(): void
+    {
+        $this->steps([[2, 4], [2, 3]]);
+        $project = $this->assignment()->project;
+        $admin = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'organization_admin']);
+
+        $this->actingAs($admin)->postJson(route('projekte.termine.set-period', $project), ['side' => 'end', 'date' => '2027-03-09'])->assertOk();
+        $this->assertSame('2027-03-09', $project->fresh()->end_date->toDateString());
+
+        // Start darf nicht hinter dem Ende liegen
+        $this->actingAs($admin)->postJson(route('projekte.termine.set-period', $project), ['side' => 'start', 'date' => '2027-03-20'])->assertStatus(422);
+
+        // Ist ein Schritt als Ende markiert, ist er die Quelle: sein Termin wird gesetzt, das Projektende folgt
+        $this->steps[1]->update(['has_due_date' => true]);
+        $pws = \App\Models\ProjectWorkflowStep::query()->create(['tenant_id' => $this->tenant->id, 'project_id' => $project->id, 'workflow_step_id' => $this->steps[1]->id, 'sort' => 2, 'is_end' => true]);
+        $this->actingAs($admin)->postJson(route('projekte.termine.set-period', $project), ['side' => 'end', 'date' => '2027-03-11'])->assertOk();
+        $this->assertSame('2027-03-11', $pws->fresh()->due_date->toDateString());
+        $this->assertSame('2027-03-11', $project->fresh()->end_date->toDateString());
+
+        $plain = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'user']);
+        $this->actingAs($plain)->postJson(route('projekte.termine.set-period', $project), ['side' => 'end', 'date' => '2027-03-12'])->assertForbidden();
+    }
 }

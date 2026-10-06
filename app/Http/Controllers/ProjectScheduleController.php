@@ -164,6 +164,33 @@ class ProjectScheduleController extends Controller
         return response()->json(['durations' => $durations]);
     }
 
+    /**
+     * Projektstart oder -ende setzen (Ralf, 2026-10-07): Zeitraum an die Dauern des Workflows anpassen. Ist ein Workflow-Schritt als
+     * Start bzw. Ende markiert, ist DER die Quelle des Projektdatums (ProjectWorkflowStepObserver) - dann wird dessen Termin gesetzt
+     * und das Projektdatum folgt; sonst wird das Projektdatum direkt gesetzt.
+     */
+    public function setPeriod(Request $request, Project $project): JsonResponse
+    {
+        abort_unless($request->user()->can('project.view') && $request->user()->can('workflow_step.due_date'), 403);
+
+        $validated = $request->validate(['side' => ['required', 'in:start,end'], 'date' => ['required', 'date']]);
+        $isStart = $validated['side'] === 'start';
+        $date = \Carbon\CarbonImmutable::parse($validated['date']);
+        $other = $isStart ? $project->end_date : $project->start_date;
+        abort_if($other !== null && ($isStart ? $date->gt($other) : $date->lt($other)), 422, __('Das Datum passt nicht zum anderen Rand des Projektzeitraums.'));
+
+        $marker = $project->projectWorkflowSteps()->get()->first(
+            fn (ProjectWorkflowStep $step) => $step->isScheduleStepForCurrentWorkflow() && ($isStart ? $step->effectiveIsStart() : $step->effectiveIsEnd())
+        );
+        if ($marker) {
+            $marker->update(['due_date' => $date->toDateString()]);
+        } else {
+            $project->update([$isStart ? 'start_date' : 'end_date' => $date->toDateString()]);
+        }
+
+        return response()->json(['date' => $date->toDateString()]);
+    }
+
     public function updateField(Request $request, Project $project, ProjectWorkflowStep $projectWorkflowStep): JsonResponse
     {
         abort_unless($projectWorkflowStep->project_id === $project->id, 404);

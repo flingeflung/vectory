@@ -16,12 +16,15 @@
         holidays: @js($chart['holidays']),
         steps: @js($chart['steps']),
         groups: @js($chart['groups']),
+        period: @js($chart['period']),
+        hasOverrides: @js($hasOverrides ?? false),
+        canEditPeriod: @js($canEditPeriod ?? false),
+        applying: false,
         original: null,
         wdCal: [],
         grid: { weekends: [], holidays: [], months: [], years: [], today: null },
         palette: ['#93c5fd', '#6ee7b7', '#fcd34d', '#f9a8d4', '#c4b5fd', '#fdba74', '#5eead4', '#fca5a5'],
         init() {
-            this.normalize();
             this.original = this.steps.map((step) => step.days);
             const monthNames = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
             const now = new Date();
@@ -43,26 +46,17 @@
         },
         get total() { return this.workdays.length; },
         get span() { return this.calendar.length; },
+        // Summe der Dauern; kleiner als total = Puffer bis zum Projektende, total ist bei zu knappem Zeitraum über das Projektende hinaus verlängert
+        get used() { return this.steps.reduce((a, step) => a + step.days, 0); },
+        get endIdx() { return this.calendar.indexOf(this.period.project_end); },
+        get todayIso() { const now = new Date(); return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0'); },
+        get startInPast() { return this.period.new_start !== null && this.period.new_start < this.todayIso; },
         get changed() { return this.original !== null && this.steps.some((step, i) => step.days !== this.original[i]); },
-        // Die Summe der Dauern muss genau der Zeitraum sein (der Server liefert das schon so; hier nur als Absicherung)
-        normalize() {
-            const sum = this.steps.reduce((a, step) => a + step.days, 0);
-            if (sum === this.total || this.steps.length === 0) return;
-            this.steps.forEach((step) => { step.days = Math.max(1, Math.round(step.days * this.total / sum)); });
-            let diff = this.total - this.steps.reduce((a, step) => a + step.days, 0);
-            const order = [...this.steps.keys()].sort((a, b) => this.steps[b].days - this.steps[a].days);
-            while (diff !== 0 && order.length) {
-                const step = this.steps[order[0]];
-                if (diff < 0 && step.days <= 1) break;
-                step.days += diff > 0 ? 1 : -1;
-                diff += diff > 0 ? -1 : 1;
-            }
-        },
         cum(i) { let c = 0; for (let k = 0; k <= i; k++) c += this.steps[k].days; return c; },
         endIso(i) { return this.workdays[Math.min(this.total, this.cum(i)) - 1]; },
         dateDe(iso) { return iso ? iso.split('-').reverse().join('.') : ''; },
         // Kalenderposition (0..span) des rechten Rands von Schritt i
-        edge(i) { return i >= this.steps.length - 1 ? this.span : this.wdCal[this.cum(i)]; },
+        edge(i) { return i >= this.steps.length - 1 ? (this.used >= this.total ? this.span : this.wdCal[this.used - 1] + 1) : this.wdCal[this.cum(i)]; },
         startPct(i) { return (i === 0 ? 0 : this.edge(i - 1)) / this.span * 100; },
         widthPct(i) { return (this.edge(i) - (i === 0 ? 0 : this.edge(i - 1))) / this.span * 100; },
         pct(k) { return k / this.span * 100; },
@@ -130,12 +124,63 @@
             }
             el.value = this.steps[i].days;
         },
+        async applyPeriod(side, iso) {
+            const message = side === 'end'
+                ? @js(__('Das Projektende wird auf :date gesetzt. Die Termine der Schritte ändern sich dabei nicht.'))
+                : @js(__('Der Projektstart wird auf :date gesetzt. Die Termine der Schritte ändern sich dabei nicht.'));
+            if (! await window.confirmDialog({
+                title: @js(__('Zeitraum anpassen?')),
+                message: message.replace(':date', this.dateDe(iso)),
+                confirmLabel: @js(__('Anpassen')),
+                cancelLabel: @js(__('Abbrechen')),
+            })) return;
+            this.applying = true;
+            const response = await fetch(@js(route('projekte.termine.set-period', $project)), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                body: JSON.stringify({ side: side, date: iso }),
+            });
+            this.applying = false;
+            if (! response.ok) {
+                const data = await response.json().catch(() => ({}));
+                await window.notifyDialog(data.message || @js(__('Der Zeitraum konnte nicht angepasst werden.')));
+                return;
+            }
+            window.showToast(@js(__('Gespeichert.')));
+            @if ($isOverlay)
+                await window.refreshUnderlyingProject({{ $project->id }});
+            @else
+                window.location.reload();
+            @endif
+        },
         reset() { this.steps.forEach((step, i) => { step.days = this.original[i]; }); },
     }"
     class="rounded-lg border border-gray-200 bg-white p-3 text-xs"
 >
-    @if ($chart['compressed'])
-        <p class="mb-2 text-gray-500">{{ __('Der Zeitbedarf laut Workflow (:sum AT) passt nicht zum Projektzeitraum (:available AT). Die Balken sind auf den Zeitraum umgerechnet; die Dauer laut Workflow steht im Tooltip der Felder.', ['sum' => $chart['sum'], 'available' => $chart['available']]) }}</p>
+    @if ($chart['period']['mode'] !== 'match')
+        <div class="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-md border px-2 py-1 {{ $chart['period']['mode'] === 'overflow' ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-gray-200 bg-gray-50 text-gray-600' }}">
+            <span title="{{ __('Summe der Dauern der Workflow-Schritte „In Bearbeitung“ (in Arbeitstagen) gegenüber den Arbeitstagen zwischen Projektstart und -ende.') }}">
+                {{ __('Zeitbedarf laut Workflow') }}: <span class="font-semibold">{{ $chart['period']['need'] }} {{ __('AT') }}</span>
+                &middot; {{ __('Projektzeitraum') }}: <span class="font-semibold">{{ $chart['period']['available'] }} {{ __('AT') }}</span>
+                &middot;
+                @if ($chart['period']['mode'] === 'overflow')
+                    <span class="font-semibold">{{ __('Es fehlen :days AT', ['days' => $chart['period']['diff']]) }}</span>
+                @else
+                    <span class="font-semibold">{{ __('Puffer: :days AT', ['days' => $chart['period']['diff']]) }}</span>
+                @endif
+            </span>
+            <template x-if="canEditPeriod">
+                <span class="inline-flex flex-wrap items-center gap-1.5">
+                    <button type="button" :disabled="applying" @click="applyPeriod('end', period.new_end)" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-[11px] font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:cursor-wait disabled:opacity-50" :title="@js(__('Setzt das Projektende so, dass der Zeitraum zu den Dauern passt. Der Projektstart bleibt.'))">
+                        <span x-text="@js(__('Ende auf :date setzen')).replace(':date', dateDe(period.new_end))"></span>
+                    </button>
+                    <button type="button" :disabled="applying || startInPast" @click="applyPeriod('start', period.new_start)" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-[11px] font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:cursor-not-allowed disabled:opacity-50" :title="startInPast ? @js(__('Der neue Start läge in der Vergangenheit.')) : @js(__('Setzt den Projektstart so, dass der Zeitraum zu den Dauern passt. Das Projektende bleibt.'))">
+                        <span x-text="@js(__('Start auf :date setzen')).replace(':date', dateDe(period.new_start))"></span>
+                    </button>
+                    <button type="button" :disabled="applying" @click="adjustDurations(hasOverrides)" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-[11px] font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:cursor-wait disabled:opacity-50" title="{{ __('Rechnet die Dauern der Schritte mit dem Faktor auf den Projektzeitraum um und speichert sie am Projekt. Der Workflow selbst bleibt unverändert.') }}">{{ __('Dauern an Projektzeitraum anpassen') }}</button>
+                </span>
+            </template>
+        </div>
     @endif
 
     <div class="px-1">
@@ -155,6 +200,24 @@
                 <div class="pointer-events-none absolute top-0 h-full w-0.5 -translate-x-px bg-gray-500" :style="{ left: pct(y.k) + '%' }"></div>
             </template>
 
+            <div
+                x-show="used < total"
+                class="pointer-events-none absolute flex items-center justify-center overflow-hidden whitespace-nowrap text-[10px] text-gray-500"
+                :style="{ top: '16px', bottom: '16px', left: pct(edge(steps.length - 1)) + '%', width: (100 - pct(edge(steps.length - 1))) + '%', backgroundImage: 'repeating-linear-gradient(135deg, #e5e7eb 0, #e5e7eb 2px, #f9fafb 2px, #f9fafb 6px)' }"
+                :title="@js(__('Puffer: Zeit bis zum Projektende, die der Workflow nicht braucht'))"
+            ><span x-text="@js(__('Puffer: :days AT')).replace(':days', period.diff)"></span></div>
+            <div
+                x-show="period.mode === 'overflow' && endIdx >= 0"
+                class="absolute top-0 h-full"
+                :style="{ left: pct(endIdx + 1) + '%', width: (100 - pct(endIdx + 1)) + '%', backgroundColor: 'rgba(239, 68, 68, 0.12)' }"
+            ></div>
+            <div
+                x-show="period.mode === 'overflow' && endIdx >= 0"
+                class="pointer-events-none absolute top-0 z-[5] h-full w-0.5 -translate-x-px bg-red-500"
+                :style="{ left: pct(endIdx + 1) + '%' }"
+                :title="@js(__('Projektende')) + ' ' + dateDe(period.project_end) + ' – ' + @js(__('Der Workflow reicht :days AT darüber hinaus.')).replace(':days', period.diff)"
+            ></div>
+
             <template x-for="(step, i) in steps" :key="step.id">
                 <div
                     class="absolute border-r border-white"
@@ -166,10 +229,10 @@
 
             <div
                 x-show="grid.today !== null"
-                class="pointer-events-none absolute top-0 z-[5] h-full w-0.5 -translate-x-px bg-blue-600"
+                class="absolute top-0 z-[5] flex h-full w-2 -translate-x-1/2 justify-center"
                 :style="{ left: pct((grid.today ?? 0) + 0.5) + '%' }"
-                title="{{ __('Heute') }}"
-            ></div>
+                :title="@js(__('Heute')) + ': ' + dateDe(todayIso)"
+            ><div class="h-full w-0.5 bg-blue-600"></div></div>
 
             <template x-for="(step, i) in steps.slice(0, -1)" :key="'handle-' + step.id">
                 <div
