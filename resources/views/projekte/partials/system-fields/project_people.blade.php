@@ -32,7 +32,6 @@
         teams: {{ \Illuminate\Support\Js::from($teamData) }},
         groupsByPerson: {{ \Illuminate\Support\Js::from($groupsByPerson) }},
         teamId: '',
-        teamResult: null,
         // Team zuweisen (Ralf, 2026-10-06): die Teamstruktur wird nicht gespeichert, es werden nur die einzelnen Personen
         // vorgemerkt (angehakt); ein anderes Team ersetzt die Vormerkung des vorherigen. Wer im Projekt schon zugewiesen ist (egal in welcher Funktionsgruppe), wird übersprungen; bestehende
         // Zuweisungen bleiben unverändert. Gespeichert wird wie sonst auch erst mit dem Speichern des Projekts.
@@ -50,35 +49,18 @@
             this.clearTeam();
             const team = this.teams.find((t) => String(t.id) === String(this.teamId));
             if (! team) return;
-            const result = { added: [], already: [], inactive: [], none: [] };
             team.members.forEach((member) => {
                 const boxes = [...this.$root.querySelectorAll('input[data-person]')].filter((box) => box.dataset.person === String(member.id));
                 // defaultChecked = so ist die Person gespeichert; checked ohne defaultChecked = nur vorgemerkt (z. B. durch ein Team vorher)
-                if (boxes.some((box) => box.defaultChecked)) { result.already.push(member.name); return; }
-                if (! member.active) { result.inactive.push(member.name); return; }
+                if (boxes.some((box) => box.defaultChecked) || ! member.active) return;
                 // Die Person kommt in alle Funktionsgruppen dieses Projekts, in denen sie Mitglied ist.
                 const groupIds = (this.groupsByPerson[member.id] || []).map((g) => String(g.id));
-                const targets = boxes.filter((box) => groupIds.includes(String(box.dataset.group)));
-                if (targets.length === 0) { result.none.push(member.name); return; }
-                targets.forEach((box) => {
+                boxes.filter((box) => groupIds.includes(String(box.dataset.group))).forEach((box) => {
                     box.checked = true;
                     this.teamBoxes.push(box);
                     box.dispatchEvent(new Event('change', { bubbles: true }));
                 });
-                const shorts = (this.groupsByPerson[member.id] || []).filter((g) => targets.some((box) => String(box.dataset.group) === String(g.id))).map((g) => g.short);
-                result.added.push(member.name + (targets.length > 1 ? ' (' + shorts.join(', ') + ')' : ''));
             });
-            this.teamResult = result;
-        },
-        teamResultLines() {
-            const r = this.teamResult;
-            if (! r) return [];
-            const lines = [];
-            if (r.added.length) lines.push(r.added.length + ' ' + {{ \Illuminate\Support\Js::from(__('Person(en) vorgemerkt:')) }} + ' ' + r.added.join('; '));
-            if (r.already.length) lines.push(r.already.length + ' ' + {{ \Illuminate\Support\Js::from(__('bereits zugewiesen, übersprungen:')) }} + ' ' + r.already.join('; '));
-            if (r.inactive.length) lines.push(r.inactive.length + ' ' + {{ \Illuminate\Support\Js::from(__('inaktiv, übersprungen:')) }} + ' ' + r.inactive.join('; '));
-            if (r.none.length) lines.push(r.none.length + ' ' + {{ \Illuminate\Support\Js::from(__('in keiner zuweisbaren Funktionsgruppe, übersprungen:')) }} + ' ' + r.none.join('; '));
-            return lines;
         },
         // Overlay Projektbeteiligte Personen (Ralf, 2026-10-06): beim Öffnen wird der Stand der Häkchen gemerkt; wird das
         // Overlay ohne Speichern geschlossen, stellt es diesen Stand wieder her (die Felder liegen im Projektformular).
@@ -98,7 +80,6 @@
                 this.peopleModalOpen = true;
                 this.peopleSnapshot = this.peopleInputs().map((el) => ({ el, checked: el.checked }));
                 this.teamId = '';
-                this.teamResult = null;
                 this.teamBoxes = [];
                 this.peopleTick++;
             } else if (! open && this.peopleModalOpen) {
@@ -211,15 +192,12 @@
                 </div>
                 @if (count($teamData) > 0)
                     <div class="mt-2">
-                        <select x-model="teamId" @change="teamResult = null; applyTeam()" class="w-full max-w-sm rounded-md border-gray-300 py-1 text-xs" title="{{ __('Alle Personen eines Teams auf einmal vormerken. Wer schon zugewiesen ist, wird übersprungen.') }}">
+                        <select x-model="teamId" @change="applyTeam()" class="w-full max-w-sm rounded-md border-gray-300 py-1 text-xs" title="{{ __('Alle Personen eines Teams auf einmal vormerken. Wer schon zugewiesen ist, wird übersprungen.') }}">
                             <option value="">{{ __('– Team wählen –') }}</option>
                             <template x-for="team in teams" :key="team.id">
                                 <option :value="team.id" x-text="team.name + ' (' + team.members.length + ')'"></option>
                             </template>
                         </select>
-                        <div x-show="teamResult" x-cloak class="mt-1 space-y-0.5 text-[11px] text-gray-600">
-                            <template x-for="line in teamResultLines()" :key="line"><div x-text="line"></div></template>
-                        </div>
                     </div>
                 @endif
             </div>
