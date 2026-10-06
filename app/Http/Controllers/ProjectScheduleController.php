@@ -165,6 +165,32 @@ class ProjectScheduleController extends Controller
     }
 
     /**
+     * Dauern aus dem Zeitraum-Diagramm speichern (Ralf, 2026-10-07): je Schritt "In Bearbeitung" eine Dauer in Arbeitstagen am Projekt.
+     * Die Termine der Schritte bleiben unberührt - die setzt "Termine berechnen" auf ausdrücklichen Wunsch.
+     */
+    public function saveDurations(Request $request, Project $project): JsonResponse
+    {
+        abort_unless($request->user()->can('project.view') && $request->user()->can('workflow_step.due_date'), 403);
+
+        $validated = $request->validate(['durations' => ['required', 'array', 'min:1'], 'durations.*' => ['integer', 'min:1', 'max:3650']]);
+        $allowed = \App\Models\WorkflowStep::query()->withoutGlobalScope('tenant')
+            ->where('workflow_id', $project->workflow_id)
+            ->where('lifecycle_status', \App\Models\WorkflowGroupWindow::WORK_LIFECYCLE_STATUS)
+            ->pluck('id')->map(fn ($id) => (int) $id)->all();
+        abort_if(array_diff(array_map('intval', array_keys($validated['durations'])), $allowed) !== [], 422, __('Mindestens ein Schritt gehört nicht zum Workflow des Projekts.'));
+
+        foreach ($validated['durations'] as $stepId => $days) {
+            $row = ProjectWorkflowStep::query()->withoutGlobalScope('tenant')
+                ->where('project_id', $project->id)->where('workflow_step_id', $stepId)->first()
+                ?? new ProjectWorkflowStep(['tenant_id' => $project->tenant_id, 'project_id' => $project->id, 'workflow_step_id' => $stepId]);
+            $row->duration_days = (int) $days;
+            $row->save();
+        }
+
+        return response()->json(['saved' => count($validated['durations'])]);
+    }
+
+    /**
      * Projektstart oder -ende setzen (Ralf, 2026-10-07): Zeitraum an die Dauern des Workflows anpassen. Ist ein Workflow-Schritt als
      * Start bzw. Ende markiert, ist DER die Quelle des Projektdatums (ProjectWorkflowStepObserver) - dann wird dessen Termin gesetzt
      * und das Projektdatum folgt; sonst wird das Projektdatum direkt gesetzt.

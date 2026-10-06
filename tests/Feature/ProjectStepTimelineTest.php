@@ -252,4 +252,26 @@ class ProjectStepTimelineTest extends TestCase
         $plain = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'user']);
         $this->actingAs($plain)->postJson(route('projekte.termine.set-period', $project), ['side' => 'end', 'date' => '2027-03-12'])->assertForbidden();
     }
+
+    public function test_save_durations_writes_project_durations_and_leaves_dates_alone(): void
+    {
+        $this->steps([[2, 4], [2, 3], [1, 5]]);
+        $project = $this->assignment()->project;
+        $admin = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'organization_admin']);
+        $pws = \App\Models\ProjectWorkflowStep::query()->create(['tenant_id' => $this->tenant->id, 'project_id' => $project->id, 'workflow_step_id' => $this->steps[0]->id, 'sort' => 1, 'due_date' => '2027-03-05']);
+
+        $this->actingAs($admin)->postJson(route('projekte.termine.save-durations', $project), ['durations' => [$this->steps[0]->id => 6, $this->steps[1]->id => 1]])->assertOk();
+
+        $durations = \App\Models\ProjectWorkflowStep::query()->withoutGlobalScope('tenant')->where('project_id', $project->id)->pluck('duration_days', 'workflow_step_id')->all();
+        $this->assertSame([$this->steps[0]->id => 6, $this->steps[1]->id => 1], $durations);
+        $this->assertSame('2027-03-05', $pws->fresh()->due_date->toDateString());   // Termin bleibt
+        $this->assertSame([4, 3, 5], collect($this->steps)->map(fn ($step) => (int) $step->fresh()->duration_days)->all());   // Workflow bleibt
+
+        // Schritt "Planung" (nicht "In Bearbeitung") und ungültige Dauer werden abgelehnt
+        $this->actingAs($admin)->postJson(route('projekte.termine.save-durations', $project), ['durations' => [$this->steps[2]->id => 2]])->assertStatus(422);
+        $this->actingAs($admin)->postJson(route('projekte.termine.save-durations', $project), ['durations' => [$this->steps[0]->id => 0]])->assertStatus(422);
+
+        $plain = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'user']);
+        $this->actingAs($plain)->postJson(route('projekte.termine.save-durations', $project), ['durations' => [$this->steps[0]->id => 2]])->assertForbidden();
+    }
 }

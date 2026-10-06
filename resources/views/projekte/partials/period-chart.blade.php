@@ -164,6 +164,28 @@
             }
             el.value = this.steps[i].days;
         },
+        async saveDurations() {
+            const durations = {};
+            this.steps.forEach((step, i) => { if (step.days !== this.original[i]) durations[step.id] = step.days; });
+            this.applying = true;
+            const response = await fetch(@js(route('projekte.termine.save-durations', $project)), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                body: JSON.stringify({ durations: durations }),
+            });
+            this.applying = false;
+            if (! response.ok) {
+                const data = await response.json().catch(() => ({}));
+                await window.notifyDialog(data.message || @js(__('Die Dauern konnten nicht gespeichert werden.')));
+                return;
+            }
+            window.showToast(@js(__('Gespeichert.')));
+            @if ($isOverlay)
+                await window.refreshUnderlyingProject({{ $project->id }});
+            @else
+                window.location.reload();
+            @endif
+        },
         async applyPeriod(side, iso) {
             const message = side === 'end'
                 ? @js(__('Das Projektende wird auf :date gesetzt. Die Termine der Schritte ändern sich dabei nicht.'))
@@ -386,8 +408,14 @@
         <span class="ml-3 mr-1 inline-block h-2 w-2 rotate-45 bg-red-600 align-middle"></span>{{ __('Schritt endet laut Plan nach dem Termin') }}
     </p>
 
-    <div class="mt-2 flex flex-wrap items-center gap-3 text-gray-400">
-        <span>{{ __('Vorerst nur Ansicht: Verschiebungen werden nicht gespeichert.') }}</span>
+    <div class="mt-2 flex flex-wrap items-center gap-2 text-gray-500">
+        <template x-if="canEditPeriod">
+            <button type="button" onclick="window.openProjectSchedule({{ $project->id }})" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 font-medium text-gray-700 hover:bg-btn-secondary-hover" title="{{ __('Berechnet die Termine der Schritte aus einem Fixpunkt und den Dauern und trägt sie auf Wunsch ein.') }}">{{ __('Termine berechnen …') }}</button>
+        </template>
+        <span x-show="changed" x-cloak class="text-amber-700">{{ __('Nicht gespeicherte Änderungen: Die Dauern werden erst mit „Speichern“ am Projekt übernommen, die Termine der Schritte bleiben unverändert.') }}</span>
+        <span x-show="! canEditPeriod && changed" x-cloak class="text-gray-400">{{ __('Ihnen fehlt die Berechtigung, Termine und Dauern zu ändern.') }}</span>
+        <span class="flex-1"></span>
         <button type="button" x-show="changed" x-cloak @click="reset()" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Zurücksetzen') }}</button>
+        <button type="button" x-show="changed && canEditPeriod" x-cloak :disabled="applying" @click="saveDurations()" class="rounded-md border border-transparent bg-btn-primary px-2.5 py-0.5 font-medium text-white hover:bg-btn-primary-hover disabled:cursor-wait disabled:opacity-50" title="{{ __('Speichert die geänderten Dauern am Projekt. Die Termine der Schritte ändern sich dabei nicht.') }}">{{ __('Speichern') }}</button>
     </div>
 </div>
