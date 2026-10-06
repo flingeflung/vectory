@@ -39,6 +39,7 @@
         // vorgemerkt (angehakt); ein anderes Team ersetzt die Vormerkung des vorherigen. Wer im Projekt schon zugewiesen ist (egal in welcher Funktionsgruppe), wird übersprungen; bestehende
         // Zuweisungen bleiben unverändert. Gespeichert wird wie sonst auch erst mit dem Speichern des Projekts.
         teamBoxes: [],
+        teamPicking: false,
         canGrant: {{ \Illuminate\Support\Js::from($canGrantRelease) }},
         orgName: {{ \Illuminate\Support\Js::from($project->tenant?->short_name ?? $project->tenant?->name) }},
         granting: false,
@@ -142,6 +143,7 @@
                 this.peopleModalOpen = true;
                 this.peopleSnapshot = this.peopleInputs().map((el) => ({ el, checked: el.checked }));
                 this.teamId = '';
+                this.teamPicking = false;
                 this.teamBoxes = [];
                 this.peopleTick++;
             } else if (! open && this.peopleModalOpen) {
@@ -254,7 +256,10 @@
                 </div>
                 @if (count($teamData) > 0)
                     <div class="mt-2">
-                        <select x-model="teamId" @change="applyTeam()" class="w-full max-w-sm rounded-md border-gray-300 py-1 text-xs" title="{{ __('Alle Personen eines Teams auf einmal vormerken. Wer schon zugewiesen ist, wird übersprungen.') }}">
+                        <button type="button" x-show="! teamPicking" @click="teamPicking = true; $nextTick(() => $refs.teamSelect.focus())" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover" title="{{ __('Alle Personen eines Teams auf einmal vormerken. Wer schon zugewiesen ist, wird übersprungen.') }}">
+                            {{ __('Team einsetzen') }}
+                        </button>
+                        <select x-ref="teamSelect" x-show="teamPicking" x-cloak x-model="teamId" @change="applyTeam()" class="w-full max-w-sm rounded-md border-gray-300 py-1 text-xs" title="{{ __('Alle Personen eines Teams auf einmal vormerken. Wer schon zugewiesen ist, wird übersprungen.') }}">
                             <option value="">{{ __('– Team wählen –') }}</option>
                             <template x-for="team in teams" :key="team.id">
                                 <option :value="team.id" x-text="teamLabel(team)"></option>

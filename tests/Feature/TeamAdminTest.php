@@ -88,6 +88,7 @@ class TeamAdminTest extends TestCase
 
         $this->actingAs($admin)->get(route('projekte.projektbeteiligte.show', $project))
             ->assertOk()
+            ->assertSee(__('Team einsetzen'))
             ->assertSee(__('– Team wählen –'))
             ->assertSee('Team Aktiv')
             ->assertDontSee('Team Inaktiv')
