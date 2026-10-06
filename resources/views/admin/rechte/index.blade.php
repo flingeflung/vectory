@@ -530,8 +530,19 @@
                         <div class="text-xs text-gray-500">
                             {{ __('Diese Person gehört zum Kunden „:name" und ist hier nur über eine Kundenzugriff-Freigabe sichtbar. Ihr Rechte-Set gilt für die ganze Person, nicht nur für diesen Kunden, und lässt sich deshalb nur bei „:name" ändern.', ['name' => $selectedPersonHomeTenantName ?? __('einem anderen Kunden')]) }}
                         </div>
+                        @php
+                            $adminRoleTitle = [
+                                'organization_admin' => __('Organisations-Administrator'),
+                                'central_admin' => __('Zentral-Administrator'),
+                                'super_admin' => __('Super-Administrator'),
+                            ][$selectedPerson->user?->role] ?? null;
+                        @endphp
                         <div class="mt-3 text-sm text-gray-700">
-                            {{ __('Aktuelles Rechte-Set') }}: <span class="font-medium">{{ $selectedPerson->permissionTemplate?->name ?? __('– nicht zugewiesen –') }}</span>
+                            @if (! $selectedPerson->permissionTemplate && $adminRoleTitle)
+                                {{ __('Besitzt die Rolle :role; alle Rechte sind auch ohne Rechteset automatisch vorhanden.', ['role' => $adminRoleTitle]) }}
+                            @else
+                                {{ __('Aktuelles Rechte-Set') }}: <span class="font-medium">{{ $selectedPerson->permissionTemplate?->name ?? __('– nicht zugewiesen –') }}</span>
+                            @endif
                         </div>
                     </div>
                 @endif
