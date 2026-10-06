@@ -164,6 +164,7 @@
     "Anfrage abschicken": "Send request",
     "Anfrage konnte nicht verschickt werden - ist für diesen Kunden eine Info-E-Mail hinterlegt (:location)?": "Request could not be sent - is an info email address configured for this customer (:location)?",
     "Anfrage verschickt.": "Request sent.",
+    "Anführungszeichen": "Quotation marks",
     "Angehakt: Projekt wird geändert": "",
     "Angehakt: Projektbeteiligte Personen werden mitkopiert. Wenn eine davon inaktiv ist, wird vor dem Kopieren gewarnt.": "Checked: Project participants are copied as well. If any of them is inactive, a warning is shown before copying.",
     "Angehakt: Versionsnummer wird übernommen, beim Kopieren wird zusätzlich gefragt, ob sie um 1 erhöht werden soll.": "Checked: The version number is copied; when copying, you will also be asked whether it should be increased by 1.",

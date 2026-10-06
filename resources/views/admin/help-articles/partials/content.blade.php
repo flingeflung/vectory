@@ -288,6 +288,7 @@
                                     <x-help-markup :label="'## '.__('Unterüberschrift')" action="prefix" a1="## " /> ·
                                     <x-help-markup :label="'**'.__('fett').'**'" action="wrap" a1="**" a2="**" :part="__('fett')" /> ·
                                     <x-help-markup :label="'*'.__('kursiv').'*'" action="wrap" a1="*" a2="*" :part="__('kursiv')" /> ·
+                                    <x-help-markup :label="'„'.__('Anführungszeichen').'“'" action="wrap" a1="„" a2="“" :part="__('Text')" /> ·
                                     <x-help-markup :label="'- '.__('Punkt (Liste)')" action="prefix" a1="- " /> ·
                                     <x-help-markup :label="'1. '.__('Punkt (nummeriert)')" action="numbered" /> ·
                                     <x-help-markup :label="'['.__('Linktext').'](https://…)'" action="link" :part="__('Linktext')" /> ·
