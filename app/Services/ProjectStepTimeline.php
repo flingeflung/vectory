@@ -129,28 +129,36 @@ class ProjectStepTimeline
     }
 
     /**
-     * Dauern der Schritte "In Bearbeitung" auf den Projektzeitraum umgerechnet (Ralf, 2026-10-06): jede Dauer mal Faktor
-     * (verfügbare Arbeitstage / Summe), als ganze Tage, mindestens 1 Tag je Schritt, in der Summe möglichst genau der Zeitraum
-     * (Rundung nach dem größten Rest). Passen schon die Mindestwerte nicht in den Zeitraum, bleibt es bei 1 Tag je Schritt.
+     * Dauern der Schritte "In Bearbeitung" auf den Projektzeitraum umgerechnet (Ralf, 2026-10-06): jede Dauer mal Faktor als ganze Tage,
+     * mindestens 1 Tag je Schritt, in der Summe möglichst genau der Zeitraum (Rundung nach dem größten Rest).
+     * Schritte ohne eingetragene Dauer (0) zählen in der Rechnung 1 Tag, werden aber NICHT umgerechnet und nicht zurückgegeben -
+     * ihre 0 bleibt stehen. Passen schon die Mindestwerte nicht in den Zeitraum, bleibt es bei 1 Tag je Schritt.
      *
-     * @return array<int, int>|null Schritt-ID => neue Dauer; null = kein Workflow oder Zeitraum
+     * @return array<int, int>|null Schritt-ID => neue Dauer (nur Schritte mit eingetragener Dauer); null = kein Workflow oder Zeitraum
      */
     public function scaledDurations(Project $project, int $availableDays): ?array
     {
-        $breakdown = $this->breakdownById($project);
-        if ($breakdown === null || $availableDays <= 0) {
+        $steps = $this->breakdownById($project);
+        if ($steps === null || $availableDays <= 0) {
             return null;
         }
 
-        $sum = array_sum($breakdown);
+        $fixedCount = count(array_filter($steps, fn ($step) => $step['fixed']));
+        $weights = array_map(fn ($step) => $step['days'], array_filter($steps, fn ($step) => ! $step['fixed']));
+        if ($weights === []) {
+            return [];
+        }
+
+        $target = max(count($weights), $availableDays - $fixedCount);
+        $sum = array_sum($weights);
         $scaled = [];
         $ints = [];
-        foreach ($breakdown as $stepId => $days) {
-            $scaled[$stepId] = $days * $availableDays / $sum;
+        foreach ($weights as $stepId => $days) {
+            $scaled[$stepId] = $days * $target / $sum;
             $ints[$stepId] = max(self::MIN_STEP_DAYS, (int) floor($scaled[$stepId]));
         }
 
-        $diff = $availableDays - array_sum($ints);
+        $diff = $target - array_sum($ints);
         while ($diff > 0) {
             // +1 beim Schritt mit dem größten Rest
             uksort($ints, fn ($a, $b) => ($scaled[$b] - $ints[$b]) <=> ($scaled[$a] - $ints[$a]));
@@ -173,7 +181,7 @@ class ProjectStepTimeline
         return $ints;
     }
 
-    /** @return array<int, int>|null Schritt-ID => Dauer (Wert am Projekt, sonst Standard, mindestens 1) */
+    /** @return array<int, array{days: int, fixed: bool}>|null Schritt-ID => Dauer (Wert am Projekt, sonst Standard, mindestens 1) und ob keine Dauer eingetragen ist */
     private function breakdownById(Project $project): ?array
     {
         if (! $project->workflow_id) {
@@ -184,13 +192,13 @@ class ProjectStepTimeline
             return null;
         }
         $overrides = $this->projectDurations($project->id);
-        $weights = [];
+        $result = [];
         foreach ($steps as $step) {
-            $days = array_key_exists($step->id, $overrides) && $overrides[$step->id] !== null ? $overrides[$step->id] : $step->duration_days;
-            $weights[$step->id] = max(self::MIN_STEP_DAYS, (int) $days);
+            $raw = array_key_exists($step->id, $overrides) && $overrides[$step->id] !== null ? (int) $overrides[$step->id] : (int) $step->duration_days;
+            $result[$step->id] = ['days' => max(self::MIN_STEP_DAYS, $raw), 'fixed' => $raw < self::MIN_STEP_DAYS];
         }
 
-        return $weights;
+        return $result;
     }
 
     private function workflow(int $workflowId): array

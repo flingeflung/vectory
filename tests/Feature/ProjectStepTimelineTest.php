@@ -156,12 +156,13 @@ class ProjectStepTimelineTest extends TestCase
 
     public function test_scaled_durations_are_whole_days_and_add_up_to_the_project_period(): void
     {
-        // 8 + 6 + (0 -> 1) = 15 Tage auf 10 Arbeitstage: 5,33 / 4,00 / 0,67 -> 5 / 4 / 1 (Summe 10)
+        // 8 + 6 Tage (+ ein Schritt ohne Dauer, der 1 Tag zählt und unverändert bleibt) auf 10 Arbeitstage:
+        // 9 Tage verteilen: 5,14 / 3,86 -> 5 / 4; der Schritt ohne Dauer wird nicht zurückgegeben
         $this->steps([[2, 8], [2, 6], [2, 0]]);
         $project = $this->assignment()->project;
         $scaled = app(ProjectPlanningCalculator::class)->scaledDurations($project);
-        $this->assertSame([5, 4, 1], array_values($scaled));
-        $this->assertSame(10, array_sum($scaled));
+        $this->assertSame([5, 4], array_values($scaled));
+        $this->assertSame(9, array_sum($scaled));
     }
 
     public function test_adjust_durations_saves_them_on_the_project_and_leaves_the_workflow_alone(): void
@@ -176,7 +177,7 @@ class ProjectStepTimelineTest extends TestCase
         $this->actingAs($admin)->postJson(route('projekte.termine.adjust-durations', $project))->assertOk();
 
         $saved = \App\Models\ProjectWorkflowStep::query()->withoutGlobalScope('tenant')->where('project_id', $project->id)->orderBy('sort')->pluck('duration_days')->all();
-        $this->assertSame([5, 4, 1], $saved);
+        $this->assertSame([5, 4, null], $saved);   // der Schritt ohne Dauer bleibt unberührt
         $this->assertSame([8, 6, 0], collect($this->steps)->map(fn ($step) => (int) $step->fresh()->duration_days)->all());
 
         // Danach passen Bedarf und Zeitraum zusammen
