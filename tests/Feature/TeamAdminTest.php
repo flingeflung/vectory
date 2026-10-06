@@ -124,6 +124,8 @@ class TeamAdminTest extends TestCase
             ->assertSee('Heimat-Team')
             ->assertSee('Kunden-Team')
             ->assertDontSee('Team ohne Freigabe')
+            ->assertSee('Keine Freigabe für diese Organisation:')
+            ->assertSee('released', false)
             ->assertSee('HD'); // Organisation wird dazugeschrieben, weil Teams aus zwei Organisationen zur Auswahl stehen
     }
 }

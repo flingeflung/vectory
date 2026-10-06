@@ -36,6 +36,19 @@
         // vorgemerkt (angehakt); ein anderes Team ersetzt die Vormerkung des vorherigen. Wer im Projekt schon zugewiesen ist (egal in welcher Funktionsgruppe), wird übersprungen; bestehende
         // Zuweisungen bleiben unverändert. Gespeichert wird wie sonst auch erst mit dem Speichern des Projekts.
         teamBoxes: [],
+        // Auswahltext eines Teams: bei Mitgliedern ohne Freigabe für diese Organisation steht dort, wie viele zuweisbar sind
+        teamLabel(team) {
+            const released = team.members.filter((m) => m.released).length;
+            const count = released < team.members.length
+                ? {{ \Illuminate\Support\Js::from(__(':count von :total zuweisbar')) }}.replace(':count', released).replace(':total', team.members.length)
+                : String(team.members.length);
+            return team.name + (team.org ? ' · ' + team.org : '') + ' (' + count + ')';
+        },
+        get teamHint() {
+            const team = this.teams.find((t) => String(t.id) === String(this.teamId));
+            const missing = team ? team.members.filter((m) => ! m.released).map((m) => m.name) : [];
+            return missing.length ? {{ \Illuminate\Support\Js::from(__('Keine Freigabe für diese Organisation:')) }} + ' ' + missing.join('; ') : '';
+        },
         clearTeam() {
             // Die durch ein vorher gewähltes Team vorgemerkten Personen wieder abwählen (von Hand gesetzte Häkchen bleiben)
             this.teamBoxes.forEach((box) => {
@@ -195,9 +208,10 @@
                         <select x-model="teamId" @change="applyTeam()" class="w-full max-w-sm rounded-md border-gray-300 py-1 text-xs" title="{{ __('Alle Personen eines Teams auf einmal vormerken. Wer schon zugewiesen ist, wird übersprungen.') }}">
                             <option value="">{{ __('– Team wählen –') }}</option>
                             <template x-for="team in teams" :key="team.id">
-                                <option :value="team.id" x-text="team.name + (team.org ? ' · ' + team.org : '') + ' (' + team.members.length + ')'"></option>
+                                <option :value="team.id" x-text="teamLabel(team)"></option>
                             </template>
                         </select>
+                        <div x-show="teamHint" x-cloak class="mt-1 text-[11px] text-amber-700" x-text="teamHint"></div>
                     </div>
                 @endif
             </div>

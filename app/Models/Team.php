@@ -39,7 +39,7 @@ class Team extends Model
      * UND die aller Organisationen, auf die der angemeldete Benutzer Zugriff hat - ein Team der Heimatfirma lässt sich also auch in einem
      * Kundenprojekt zuweisen. Die Teamstruktur wird nicht am Projekt gespeichert, es werden nur die einzelnen Personen übernommen.
      *
-     * @return list<array{id: int, name: string, org: ?string, members: list<array{id: int, name: string, active: bool}>}>
+     * @return list<array{id: int, name: string, org: ?string, members: list<array{id: int, name: string, active: bool, released: bool}>}>
      */
     public static function assignableForProject(int $projectTenantId): array
     {
@@ -70,6 +70,8 @@ class Team extends Model
                     'id' => $person->id,
                     'name' => $person->fullName(),
                     'active' => (bool) $person->active,
+                    // für die Organisation des Projekts freigeschaltet (sonst nicht zuweisbar)
+                    'released' => $person->isVisibleInTenant($projectTenantId),
                 ])->values()->all(),
             ])
             ->values()
