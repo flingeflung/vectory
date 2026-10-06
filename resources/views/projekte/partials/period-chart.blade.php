@@ -267,8 +267,8 @@
                     <span class="w-36 shrink-0 truncate text-gray-600" x-text="g.name" :title="g.name"></span>
                     <div class="relative h-5 flex-1 rounded bg-gray-100">
                         <div
-                            class="absolute top-0 flex h-full items-center justify-center overflow-hidden whitespace-nowrap rounded bg-sky-500 text-[10px] font-medium text-white"
-                            :style="{ left: groupLeft(g) + '%', width: groupWidth(g) + '%' }"
+                            class="absolute flex items-center justify-center overflow-hidden whitespace-nowrap rounded bg-sky-500 text-[10px] font-medium text-white"
+                            :style="{ top: '2px', bottom: '2px', left: groupLeft(g) + '%', width: groupWidth(g) + '%' }"
                             :title="groupTip(g)"
                             x-text="hoursLabel(groupHours(g))"
                         ></div>
