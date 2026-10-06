@@ -7,9 +7,21 @@
         @php($entries = $entriesByGroup->get($group->id) ?? collect())
         <section class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
             <div class="grid grid-cols-[minmax(0,1fr)_7rem_7rem_7rem] items-center gap-2 bg-gray-50 px-2.5 py-1.5">
-                <div class="min-w-0">
-                    <div class="truncate font-semibold text-gray-800" title="{{ $group->name }}">{{ $group->name }}</div>
-                    <div class="text-xs text-gray-400">{{ $group->short_name }}</div>
+                <div class="flex min-w-0 items-center gap-2">
+                    <div class="min-w-0">
+                        <div class="truncate font-semibold text-gray-800" title="{{ $group->name }}">{{ $group->name }}</div>
+                        <div class="text-xs text-gray-400">{{ $group->short_name }}</div>
+                    </div>
+                    @if ($entries->isNotEmpty())
+                        <button
+                            type="button"
+                            x-show="number(planned['{{ $group->id }}']) > 0"
+                            title="{{ __('Stunden dieser Funktionsgruppe automatisch auf alle ihre Personen gleichmäßig verteilen') }}"
+                            :disabled="distributing"
+                            @click="distributeHours('{{ $group->id }}')"
+                            class="shrink-0 rounded-md border border-btn-secondary-border bg-btn-secondary px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:cursor-wait disabled:opacity-50"
+                        >{{ __('Std. verteilen') }}</button>
+                    @endif
                 </div>
                 <div class="text-right">
                     <div class="text-[11px] text-gray-400">{{ __('Geplant') }}</div>
