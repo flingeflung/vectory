@@ -94,4 +94,36 @@ class TeamAdminTest extends TestCase
             ->assertSee('data-person="'.$anna->id.'"', false)
             ->assertSee('data-group="'.$group->id.'"', false);
     }
+
+    public function test_team_of_the_home_organization_can_be_assigned_in_a_customer_project(): void
+    {
+        $home = Tenant::query()->firstOrFail();
+        $home->update(['is_home_tenant' => true, 'short_name' => 'HD']);
+        $customer = Tenant::query()->create(['name' => 'Maschinen', 'short_name' => 'MA']);
+        \App\Models\SystemSetting::set(\App\Models\SystemSetting::MULTI_TENANT_ENABLED, '1');
+        $admin = User::factory()->create(['tenant_id' => $home->id, 'role' => 'central_admin']);
+
+        $homePerson = $this->person($home, 'Heimat');
+        $group = \App\Models\FunctionGroup::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $home->id, 'name' => 'Technische Redaktion', 'short_name' => 'TR']);
+        $group->members()->attach($homePerson->id, ['tenant_id' => $home->id]);
+        \Illuminate\Support\Facades\DB::table('function_group_tenant')->insert(['function_group_id' => $group->id, 'tenant_id' => $customer->id, 'created_at' => now(), 'updated_at' => now()]);
+        \Illuminate\Support\Facades\DB::table('person_tenant')->insert(['person_id' => $homePerson->id, 'tenant_id' => $customer->id]);
+        $project = \App\Models\Project::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $customer->id, 'source_pn' => '279993', 'title' => 'Kundenprojekt', 'status' => 1]);
+
+        $homeTeam = Team::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $home->id, 'name' => 'Heimat-Team']);
+        $homeTeam->members()->attach($homePerson->id, ['tenant_id' => $home->id, 'role' => 'member']);
+        Team::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $customer->id, 'name' => 'Kunden-Team']);
+        // Team der Heimat ohne einen für den Kunden freigeschalteten Mitarbeiter: nicht verfügbar
+        $unreleased = $this->person($home, 'Ohnefreigabe');
+        $unreleasedTeam = Team::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $home->id, 'name' => 'Team ohne Freigabe']);
+        $unreleasedTeam->members()->attach($unreleased->id, ['tenant_id' => $home->id, 'role' => 'member']);
+
+        $this->actingAs($admin)->withSession(['active_tenant_id' => $customer->id])
+            ->get(route('projekte.projektbeteiligte.show', $project))
+            ->assertOk()
+            ->assertSee('Heimat-Team')
+            ->assertSee('Kunden-Team')
+            ->assertDontSee('Team ohne Freigabe')
+            ->assertSee('HD'); // Organisation wird dazugeschrieben, weil Teams aus zwei Organisationen zur Auswahl stehen
+    }
 }

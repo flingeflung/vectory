@@ -6,7 +6,7 @@
      Lädt sich NICHT neu, während gerade editiert wird (sonst gingen
      unfertige Änderungen verloren). --}}
 @php
-    $teamData = \App\Models\Team::assignableForTenant($project->tenant_id);
+    $teamData = \App\Models\Team::assignableForProject($project->tenant_id);
     // Welche Funktionsgruppen dieses Projekts bieten eine Person an? Nur dort lässt sich ein Teammitglied automatisch zuweisen.
     $groupsByPerson = [];
     foreach ($allFunctionGroups as $group) {
@@ -195,7 +195,7 @@
                         <select x-model="teamId" @change="applyTeam()" class="w-full max-w-sm rounded-md border-gray-300 py-1 text-xs" title="{{ __('Alle Personen eines Teams auf einmal vormerken. Wer schon zugewiesen ist, wird übersprungen.') }}">
                             <option value="">{{ __('– Team wählen –') }}</option>
                             <template x-for="team in teams" :key="team.id">
-                                <option :value="team.id" x-text="team.name + ' (' + team.members.length + ')'"></option>
+                                <option :value="team.id" x-text="team.name + (team.org ? ' · ' + team.org : '') + ' (' + team.members.length + ')'"></option>
                             </template>
                         </select>
                     </div>
