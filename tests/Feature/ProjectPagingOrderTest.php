@@ -34,7 +34,7 @@ class ProjectPagingOrderTest extends TestCase
         $method->setAccessible(true);
 
         $sequence = [$from->source_pn];
-        for ($project = $from; ($project = $method->invoke($controller, null, 'desc', [], $project, $way)) !== null;) {
+        for ($project = $from; ($project = $method->invoke($controller, 'start_date', 'desc', [], $project, $way)) !== null;) {
             $sequence[] = $project->source_pn;
             if (count($sequence) > 20) {
                 break; // Schutz gegen Schleifen

@@ -1982,7 +1982,7 @@ class ProjectController extends Controller
     }
 
     /**
-     * Kein sort-Parameter -> fachlich fester Default (start_date, absteigend).
+     * Kein sort-Parameter -> fachlich fester Default (PN absteigend, neueste zuerst; Ralf 2026-10-07).
      * Die Übersicht bietet dafür keine asc/desc-Wahl an, also muss die
      * Blätter-Navigation dieselbe feste Richtung verwenden wie die Tabelle.
      *
@@ -1990,7 +1990,7 @@ class ProjectController extends Controller
      */
     private function effectiveOrder(?string $sort, string $direction): array
     {
-        return $sort ? [$sort, $direction] : ['start_date', 'desc'];
+        return $sort ? [$sort, $direction] : ['source_pn', 'desc'];
     }
 
     /**
