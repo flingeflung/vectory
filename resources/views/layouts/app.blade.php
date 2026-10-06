@@ -2546,7 +2546,22 @@
                 const showLoading = () => loading().classList.replace('hidden', 'flex');
                 const hideLoading = () => loading().classList.replace('flex', 'hidden');
 
-                const serializeForm = (form) => form ? new URLSearchParams(new FormData(form)).toString() : null;
+                // Die Felder des Overlays Projektbeteiligte Personen liegen außerhalb des Projekt-Overlays (am body), gehören aber
+                // zum Formular und kommen erst nach dem Aufbau dazu. Sie zählen hier nicht mit: Das Overlay prüft und verwirft
+                // seine Änderungen selbst, sonst meldet das Projekt fälschlich ungespeicherte Änderungen.
+                const serializeForm = (form) => {
+                    if (! form) {
+                        return null;
+                    }
+                    const data = new FormData(form);
+                    [...form.elements].forEach((element) => {
+                        if (element.name && element.closest && element.closest('[data-people-modal-body]')) {
+                            data.delete(element.name);
+                        }
+                    });
+
+                    return new URLSearchParams(data).toString();
+                };
 
                 // Immer das eigentliche Projektformular prüfen: Davor stehen im Overlay weitere Formulare (z.B. das Checklisten-Modal),
                 // die als "erstes Formular" nie als geändert galten - dann fehlte der Speichern-Button.
