@@ -32,24 +32,25 @@
         teamId: '',
         teamResult: null,
         // Team zuweisen (Ralf, 2026-10-06): die Teamstruktur wird nicht gespeichert, es werden nur die einzelnen Personen
-        // angehakt. Wer im Projekt schon zugewiesen ist (egal in welcher Funktionsgruppe), wird übersprungen; bestehende
+        // vorgemerkt (angehakt). Wer im Projekt schon zugewiesen ist (egal in welcher Funktionsgruppe), wird übersprungen; bestehende
         // Zuweisungen bleiben unverändert. Gespeichert wird wie sonst auch erst mit dem Speichern des Projekts.
         applyTeam() {
             const team = this.teams.find((t) => String(t.id) === String(this.teamId));
             if (! team) return;
-            const result = { added: [], already: [], inactive: [], ambiguous: [], none: [] };
+            const result = { added: [], already: [], inactive: [], none: [] };
             team.members.forEach((member) => {
                 const boxes = [...this.$root.querySelectorAll('input[data-person]')].filter((box) => box.dataset.person === String(member.id));
                 if (boxes.some((box) => box.checked)) { result.already.push(member.name); return; }
                 if (! member.active) { result.inactive.push(member.name); return; }
-                const groups = this.groupsByPerson[member.id] || [];
-                if (groups.length === 0) { result.none.push(member.name); return; }
-                if (groups.length > 1) { result.ambiguous.push(member.name + ' (' + groups.map((g) => g.short).join(', ') + ')'); return; }
-                const box = boxes.find((b) => String(b.dataset.group) === String(groups[0].id));
-                if (! box) { result.none.push(member.name); return; }
-                box.checked = true;
-                box.dispatchEvent(new Event('change', { bubbles: true }));
-                result.added.push(member.name);
+                // Die Person kommt in alle Funktionsgruppen dieses Projekts, in denen sie Mitglied ist.
+                const groupIds = (this.groupsByPerson[member.id] || []).map((g) => String(g.id));
+                const targets = boxes.filter((box) => groupIds.includes(String(box.dataset.group)));
+                if (targets.length === 0) { result.none.push(member.name); return; }
+                targets.forEach((box) => {
+                    box.checked = true;
+                    box.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+                result.added.push(member.name + (targets.length > 1 ? ' (' + targets.length + ' ' + {{ \Illuminate\Support\Js::from(__('Funktionsgruppen')) }} + ')' : ''));
             });
             this.teamResult = result;
         },
@@ -57,10 +58,9 @@
             const r = this.teamResult;
             if (! r) return [];
             const lines = [];
-            lines.push(r.added.length + ' ' + {{ \Illuminate\Support\Js::from(__('Person(en) angehakt, gespeichert wird erst mit „Speichern“:')) }} + (r.added.length ? ' ' + r.added.join('; ') : ''));
+            lines.push(r.added.length + ' ' + {{ \Illuminate\Support\Js::from(__('Person(en) vorgemerkt:')) }} + (r.added.length ? ' ' + r.added.join('; ') : ''));
             if (r.already.length) lines.push(r.already.length + ' ' + {{ \Illuminate\Support\Js::from(__('bereits zugewiesen, übersprungen:')) }} + ' ' + r.already.join('; '));
             if (r.inactive.length) lines.push(r.inactive.length + ' ' + {{ \Illuminate\Support\Js::from(__('inaktiv, übersprungen:')) }} + ' ' + r.inactive.join('; '));
-            if (r.ambiguous.length) lines.push(r.ambiguous.length + ' ' + {{ \Illuminate\Support\Js::from(__('in mehreren Funktionsgruppen, bitte unten selbst zuweisen:')) }} + ' ' + r.ambiguous.join('; '));
             if (r.none.length) lines.push(r.none.length + ' ' + {{ \Illuminate\Support\Js::from(__('in keiner zuweisbaren Funktionsgruppe, übersprungen:')) }} + ' ' + r.none.join('; '));
             return lines;
         },
