@@ -28,8 +28,8 @@ class ProjectSortMemoryTest extends TestCase
         $this->actingAs($user)->get(route('projekte', ['sort' => 'source_pn', 'direction' => 'asc']))->assertSeeInOrder(['270001', '270002', '270003']);
         $this->actingAs($user)->get(route('projekte'))->assertSeeInOrder(['270001', '270002', '270003']);
 
-        // Eine andere Spalte wird ebenfalls gemerkt (Start aufsteigend: 270003 hat das früheste Datum)
-        $this->actingAs($user)->get(route('projekte', ['sort' => 'start_date', 'direction' => 'asc']));
+        // Eine andere Spalte wird ebenfalls gemerkt (Bezeichnung absteigend)
+        $this->actingAs($user)->get(route('projekte', ['sort' => 'title', 'direction' => 'desc']));
         $this->actingAs($user)->get(route('projekte'))->assertSeeInOrder(['270003', '270002', '270001']);
     }
 }

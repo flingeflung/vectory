@@ -20,6 +20,7 @@
         hasOverrides: @js($hasOverrides ?? false),
         canEditPeriod: @js($canEditPeriod ?? false),
         applying: false,
+        hover: null,
         original: null,
         wdCal: [],
         grid: { weekends: [], holidays: [], months: [], years: [], today: null },
@@ -222,7 +223,7 @@
                 <div
                     class="absolute border-r border-white"
                     :class="{ 'rounded-l': i === 0, 'rounded-r': i === steps.length - 1 }"
-                    :style="{ top: '16px', bottom: '16px', left: startPct(i) + '%', width: widthPct(i) + '%', backgroundColor: palette[i % palette.length], opacity: 0.85 }"
+                    :style="{ top: '16px', bottom: '16px', left: startPct(i) + '%', width: widthPct(i) + '%', backgroundColor: palette[i % palette.length], opacity: hover === null ? 0.85 : (hover === i ? 1 : 0.35), outline: hover === i ? '2px solid #1f2937' : 'none', zIndex: hover === i ? 6 : 0 }"
                     :title="tip(i)"
                 ></div>
             </template>
@@ -279,7 +280,7 @@
 
     <div class="mt-2 flex flex-wrap gap-2">
         <template x-for="(step, i) in steps" :key="'field-' + step.id">
-            <div class="flex items-center gap-1 rounded-md border border-gray-200 px-1.5 py-1">
+            <div class="flex items-center gap-1 rounded-md border px-1.5 py-1" :class="hover === i ? 'border-gray-500 bg-gray-50' : 'border-gray-200'" @mouseenter="hover = i" @mouseleave="hover = null">
                 <span class="inline-block h-3 w-3 shrink-0 rounded-sm" :style="{ backgroundColor: palette[i % palette.length] }"></span>
                 <span class="max-w-[10rem] truncate font-medium text-gray-700" x-text="shortLabel(step.title)" :title="step.title"></span>
                 <input
