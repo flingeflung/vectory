@@ -245,7 +245,7 @@
                 class="pointer-events-none absolute flex items-center justify-center overflow-hidden whitespace-nowrap text-[10px] text-gray-500"
                 :style="{ top: '16px', bottom: '16px', left: pct(edge(steps.length - 1)) + '%', width: (100 - pct(edge(steps.length - 1))) + '%', backgroundImage: 'repeating-linear-gradient(135deg, #e5e7eb 0, #e5e7eb 2px, #f9fafb 2px, #f9fafb 6px)' }"
                 :title="@js(__('Puffer: Zeit bis zum Projektende, die der Workflow nicht braucht'))"
-            ><span x-text="@js(__('Puffer: :days AT')).replace(':days', period.diff)"></span></div>
+            ><span x-show="preview !== 'end'" x-text="@js(__('Puffer: :days AT')).replace(':days', period.diff)"></span></div>
             <div
                 x-show="period.mode === 'overflow' && endIdx >= 0 && preview !== 'durations'"
                 class="absolute top-0 h-full"
