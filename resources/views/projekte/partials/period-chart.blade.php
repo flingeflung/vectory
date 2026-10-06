@@ -198,7 +198,7 @@
         <div x-show="groups.length" class="mt-2 space-y-1">
             <template x-for="g in groups" :key="'group-' + g.id">
                 <div class="flex items-center gap-2">
-                    <span class="w-[7.5rem] shrink-0 truncate text-gray-600" x-text="g.name" :title="g.name"></span>
+                    <span class="w-36 shrink-0 truncate text-gray-600" x-text="g.name" :title="g.name"></span>
                     <div class="relative h-5 flex-1 rounded bg-gray-100">
                         <div
                             class="absolute top-0 flex h-full items-center justify-center overflow-hidden whitespace-nowrap rounded bg-sky-500 text-[10px] font-medium text-white"
