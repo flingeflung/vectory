@@ -18,10 +18,10 @@ return [
         'planung.planstunden' => 'Planung › Planstunden',
         'planung.auslastung' => 'Planung › Auslastung',
         'planung.terminplan' => 'Planung › Terminplan',
-        'zeiten' => 'Zeiten',
-        'zeiten.uebersicht' => 'Zeiten › Projektstunden',
-        'zeiten.personen' => 'Zeiten › Personen & Tage',
-        'zeiten.gesamt' => 'Zeiten › Zeitverlauf',
+        'zeiten' => 'Gebuchte Std.',
+        'zeiten.uebersicht' => 'Gebuchte Std. › Projektstunden',
+        'zeiten.personen' => 'Gebuchte Std. › Personen & Tage',
+        'zeiten.gesamt' => 'Gebuchte Std. › Zeitverlauf',
     ],
     // Dialog "Zeiterfassung" am Projekt (Stunden buchen); die Reiter sind einzeln nachgeladene Fragmente
     'project-time-tracking' => [
