@@ -183,11 +183,13 @@
                     </div>
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('Kürzel') }}</label>
-                        <input type="text" id="person-short-name" name="short_name" value="{{ old('short_name', $person->short_name) }}" minlength="2" maxlength="4" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                        <input type="text" id="person-short-name" name="short_name" value="{{ old('short_name', $person->short_name) }}" minlength="2" maxlength="4" data-check-url="{{ route('admin.personen.feldpruefung', $person) }}" onblur="window.checkPersonField?.(this)" oninput="window.clearPersonFieldHint?.(this)" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                        <p data-field-hint class="mt-0.5 hidden text-xs text-red-600"></p>
                     </div>
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('E-Mail') }}</label>
-                        <input type="email" name="email" value="{{ old('email', $person->email) }}" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                        <input type="email" name="email" value="{{ old('email', $person->email) }}" data-check-url="{{ route('admin.personen.feldpruefung', $person) }}" onblur="window.checkPersonField?.(this)" oninput="window.clearPersonFieldHint?.(this)" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                        <p data-field-hint class="mt-0.5 hidden text-xs text-red-600"></p>
                     </div>
                     @if ($multiTenantEnabled)
                         <div>

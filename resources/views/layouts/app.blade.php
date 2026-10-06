@@ -1859,6 +1859,37 @@
                 // manuelle Eingabe. Global (nicht Overlay-Closure), weil das
                 // Feld auch auf der normalen Vollseite (nicht nur im Overlay)
                 // vorkommt.
+                // Feldprüfung beim Verlassen des Feldes (Kürzel, E-Mail): Hinweis direkt unter dem Feld, gespeichert wird nichts.
+                window.clearPersonFieldHint = function (input) {
+                    const hint = input.parentElement.querySelector('[data-field-hint]');
+                    input.classList.remove('border-red-400');
+                    if (hint) {
+                        hint.textContent = '';
+                        hint.classList.add('hidden');
+                    }
+                };
+                window.checkPersonField = async function (input) {
+                    const hint = input.parentElement.querySelector('[data-field-hint]');
+                    if (!hint || !input.dataset.checkUrl) {
+                        return;
+                    }
+                    const value = input.value.trim();
+                    try {
+                        const url = new URL(input.dataset.checkUrl, window.location.origin);
+                        url.searchParams.set('field', input.name);
+                        url.searchParams.set('value', value);
+                        const response = await fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+                        if (!response.ok || input.value.trim() !== value) {
+                            return;
+                        }
+                        const data = await response.json();
+                        input.classList.toggle('border-red-400', !!data.message);
+                        hint.textContent = data.message || '';
+                        hint.classList.toggle('hidden', !data.message);
+                    } catch (error) {
+                        // Prüfung nicht möglich: kein Hinweis, das Speichern prüft ohnehin noch einmal
+                    }
+                };
                 window.suggestPersonShortName = function () {
                     const first = document.getElementById('person-first-name');
                     const last = document.getElementById('person-last-name');

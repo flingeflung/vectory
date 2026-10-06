@@ -240,6 +240,30 @@ class PersonController extends Controller
         return view('admin.personen.edit', $data);
     }
 
+    /**
+     * Prüft ein einzelnes Feld direkt beim Verlassen (Ralf, 2026-10-06): Kürzel (Länge, noch frei?) und E-Mail (gültig?).
+     * Dieselben Regeln wie beim Speichern; es wird nichts gespeichert.
+     */
+    public function checkField(Request $request, Person $person): JsonResponse
+    {
+        abort_unless($this->personVisibleInCurrentTenant($request, $person), 404);
+        abort_unless($this->personFullyEditableByCurrentUser($request, $person), 403);
+
+        $rules = [
+            'short_name' => [
+                'nullable', 'string', 'min:2', 'max:4',
+                Rule::unique('people', 'short_name')->where('tenant_id', $person->tenant_id)->ignore($person->id),
+            ],
+            'email' => ['nullable', 'email', 'max:255'],
+        ];
+        $field = (string) $request->query('field');
+        abort_unless(isset($rules[$field]), 422);
+
+        $validator = Validator::make([$field => $request->query('value')], [$field => $rules[$field]], $this->fieldMessages(), ['short_name' => __('Kürzel'), 'email' => __('E-Mail')]);
+
+        return response()->json(['message' => $validator->fails() ? $validator->errors()->first($field) : null]);
+    }
+
     public function update(Request $request, Person $person): RedirectResponse|Response
     {
         abort_unless($this->personVisibleInCurrentTenant($request, $person), 404);
@@ -272,16 +296,21 @@ class PersonController extends Controller
             'active' => ['boolean'],
             'resource_planning' => ['boolean'],
             'calendar_enabled' => ['boolean'],
-        ], [], ['short_name' => __('Kürzel')]);
+        ], $this->fieldMessages(), ['short_name' => __('Kürzel')]);
 
         if ($validator->fails()) {
+            // Beim Fehler bleiben die eingetragenen Werte im Formular erhalten (nichts wird gespeichert, nur angezeigt).
+            $data = $this->withSubmittedValues($this->editData($request, $person), $request);
+
             if ($isOverlay) {
                 return response()
-                    ->view('admin.personen.partials.edit-body', [...$this->editData($request, $person), 'overlay' => true, 'errors' => $this->viewErrors($validator->errors())])
+                    ->view('admin.personen.partials.edit-body', [...$data, 'overlay' => true, 'errors' => $this->viewErrors($validator->errors())])
                     ->setStatusCode(422);
             }
 
-            return back()->withErrors($validator)->withInput();
+            return response()
+                ->view('admin.personen.edit', [...$data, 'errors' => $this->viewErrors($validator->errors())])
+                ->setStatusCode(422);
         }
 
         $validated = $validator->validated();
@@ -681,6 +710,65 @@ class PersonController extends Controller
     /**
      * @return array{person: Person, companies: Collection, departments: Collection, businessUnits: Collection, legacyRoles: Collection, permissionTemplates: Collection, functionGroups: Collection, filters: array, previousPerson: ?Person, nextPerson: ?Person}
      */
+    /** @return array<string, string> Meldungen für Kürzel und E-Mail (beim Speichern und bei der Prüfung beim Verlassen des Feldes) */
+    private function fieldMessages(): array
+    {
+        return [
+            'short_name.unique' => __('Kürzel wird bereits verwendet'),
+            'short_name.min' => __('Das Kürzel braucht 2 bis 4 Zeichen'),
+            'short_name.max' => __('Das Kürzel braucht 2 bis 4 Zeichen'),
+            'email.email' => __('Die E-Mail-Adresse ist ungültig'),
+        ];
+    }
+
+    /**
+     * Legt die abgeschickten (noch nicht gespeicherten) Formularwerte über die geladene Person, damit ein Formular nach
+     * einer Fehlermeldung nicht auf den gespeicherten Stand zurückspringt.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function withSubmittedValues(array $data, Request $request): array
+    {
+        $person = $data['person'];
+        $text = fn (string $key) => $request->has($key) ? (string) $request->input($key) : $person->{$key};
+        $id = fn (string $key) => $request->filled($key) ? (int) $request->input($key) : null;
+
+        $person->forceFill([
+            'first_name' => $text('first_name'),
+            'last_name' => $text('last_name'),
+            'short_name' => $request->filled('short_name') ? (string) $request->input('short_name') : null,
+            'email' => $request->filled('email') ? (string) $request->input('email') : null,
+            'company_id' => $id('company_id'),
+            'department_id' => $id('department_id'),
+            'business_unit_id' => $id('business_unit_id'),
+            'legacy_role_id' => $id('legacy_role_id'),
+            'permission_template_id' => $id('permission_template_id'),
+            'remarks' => $request->filled('remarks') ? (string) $request->input('remarks') : null,
+            'active' => $request->boolean('active'),
+            'resource_planning' => $request->boolean('resource_planning'),
+            'calendar_enabled' => $request->boolean('calendar_enabled'),
+        ]);
+
+        foreach (['start_date', 'end_date'] as $key) {
+            if (! $request->has($key)) {
+                continue;
+            }
+            try {
+                $person->{$key} = $request->filled($key) ? \Carbon\Carbon::parse((string) $request->input($key))->toDateString() : null;
+            } catch (\Throwable) {
+                // unlesbares Datum: den gespeicherten Wert stehen lassen
+            }
+        }
+
+        $person->setRelation('functionGroups', FunctionGroup::query()
+            ->availableForTenant($person->tenant_id)
+            ->whereIn('id', collect($request->array('function_group_ids'))->map(fn ($groupId) => (int) $groupId))
+            ->get());
+
+        return [...$data, 'person' => $person];
+    }
+
     private function editData(Request $request, Person $person): array
     {
         // Für die Liste/das Blättern zählt der AKTIVE Kunde (Kontext, in dem
