@@ -1,23 +1,47 @@
 {{--
-    Zeitraum-Diagramm (Ralf, 2026-10-06): die Arbeitsschritte "In Bearbeitung" als aneinanderhängende Balken über den Arbeitstagen von
-    Projektstart bis -ende. Die Breite eines Balkens entspricht seiner Dauer in AT. Die Balkenenden lassen sich ziehen; darunter stehen je
-    Schritt Enddatum und Dauer als Felder. Alle drei Eingabewege (Ziehen, Datum, AT) wirken aufeinander (Wechselwirkung):
+    Zeitraum-Diagramm (Ralf, 2026-10-06): die Arbeitsschritte "In Bearbeitung" als aneinanderhängende Balken über dem Kalender von
+    Projektstart bis -ende. Die Zeitachse zeigt alle Kalendertage; im Hintergrund liegt ein feines Raster (Sa/So, Feiertage, Monatswechsel,
+    Jahreswechsel, Heute). Ein Balken reicht bis zum Beginn des ersten Arbeitstags des nächsten Schritts (Wochenenden zählen zum vorigen
+    Schritt). Die Balkenenden lassen sich ziehen; darunter stehen je Schritt Enddatum und Dauer als Felder. Alle drei Eingabewege (Ziehen,
+    Datum, AT) wirken aufeinander (Wechselwirkung):
     - Ziehen: verschiebt die Grenze zum nächsten Schritt -> Datum und AT beider Schritte ändern sich.
     - Datum eines Schritts ändern: dieselbe Grenzverschiebung (der letzte Schritt endet immer am Projektende).
     - AT eines Schritts ändern: der Nachbar gleicht aus (beim letzten Schritt der Vorgänger).
-    Die Gesamtbreite bleibt der Projektzeitraum, jeder Schritt hat mindestens 1 AT. Vorerst nur Ansicht/Entwurf: nichts wird gespeichert.
+    Die Summe der Dauern bleibt der Projektzeitraum in AT, jeder Schritt hat mindestens 1 AT. Vorerst nur Ansicht/Entwurf: nichts wird gespeichert.
 --}}
 <div
     x-data="{
         workdays: @js($chart['workdays']),
+        calendar: @js($chart['calendar']),
+        holidays: @js($chart['holidays']),
         steps: @js($chart['steps']),
         original: null,
+        wdCal: [],
+        grid: { weekends: [], holidays: [], months: [], years: [], today: null },
         palette: ['#93c5fd', '#6ee7b7', '#fcd34d', '#f9a8d4', '#c4b5fd', '#fdba74', '#5eead4', '#fca5a5'],
         init() {
             this.normalize();
             this.original = this.steps.map((step) => step.days);
+            const monthNames = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+            const now = new Date();
+            const todayIso = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+            const index = {};
+            this.calendar.forEach((iso, k) => {
+                index[iso] = k;
+                const [y, m, d] = iso.split('-').map(Number);
+                const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+                if (dow === 0 || dow === 6) this.grid.weekends.push(k);
+                if (this.holidays[iso]) this.grid.holidays.push({ k: k, name: this.holidays[iso] });
+                if (d === 1 && k > 0) {
+                    if (m === 1) this.grid.years.push({ k: k, label: String(y) });
+                    else this.grid.months.push({ k: k, label: monthNames[m - 1] });
+                }
+            });
+            this.wdCal = this.workdays.map((iso) => index[iso]);
+            if (index[todayIso] !== undefined) this.grid.today = index[todayIso];
         },
         get total() { return this.workdays.length; },
+        get span() { return this.calendar.length; },
         get changed() { return this.original !== null && this.steps.some((step, i) => step.days !== this.original[i]); },
         // Die Summe der Dauern muss genau der Zeitraum sein (der Server liefert das schon so; hier nur als Absicherung)
         normalize() {
@@ -36,8 +60,11 @@
         cum(i) { let c = 0; for (let k = 0; k <= i; k++) c += this.steps[k].days; return c; },
         endIso(i) { return this.workdays[Math.min(this.total, this.cum(i)) - 1]; },
         dateDe(iso) { return iso ? iso.split('-').reverse().join('.') : ''; },
-        startPct(i) { return (this.cum(i) - this.steps[i].days) / this.total * 100; },
-        widthPct(i) { return this.steps[i].days / this.total * 100; },
+        // Kalenderposition (0..span) des rechten Rands von Schritt i
+        edge(i) { return i >= this.steps.length - 1 ? this.span : this.wdCal[this.cum(i)]; },
+        startPct(i) { return (i === 0 ? 0 : this.edge(i - 1)) / this.span * 100; },
+        widthPct(i) { return (this.edge(i) - (i === 0 ? 0 : this.edge(i - 1))) / this.span * 100; },
+        pct(k) { return k / this.span * 100; },
         tip(i) {
             const start = this.workdays[this.cum(i) - this.steps[i].days];
             return this.steps[i].title + ' · ' + this.steps[i].days + ' AT · ' + this.dateDe(start) + ' – ' + this.dateDe(this.endIso(i));
@@ -62,7 +89,8 @@
         startDrag(i, event) {
             const move = (e) => {
                 const rect = this.$refs.track.getBoundingClientRect();
-                this.moveBoundary(i, Math.round((e.clientX - rect.left) / rect.width * this.total));
+                const c = Math.round((e.clientX - rect.left) / rect.width * this.span);
+                this.moveBoundary(i, this.wdCal.filter((k) => k < c).length);
             };
             const up = () => {
                 window.removeEventListener('pointermove', move);
@@ -98,29 +126,60 @@
     @endif
 
     <div class="px-1">
-        <div x-ref="track" class="relative h-9 w-full select-none overflow-visible rounded">
+        <div x-ref="track" class="relative h-10 w-full select-none overflow-visible rounded">
+            {{-- Raster im Hintergrund --}}
+            <template x-for="k in grid.weekends" :key="'we-' + k">
+                <div class="pointer-events-none absolute top-0 h-full" :style="{ left: pct(k) + '%', width: pct(1) + '%', backgroundColor: '#fffaeb' }"></div>
+            </template>
+            <template x-for="h in grid.holidays" :key="'ho-' + h.k">
+                <div class="absolute top-0 h-full bg-rose-300" :style="{ left: pct(h.k) + '%', width: 'max(1px, ' + pct(1) + '%)', opacity: 0.6 }" :title="h.name + ' (' + dateDe(calendar[h.k]) + ')'"></div>
+            </template>
+            <template x-for="m in grid.months" :key="'mo-' + m.k">
+                <div class="pointer-events-none absolute top-0 h-full w-px bg-gray-300" :style="{ left: pct(m.k) + '%' }"></div>
+            </template>
+            <template x-for="y in grid.years" :key="'ye-' + y.k">
+                <div class="pointer-events-none absolute top-0 h-full w-0.5 -translate-x-px bg-gray-500" :style="{ left: pct(y.k) + '%' }"></div>
+            </template>
+
             <template x-for="(step, i) in steps" :key="step.id">
                 <div
-                    class="absolute top-0 h-full border-r border-white"
+                    class="absolute border-r border-white"
                     :class="{ 'rounded-l': i === 0, 'rounded-r': i === steps.length - 1 }"
-                    :style="{ left: startPct(i) + '%', width: widthPct(i) + '%', backgroundColor: palette[i % palette.length] }"
+                    :style="{ top: '6px', bottom: '6px', left: startPct(i) + '%', width: widthPct(i) + '%', backgroundColor: palette[i % palette.length], opacity: 0.85 }"
                     :title="tip(i)"
                 ></div>
             </template>
+
+            <div
+                x-show="grid.today !== null"
+                class="pointer-events-none absolute top-0 z-[5] h-full w-0.5 -translate-x-px bg-blue-600"
+                :style="{ left: pct((grid.today ?? 0) + 0.5) + '%' }"
+                title="{{ __('Heute') }}"
+            ></div>
+
             <template x-for="(step, i) in steps.slice(0, -1)" :key="'handle-' + step.id">
                 <div
                     class="absolute top-0 z-10 flex h-full w-3 -translate-x-1/2 cursor-col-resize items-center justify-center"
-                    :style="{ left: (cum(i) / total * 100) + '%' }"
+                    :style="{ left: pct(edge(i)) + '%' }"
                     @pointerdown.prevent="startDrag(i, $event)"
-                    title="{{ __('Ziehen, um die Grenze zum nächsten Schritt zu verschieben') }}"
+                    :title="dateDe(endIso(i))"
                 >
                     <div class="h-5 w-1 rounded bg-gray-700/70"></div>
                 </div>
             </template>
         </div>
-        <div class="mt-1 flex justify-between text-gray-500">
-            <span x-text="dateDe(workdays[0])"></span>
-            <span x-text="dateDe(workdays[workdays.length - 1])"></span>
+        <div class="relative mt-1 h-4 text-gray-500">
+            <span class="absolute left-0" x-text="dateDe(calendar[0])"></span>
+            <template x-for="m in grid.months.concat(grid.years)" :key="'lab-' + m.k">
+                <span
+                    x-show="pct(m.k) > 12 && pct(m.k) < 88"
+                    class="absolute -translate-x-1/2 text-[10px] text-gray-400"
+                    :class="m.label.length === 4 ? 'font-semibold text-gray-600' : ''"
+                    :style="{ left: pct(m.k) + '%' }"
+                    x-text="m.label"
+                ></span>
+            </template>
+            <span class="absolute right-0" x-text="dateDe(calendar[calendar.length - 1])"></span>
         </div>
     </div>
 
@@ -134,7 +193,7 @@
                     :value="endIso(i)"
                     :disabled="i === steps.length - 1"
                     @change="setEndDate(i, $event.target.value, $event.target)"
-                    class="w-[8.5rem] rounded border-gray-300 py-0.5 text-xs disabled:bg-gray-50 disabled:text-gray-500"
+                    class="w-[7.25rem] rounded border-gray-300 px-1 py-0.5 text-xs disabled:bg-gray-50 disabled:text-gray-500"
                     title="{{ __('Berechnetes Ende des Schritts') }}"
                 >
                 <input
@@ -142,7 +201,7 @@
                     min="1"
                     :value="step.days"
                     @change="setDays(i, $event.target.value, $event.target)"
-                    class="w-14 rounded border-gray-300 py-0.5 text-right text-xs"
+                    class="w-10 rounded border-gray-300 px-1 py-0.5 text-right text-xs"
                     :title="'{{ __('Dauer in Arbeitstagen (AT)') }}' + (step.fixed ? ' – {{ __('keine Dauer im Workflow eingetragen, zählt 1 Tag') }}' : ' – {{ __('laut Workflow') }}: ' + step.workflow_days)"
                 >
                 <span class="text-gray-500">{{ __('AT') }}</span>

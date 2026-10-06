@@ -175,7 +175,7 @@ class ProjectPlanningCalculator
      * Zeitraum umgerechneten (wie beim Knopf "Dauern an Projektzeitraum anpassen"), damit die Balken die Breite genau füllen.
      * Schritte ohne eingetragene Dauer zählen 1 Tag.
      *
-     * @return array{workdays: list<string>, steps: list<array{id: int, title: string, days: int, workflow_days: int, fixed: bool}>, sum: int, available: int, compressed: bool}|null
+     * @return array{workdays: list<string>, calendar: list<string>, holidays: object, steps: list<array{id: int, title: string, days: int, workflow_days: int, fixed: bool}>, sum: int, available: int, compressed: bool}|null
      */
     public function periodChart(\App\Models\Project $project): ?array
     {
@@ -194,8 +194,24 @@ class ProjectPlanningCalculator
             $steps[] = ['id' => $row['id'], 'title' => $row['title'], 'days' => $days, 'workflow_days' => $row['days'], 'fixed' => $row['default_used']];
         }
 
+        // Kalender von Projektstart bis -ende mit allen Tagen (auch Wochenenden, Feiertage) für das Raster im Hintergrund
+        $start = CarbonImmutable::parse($project->start_date->toDateString());
+        $end = CarbonImmutable::parse($project->end_date->toDateString());
+        $calendar = [];
+        for ($date = $start; $date->lessThanOrEqualTo($end); $date = $date->addDay()) {
+            $calendar[] = $date->toDateString();
+        }
+        $holidayNames = Holiday::query()->withoutGlobalScope('tenant')
+            ->where('tenant_id', $project->tenant_id)->where('active', true)
+            ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
+            ->get(['date', 'name'])
+            ->mapWithKeys(fn (Holiday $holiday) => [$holiday->date->toDateString() => (string) $holiday->name])
+            ->all();
+
         return [
             'workdays' => $workdays,
+            'calendar' => $calendar,
+            'holidays' => (object) $holidayNames,
             'steps' => $steps,
             'sum' => $breakdown['sum'],
             'available' => $available,
