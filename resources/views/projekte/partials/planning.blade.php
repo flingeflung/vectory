@@ -16,6 +16,33 @@
         utilBounds: { minYear: {{ min(2026, (int) ($project->start_date?->year ?? 2026)) }}, maxYear: {{ (int) now()->year + 5 }}, startYear: {{ $project->start_date?->year ?? 'null' }}, startMonth: {{ $project->start_date?->month ?? 'null' }} },
         util: { view: 'month', year: {{ now()->year }}, month: {{ now()->month }}, person: '', loading: false, loaded: false, people: [] },
         subTab: window.projectPlanungSubTab || 'planstunden',
+        // Dauern der Schritte an den Projektzeitraum anpassen (Ralf, 2026-10-06)
+        adjusting: false,
+        async adjustDurations(hasOverrides) {
+            if (hasOverrides && ! await window.confirmDialog({
+                title: {{ \Illuminate\Support\Js::from(__('Dauern anpassen?')) }},
+                message: {{ \Illuminate\Support\Js::from(__('Die für dieses Projekt eingetragenen Dauern der Schritte werden durch die umgerechneten Werte ersetzt. Termine ändern sich dabei nicht.')) }},
+                confirmLabel: {{ \Illuminate\Support\Js::from(__('Anpassen')) }},
+                cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
+            })) return;
+            this.adjusting = true;
+            const response = await fetch({{ \Illuminate\Support\Js::from(route('projekte.termine.adjust-durations', $project)) }}, {
+                method: 'POST',
+                headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+            });
+            this.adjusting = false;
+            if (! response.ok) {
+                const data = await response.json().catch(() => ({}));
+                await window.notifyDialog(data.message || {{ \Illuminate\Support\Js::from(__('Die Dauern konnten nicht angepasst werden.')) }});
+                return;
+            }
+            window.showToast({{ \Illuminate\Support\Js::from(__('Gespeichert.')) }});
+            @if ($isOverlay)
+                await window.refreshUnderlyingProject({{ $project->id }});
+            @else
+                window.location.reload();
+            @endif
+        },
         init() {
             this.$watch('subTab', (value) => window.projectPlanungSubTab = value);
             if (this.subTab === 'auslastung') this.$nextTick(() => this.loadUtilization());
@@ -194,6 +221,11 @@
                     @endif
                 @else
                     <span class="font-semibold">{{ __('unvollständig (Start oder Ende fehlt)') }}</span>
+                @endif
+                @if ($timeNeed['available'] !== null && $timeNeed['available'] > 0 && $timeNeed['sum'] !== $timeNeed['available'] && auth()->user()->can('workflow_step.due_date'))
+                    <button type="button" @click="adjustDurations({{ $timeNeed['has_overrides'] ? 'true' : 'false' }})" :disabled="adjusting" class="ml-2 rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-[11px] font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:cursor-wait disabled:opacity-50" title="{{ __('Rechnet die Dauern der Schritte mit dem Faktor auf den Projektzeitraum um und speichert sie am Projekt. Der Workflow selbst bleibt unverändert.') }}">
+                        {{ __('Dauern an Projektzeitraum anpassen') }}
+                    </button>
                 @endif
             </p>
         @endif

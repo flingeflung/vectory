@@ -153,4 +153,39 @@ class ProjectStepTimelineTest extends TestCase
         $project->update(['workflow_id' => null]);
         $this->assertSame('no_workflow', app(ProjectPlanningCalculator::class)->timeNeed($project->fresh())['state']);
     }
+
+    public function test_scaled_durations_are_whole_days_and_add_up_to_the_project_period(): void
+    {
+        // 8 + 6 + (0 -> 1) = 15 Tage auf 10 Arbeitstage: 5,33 / 4,00 / 0,67 -> 5 / 4 / 1 (Summe 10)
+        $this->steps([[2, 8], [2, 6], [2, 0]]);
+        $project = $this->assignment()->project;
+        $scaled = app(ProjectPlanningCalculator::class)->scaledDurations($project);
+        $this->assertSame([5, 4, 1], array_values($scaled));
+        $this->assertSame(10, array_sum($scaled));
+    }
+
+    public function test_adjust_durations_saves_them_on_the_project_and_leaves_the_workflow_alone(): void
+    {
+        $this->steps([[2, 8], [2, 6], [2, 0]]);
+        $project = $this->assignment()->project;
+        foreach ($this->steps as $step) {
+            \App\Models\ProjectWorkflowStep::query()->create(['tenant_id' => $this->tenant->id, 'project_id' => $project->id, 'workflow_step_id' => $step->id, 'sort' => $step->sort]);
+        }
+        $admin = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'organization_admin']);
+
+        $this->actingAs($admin)->postJson(route('projekte.termine.adjust-durations', $project))->assertOk();
+
+        $saved = \App\Models\ProjectWorkflowStep::query()->withoutGlobalScope('tenant')->where('project_id', $project->id)->orderBy('sort')->pluck('duration_days')->all();
+        $this->assertSame([5, 4, 1], $saved);
+        $this->assertSame([8, 6, 0], collect($this->steps)->map(fn ($step) => (int) $step->fresh()->duration_days)->all());
+
+        // Danach passen Bedarf und Zeitraum zusammen
+        $need = app(ProjectPlanningCalculator::class)->timeNeed($project->fresh());
+        $this->assertSame('ok', $need['state']);
+        $this->assertSame(10, $need['sum']);
+
+        // Ohne Recht keine Anpassung
+        $plain = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'user']);
+        $this->actingAs($plain)->postJson(route('projekte.termine.adjust-durations', $project))->assertForbidden();
+    }
 }

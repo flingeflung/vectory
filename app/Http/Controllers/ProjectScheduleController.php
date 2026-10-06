@@ -139,6 +139,31 @@ class ProjectScheduleController extends Controller
      * wie ProjectWorkflowStepController::updateDueDate(), nur generisch für
      * mehrere Felder statt nur due_date.
      */
+    /**
+     * Dauern der Schritte dieses Projekts an den Projektzeitraum anpassen (Ralf, 2026-10-06): die im Workflow hinterlegten Standarddauern sind
+     * nur Richtwerte; hier werden sie mit dem Faktor Projektzeitraum / Zeitbedarf umgerechnet und als Dauern AM PROJEKT gespeichert
+     * (der Workflow selbst bleibt unverändert). Termine werden dabei nicht verändert - dafür gibt es "Termine berechnen".
+     */
+    public function adjustDurations(Request $request, Project $project, \App\Services\ProjectPlanningCalculator $calculator): JsonResponse
+    {
+        abort_unless($request->user()->can('project.view') && $request->user()->can('workflow_step.due_date'), 403);
+
+        $durations = $calculator->scaledDurations($project);
+        abort_if($durations === null, 422, __('Für dieses Projekt lassen sich die Dauern nicht anpassen: Es fehlt ein Workflow oder ein vollständiger Projektzeitraum.'));
+
+        foreach ($durations as $stepId => $days) {
+            $row = ProjectWorkflowStep::query()->withoutGlobalScope('tenant')
+                ->where('project_id', $project->id)->where('workflow_step_id', $stepId)->first();
+            if ($row === null) {
+                $row = new ProjectWorkflowStep(['tenant_id' => $project->tenant_id, 'project_id' => $project->id, 'workflow_step_id' => $stepId]);
+            }
+            $row->duration_days = $days;
+            $row->save();
+        }
+
+        return response()->json(['durations' => $durations]);
+    }
+
     public function updateField(Request $request, Project $project, ProjectWorkflowStep $projectWorkflowStep): JsonResponse
     {
         abort_unless($projectWorkflowStep->project_id === $project->id, 404);

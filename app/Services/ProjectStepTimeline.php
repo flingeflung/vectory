@@ -128,6 +128,71 @@ class ProjectStepTimeline
         return ['steps' => $rows, 'sum' => array_sum(array_column($rows, 'days'))];
     }
 
+    /**
+     * Dauern der Schritte "In Bearbeitung" auf den Projektzeitraum umgerechnet (Ralf, 2026-10-06): jede Dauer mal Faktor
+     * (verfügbare Arbeitstage / Summe), als ganze Tage, mindestens 1 Tag je Schritt, in der Summe möglichst genau der Zeitraum
+     * (Rundung nach dem größten Rest). Passen schon die Mindestwerte nicht in den Zeitraum, bleibt es bei 1 Tag je Schritt.
+     *
+     * @return array<int, int>|null Schritt-ID => neue Dauer; null = kein Workflow oder Zeitraum
+     */
+    public function scaledDurations(Project $project, int $availableDays): ?array
+    {
+        $breakdown = $this->breakdownById($project);
+        if ($breakdown === null || $availableDays <= 0) {
+            return null;
+        }
+
+        $sum = array_sum($breakdown);
+        $scaled = [];
+        $ints = [];
+        foreach ($breakdown as $stepId => $days) {
+            $scaled[$stepId] = $days * $availableDays / $sum;
+            $ints[$stepId] = max(self::MIN_STEP_DAYS, (int) floor($scaled[$stepId]));
+        }
+
+        $diff = $availableDays - array_sum($ints);
+        while ($diff > 0) {
+            // +1 beim Schritt mit dem größten Rest
+            uksort($ints, fn ($a, $b) => ($scaled[$b] - $ints[$b]) <=> ($scaled[$a] - $ints[$a]));
+            $ints[array_key_first($ints)]++;
+            $diff--;
+        }
+        while ($diff < 0) {
+            $candidates = array_filter($ints, fn ($days) => $days > self::MIN_STEP_DAYS);
+            if ($candidates === []) {
+                break;
+            }
+            // -1 beim längsten Schritt
+            arsort($candidates);
+            $ints[array_key_first($candidates)]--;
+            $diff++;
+        }
+
+        ksort($ints);
+
+        return $ints;
+    }
+
+    /** @return array<int, int>|null Schritt-ID => Dauer (Wert am Projekt, sonst Standard, mindestens 1) */
+    private function breakdownById(Project $project): ?array
+    {
+        if (! $project->workflow_id) {
+            return null;
+        }
+        $steps = $this->workflow((int) $project->workflow_id)['steps'];
+        if ($steps === []) {
+            return null;
+        }
+        $overrides = $this->projectDurations($project->id);
+        $weights = [];
+        foreach ($steps as $step) {
+            $days = array_key_exists($step->id, $overrides) && $overrides[$step->id] !== null ? $overrides[$step->id] : $step->duration_days;
+            $weights[$step->id] = max(self::MIN_STEP_DAYS, (int) $days);
+        }
+
+        return $weights;
+    }
+
     private function workflow(int $workflowId): array
     {
         return $this->workflowCache[$workflowId] ??= [

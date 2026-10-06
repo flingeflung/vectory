@@ -181,7 +181,17 @@ class ProjectPlanningCalculator
             'available' => $available,
             'factor' => $available !== null && $breakdown['sum'] > 0 ? round($available / $breakdown['sum'], 2) : null,
             'steps' => $breakdown['steps'],
+            'has_overrides' => \App\Models\ProjectWorkflowStep::query()->withoutGlobalScope('tenant')
+                ->where('project_id', $project->id)->whereNotNull('duration_days')->exists(),
         ];
+    }
+
+    /** @return array<int, int>|null Schritt-ID => neue Dauer, auf den Projektzeitraum umgerechnet */
+    public function scaledDurations(\App\Models\Project $project): ?array
+    {
+        $available = $this->projectWorkdays($project);
+
+        return $available === null ? null : $this->stepTimeline()->scaledDurations($project, $available);
     }
 
     private function stepTimeline(): ProjectStepTimeline
