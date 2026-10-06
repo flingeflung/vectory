@@ -153,13 +153,12 @@
         @if (count($teamData) > 0)
             <div class="border-b border-gray-200 bg-gray-50 px-2 py-1.5">
                 <div class="flex items-center gap-2">
-                    <select x-model="teamId" @change="teamResult = null" class="min-w-0 flex-1 rounded-md border-gray-300 py-0.5 text-xs" title="{{ __('Alle Personen eines Teams auf einmal zuweisen. Wer schon zugewiesen ist, wird übersprungen.') }}">
+                    <select x-model="teamId" @change="teamResult = null; applyTeam()" class="min-w-0 flex-1 rounded-md border-gray-300 py-0.5 text-xs" title="{{ __('Alle Personen eines Teams auf einmal vormerken. Wer schon zugewiesen ist, wird übersprungen.') }}">
                         <option value="">{{ __('– Team wählen –') }}</option>
                         <template x-for="team in teams" :key="team.id">
                             <option :value="team.id" x-text="team.name + ' (' + team.members.length + ')'"></option>
                         </template>
                     </select>
-                    <button type="button" @click="applyTeam()" :disabled="! teamId" class="shrink-0 rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:opacity-50">{{ __('Team zuweisen') }}</button>
                 </div>
                 <div x-show="teamResult" x-cloak class="mt-1 space-y-0.5 text-[11px] text-gray-600">
                     <template x-for="line in teamResultLines()" :key="line"><div x-text="line"></div></template>

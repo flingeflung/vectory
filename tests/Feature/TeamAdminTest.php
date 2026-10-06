@@ -88,7 +88,7 @@ class TeamAdminTest extends TestCase
 
         $this->actingAs($admin)->get(route('projekte.projektbeteiligte.show', $project))
             ->assertOk()
-            ->assertSee(__('Team zuweisen'))
+            ->assertSee(__('– Team wählen –'))
             ->assertSee('Team Aktiv')
             ->assertDontSee('Team Inaktiv')
             ->assertSee('data-person="'.$anna->id.'"', false)
