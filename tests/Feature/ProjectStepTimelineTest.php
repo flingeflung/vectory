@@ -189,4 +189,18 @@ class ProjectStepTimelineTest extends TestCase
         $plain = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'user']);
         $this->actingAs($plain)->postJson(route('projekte.termine.adjust-durations', $project))->assertForbidden();
     }
+
+    public function test_calculated_end_dates_follow_the_durations_on_working_days(): void
+    {
+        // Start Montag 1.3.2027; Schritte: 3 Tage, 4 Tage (über das Wochenende), 0 -> zählt 1
+        $this->steps([[2, 3], [2, 4], [2, 0], [1, 9]]);
+        $project = $this->assignment()->project;
+
+        $ends = app(ProjectPlanningCalculator::class)->stepEndDates($project);
+
+        $this->assertSame('2027-03-03', $ends[$this->steps[0]->id]->toDateString());   // Mo-Mi
+        $this->assertSame('2027-03-09', $ends[$this->steps[1]->id]->toDateString());   // Do, Fr, Mo, Di
+        $this->assertSame('2027-03-10', $ends[$this->steps[2]->id]->toDateString());   // Mi (Mindestwert 1 Tag)
+        $this->assertArrayNotHasKey($this->steps[3]->id, $ends);                        // nicht "In Bearbeitung"
+    }
 }

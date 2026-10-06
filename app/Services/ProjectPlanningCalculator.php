@@ -186,6 +186,45 @@ class ProjectPlanningCalculator
         ];
     }
 
+    /**
+     * Berechnetes Ende jedes Arbeitsschritts (Ralf, 2026-10-06): ab dem Projektstart werden die Dauern der Schritte "In Bearbeitung"
+     * der Reihe nach auf Arbeitstage gelegt (ohne Wochenenden und Feiertage der Organisation). Der erste Schritt beginnt am Starttag
+     * (fällt er auf einen freien Tag, am nächsten Arbeitstag), jeder weitere am Arbeitstag nach dem Ende des vorigen.
+     *
+     * @return array<int, CarbonImmutable> Schritt-ID => Enddatum (leer ohne Projektstart oder Workflow)
+     */
+    public function stepEndDates(\App\Models\Project $project): array
+    {
+        $days = $this->stepTimeline()->stepDays($project);
+        if ($days === null || ! $project->start_date) {
+            return [];
+        }
+
+        $start = CarbonImmutable::parse($project->start_date->toDateString());
+        $holidays = $this->holidays((int) $project->tenant_id, $start->year, $start->year + 3);
+        $isFree = fn (CarbonImmutable $date) => $date->isWeekend() || $holidays->contains($date->toDateString());
+        $nextWorkday = function (CarbonImmutable $date) use ($isFree) {
+            while ($isFree($date)) {
+                $date = $date->addDay();
+            }
+
+            return $date;
+        };
+
+        $result = [];
+        $cursor = $nextWorkday($start);
+        foreach ($days as $stepId => $count) {
+            $end = $cursor;
+            for ($i = 1; $i < $count; $i++) {
+                $end = $nextWorkday($end->addDay());
+            }
+            $result[$stepId] = $end;
+            $cursor = $nextWorkday($end->addDay());
+        }
+
+        return $result;
+    }
+
     /** @return array<int, int>|null Schritt-ID => neue Dauer, auf den Projektzeitraum umgerechnet */
     public function scaledDurations(\App\Models\Project $project): ?array
     {

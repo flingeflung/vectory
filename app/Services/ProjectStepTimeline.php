@@ -181,6 +181,14 @@ class ProjectStepTimeline
         return $ints;
     }
 
+    /** @return array<int, int>|null Schritt-ID => zählende Arbeitstage der Schritte "In Bearbeitung" in Ablaufreihenfolge (mindestens 1) */
+    public function stepDays(Project $project): ?array
+    {
+        $steps = $this->breakdownById($project);
+
+        return $steps === null ? null : array_map(fn ($step) => $step['days'], $steps);
+    }
+
     /** @return array<int, array{days: int, fixed: bool}>|null Schritt-ID => Dauer (Wert am Projekt, sonst Standard, mindestens 1) und ob keine Dauer eingetragen ist */
     private function breakdownById(Project $project): ?array
     {

@@ -515,10 +515,18 @@
                                             </div>
                                         @endif
 
-                                        @php $duration = (int) $pws->effectiveDurationDays(); @endphp
+                                        @php
+                                            $duration = (int) $pws->effectiveDurationDays();
+                                            // einmal je Projekt berechnet, gilt für alle Schritte
+                                            $calculatedEnds ??= app(\App\Services\ProjectPlanningCalculator::class)->stepEndDates($project);
+                                            $calculatedEnd = $calculatedEnds[$step->id] ?? null;
+                                        @endphp
                                         <div class="mt-0.5 text-xs {{ $duration > 0 ? 'text-gray-600' : 'text-gray-400' }}" title="{{ __('Dauer in Arbeitstagen (AT) - wie in „Termine berechnen“') }}">
                                             @if ($duration > 0)
                                                 {{ __('Dauer') }}: {{ $duration }} {{ __('AT') }}
+                                                @if ($calculatedEnd)
+                                                    <span class="text-gray-400" title="{{ __('Aus Projektstart und den Dauern der Schritte berechnetes Ende (Arbeitstage, ohne Wochenenden und Feiertage der Organisation)') }}">({{ __('berechnet') }}: {{ $calculatedEnd->format('d.m.Y') }})</span>
+                                                @endif
                                             @else
                                                 {{ __('keine Dauer eingetragen') }}
                                             @endif
