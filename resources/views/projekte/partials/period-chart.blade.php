@@ -15,6 +15,7 @@
         calendar: @js($chart['calendar']),
         holidays: @js($chart['holidays']),
         steps: @js($chart['steps']),
+        groups: @js($chart['groups']),
         original: null,
         wdCal: [],
         grid: { weekends: [], holidays: [], months: [], years: [], today: null },
@@ -65,6 +66,18 @@
         startPct(i) { return (i === 0 ? 0 : this.edge(i - 1)) / this.span * 100; },
         widthPct(i) { return (this.edge(i) - (i === 0 ? 0 : this.edge(i - 1))) / this.span * 100; },
         pct(k) { return k / this.span * 100; },
+        // Einsatzplan: Balken einer Funktionsgruppe von Schritt from bis Schritt to; die Stunden kommen aus Planstunden (Variable planned der Planungsseite)
+        groupLeft(g) { return this.startPct(Math.min(g.from, this.steps.length - 1)); },
+        groupWidth(g) { const to = Math.min(g.to, this.steps.length - 1); return this.pct(this.edge(to)) - this.groupLeft(g); },
+        groupHours(g) { return Number(this.planned[String(g.id)] || 0); },
+        hoursLabel(h) { return h > 0 ? h.toLocaleString('de-DE', { maximumFractionDigits: 2 }) + ' h' : ''; },
+        groupTip(g) {
+            const from = Math.min(g.from, this.steps.length - 1);
+            const to = Math.min(g.to, this.steps.length - 1);
+            const start = this.workdays[this.cum(from) - this.steps[from].days];
+            const hours = this.groupHours(g);
+            return g.name + ' · ' + (hours > 0 ? this.hoursLabel(hours) + ' · ' : '') + this.dateDe(start) + ' – ' + this.dateDe(this.endIso(to));
+        },
         tip(i) {
             const start = this.workdays[this.cum(i) - this.steps[i].days];
             return this.steps[i].title + ' · ' + this.steps[i].days + ' AT · ' + this.dateDe(start) + ' – ' + this.dateDe(this.endIso(i));
@@ -126,7 +139,7 @@
     @endif
 
     <div class="px-1">
-        <div x-ref="track" style="height: 60px" class="relative w-full select-none overflow-visible rounded">
+        <div x-ref="track" style="height: 60px" class="relative select-none overflow-visible rounded" :class="groups.length ? 'ml-[9.5rem]' : ''">
             {{-- Raster im Hintergrund --}}
             <template x-for="k in grid.weekends" :key="'we-' + k">
                 <div class="pointer-events-none absolute top-0 h-full" :style="{ left: pct(k) + '%', width: pct(1) + '%', backgroundColor: '#fdefc6' }"></div>
@@ -168,7 +181,7 @@
                 </div>
             </template>
         </div>
-        <div class="relative mt-1 h-4 text-gray-500">
+        <div class="relative mt-1 h-4 text-gray-500" :class="groups.length ? 'ml-[9.5rem]' : ''">
             <span class="absolute left-0" x-text="dateDe(calendar[0])"></span>
             <template x-for="m in grid.months.concat(grid.years)" :key="'lab-' + m.k">
                 <span
@@ -180,6 +193,22 @@
                 ></span>
             </template>
             <span class="absolute right-0" x-text="dateDe(calendar[calendar.length - 1])"></span>
+        </div>
+
+        <div x-show="groups.length" class="mt-2 space-y-1">
+            <template x-for="g in groups" :key="'group-' + g.id">
+                <div class="flex items-center gap-2">
+                    <span class="w-[7.5rem] shrink-0 truncate text-gray-600" x-text="g.name" :title="g.name"></span>
+                    <div class="relative h-5 flex-1 rounded bg-gray-100">
+                        <div
+                            class="absolute top-0 flex h-full items-center justify-center overflow-hidden whitespace-nowrap rounded bg-sky-500 text-[10px] font-medium text-white"
+                            :style="{ left: groupLeft(g) + '%', width: groupWidth(g) + '%' }"
+                            :title="groupTip(g)"
+                            x-text="hoursLabel(groupHours(g))"
+                        ></div>
+                    </div>
+                </div>
+            </template>
         </div>
     </div>
 

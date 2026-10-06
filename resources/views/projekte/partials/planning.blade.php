@@ -19,7 +19,7 @@
         // Dauern der Schritte an den Projektzeitraum anpassen (Ralf, 2026-10-06)
         adjusting: false,
         // Ein-/ausklappbare Bereiche in Planstunden (Ralf, 2026-10-06), Zustand im Browser gemerkt
-        sections: (() => { const defaults = { zeitraum: true, verteilung: true }; try { return { ...defaults, ...JSON.parse(localStorage.getItem('vectory-planning-sections') || '{}') }; } catch (e) { return defaults; } })(),
+        sections: (() => { const defaults = { bedarf: true, zeitraum: true, verteilung: true }; try { return { ...defaults, ...JSON.parse(localStorage.getItem('vectory-planning-sections') || '{}') }; } catch (e) { return defaults; } })(),
         toggleSection(name) {
             this.sections[name] = ! this.sections[name];
             try { localStorage.setItem('vectory-planning-sections', JSON.stringify(this.sections)); } catch (e) {}
@@ -210,6 +210,13 @@
     </div>
 
     <div x-show="subTab === 'planstunden'" data-help-tab="planung.planstunden" class="{{ $isOverlay ? 'flex min-h-0 flex-1 flex-col gap-2' : 'space-y-2' }}">
+        <div class="shrink-0">
+            <button type="button" @click="toggleSection('bedarf')" class="flex items-center gap-1.5 text-left" :aria-expanded="sections.bedarf">
+                <svg class="h-4 w-4 shrink-0 text-gray-500 transition-transform" :class="sections.bedarf ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+                <h3 class="font-semibold text-gray-900">{{ __('Zeitbedarf und Planstunden') }}</h3>
+            </button>
+        </div>
+        <div x-show="sections.bedarf" class="flex shrink-0 flex-col gap-2">
         @php $timeNeed = app(\App\Services\ProjectPlanningCalculator::class)->timeNeed($project); @endphp
         @if ($timeNeed['state'] === 'no_workflow')
             <p class="shrink-0 rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-500">{{ __('Für dieses Projekt ist kein Workflow zugewiesen.') }}</p>
@@ -237,6 +244,7 @@
         @endif
 
         @include('projekte.partials.planned-hours-editor')
+        </div>
 
         @php $periodChart = app(\App\Services\ProjectPlanningCalculator::class)->periodChart($project); @endphp
         <div class="shrink-0">

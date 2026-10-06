@@ -175,7 +175,7 @@ class ProjectPlanningCalculator
      * Zeitraum umgerechneten (wie beim Knopf "Dauern an Projektzeitraum anpassen"), damit die Balken die Breite genau füllen.
      * Schritte ohne eingetragene Dauer zählen 1 Tag.
      *
-     * @return array{workdays: list<string>, calendar: list<string>, holidays: object, steps: list<array{id: int, title: string, days: int, workflow_days: int, fixed: bool}>, sum: int, available: int, compressed: bool}|null
+     * @return array{groups: list<array{id: int, name: string, from: int, to: int}>, workdays: list<string>, calendar: list<string>, holidays: object, steps: list<array{id: int, title: string, days: int, workflow_days: int, fixed: bool}>, sum: int, available: int, compressed: bool}|null
      */
     public function periodChart(\App\Models\Project $project): ?array
     {
@@ -208,7 +208,23 @@ class ProjectPlanningCalculator
             ->mapWithKeys(fn (Holiday $holiday) => [$holiday->date->toDateString() => (string) $holiday->name])
             ->all();
 
+        // Einsatzplan des Workflows: je zuständiger Funktionsgruppe von/bis als Position in $steps (0-basiert); ohne Eintrag die ganze Breite
+        $workSteps = \App\Models\WorkflowStep::query()->withoutGlobalScope('tenant')->where('workflow_id', $project->workflow_id)
+            ->where('lifecycle_status', \App\Models\WorkflowGroupWindow::WORK_LIFECYCLE_STATUS)->orderBy('sort')->with('functionGroups')->get();
+        $position = $workSteps->pluck('id')->flip();
+        $windows = \App\Models\WorkflowGroupWindow::query()->withoutGlobalScope('tenant')->where('workflow_id', $project->workflow_id)->get()->keyBy('function_group_id');
+        $last = max(0, $workSteps->count() - 1);
+        $groups = $workSteps->flatMap->functionGroups->unique('id')->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)->values()
+            ->map(function ($group) use ($windows, $position, $last) {
+                $window = $windows->get($group->id);
+                $from = $window?->from_step_id !== null && $position->has($window->from_step_id) ? $position[$window->from_step_id] : 0;
+                $to = $window?->to_step_id !== null && $position->has($window->to_step_id) ? $position[$window->to_step_id] : $last;
+
+                return ['id' => (int) $group->id, 'name' => (string) $group->name, 'from' => min($from, $to), 'to' => max($from, $to)];
+            })->all();
+
         return [
+            'groups' => $groups,
             'workdays' => $workdays,
             'calendar' => $calendar,
             'holidays' => (object) $holidayNames,
