@@ -1617,7 +1617,7 @@
     "Verbund auflösen": "Dissolve project bundle",
     "Verbund auflösen?": "Dissolve project bundle?",
     "Verbund-Rolle geändert": "Project bundle role changed",
-    "Verdichtet: Der errechnete Zeitbedarf (:sum AT) überschreitet den verfügbaren Projektzeitraum (:available AT) und wird für die Ressourcenplanung entsprechend komprimiert. Dadurch können höhere Stundenaufwände pro Tag und Person entstehen.": "Compressed: The calculated time required (:sum WD) exceeds the available project period (:available WD) and is compressed accordingly for resource planning. This can result in higher hours per day and person.",
+    "Verdichtet: Der Zeitbedarf laut Workflow (:sum AT) überschreitet den verfügbaren Projektzeitraum (:available AT) und wird für die Ressourcenplanung entsprechend komprimiert. Dadurch können höhere Stundenaufwände pro Tag und Person entstehen.": "Compressed: The time required per workflow (:sum WD) exceeds the available project period (:available WD) and is compressed accordingly for resource planning. This can result in higher hours per day and person.",
     "Verfügbarkeit Ansprechpartner (PT/PM)": "",
     "Verfügbarkeit Lokalisierer": "",
     "Verfügbarkeit der Funktionsgruppen bei den Organisationen festlegen": "Set function group availability for organizations",
