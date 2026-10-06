@@ -93,9 +93,9 @@
                 </button>
             </div>
 
-            <p class="mb-3 text-xs text-gray-500">{{ __('Die Reihenfolge kannst du direkt auf der Startseite per Ziehen ändern.') }}</p>
+            <p class="mb-3 text-xs text-gray-500">{{ __('Die Reihenfolge können Sie direkt auf der Startseite per Ziehen ändern.') }}</p>
 
-            <form method="POST" action="{{ route('dashboard.layout') }}" class="space-y-2 text-sm">
+            <form method="POST" action="{{ route('dashboard.layout') }}" x-data="{ dirty: false }" @input="dirty = window.formIsDirty($el)" @change="dirty = window.formIsDirty($el)" class="space-y-2 text-sm">
                 @php
                     // Aktive Kacheln zuerst, in ihrer aktuellen (per Drag&Drop
                     // sortierten) Reihenfolge - sonst würde ein simples Ab-/Anhaken
@@ -113,7 +113,7 @@
                 @endforeach
 
                 <div class="flex justify-end pt-2">
-                    <button type="submit" class="rounded bg-btn-primary px-4 py-2 text-xs font-medium text-white hover:bg-btn-primary-hover">
+                    <button type="submit" x-show="dirty" x-cloak class="rounded bg-btn-primary px-4 py-2 text-xs font-medium text-white hover:bg-btn-primary-hover">
                         {{ __('Speichern') }}
                     </button>
                 </div>

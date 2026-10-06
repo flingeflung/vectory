@@ -173,7 +173,7 @@
     </div>
 
     <x-modal name="jobload-jobs" max-width="lg" :draggable="true">
-        <form method="POST" action="{{ route('jobload.jobs') }}" onsubmit="return window.jobloadConfirmJobs(event)" class="flex max-h-[75vh] flex-col">
+        <form method="POST" action="{{ route('jobload.jobs') }}" onsubmit="return window.jobloadConfirmJobs(event)" x-data="{ dirty: false }" @input="dirty = window.formIsDirty($el)" @change="dirty = window.formIsDirty($el)" class="flex max-h-[75vh] flex-col">
             @csrf
             <input type="hidden" name="week" value="{{ $weekValue }}">
             <div class="flex shrink-0 items-center justify-between border-b border-gray-200 bg-gray-100 px-4 py-2" data-drag-handle title="{{ __('Ziehen zum Verschieben') }}">
@@ -201,7 +201,7 @@
             <div class="flex shrink-0 justify-end gap-2 border-t border-gray-200 px-4 py-3">
                 <button type="button" @click="$dispatch('close-modal', 'jobload-jobs')" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Abbrechen') }}</button>
                 @if ($availableJobs->isNotEmpty())
-                    <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
+                    <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
                 @endif
             </div>
         </form>

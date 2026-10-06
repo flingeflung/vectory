@@ -419,7 +419,7 @@
     "Die Planstunden wurden vom Aufwandsprofil gelöst und gelten nur für dieses Projekt.": "The planned hours were detached from the effort profile and apply only to this project.",
     "Die Prozentwerte müssen in Summe 100 ergeben. Aktuell: :sum.": "",
     "Die Quelle hat hier keine Einträge.": "",
-    "Die Reihenfolge kannst du direkt auf der Startseite per Ziehen ändern.": "You can change the order directly on the home page by dragging.",
+    "Die Reihenfolge können Sie direkt auf der Startseite per Ziehen ändern.": "You can change the order directly on the home page by dragging.",
     "Die Stamm-ID verbindet alle Versionen desselben Dokuments. Ein neues Dokument und eine Kopie als neues Dokument erhalten eine neue Stamm-ID; nur beim Aufversionieren bleibt sie erhalten. Sie lässt sich nicht von Hand ändern, aber kopieren und in der Suche verwenden.": "",
     "Die Verbindung zum Aufwandsprofil wird für dieses Projekt endgültig gelöst - eine spätere Rückkehr zur Aufwandsprofil-Verknüpfung ist nicht mehr möglich. Das Aufwandsprofil selbst bleibt unverändert. Die aktuelle Aufschlüsselung je Funktionsgruppe wird als Startpunkt übernommen und bleibt danach unabhängig änderbar.": "",
     "Die Zugriffsstufe legt den administrativen Bereich fest und ist unabhängig von der fachlichen Rolle und dem Rechte-Set.": "The access level defines the administrative scope and is independent of the functional role and permission set.",

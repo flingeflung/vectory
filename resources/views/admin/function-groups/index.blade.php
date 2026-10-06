@@ -275,7 +275,7 @@
                     {{ $selectedPerson->fullName() }}{{ ! $selectedPerson->active ? ' [i]' : '' }} <x-absence-icon :person="$selectedPerson" /> <x-department-tag :person="$selectedPerson" />
                 </div>
 
-                <form method="POST" action="{{ route('admin.function-groups.personen.update', $selectedPerson) }}" class="flex-1 min-h-0 overflow-y-auto p-3">
+                <form method="POST" action="{{ route('admin.function-groups.personen.update', $selectedPerson) }}" x-data="{ dirty: false }" @input="dirty = window.formIsDirty($el)" @change="dirty = window.formIsDirty($el)" class="flex-1 min-h-0 overflow-y-auto p-3">
                     @csrf
                     <div class="mb-3 text-xs text-gray-500">{{ __('Funktionsgruppen dieser Person - Mehrfachauswahl möglich.') }}</div>
                     <div class="space-y-1">
@@ -286,7 +286,7 @@
                             </label>
                         @endforeach
                     </div>
-                    <button type="submit" class="mt-3 rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">
+                    <button type="submit" x-show="dirty" x-cloak class="mt-3 rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">
                         {{ __('Speichern') }}
                     </button>
                 </form>
@@ -308,7 +308,7 @@
                     </div>
                     <button type="button" onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'function-group-availability' }))" class="text-gray-400 hover:text-gray-600" aria-label="{{ __('Schließen') }}">&times;</button>
                 </div>
-                <form method="POST" action="{{ route('admin.function-groups.availability.update') }}" class="flex min-h-0 flex-1 flex-col">
+                <form method="POST" action="{{ route('admin.function-groups.availability.update') }}" x-data="{ dirty: false }" @input="dirty = window.formIsDirty($el)" @change="dirty = window.formIsDirty($el)" class="flex min-h-0 flex-1 flex-col">
                     @csrf
                     <div class="min-h-0 flex-1 overflow-auto p-3">
                         <table class="w-full border-collapse text-xs">
@@ -340,7 +340,7 @@
                     </div>
                     <div class="flex shrink-0 justify-end gap-2 border-t border-gray-200 px-4 py-2">
                         <button type="button" onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'function-group-availability' }))" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Abbrechen') }}</button>
-                        <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
+                        <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
                     </div>
                 </form>
             </div>

@@ -49,12 +49,12 @@
 
         <div class="flex min-w-0 flex-1 flex-col rounded-lg border border-gray-200 bg-white">
             @if ($selectedGroup)
-                <form method="POST" action="{{ route('admin.jobtypen.gruppen.update', $selectedGroup->id) }}" class="flex flex-wrap items-end gap-3 border-b border-gray-100 p-3">
+                <form method="POST" action="{{ route('admin.jobtypen.gruppen.update', $selectedGroup->id) }}" x-data="{ dirty: false }" @input="dirty = window.formIsDirty($el)" @change="dirty = window.formIsDirty($el)" class="flex flex-wrap items-end gap-3 border-b border-gray-100 p-3">
                     @csrf
                     <label class="min-w-48 flex-1 text-xs text-gray-600">{{ __('Jobgruppe') }}
                         <input type="text" name="name" value="{{ $selectedGroup->name }}" required maxlength="255" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
                     </label>
-                    <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
+                    <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
                 </form>
 
                 <div class="min-h-0 flex-1 space-y-3 overflow-y-auto p-3" x-data="{ newJob: false }">
@@ -75,7 +75,7 @@
                         <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
                     </form>
                     @forelse ($jobs->where('job_group_id', $selectedGroup->id) as $job)
-                        <form method="POST" action="{{ route('admin.jobtypen.update', $job->id) }}" class="flex flex-wrap items-end gap-2 rounded-md border border-gray-200 p-2">
+                        <form method="POST" action="{{ route('admin.jobtypen.update', $job->id) }}" x-data="{ dirty: false }" @input="dirty = window.formIsDirty($el)" @change="dirty = window.formIsDirty($el)" class="flex flex-wrap items-end gap-2 rounded-md border border-gray-200 p-2">
                             @csrf
                             <label class="w-40 text-xs text-gray-600">{{ __('Jobgruppe') }}
                                 <select name="job_group_id" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
@@ -90,7 +90,7 @@
                             <label class="min-w-48 flex-1 text-xs text-gray-600">{{ __('Langname') }}
                                 <input type="text" name="name" value="{{ $job->name }}" required maxlength="255" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
                             </label>
-                            <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
+                            <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
                         </form>
                     @empty
                         <p class="text-sm text-gray-500">{{ __('Noch keine Jobtypen in dieser Gruppe angelegt.') }}</p>

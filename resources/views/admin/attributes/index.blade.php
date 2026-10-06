@@ -320,6 +320,7 @@
                                         method="POST"
                                         action="{{ route('admin.projektattribute.pulldown.update', $attribute) }}"
                                         class="space-y-3"
+                                        x-data="{ dirty: false }" @input="dirty = window.formIsDirty($el)" @change="dirty = window.formIsDirty($el)"
                                     >
                                         @csrf
                                         <div>
@@ -381,7 +382,7 @@
                                             <button type="button" onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'pulldown-edit-{{ $attribute->id }}' }))" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                                                 {{ __('Abbrechen') }}
                                             </button>
-                                            <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
+                                            <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
                                                 {{ __('Speichern') }}
                                             </button>
                                         </div>
