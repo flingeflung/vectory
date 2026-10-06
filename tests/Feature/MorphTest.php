@@ -107,4 +107,21 @@ class MorphTest extends TestCase
         $this->actingAs($plain)->get(route('dashboard'))->assertOk()
             ->assertDontSee(__('Morphen: Sicht einer anderen Rolle prüfen'));
     }
+
+    public function test_morphed_user_keeps_the_home_organization_but_can_stay_in_the_selected_one(): void
+    {
+        $home = Tenant::query()->firstOrFail();
+        $home->update(['is_home_tenant' => true]);
+        $customer = Tenant::query()->create(['name' => 'Maschinen', 'short_name' => 'MA']);
+        SystemSetting::set(SystemSetting::MULTI_TENANT_ENABLED, '1');
+        $super = $this->superAdmin($home);
+
+        $this->actingAs($super)->withSession(['active_tenant_id' => $customer->id]);
+        $this->postJson(route('morphen.start'), ['role' => 'user'])->assertOk();
+
+        // Die Person (und damit z. B. die Zeiterfassung) gehört weiter zur Heimat-Organisation ...
+        $this->assertSame($home->id, auth()->user()->tenant_id);
+        // ... gearbeitet wird aber weiter in der beim Morphen gewählten Organisation.
+        $this->assertSame($customer->id, CurrentTenant::id());
+    }
 }

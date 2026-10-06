@@ -84,6 +84,11 @@ class CurrentTenant
             return true;
         }
 
+        // Gemorphter User (Super-Admin): die beim Morphen aktive Organisation bleibt erreichbar, auch ohne eigene Freigabe.
+        if (Morph::active($user) && (Morph::state()['tenant_id'] ?? null) === $tenantId) {
+            return true;
+        }
+
         // Organisations-Admins bleiben verbindlich auf ihre eigene
         // Organisation begrenzt. Eine person_tenant-Freigabe kann diese
         // administrative Sicherheitsgrenze nicht erweitern.

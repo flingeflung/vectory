@@ -40,7 +40,9 @@ class User extends Authenticatable
 
     protected function getTenantIdAttribute($value)
     {
-        if ($this->isMorphed() && Morph::state()['role'] !== AccessLevel::CENTRAL_ADMIN) {
+        // Nur der Organisations-Admin gehört "seiner" (aktiven) Organisation an. Ein gemorphter User behält seine Heimat-Organisation:
+        // seine Person gehört dorthin, und in andere Organisationen kommt er wie ein echter User per Freigabe (siehe CurrentTenant).
+        if ($this->isMorphed() && Morph::state()['role'] === AccessLevel::ORGANIZATION_ADMIN) {
             return Morph::state()['tenant_id'];
         }
 
