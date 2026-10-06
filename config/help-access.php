@@ -39,6 +39,9 @@ return [
     'D-78FH#jobs' => 'Mit dem Recht „Jobs am Projekt verwalten“ (project.jobload.manage); Administratoren immer.',
     'D-78FH#aufteilung' => 'Mit dem Recht „Jobs am Projekt verwalten“ (project.jobload.manage); Administratoren immer. Nur bei einem Hauptprojekt mit Unterprojekten.',
 
+    // Overlay "Projektbeteiligte Personen" am Projekt (D-XNXQ)
+    'D-XNXQ' => 'Alle, die das Projekt öffnen können. Speichern nur mit den Rechten „Projekt-Stammdaten bearbeiten“ (project.edit) und, wenn sich Personen ändern, „Projektbeteiligte hinzufügen/entfernen“ (project.people.manage); Administratoren immer.',
+
     // Projektdetails (D-MFQU), Reiter Planung und Zeiten
     'D-MFQU#planung.planstunden' => 'Alle, die das Projekt sehen. Ändern nur mit dem Planungsrecht (planning.view); Administratoren immer.',
     'D-MFQU#planung.auslastung' => 'Mit den Rechten „Projekte ansehen“ und „Planung: erweiterte Planung und personenbezogene Auswertungen“ (planning.view); Administratoren immer.',
