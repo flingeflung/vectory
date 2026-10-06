@@ -11,6 +11,8 @@
     // Schlüssel, unter dem die Größe im Browser gemerkt wird (Standard: der Dialogname). Für Dialoge, deren Name
     // eine Projekt-ID enthält, einen festen Schlüssel angeben, damit die Größe für alle Projekte gilt.
     'sizeKey' => null,
+    // Auch die Position (nach dem Verschieben) im Browser merken und beim nächsten Öffnen wiederherstellen (Ralf, 2026-10-06).
+    'rememberPosition' => false,
     'fullscreen' => false,
     // Ralf, 2026-09-15: "bei komplizierten Eingaben ist ein Klick daneben
     // sehr ärgerlich" - für Dialoge mit aufwändig auszufüllenden Formularen
@@ -65,6 +67,7 @@ $dialogId = $helpId ? \App\Support\DialogId::for($name) : null;
         draggable: @js($draggable),
         keepHeight: @js((bool) ($resizable || $fullscreen || $height)),
         resizable: @js($resizable),
+        rememberPosition: @js((bool) $rememberPosition),
         fullscreen: @js($fullscreen),
         maximize: false,
         savedNormalBox: null,
@@ -103,6 +106,18 @@ $dialogId = $helpId ? \App\Support\DialogId::for($name) : null;
                 y: Math.max(0, Math.round(rect.top)),
             };
         },
+        storedPlacement() {
+            try {
+                return JSON.parse(localStorage.getItem({{ \Illuminate\Support\Js::from($storageKey) }}) || 'null') || {};
+            } catch (e) {
+                return {};
+            }
+        },
+        storePlacement(patch) {
+            try {
+                localStorage.setItem({{ \Illuminate\Support\Js::from($storageKey) }}, JSON.stringify({ ...this.storedPlacement(), ...patch }));
+            } catch (e) {}
+        },
         startDrag(e) {
             if (! this.draggable || e.target.closest('button, a, input, select, textarea')) {
                 return;
@@ -136,6 +151,9 @@ $dialogId = $helpId ? \App\Support\DialogId::for($name) : null;
             };
             const onUp = () => {
                 this.dragging = false;
+                if (this.rememberPosition && this.resizable && this.dragPos) {
+                    this.storePlacement({ x: Math.round(this.dragPos.x), y: Math.round(this.dragPos.y) });
+                }
                 window.removeEventListener('mousemove', onMove);
                 window.removeEventListener('mouseup', onUp);
             };
@@ -188,6 +206,12 @@ $dialogId = $helpId ? \App\Support\DialogId::for($name) : null;
                 x: Math.round((window.innerWidth - width) / 2),
                 y: Math.round((window.innerHeight - height) / 2),
             };
+            if (this.rememberPosition && Number.isFinite(stored?.x) && Number.isFinite(stored?.y)) {
+                this.dragPos = {
+                    x: Math.min(Math.max(0, stored.x), Math.max(0, window.innerWidth - width)),
+                    y: Math.min(Math.max(0, stored.y), Math.max(0, window.innerHeight - height)),
+                };
+            }
         },
         toggleMaximize() {
             if (! this.fullscreen) {
@@ -272,10 +296,7 @@ $dialogId = $helpId ? \App\Support\DialogId::for($name) : null;
 
                     clearTimeout(saveTimeout);
                     saveTimeout = setTimeout(() => {
-                        localStorage.setItem(
-                            {{ \Illuminate\Support\Js::from($storageKey) }},
-                            JSON.stringify(this.dragBox)
-                        );
+                        this.storePlacement({ width: this.dragBox.width, height: this.dragBox.height });
                     }, 300);
                 }).observe(box);
             });

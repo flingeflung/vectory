@@ -173,7 +173,7 @@
     </div>
 
     <template x-teleport="body">
-    <x-modal name="project-people-{{ $project->id }}" max-width="4xl" :draggable="true" :resizable="true" size-key="project-people" :dirty-check="'projectPeopleModalIsDirty'">
+    <x-modal name="project-people-{{ $project->id }}" max-width="4xl" :draggable="true" :resizable="true" size-key="project-people" :remember-position="true" :dirty-check="'projectPeopleModalIsDirty'">
         <div x-effect="onPeopleModal(show)" class="flex h-full min-h-0 flex-col">
             <div data-drag-handle class="flex shrink-0 cursor-move select-none items-center justify-between rounded-t-lg border-b border-gray-200 bg-gray-100 px-4 py-3">
                 <div>
