@@ -1185,6 +1185,7 @@
     "Neues Projekt": "New project",
     "Neues Team anlegen": "Create new team",
     "Nicht berücksichtigt": "",
+    "Nicht gespeicherte Änderungen: Dauern (und ein späterer Projektstart) werden erst mit „Speichern“ am Projekt übernommen, die Termine der Schritte bleiben unverändert.": "Unsaved changes: Durations (and a later project start) are only applied to the project with \"Save\"; the dates of the steps remain unchanged.",
     "Nicht gespeicherte Änderungen: Die Dauern werden erst mit „Speichern“ am Projekt übernommen, die Termine der Schritte bleiben unverändert.": "Unsaved changes: The durations are only applied to the project with \"Save\"; the dates of the steps remain unchanged.",
     "Nicht zu verwechseln mit der fachlichen \"Rolle\" oben (TR/PM-PT/...) - hier geht es um Admin-/Super-Admin-Zugriff auf Vectory selbst.": "Not to be confused with the functional \"role\" above (TR/PM-PT/...) - this refers to Admin/Super Admin access to Vectory itself.",
     "Niemand.": "Nobody.",
