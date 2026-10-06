@@ -50,8 +50,8 @@
 
     <div x-show="editingMarkets" x-cloak class="mt-0.5">
         <div class="mb-1.5 flex items-center gap-1.5">
-            <select x-model="selectedSet" class="rounded border-gray-300 py-1 text-xs">
-                <option value="">{{ __('Standard-Märkte zuweisen') }}</option>
+            <select x-model="selectedSet" @change="applySet()" class="rounded border-gray-300 py-1 text-xs" title="{{ __('Setzt die Häkchen sofort nach dem gewählten Set.') }}">
+                <option value="">{{ __('– Set wählen –') }}</option>
                 <option value="__all__">{{ __('Alle auswählen') }}</option>
                 <option value="__none__">{{ __('Alle entfernen') }}</option>
                 @if ($marketSets->isNotEmpty())
@@ -62,9 +62,6 @@
                     </optgroup>
                 @endif
             </select>
-            <button type="button" x-show="selectedSet" x-cloak @click="applySet()" class="rounded bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
-                {{ __('Zuweisen') }}
-            </button>
         </div>
 
         <div class="grid grid-cols-2 gap-x-4 gap-y-1 max-h-56 overflow-y-auto rounded border border-gray-300 bg-white p-2 text-xs">
