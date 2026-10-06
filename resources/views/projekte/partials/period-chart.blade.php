@@ -145,7 +145,7 @@
                 <div
                     class="absolute border-r border-white"
                     :class="{ 'rounded-l': i === 0, 'rounded-r': i === steps.length - 1 }"
-                    :style="{ top: '6px', bottom: '6px', left: startPct(i) + '%', width: widthPct(i) + '%', backgroundColor: palette[i % palette.length], opacity: 0.85 }"
+                    :style="{ top: '16px', bottom: '16px', left: startPct(i) + '%', width: widthPct(i) + '%', backgroundColor: palette[i % palette.length], opacity: 0.85 }"
                     :title="tip(i)"
                 ></div>
             </template>
