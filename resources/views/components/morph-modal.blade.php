@@ -4,7 +4,14 @@
 --}}
 @if (auth()->check() && \App\Support\Morph::isRealSuperAdmin(auth()->user()))
     @php
-        $morphTemplates = \App\Models\PermissionTemplate::query()->where('is_baustein', false)->orderBy('sort')->orderBy('name')->get(['id', 'name']);
+        // Rechte-Sets aller (aktiven) Organisationen, nach Organisation gruppiert, die aktive zuerst: das Rechte-Set einer Person gehört zu
+        // ihrer Heimat-Organisation, nicht zwingend zur gerade gewählten.
+        $morphActiveTenantId = \App\Support\CurrentTenant::id();
+        $morphTemplates = \App\Models\PermissionTemplate::query()->withoutGlobalScope('tenant')
+            ->with(['tenant' => fn ($query) => $query->withoutGlobalScopes()->select('id', 'name', 'short_name')])
+            ->where('is_baustein', false)->orderBy('sort')->orderBy('name')->get(['id', 'tenant_id', 'name'])
+            ->groupBy('tenant_id')
+            ->sortBy(fn ($group, $tenantId) => (int) $tenantId === (int) $morphActiveTenantId ? '' : mb_strtolower((string) $group->first()->tenant?->name));
         $morphState = \App\Support\Morph::state();
     @endphp
     <x-modal name="morph" max-width="md" :draggable="true">
@@ -37,8 +44,12 @@
                     <label class="block text-xs text-gray-500">{{ __('Rechte-Set') }}</label>
                     <select x-model="templateId" class="mt-0.5 w-full rounded-md border-gray-300 py-1 text-sm">
                         <option value="">{{ __('– ohne Rechte-Set –') }}</option>
-                        @foreach ($morphTemplates as $template)
-                            <option value="{{ $template->id }}">{{ $template->name }}</option>
+                        @foreach ($morphTemplates as $group)
+                            <optgroup label="{{ $group->first()->tenant?->name }}">
+                                @foreach ($group as $template)
+                                    <option value="{{ $template->id }}">{{ $template->name }}</option>
+                                @endforeach
+                            </optgroup>
                         @endforeach
                     </select>
                 </div>

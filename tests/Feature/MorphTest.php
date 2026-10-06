@@ -92,6 +92,19 @@ class MorphTest extends TestCase
         $this->assertSame('super_admin', $otherSuper->role);
     }
 
+    public function test_morph_dialog_offers_the_permission_sets_of_all_organizations(): void
+    {
+        $home = Tenant::query()->firstOrFail();
+        $customer = Tenant::query()->create(['name' => 'Maschinen', 'short_name' => 'MA']);
+        PermissionTemplate::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $home->id, 'name' => 'Heimat-Set']);
+        PermissionTemplate::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $customer->id, 'name' => 'Kunden-Set']);
+        $super = $this->superAdmin($home);
+
+        $this->actingAs($super)->get(route('dashboard'))->assertOk()
+            ->assertSee('Heimat-Set')
+            ->assertSee('Kunden-Set');
+    }
+
     public function test_banner_and_button_appear_for_the_super_admin_only(): void
     {
         $tenant = Tenant::query()->firstOrFail();
