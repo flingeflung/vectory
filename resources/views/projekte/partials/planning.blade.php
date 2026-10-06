@@ -15,7 +15,7 @@
         distributing: false,
         utilBounds: { minYear: {{ min(2026, (int) ($project->start_date?->year ?? 2026)) }}, maxYear: {{ (int) now()->year + 5 }}, startYear: {{ $project->start_date?->year ?? 'null' }}, startMonth: {{ $project->start_date?->month ?? 'null' }} },
         util: { view: 'month', year: {{ now()->year }}, month: {{ now()->month }}, person: '', loading: false, loaded: false, people: [] },
-        subTab: window.projectPlanungSubTab || 'planstunden',
+        subTab: window.projectPlanungSubTab || 'terminplan',
         // Dauern der Schritte an den Projektzeitraum anpassen (Ralf, 2026-10-06)
         adjusting: false,
         // Ein-/ausklappbare Bereiche in Planstunden (Ralf, 2026-10-06), Zustand im Browser gemerkt
@@ -202,11 +202,11 @@
 >
     {{-- Unterreiter wie im Tab "Zeiten" (Ralf, 2026-10-03): Planstunden (bisheriger Inhalt) | Terminplan. --}}
     <div class="shrink-0 flex gap-1 border-b border-gray-100">
+        <button type="button" @click="subTab = 'terminplan'" :class="subTab === 'terminplan' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700'" class="border-b-2 px-3 py-1.5 text-xs font-medium">{{ __('Terminplan') }}</button>
         <button type="button" @click="subTab = 'planstunden'" :class="subTab === 'planstunden' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700'" class="border-b-2 px-3 py-1.5 text-xs font-medium">{{ __('Planstunden') }}</button>
         @can('planning.view')
             <button type="button" @click="subTab = 'auslastung'; if (! util.loaded) loadUtilization()" :class="subTab === 'auslastung' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700'" class="border-b-2 px-3 py-1.5 text-xs font-medium">{{ __('Auslastung') }}</button>
         @endcan
-        <button type="button" @click="subTab = 'terminplan'" :class="subTab === 'terminplan' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700'" class="border-b-2 px-3 py-1.5 text-xs font-medium">{{ __('Terminplan') }}</button>
     </div>
 
     <div x-show="subTab === 'planstunden'" data-help-tab="planung.planstunden" class="{{ $isOverlay ? 'flex min-h-0 flex-1 flex-col gap-2' : 'space-y-2' }}">
