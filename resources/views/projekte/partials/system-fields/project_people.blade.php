@@ -71,7 +71,7 @@
         // Overlay Projektbeteiligte Personen (Ralf, 2026-10-06): beim Öffnen wird der Stand der Häkchen gemerkt; wird das
         // Overlay ohne Speichern geschlossen, stellt es diesen Stand wieder her (die Felder liegen im Projektformular).
         peopleInputs() {
-            const body = document.querySelector('#project-people-field-{{ $project->id }} [data-people-modal-body]');
+            const body = document.querySelector('[data-modal-name=project-people-{{ $project->id }}] [data-people-modal-body]');
             return body ? [...body.querySelectorAll('input[type=checkbox], input[type=radio]')] : [];
         },
         peopleDirty() {
@@ -178,6 +178,7 @@
         @endif
     </div>
 
+    <template x-teleport="body">
     <x-modal name="project-people-{{ $project->id }}" max-width="4xl" :draggable="true" :resizable="true" :dirty-check="'projectPeopleModalIsDirty'">
         <div x-effect="onPeopleModal(show)" class="flex h-full min-h-0 flex-col">
             <div data-drag-handle class="flex shrink-0 cursor-move select-none items-center justify-between rounded-t-lg border-b border-gray-200 bg-gray-100 px-4 py-3">
@@ -255,6 +256,7 @@
                             <label class="grid grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-1 {{ $person->active ? 'text-gray-600' : 'text-gray-400' }}">
                                 <input
                                     type="checkbox"
+                                    form="project-detail-form"
                                     name="project_people[{{ $group->id }}][]"
                                     value="{{ $person->id }}"
                                     data-person="{{ $person->id }}"
@@ -265,6 +267,7 @@
                                 >
                                 <input
                                     type="radio"
+                                    form="project-detail-form"
                                     name="project_people_primary[{{ $group->id }}]"
                                     value="{{ $person->id }}"
                                     class="shrink-0"
@@ -289,4 +292,5 @@
             </div>
         </div>
     </x-modal>
+    </template>
 </div>
