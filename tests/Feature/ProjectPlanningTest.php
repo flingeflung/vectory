@@ -178,13 +178,23 @@ class ProjectPlanningTest extends TestCase
         $this->assertEqualsWithDelta(8.0, $octoberSecond['absence'], 0.001);
         $this->assertEqualsWithDelta(-3.0, $octoberSecond['remaining'], 0.001);
 
-        $this->get(route('planung.projektplanung', [
+        $utilization = $this->get(route('planung.projektplanung', [
             'content' => 'utilization',
             'year' => 2026,
             'month' => 10,
             'person_filter' => 1,
             'people' => [$person->id],
-        ]))->assertOk()->assertSee(__('Geplante Projektstunden'));
+        ]))->assertOk()
+            ->assertSee(__('Geplante Projektstunden'))
+            ->assertSee(__('Stunden ausgewertet für die Organisationen:'))
+            ->assertSee('<canvas data-chart=', false)
+            ->assertSee('table-layout: fixed', false);
+
+        // Das Diagramm zeigt dieselben Werte wie die Tabelle darunter (1. Oktober: 3 Projektstunden).
+        $chart = $utilization->viewData('chartByPerson')->get($person->id);
+        $this->assertSame(31, count($chart['labels']));
+        $this->assertEqualsWithDelta(3.0, $chart['project_in'][0], 0.001);
+        $this->assertEqualsWithDelta(0.0, $chart['capacity'][1], 0.001);
 
         $this->get(route('projekte.show', $projectId))
             ->assertOk()

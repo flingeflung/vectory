@@ -54,34 +54,13 @@ final class ProjectUtilization
 
         $calculator->prime($people, $rangeStart, $rangeEnd);
         $result = $people->map(function (Person $person) use ($assignments, $calculator, $periods, $rangeStart, $rangeEnd, $mode, $holidayNames) {
-            $capacity = $calculator->capacityByDay($person, $rangeStart, $rangeEnd);
             $planned = [];
             foreach ($assignments->where('person_id', $person->id) as $assignment) {
                 foreach ($calculator->plannedHoursByDay($assignment, $rangeStart, $rangeEnd) as $date => $hours) {
                     $planned[$date] = ($planned[$date] ?? 0.0) + $hours;
                 }
             }
-
-            $rows = [];
-            foreach ($periods as $period) {
-                $sum = array_fill_keys(['work', 'holiday', 'absence', 'base_load', 'available', 'project', 'project_in', 'project_over'], 0.0);
-                foreach ($period['days'] as $day) {
-                    $cap = $capacity->get($day, ['work' => 0, 'holiday' => 0, 'absence' => 0, 'base_load' => 0, 'available' => 0]);
-                    $project = (float) ($planned[$day] ?? 0);
-                    $inside = min($project, (float) $cap['available']);
-                    $sum['work'] += (float) $cap['work'];
-                    $sum['holiday'] += (float) ($cap['holiday'] ?? 0);
-                    $sum['absence'] += (float) $cap['absence'];
-                    $sum['base_load'] += (float) $cap['base_load'];
-                    $sum['available'] += (float) $cap['available'];
-                    $sum['project'] += $project;
-                    $sum['project_in'] += $inside;
-                    $sum['project_over'] += $project - $inside;
-                }
-                $sum['remaining'] = $sum['available'] - $sum['project'];
-                $sum['utilization'] = $sum['available'] > 0 ? $sum['project'] / $sum['available'] * 100 : 0.0;
-                $rows[$period['key']] = $sum;
-            }
+            $rows = self::rowsFor($periods, $calculator->capacityByDay($person, $rangeStart, $rangeEnd), $planned);
 
             return [
                 'person' => $person,
@@ -106,6 +85,46 @@ final class ProjectUtilization
             'allPeople' => $allPeople,
             'members' => $members,
         ];
+    }
+
+    /**
+     * Summen je Zeitabschnitt für eine Person aus Tageskapazität und geplanten Tagesstunden (auch von der Planungsseite genutzt).
+     *
+     * @param  Collection<int, array{key: string, label: string, sub: string, days: list<string>}>  $periods
+     * @param  Collection<string, array<string, float>>  $capacity
+     * @param  array<string, float>  $planned
+     * @return array<string, array<string, float>>
+     */
+    public static function rowsFor(Collection $periods, Collection $capacity, array $planned): array
+    {
+        $rows = [];
+        foreach ($periods as $period) {
+            $sum = array_fill_keys(['work', 'holiday', 'absence', 'base_load', 'available', 'project', 'project_in', 'project_over'], 0.0);
+            foreach ($period['days'] as $day) {
+                $cap = $capacity->get($day, ['work' => 0, 'holiday' => 0, 'absence' => 0, 'base_load' => 0, 'available' => 0]);
+                $project = (float) ($planned[$day] ?? 0);
+                $inside = min($project, (float) $cap['available']);
+                $sum['work'] += (float) $cap['work'];
+                $sum['holiday'] += (float) ($cap['holiday'] ?? 0);
+                $sum['absence'] += (float) $cap['absence'];
+                $sum['base_load'] += (float) $cap['base_load'];
+                $sum['available'] += (float) $cap['available'];
+                $sum['project'] += $project;
+                $sum['project_in'] += $inside;
+                $sum['project_over'] += $project - $inside;
+            }
+            $sum['remaining'] = $sum['available'] - $sum['project'];
+            $sum['utilization'] = $sum['available'] > 0 ? $sum['project'] / $sum['available'] * 100 : 0.0;
+            $rows[$period['key']] = $sum;
+        }
+
+        return $rows;
+    }
+
+    /** @return array{0: Collection<int, array{key: string, label: string, sub: string, days: list<string>}>, 1: CarbonImmutable, 2: CarbonImmutable} */
+    public static function periodsFor(string $mode, int $year, int $month): array
+    {
+        return $mode === 'year' ? self::yearPeriods($year) : self::monthPeriods($year, $month);
     }
 
     /** @return array{0: Collection<int, array{key: string, label: string, sub: string, days: list<string>}>, 1: CarbonImmutable, 2: CarbonImmutable} */
@@ -147,7 +166,7 @@ final class ProjectUtilization
      * @param  Collection<string, string>  $holidayNames
      * @return array<string, mixed>
      */
-    private static function chartData(Collection $periods, array $rows, string $mode, Collection $holidayNames): array
+    public static function chartData(Collection $periods, array $rows, string $mode, Collection $holidayNames): array
     {
         $series = fn (callable $value) => $periods->map(fn (array $p) => round($value($rows[$p['key']]), 2))->values()->all();
 

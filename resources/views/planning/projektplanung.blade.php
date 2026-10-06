@@ -83,8 +83,49 @@
         <button type="button" onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'projektplanung-organisationen' }))" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Organisationen') }} ({{ $selectedOrganizationIds->count() }})</button>
     </div>
 
-    <div class="min-h-0 flex-1 overflow-auto rounded-lg border border-gray-200 bg-white">
-        <table class="min-w-max border-separate border-spacing-0 text-xs">
+    @if ($contentMode === 'utilization')
+        @php
+            $evaluatedOrganizations = $organizations->whereIn('id', $selectedOrganizationIds->all())->pluck('name');
+            $labelWidth = 208;
+            $columnWidth = $displayMode === 'month' ? 40 : 48;
+            $columnCount = $displayMode === 'month' ? $days->count() : $weeks->count();
+            $totalWidth = $labelWidth + $columnCount * $columnWidth;
+        @endphp
+        <p class="mb-2 shrink-0 text-xs text-gray-600">
+            @if ($evaluatedOrganizations->isNotEmpty())
+                {{ __('Stunden ausgewertet für die Organisationen:') }} <span class="font-medium text-gray-800">{{ $evaluatedOrganizations->join(', ') }}</span>
+            @else
+                {{ __('Es ist keine Organisation ausgewählt. Wenn keine Organisation gewählt ist, dann zählen keine Projektstunden.') }}
+            @endif
+        </p>
+    @endif
+
+    <div
+        class="min-h-0 flex-1 overflow-auto rounded-lg border border-gray-200 bg-white"
+        @if ($contentMode === 'utilization')
+            x-data="{
+                charts: [],
+                async init() {
+                    const Chart = await window.loadChartJs();
+                    const names = {{ \Illuminate\Support\Js::from(['capacity' => __('Arbeitszeit (verfügbar)'), 'base' => __('Grundlast'), 'project' => __('Projekt'), 'over' => __('Überbuchung'), 'week' => __('KW')]) }};
+                    this.$root.querySelectorAll('canvas[data-chart]').forEach((canvas) => {
+                        this.charts.push(window.drawUtilizationChart(Chart, canvas, names, {{ $displayMode === 'year' ? 'true' : 'false' }}));
+                    });
+                },
+                destroy() { this.charts.splice(0).forEach((chart) => chart.destroy()); },
+            }"
+        @endif
+    >
+        <table class="min-w-max border-separate border-spacing-0 text-xs" @if ($contentMode === 'utilization') style="table-layout: fixed; width: {{ $totalWidth }}px" @endif>
+            @if ($contentMode === 'utilization')
+                {{-- Feste Spaltenbreiten, damit das Diagramm Spalte für Spalte über den Zahlen liegt --}}
+                <colgroup>
+                    <col style="width: {{ $labelWidth }}px">
+                    @for ($i = 0; $i < $columnCount; $i++)
+                        <col style="width: {{ $columnWidth }}px">
+                    @endfor
+                </colgroup>
+            @endif
             <thead class="sticky top-0 z-10 isolate bg-gray-50 text-gray-700">
                 @if ($displayMode === 'month')
                     <tr>
@@ -124,7 +165,7 @@
                     @endif
                     @foreach ($people as $person)
                         <tr class="border-b border-gray-200 bg-gray-50">
-                            <th scope="row" class="sticky left-0 z-[1] whitespace-nowrap border-r border-gray-200 bg-gray-50 px-2 py-1.5 text-left font-semibold text-gray-800">
+                            <th scope="row" class="sticky left-0 z-[1] whitespace-nowrap border-r border-gray-200 bg-gray-50 px-2 py-1.5 text-left font-semibold text-gray-800 {{ $contentMode === 'utilization' ? 'truncate' : '' }}" @if ($contentMode === 'utilization') title="{{ $person->last_name }}, {{ $person->first_name }}" @endif>
                                 {{ $person->last_name }}, {{ $person->first_name }}
                                 @if ($contentMode === 'projects')
                                     <span class="ml-1 font-normal text-gray-400" title="{{ __(':count angezeigte Projekte', ['count' => $projectRowsByPerson->get($person->id, collect())->count()]) }}">({{ $projectRowsByPerson->get($person->id, collect())->count() }})</span>
@@ -132,6 +173,16 @@
                             </th>
                             <td colspan="{{ $displayMode === 'month' ? $days->count() : $weeks->count() }}"></td>
                         </tr>
+
+                        @if ($contentMode === 'utilization' && $chartByPerson->has($person->id))
+                            <tr>
+                                <td colspan="{{ $columnCount + 1 }}" class="p-0">
+                                    <div class="relative h-56" style="width: {{ $totalWidth }}px">
+                                        <canvas data-chart='@json($chartByPerson->get($person->id))' data-unit="{{ __('Std.') }}" data-label-width="{{ $labelWidth }}"></canvas>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endif
 
                         @if ($contentMode === 'projects')
                             @forelse ($projectRowsByPerson->get($person->id, collect()) as $projectRow)
@@ -263,6 +314,31 @@
             </tbody>
         </table>
     </div>
+
+    @if ($contentMode === 'utilization')
+        {{-- Legende außerhalb des Scrollbereichs, damit sie immer sichtbar bleibt --}}
+        <div class="mt-2 flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-gray-600">
+            <span class="text-gray-400">
+                @if ($displayMode === 'year')
+                    {!! __('In Wochen mit :holidays ist die Arbeitszeit entsprechend reduziert', ['holidays' => \App\Models\GlossaryTerm::link('Feiertage', __('Feiertagen'))]) !!}
+                @endif
+            </span>
+            <span class="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <span><span class="mr-1.5 inline-block h-0.5 w-5 align-middle" style="background-color: #16a34a"></span>{{ $displayMode === 'month' ? __('Arbeitszeit') : __('Wochenarbeitszeit') }}</span>
+                <span><span class="mr-1.5 inline-block h-2.5 w-5 align-middle" style="background-color: #94a3b8"></span>{{ __('Grundlast') }}</span>
+                <span><span class="mr-1.5 inline-block h-2.5 w-5 align-middle" style="background-color: #3b82f6"></span>{{ __('Projekt') }}</span>
+                <span><span class="mr-1.5 inline-block h-2.5 w-5 align-middle" style="background-color: #ef4444"></span>{{ __('Überbuchung') }}</span>
+                @if ($displayMode === 'month' ? $days->contains(fn ($day) => $day->isToday()) : $year === (int) now()->year)
+                    <span><span class="mr-1.5 inline-block h-2.5 w-3.5 rounded-sm border border-blue-300 bg-[#eff6ff] align-middle"></span>{{ $displayMode === 'month' ? __('Heute') : __('Aktuelle Woche') }}</span>
+                @endif
+                @if ($displayMode === 'month')
+                    <span><span class="mr-1.5 inline-block h-2.5 w-3.5 rounded-sm border border-gray-200 bg-[#fffaeb] align-middle"></span>{{ __('Wochenende') }}</span>
+                    <span><span class="mr-1.5 inline-block h-2.5 w-3.5 rounded-sm border border-gray-200 bg-[#fdf2f8] align-middle"></span>{{ __('Feiertag') }}</span>
+                    <span><span class="mr-1.5 inline-block h-2.5 w-3.5 rounded-sm bg-amber-100 align-middle"></span>{{ __('Abwesenheit') }}</span>
+                @endif
+            </span>
+        </div>
+    @endif
 
     <x-modal name="projektplanung-personen" max-width="md" :draggable="true">
         <form method="GET" action="{{ route('planung.projektplanung') }}" x-data="{ submitting: false }" @submit="submitting = true" :class="{ 'cursor-wait': submitting }" x-on:open-modal.window="if ($event.detail === 'projektplanung-personen') $nextTick(() => $refs.firstPerson?.focus())">

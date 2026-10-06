@@ -16,8 +16,9 @@ use App\Services\PersonAnnualHoursCalculator;
 use App\Services\PlanningBaseLoadCalculator;
 use App\Services\ProjectPlanningCalculator;
 use App\Support\CurrentTenant;
-use App\Support\PlanningNav;
 use App\Support\PlanningAccess;
+use App\Support\PlanningNav;
+use App\Support\ProjectUtilization;
 use App\Support\Workdays;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -226,6 +227,19 @@ class PlanningController extends Controller
             })];
         });
 
+        // Diagramm je Person über den Zahlen (Ralf, 2026-10-06): dieselben Werte wie die Tabelle, daher nur im Reiter Auslastung.
+        $chartByPerson = collect();
+        if ($contentMode === 'utilization') {
+            [$chartPeriods] = ProjectUtilization::periodsFor($displayMode, $year, $month);
+            $chartByPerson = $selectedPeople->mapWithKeys(function (Person $person) use ($capacityByPerson, $planningByPersonAndDate, $chartPeriods, $displayMode) {
+                $capacity = $capacityByPerson->get($person->id, collect());
+                $rows = ProjectUtilization::rowsFor($chartPeriods, $capacity, $planningByPersonAndDate[$person->id] ?? []);
+                $holidays = $capacity->filter(fn (array $values) => ($values['holiday'] ?? 0) > 0);
+
+                return [$person->id => ProjectUtilization::chartData($chartPeriods, $rows, $displayMode, $holidays)];
+            });
+        }
+
         $minimumMonth = CarbonImmutable::create($firstYear, 1, 1);
         $maximumMonth = CarbonImmutable::create($lastYear, 12, 1);
         $previousMonth = $monthStart->greaterThan($minimumMonth) ? $monthStart->subMonth() : null;
@@ -235,7 +249,7 @@ class PlanningController extends Controller
             'displayMode', 'contentMode', 'years', 'year', 'month', 'monthStart', 'days', 'dayWeekSegments',
             'weeks', 'weekMonthSegments', 'personGroups', 'selectedPersonGroups', 'selectedPersonIds',
             'organizations', 'selectedOrganizationIds',
-            'tenants', 'previousMonth', 'nextMonth', 'projectRowsByPerson', 'utilizationByPerson',
+            'tenants', 'previousMonth', 'nextMonth', 'projectRowsByPerson', 'utilizationByPerson', 'chartByPerson',
             'projectTenants', 'tenantColors', 'rangeStart', 'rangeEnd'
         ));
     }
