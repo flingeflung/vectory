@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Support\AccessLevel;
+use App\Support\Morph;
+use Illuminate\Support\Facades\Auth;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -19,6 +21,31 @@ class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
+
+    /**
+     * Morphen (siehe App\Support\Morph): Ist DIESER Benutzer der angemeldete echte Super-Admin mit aktivem Morphen? Dann liefern
+     * Rolle und Heimat-Organisation die gemorphten Werte, sonst die gespeicherten. Andere Benutzer sind nie betroffen.
+     */
+    private function isMorphed(): bool
+    {
+        return ($this->attributes['role'] ?? null) === AccessLevel::SUPER_ADMIN
+            && Morph::state() !== null
+            && Auth::id() === $this->getKey();
+    }
+
+    protected function getRoleAttribute($value)
+    {
+        return $this->isMorphed() ? Morph::state()['role'] : $value;
+    }
+
+    protected function getTenantIdAttribute($value)
+    {
+        if ($this->isMorphed() && Morph::state()['role'] !== AccessLevel::CENTRAL_ADMIN) {
+            return Morph::state()['tenant_id'];
+        }
+
+        return $value;
+    }
 
     public function isSuperAdmin(): bool
     {

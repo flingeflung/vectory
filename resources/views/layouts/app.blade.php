@@ -23,6 +23,7 @@
             @include('layouts.sidebar')
 
             <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+                <x-morph-banner />
                 @include('layouts.topbar')
 
                 <!-- Page Heading -->
@@ -43,6 +44,42 @@
 
         <x-confirm-dialog />
         <x-delete-confirm-dialog />
+        <x-morph-modal />
+
+        <script>
+            // Morphen (Ralf, 2026-10-06): Rolle wechseln bzw. beenden. Nach dem Wechsel bleibt man auf der Seite, wenn die Rolle sie noch
+            // öffnen darf; sonst geht es zur Startseite.
+            window.startMorph = async function (role, templateId) {
+                const response = await fetch({{ \Illuminate\Support\Js::from(route('morphen.start')) }}, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+                    body: JSON.stringify({ role: role, template_id: templateId }),
+                });
+                if (! response.ok) {
+                    await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Das Morphen konnte nicht gestartet werden.')) }});
+                    return;
+                }
+                let allowed = false;
+                try {
+                    const check = await fetch(window.location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                    allowed = check.ok && ! check.redirected;
+                } catch (error) {
+                    allowed = false;
+                }
+                if (allowed) {
+                    window.location.reload();
+                } else {
+                    window.location.href = {{ \Illuminate\Support\Js::from(route('dashboard')) }};
+                }
+            };
+            window.endMorph = async function () {
+                await fetch({{ \Illuminate\Support\Js::from(route('morphen.ende')) }}, {
+                    method: 'DELETE',
+                    headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+                });
+                window.location.reload();
+            };
+        </script>
 
         {{--
             Text in die Zwischenablage kopieren (Ralf, 2026-09-12: "das

@@ -36,6 +36,7 @@ use App\Http\Controllers\IllustrationOverviewController;
 use App\Http\Controllers\JobloadController;
 use App\Http\Controllers\JobloadOverviewController;
 use App\Http\Controllers\LocaleSwitchController;
+use App\Http\Controllers\MorphController;
 use App\Http\Controllers\MultichangeController;
 use App\Http\Controllers\PersonTablePreferenceController;
 use App\Http\Controllers\PlanningBaseLoadController;
@@ -456,6 +457,8 @@ Route::middleware(['auth', 'verified', 'can:access-superadmin', RememberLastAdmi
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/mandant-wechseln', [TenantSwitchController::class, 'update'])->name('mandant.wechseln');
     Route::post('/sprache-wechseln', [LocaleSwitchController::class, 'update'])->name('sprache.wechseln');
+    Route::post('/morphen', [MorphController::class, 'store'])->name('morphen.start');
+    Route::delete('/morphen', [MorphController::class, 'destroy'])->name('morphen.ende');
 });
 
 Route::middleware(['auth', 'verified'])->prefix('projekte/anzeigefilter')->name('projekte.anzeigefilter.')->group(function () {

@@ -34,6 +34,19 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 7.5V12l3 1.75" />
                 </svg>
             </button>
+            @if (\App\Support\Morph::isRealSuperAdmin(auth()->user()))
+                <button
+                    type="button"
+                    onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'morph' }))"
+                    class="flex h-7 w-8 items-center justify-center border-l border-white/20 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white/50"
+                    title="{{ __('Morphen: Sicht einer anderen Rolle prüfen') }}"
+                    aria-label="{{ __('Morphen: Sicht einer anderen Rolle prüfen') }}"
+                >
+                    <svg class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                    </svg>
+                </button>
+            @endif
         </div>
         @php($availableTenants = \App\Support\CurrentTenant::availableTenants())
         @if ($availableTenants->count() > 1)

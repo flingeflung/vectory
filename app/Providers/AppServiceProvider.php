@@ -8,6 +8,7 @@ use App\Models\Person;
 use App\Models\User;
 use App\Support\AccessLevel;
 use App\Support\CurrentAbsenceLookup;
+use App\Support\Morph;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Gate;
@@ -78,6 +79,11 @@ class AppServiceProvider extends ServiceProvider
 
             if (AccessLevel::isAdmin($user)) {
                 return true;
+            }
+
+            // Gemorphter Super-Admin als "User": es gilt das gewählte Rechte-Set, nicht das seiner Person.
+            if (Morph::active($user)) {
+                return Morph::template()?->hasPermission($ability) ?? false;
             }
 
             return $user->person?->hasPermission($ability) ?? false;
