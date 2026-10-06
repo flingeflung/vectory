@@ -34,9 +34,20 @@
         teamId: '',
         teamResult: null,
         // Team zuweisen (Ralf, 2026-10-06): die Teamstruktur wird nicht gespeichert, es werden nur die einzelnen Personen
-        // vorgemerkt (angehakt). Wer im Projekt schon zugewiesen ist (egal in welcher Funktionsgruppe), wird übersprungen; bestehende
+        // vorgemerkt (angehakt); ein anderes Team ersetzt die Vormerkung des vorherigen. Wer im Projekt schon zugewiesen ist (egal in welcher Funktionsgruppe), wird übersprungen; bestehende
         // Zuweisungen bleiben unverändert. Gespeichert wird wie sonst auch erst mit dem Speichern des Projekts.
+        teamBoxes: [],
+        clearTeam() {
+            // Die durch ein vorher gewähltes Team vorgemerkten Personen wieder abwählen (von Hand gesetzte Häkchen bleiben)
+            this.teamBoxes.forEach((box) => {
+                if (! box.checked) return;
+                box.checked = false;
+                box.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+            this.teamBoxes = [];
+        },
         applyTeam() {
+            this.clearTeam();
             const team = this.teams.find((t) => String(t.id) === String(this.teamId));
             if (! team) return;
             const result = { added: [], already: [], inactive: [], none: [] };
@@ -51,6 +62,7 @@
                 if (targets.length === 0) { result.none.push(member.name); return; }
                 targets.forEach((box) => {
                     box.checked = true;
+                    this.teamBoxes.push(box);
                     box.dispatchEvent(new Event('change', { bubbles: true }));
                 });
                 const shorts = (this.groupsByPerson[member.id] || []).filter((g) => targets.some((box) => String(box.dataset.group) === String(g.id))).map((g) => g.short);
@@ -87,6 +99,7 @@
                 this.peopleSnapshot = this.peopleInputs().map((el) => ({ el, checked: el.checked }));
                 this.teamId = '';
                 this.teamResult = null;
+                this.teamBoxes = [];
                 this.peopleTick++;
             } else if (! open && this.peopleModalOpen) {
                 this.peopleModalOpen = false;
