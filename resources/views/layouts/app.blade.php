@@ -2625,6 +2625,11 @@
                         return;
                     }
 
+                    // Beim Blättern (Overlay ist schon offen) die Scrollposition des Inhalts beibehalten (Ralf, 2026-10-06);
+                    // beim frischen Öffnen aus der Liste beginnt das Projekt wie gewohnt oben.
+                    const isPaging = (window.__modalStack || []).includes('project-overlay');
+                    const keptScroll = isPaging ? (body().querySelector('[data-project-scroll]')?.scrollTop ?? 0) : 0;
+
                     currentProjectId = id;
                     currentProjectSort = sort;
                     currentProjectDirection = direction;
@@ -2642,6 +2647,19 @@
                     hideLoading();
                     savedSnapshot = null;
                     snapshot();
+
+                    if (keptScroll > 0) {
+                        const restoreScroll = () => {
+                            const scroller = body().querySelector('[data-project-scroll]');
+                            if (scroller) {
+                                scroller.scrollTop = keptScroll;
+                            }
+                        };
+                        restoreScroll();
+                        // der Inhalt baut sich (Alpine) noch auf und wird dabei höher
+                        setTimeout(restoreScroll, 60);
+                        setTimeout(restoreScroll, 250);
+                    }
 
                     // Öffnen selbst ändert schon Daten (Vietto: "zuletzt geöffnet"),
                     // unabhängig von einem Speichern - betrifft z.B. die Dashboard-

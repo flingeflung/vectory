@@ -297,7 +297,7 @@
 
         <div
             class="{{ $isOverlay ? 'min-h-0 flex-1 px-4 pt-1 pb-3' : '' }}"
-            @if ($isOverlay) :class="activeTab === 'planung' ? 'overflow-hidden' : 'overflow-y-auto'" @endif
+            @if ($isOverlay) data-project-scroll :class="activeTab === 'planung' ? 'overflow-hidden' : 'overflow-y-auto'" @endif
         >
         <div x-show="activeTab === 'details'" data-help-tab="details">
         <form id="project-detail-form" method="POST" action="{{ route('projekte.update', $project) }}" class="space-y-4 text-sm">
