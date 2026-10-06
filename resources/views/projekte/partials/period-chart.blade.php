@@ -126,10 +126,10 @@
     @endif
 
     <div class="px-1">
-        <div x-ref="track" class="relative h-10 w-full select-none overflow-visible rounded">
+        <div x-ref="track" style="height: 60px" class="relative w-full select-none overflow-visible rounded">
             {{-- Raster im Hintergrund --}}
             <template x-for="k in grid.weekends" :key="'we-' + k">
-                <div class="pointer-events-none absolute top-0 h-full" :style="{ left: pct(k) + '%', width: pct(1) + '%', backgroundColor: '#fffaeb' }"></div>
+                <div class="pointer-events-none absolute top-0 h-full" :style="{ left: pct(k) + '%', width: pct(1) + '%', backgroundColor: '#fdefc6' }"></div>
             </template>
             <template x-for="h in grid.holidays" :key="'ho-' + h.k">
                 <div class="absolute top-0 h-full bg-rose-300" :style="{ left: pct(h.k) + '%', width: 'max(1px, ' + pct(1) + '%)', opacity: 0.6 }" :title="h.name + ' (' + dateDe(calendar[h.k]) + ')'"></div>
