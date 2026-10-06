@@ -98,6 +98,13 @@ class OrganizationGuardTest extends TestCase
         'app/Services/PresetCopy/JobTypesArea.php::job_types' => 3,
         'app/Services/PresetCopy/ProjectTemplatesArea.php::project_template_function_group' => 3,
         'app/Services/PresetCopy/WorkflowsArea.php::workflow_step_function_group' => 2,
+        // Endgültiges Löschen einer Organisation: gelöscht wird gezielt alles mit der tenant_id der zu löschenden Organisation
+        // (bewusst ohne die Schutzregeln, auch wenn sie deaktiviert ist) - in einer Reihenfolge, die die RESTRICT-Fremdschlüssel erfüllt.
+        'app/Services/TenantPurger.php::job_types' => 1,
+        'app/Services/TenantPurger.php::paper_format_combinations' => 1,
+        'app/Services/TenantPurger.php::people' => 1,
+        'app/Services/TenantPurger.php::project_notes' => 1,
+        'app/Services/TenantPurger.php::projects' => 1,
         'app/Support/CurrentTenant.php::person_tenant' => 2,
     ];
 

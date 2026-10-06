@@ -28,6 +28,16 @@ class TenantPurger
             ->where('tenant_id', $tenant->id)->where('system', false)->get();
 
         DB::transaction(function () use ($tenant) {
+            // Einträge, die per Fremdschlüssel (RESTRICT) aufeinander zeigen, zuerst und in dieser Reihenfolge entfernen: Die Datenbank
+            // löscht sonst beim Kaskadieren in beliebiger Reihenfolge und bricht ab, sobald ein noch benutzter Eintrag drankommt.
+            // Notizen vor Benutzern, Projekte vor Papierformat-Kombinationen, Jobtypen vor Jobgruppen,
+            // Kombinationen vor Papierformaten, Personen vor Rechte-Sets.
+            DB::table('project_notes')->where('tenant_id', $tenant->id)->delete();
+            DB::table('projects')->where('tenant_id', $tenant->id)->delete();
+            DB::table('job_types')->where('tenant_id', $tenant->id)->delete();
+            DB::table('paper_format_combinations')->where('tenant_id', $tenant->id)->delete();
+            DB::table('people')->where('tenant_id', $tenant->id)->delete();
+
             // Normale Benutzer der Organisation gehen mit; Admin-Stufen bleiben erhalten (Fremdschlüssel setzt sie auf "ohne Organisation").
             User::query()->where('tenant_id', $tenant->id)->whereIn('role', ['user', 'organization_admin'])->delete();
             $tenant->delete();

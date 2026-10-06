@@ -85,6 +85,34 @@ class TenantPurgeTest extends TestCase
         $this->assertFalse(Schema::hasColumn('projects', $column), 'Verwaiste Attribut-Spalte muss weg sein.');
     }
 
+    public function test_purge_works_with_entries_that_block_each_other(): void
+    {
+        $tenant = $this->test;
+        $this->fill($tenant, 'purge_attr');
+        $user = User::query()->where('tenant_id', $tenant->id)->firstOrFail();
+        $now = now();
+
+        $groupId = DB::table('job_groups')->insertGetId(['tenant_id' => $tenant->id, 'name' => 'Gruppe', 'created_at' => $now, 'updated_at' => $now]);
+        DB::table('job_types')->insert(['tenant_id' => $tenant->id, 'job_group_id' => $groupId, 'name' => 'Typ', 'created_at' => $now, 'updated_at' => $now]);
+
+        $inputId = DB::table('paper_formats')->insertGetId(['tenant_id' => $tenant->id, 'name' => 'A4', 'width_mm' => 210, 'height_mm' => 297, 'created_at' => $now, 'updated_at' => $now]);
+        $outputId = DB::table('paper_formats')->insertGetId(['tenant_id' => $tenant->id, 'name' => 'A5', 'width_mm' => 148, 'height_mm' => 210, 'created_at' => $now, 'updated_at' => $now]);
+        $combinationId = DB::table('paper_format_combinations')->insertGetId(['tenant_id' => $tenant->id, 'input_format_id' => $inputId, 'output_format_id' => $outputId, 'created_at' => $now, 'updated_at' => $now]);
+        $projectId = Project::query()->withoutGlobalScope('tenant')->where('tenant_id', $tenant->id)->value('id');
+        DB::table('projects')->where('id', $projectId)->update(['paper_format_combination_id' => $combinationId]);
+        DB::table('project_notes')->insert(['tenant_id' => $tenant->id, 'project_id' => $projectId, 'type' => 'note', 'text' => 'Notiz', 'created_by_user_id' => $user->id, 'created_at' => $now]);
+
+        $templateId = DB::table('permission_templates')->insertGetId(['tenant_id' => $tenant->id, 'name' => 'Rechte-Set', 'created_at' => $now, 'updated_at' => $now]);
+        DB::table('people')->where('tenant_id', $tenant->id)->update(['permission_template_id' => $templateId]);
+
+        $this->purge('Testkunde')->assertRedirect();
+
+        $this->assertDatabaseMissing('tenants', ['id' => $tenant->id]);
+        $this->assertDatabaseMissing('job_types', ['tenant_id' => $tenant->id]);
+        $this->assertDatabaseMissing('paper_formats', ['tenant_id' => $tenant->id]);
+        $this->assertDatabaseMissing('project_notes', ['tenant_id' => $tenant->id]);
+    }
+
     public function test_a_column_that_another_organization_still_uses_stays(): void
     {
         $this->fill($this->test, 'gemeinsam');
