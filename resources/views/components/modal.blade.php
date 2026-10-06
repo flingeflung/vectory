@@ -175,6 +175,10 @@ $dialogId = $helpId ? \App\Support\DialogId::for($name) : null;
             try {
                 stored = JSON.parse(localStorage.getItem({{ \Illuminate\Support\Js::from($storageKey) }}) || 'null');
             } catch (e) {}
+            // Unbrauchbare gemerkte Größen (z. B. 0 durch frühere Fehlspeicherung) ignorieren
+            if (! stored || ! (stored.width >= 300) || ! (stored.height >= 200)) {
+                stored = null;
+            }
 
             const width = Math.min(stored?.width ?? Math.round(window.innerWidth * 0.75), window.innerWidth - 32);
             const height = Math.min(stored?.height ?? Math.round(window.innerHeight * 0.75), window.innerHeight - 32);
@@ -235,7 +239,9 @@ $dialogId = $helpId ? \App\Support\DialogId::for($name) : null;
                 let saveTimeout = null;
                 let resizeEndTimeout = null;
                 new ResizeObserver(() => {
-                    if (! this.show) {
+                    // Wird der Dialog samt Seiteninhalt entfernt, während er offen ist (z. B. nach dem Speichern eines Projekts),
+                    // meldet der Beobachter die Größe 0 - die darf nie als gemerkte Größe gespeichert werden.
+                    if (! this.show || ! box.isConnected || box.offsetWidth < 100 || box.offsetHeight < 100) {
                         return;
                     }
 
