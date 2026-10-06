@@ -103,7 +103,7 @@ class ProjectStepTimeline
      * Aufschlüsselung des Zeitbedarfs für die Anzeige (Ralf, 2026-10-06): jeder Schritt "In Bearbeitung" mit seiner Dauer in Arbeitstagen
      * (Wert am Projekt, sonst Standard am Schritt, mindestens 1) - dieselbe Rechnung wie forProject().
      *
-     * @return array{steps: list<array{title: string, days: int, default_used: bool}>, sum: int}|null null = kein Workflow oder keine Arbeitsschritte
+     * @return array{steps: list<array{id: int, title: string, days: int, default_used: bool}>, sum: int}|null null = kein Workflow oder keine Arbeitsschritte
      */
     public function breakdown(Project $project): ?array
     {
@@ -122,7 +122,7 @@ class ProjectStepTimeline
             $hasOverride = array_key_exists($step->id, $overrides) && $overrides[$step->id] !== null;
             $raw = $hasOverride ? $overrides[$step->id] : $step->duration_days;
             $days = max(self::MIN_STEP_DAYS, (int) $raw);
-            $rows[] = ['title' => (string) $step->title, 'days' => $days, 'default_used' => (int) $raw < self::MIN_STEP_DAYS];
+            $rows[] = ['id' => (int) $step->id, 'title' => (string) $step->title, 'days' => $days, 'default_used' => (int) $raw < self::MIN_STEP_DAYS];
         }
 
         return ['steps' => $rows, 'sum' => array_sum(array_column($rows, 'days'))];

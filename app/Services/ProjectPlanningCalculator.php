@@ -145,20 +145,62 @@ class ProjectPlanningCalculator
     /** Arbeitstage zwischen Projektstart und -ende (ohne Wochenenden und Feiertage der Organisation); null bei unvollständigem Zeitraum. */
     public function projectWorkdays(\App\Models\Project $project): ?int
     {
+        $list = $this->projectWorkdayList($project);
+
+        return $list === null ? null : count($list);
+    }
+
+    /** @return list<string>|null Arbeitstage (Y-m-d) von Projektstart bis -ende in Reihenfolge; null bei unvollständigem Zeitraum */
+    public function projectWorkdayList(\App\Models\Project $project): ?array
+    {
         if (! $project->start_date || ! $project->end_date || $project->start_date->gt($project->end_date)) {
             return null;
         }
         $start = CarbonImmutable::parse($project->start_date->toDateString());
         $end = CarbonImmutable::parse($project->end_date->toDateString());
         $holidays = $this->holidays((int) $project->tenant_id, $start->year, $end->year);
-        $days = 0;
+        $days = [];
         for ($date = $start; $date->lessThanOrEqualTo($end); $date = $date->addDay()) {
             if ($date->isWeekday() && ! $holidays->contains($date->toDateString())) {
-                $days++;
+                $days[] = $date->toDateString();
             }
         }
 
         return $days;
+    }
+
+    /**
+     * Daten für das Zeitraum-Diagramm in Planung > Planstunden (Ralf, 2026-10-06): die Arbeitstage des Projektzeitraums und die Schritte
+     * "In Bearbeitung" mit ihren Dauern in AT. Entspricht der Bedarf dem Zeitraum, gelten die eingetragenen Dauern; sonst die auf den
+     * Zeitraum umgerechneten (wie beim Knopf "Dauern an Projektzeitraum anpassen"), damit die Balken die Breite genau füllen.
+     * Schritte ohne eingetragene Dauer zählen 1 Tag.
+     *
+     * @return array{workdays: list<string>, steps: list<array{id: int, title: string, days: int, workflow_days: int, fixed: bool}>, sum: int, available: int, compressed: bool}|null
+     */
+    public function periodChart(\App\Models\Project $project): ?array
+    {
+        $workdays = $this->projectWorkdayList($project);
+        $breakdown = $this->stepTimeline()->breakdown($project);
+        if ($workdays === null || $workdays === [] || $breakdown === null) {
+            return null;
+        }
+
+        $available = count($workdays);
+        $matches = $breakdown['sum'] === $available;
+        $scaled = $matches ? [] : ($this->stepTimeline()->scaledDurations($project, $available) ?? []);
+        $steps = [];
+        foreach ($breakdown['steps'] as $row) {
+            $days = $matches || $row['default_used'] ? $row['days'] : ($scaled[$row['id']] ?? $row['days']);
+            $steps[] = ['id' => $row['id'], 'title' => $row['title'], 'days' => $days, 'workflow_days' => $row['days'], 'fixed' => $row['default_used']];
+        }
+
+        return [
+            'workdays' => $workdays,
+            'steps' => $steps,
+            'sum' => $breakdown['sum'],
+            'available' => $available,
+            'compressed' => ! $matches,
+        ];
     }
 
     /**
