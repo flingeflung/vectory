@@ -7,11 +7,7 @@
         reference: {{ \Illuminate\Support\Js::from($referenceStepId) }},
         pendingSaves: [],
         busy: false,
-        // Eieruhr je Zeile: mindestens knapp eine Sekunde sichtbar, damit man das Speichern bemerkt (Ralf, 2026-10-06)
-        savingRows: {},
-        saveField(url, payload, rowId = null) {
-            const started = Date.now();
-            if (rowId !== null) { this.savingRows[rowId] = true; }
+        saveField(url, payload) {
             const request = fetch(url, {
                 method: 'PATCH',
                 headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Content-Type': 'application/json' },
@@ -21,6 +17,8 @@
                     const data = await response.json().catch(() => ({}));
                     throw new Error(data.message || {{ \Illuminate\Support\Js::from(__('Speichern fehlgeschlagen. Bitte erneut versuchen.')) }});
                 }
+                // Rückmeldung wie überall beim Sofort-Speichern: das kleine grüne Gespeichert-Fenster (Ralf, 2026-10-06)
+                window.showToast({{ \Illuminate\Support\Js::from(__('Gespeichert.')) }});
                 return true;
             }).catch(async (error) => {
                 await window.notifyDialog(error.message);
@@ -29,9 +27,6 @@
             this.pendingSaves.push(request);
             request.finally(() => {
                 this.pendingSaves = this.pendingSaves.filter((pending) => pending !== request);
-                if (rowId !== null) {
-                    setTimeout(() => { delete this.savingRows[rowId]; }, Math.max(0, 900 - (Date.now() - started)));
-                }
             });
             return request;
         },
@@ -73,7 +68,6 @@
                     <th class="w-16 pb-2 pr-2 text-center">{{ __('Berechnung-referenz') }}</th>
                     <th class="pb-2 pr-2 text-center">{{ __('Start') }}<sup>1</sup></th>
                     <th class="pb-2 text-center">{{ __('Ende') }}<sup>1</sup></th>
-                    <th class="w-6 pb-2"></th>
                 </tr>
             </thead>
             <tbody>
@@ -94,7 +88,7 @@
                                 placeholder="{{ __('– kein Termin-Name –') }}"
                                 class="w-full rounded border-gray-300 text-xs"
                                 @change="
-                                    saveField({{ \Illuminate\Support\Js::from(route('projekte.termine.update-field', [$project, $pws])) }}, { milestone_title: $event.target.value }, {{ $pws->id }});
+                                    saveField({{ \Illuminate\Support\Js::from(route('projekte.termine.update-field', [$project, $pws])) }}, { milestone_title: $event.target.value });
                                 "
                             >
                         </td>
@@ -105,7 +99,7 @@
                                 value="{{ $pws->effectiveDurationDays() }}"
                                 class="w-16 rounded border-gray-300 text-xs"
                                 @change="
-                                    saveField({{ \Illuminate\Support\Js::from(route('projekte.termine.update-field', [$project, $pws])) }}, { duration_days: $event.target.value }, {{ $pws->id }});
+                                    saveField({{ \Illuminate\Support\Js::from(route('projekte.termine.update-field', [$project, $pws])) }}, { duration_days: $event.target.value });
                                 "
                             >
                         </td>
@@ -115,7 +109,7 @@
                                 value="{{ $pws->due_date?->format('Y-m-d') }}"
                                 class="rounded border-gray-300 text-xs"
                                 @change="
-                                    saveField({{ \Illuminate\Support\Js::from(route('projekte.termine.update-field', [$project, $pws])) }}, { due_date: $event.target.value }, {{ $pws->id }});
+                                    saveField({{ \Illuminate\Support\Js::from(route('projekte.termine.update-field', [$project, $pws])) }}, { due_date: $event.target.value });
                                 "
                             >
                         </td>
@@ -140,7 +134,7 @@
                                 name="is_start"
                                 @checked($pws->effectiveIsStart())
                                 @click="
-                                    saveField({{ \Illuminate\Support\Js::from(route('projekte.termine.start-end', [$project, $pws])) }}, { type: 'start' }, {{ $pws->id }});
+                                    saveField({{ \Illuminate\Support\Js::from(route('projekte.termine.start-end', [$project, $pws])) }}, { type: 'start' });
                                 "
                             >
                         </td>
@@ -150,12 +144,9 @@
                                 name="is_end"
                                 @checked($pws->effectiveIsEnd())
                                 @click="
-                                    saveField({{ \Illuminate\Support\Js::from(route('projekte.termine.start-end', [$project, $pws])) }}, { type: 'end' }, {{ $pws->id }});
+                                    saveField({{ \Illuminate\Support\Js::from(route('projekte.termine.start-end', [$project, $pws])) }}, { type: 'end' });
                                 "
                             >
-                        </td>
-                        <td class="w-6 py-1.5 pl-1 text-gray-400" title="{{ __('Wird gespeichert …') }}">
-                            <span x-show="savingRows[{{ $pws->id }}]" x-cloak class="inline-flex"><x-loading-spinner class="h-4 w-4" /></span>
                         </td>
                     </tr>
                 @endforeach

@@ -1714,7 +1714,6 @@
     "Wird beim Anlegen eines Logins automatisch als Wochenstunden der Person eingetragen.": "",
     "Wird bereits in :count Projekt verwendet.|Wird bereits in :count Projekten verwendet.": "Already used in :count project.|Already used in :count projects.",
     "Wird bereits von :count Person verwendet.|Wird bereits von :count Personen verwendet.": "Already used by :count person.|Already used by :count people.",
-    "Wird gespeichert …": "Saving …",
     "Wird in :count Projekten verwendet - nur Super-Admin kann Felder mit vorhandenen Werten löschen.": "Used in :count projects - only a Super Admin can delete fields that already contain values.",
     "Wird nicht geändert.": "Will not be changed.",
     "Wird nicht geändert: Das Feld gilt für die Projektart dieses Projekts nicht.": "",
