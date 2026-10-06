@@ -400,6 +400,8 @@
                     type="number"
                     min="1"
                     :value="step.days"
+                    @focus="$event.target.select()"
+                    @mouseup.prevent
                     @change="setDays(i, $event.target.value, $event.target)"
                     class="w-10 rounded border-gray-300 px-1 py-0.5 text-right text-xs"
                     :title="'{{ __('Dauer in Arbeitstagen (AT)') }}' + (step.fixed ? ' – {{ __('keine Dauer im Workflow eingetragen, zählt 1 Tag') }}' : ' – {{ __('laut Workflow') }}: ' + step.workflow_days)"
