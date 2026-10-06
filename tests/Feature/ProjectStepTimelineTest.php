@@ -132,4 +132,25 @@ class ProjectStepTimelineTest extends TestCase
         WorkflowStep::query()->where('workflow_id', $this->workflow->id)->update(['lifecycle_status' => 3]);
         $this->assertCount(10, (new ProjectPlanningCalculator)->plannedHoursByDay($assignment->fresh(['project', 'person']), CarbonImmutable::parse('2027-03-01'), CarbonImmutable::parse('2027-03-12')));
     }
+
+    public function test_time_need_summary_lists_the_steps_and_compares_with_the_project_period(): void
+    {
+        // Zwei Schritte mit 8 und 6 Tagen, einer ohne Dauer (zählt 1), einer "In Planung" (zählt nicht): Summe 15 > 10 Arbeitstage
+        $this->steps([[2, 8], [2, 6], [2, 0], [1, 40]]);
+        $assignment = $this->assignment();
+        $project = $assignment->project;
+
+        $need = app(ProjectPlanningCalculator::class)->timeNeed($project);
+
+        $this->assertSame('over', $need['state']);
+        $this->assertSame(15, $need['sum']);
+        $this->assertSame(10, $need['available']);
+        $this->assertSame(0.67, $need['factor']);
+        $this->assertSame(['S1', 'S2', 'S3'], array_column($need['steps'], 'title'));
+        $this->assertSame([false, false, true], array_column($need['steps'], 'default_used'));
+
+        // Ohne Workflow: Hinweis statt Zahlen
+        $project->update(['workflow_id' => null]);
+        $this->assertSame('no_workflow', app(ProjectPlanningCalculator::class)->timeNeed($project->fresh())['state']);
+    }
 }

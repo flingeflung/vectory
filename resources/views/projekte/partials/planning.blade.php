@@ -177,6 +177,27 @@
     </div>
 
     <div x-show="subTab === 'planstunden'" data-help-tab="planung.planstunden" class="{{ $isOverlay ? 'flex min-h-0 flex-1 flex-col gap-2' : 'space-y-2' }}">
+        @php $timeNeed = app(\App\Services\ProjectPlanningCalculator::class)->timeNeed($project); @endphp
+        @if ($timeNeed['state'] === 'no_workflow')
+            <p class="shrink-0 rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-500">{{ __('Für dieses Projekt ist kein Workflow zugewiesen.') }}</p>
+        @else
+            @php
+                $needTooltip = collect($timeNeed['steps'])->map(fn ($step) => $step['title'].': '.$step['days'].' '.__('AT').($step['default_used'] ? ' ('.__('keine Dauer eingetragen, zählt 1 Tag').')' : ''))->join("\n");
+            @endphp
+            <p class="shrink-0 rounded-md border px-2 py-1 text-xs {{ $timeNeed['state'] === 'over' ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-gray-200 bg-gray-50 text-gray-600' }}" title="{{ __('Summe der Dauern der Workflow-Schritte „In Bearbeitung“ (in Arbeitstagen):')."\n".$needTooltip }}">
+                {{ __('Zeitbedarf laut Workflow') }}: <span class="font-semibold">{{ $timeNeed['sum'] }} {{ __('AT') }}</span>
+                &middot; {{ __('Projektzeitraum') }}:
+                @if ($timeNeed['available'] !== null)
+                    <span class="font-semibold">{{ $timeNeed['available'] }} {{ __('AT') }}</span>
+                    @if ($timeNeed['state'] === 'over')
+                        &middot; {{ __('Faktor') }} {{ number_format($timeNeed['factor'], 2, ',', '.') }}
+                    @endif
+                @else
+                    <span class="font-semibold">{{ __('unvollständig (Start oder Ende fehlt)') }}</span>
+                @endif
+            </p>
+        @endif
+
         @include('projekte.partials.planned-hours-editor')
 
         @can('planning.view')

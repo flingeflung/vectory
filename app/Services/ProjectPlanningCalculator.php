@@ -131,6 +131,20 @@ class ProjectPlanningCalculator
      */
     public function compressionNotice(\App\Models\Project $project): ?array
     {
+        $days = $this->projectWorkdays($project);
+        if ($days === null) {
+            return null;
+        }
+        $timeline = $this->stepTimeline()->forProject($project, $days);
+
+        return $timeline !== null && $timeline['compressed']
+            ? ['sum' => $timeline['sum'], 'available' => $timeline['available'], 'factor' => $timeline['factor']]
+            : null;
+    }
+
+    /** Arbeitstage zwischen Projektstart und -ende (ohne Wochenenden und Feiertage der Organisation); null bei unvollständigem Zeitraum. */
+    public function projectWorkdays(\App\Models\Project $project): ?int
+    {
         if (! $project->start_date || ! $project->end_date || $project->start_date->gt($project->end_date)) {
             return null;
         }
@@ -143,11 +157,31 @@ class ProjectPlanningCalculator
                 $days++;
             }
         }
-        $timeline = $this->stepTimeline()->forProject($project, $days);
 
-        return $timeline !== null && $timeline['compressed']
-            ? ['sum' => $timeline['sum'], 'available' => $timeline['available'], 'factor' => $timeline['factor']]
-            : null;
+        return $days;
+    }
+
+    /**
+     * Zeitbedarf laut Workflow gegenüber dem Projektzeitraum, für die Infozeile oben in Planung > Planstunden (Ralf, 2026-10-06).
+     *
+     * @return array{state: string, sum?: int, available?: ?int, factor?: float, steps?: list<array{title: string, days: int, default_used: bool}>}
+     *                                                                                                                                           state: no_workflow | ok | over
+     */
+    public function timeNeed(\App\Models\Project $project): array
+    {
+        $breakdown = $this->stepTimeline()->breakdown($project);
+        if ($breakdown === null) {
+            return ['state' => 'no_workflow'];
+        }
+        $available = $this->projectWorkdays($project);
+
+        return [
+            'state' => $available !== null && $breakdown['sum'] > $available ? 'over' : 'ok',
+            'sum' => $breakdown['sum'],
+            'available' => $available,
+            'factor' => $available !== null && $breakdown['sum'] > 0 ? round($available / $breakdown['sum'], 2) : null,
+            'steps' => $breakdown['steps'],
+        ];
     }
 
     private function stepTimeline(): ProjectStepTimeline

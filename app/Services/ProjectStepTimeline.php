@@ -99,6 +99,35 @@ class ProjectStepTimeline
     }
 
     /** @return array{steps: list<WorkflowStep>, windows: \Illuminate\Support\Collection} */
+    /**
+     * Aufschlüsselung des Zeitbedarfs für die Anzeige (Ralf, 2026-10-06): jeder Schritt "In Bearbeitung" mit seiner Dauer in Arbeitstagen
+     * (Wert am Projekt, sonst Standard am Schritt, mindestens 1) - dieselbe Rechnung wie forProject().
+     *
+     * @return array{steps: list<array{title: string, days: int, default_used: bool}>, sum: int}|null null = kein Workflow oder keine Arbeitsschritte
+     */
+    public function breakdown(Project $project): ?array
+    {
+        if (! $project->workflow_id) {
+            return null;
+        }
+        $steps = WorkflowStep::query()->withoutGlobalScope('tenant')->where('workflow_id', $project->workflow_id)
+            ->where('lifecycle_status', WorkflowGroupWindow::WORK_LIFECYCLE_STATUS)->orderBy('sort')->get(['id', 'title', 'duration_days']);
+        if ($steps->isEmpty()) {
+            return null;
+        }
+
+        $overrides = $this->projectDurations($project->id);
+        $rows = [];
+        foreach ($steps as $step) {
+            $hasOverride = array_key_exists($step->id, $overrides) && $overrides[$step->id] !== null;
+            $raw = $hasOverride ? $overrides[$step->id] : $step->duration_days;
+            $days = max(self::MIN_STEP_DAYS, (int) $raw);
+            $rows[] = ['title' => (string) $step->title, 'days' => $days, 'default_used' => (int) $raw < self::MIN_STEP_DAYS];
+        }
+
+        return ['steps' => $rows, 'sum' => array_sum(array_column($rows, 'days'))];
+    }
+
     private function workflow(int $workflowId): array
     {
         return $this->workflowCache[$workflowId] ??= [
