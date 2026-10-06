@@ -162,6 +162,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/projekte/{project}/projektbeteiligte', [ProjectController::class, 'peopleField'])->name('projekte.projektbeteiligte.show');
     Route::post('/projekte/{project}/projektbeteiligte/freigabe', [ProjectController::class, 'releaseTeamPeople'])->name('projekte.projektbeteiligte.release');
     Route::get('/projekte/{project}/planung/gruppen', [ProjectController::class, 'planningGroups'])->name('projekte.planung.gruppen');
+    Route::get('/projekte/{project}/planung/zeitraum', [ProjectController::class, 'planningPeriod'])->name('projekte.planung.zeitraum');
     Route::get('/projekte/{project}/planung/auslastung', [ProjectController::class, 'planningUtilization'])->name('projekte.planung.auslastung');
     Route::patch('/projekte/{project}', [ProjectController::class, 'update'])->name('projekte.update');
     Route::post('/projekte/{project}/planstunden/loesen', [ProjectController::class, 'breakPlannedHoursLink'])->name('projekte.planstunden.loesen');

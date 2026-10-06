@@ -623,6 +623,19 @@ class ProjectController extends Controller
     }
 
     /**
+     * Bereich "Zeitraum" des Planungs-Tabs als HTML, damit er nach einer Terminänderung (Termin am Schritt, Termine berechnen, Dauern)
+     * live nachzieht, ohne den ganzen Tab zu ersetzen.
+     */
+    public function planningPeriod(Request $request, Project $project): JsonResponse
+    {
+        abort_unless($request->user()->can('project.view') && $request->user()->can('planning.view'), 403);
+
+        return response()->json([
+            'html' => view('projekte.partials.period-section', ['project' => $project, 'isOverlay' => $request->boolean('overlay', true)])->render(),
+        ]);
+    }
+
+    /**
      * Auslastung der Projektbeteiligten nur mit den Stunden dieses Projekts (bei einem Hauptprojekt zusammen mit
      * allen Unterprojekten, Ralf 2026-10-04). Liefert den fertigen Block (Diagramm + Tabelle je Person) als HTML;
      * Monats- oder Jahresansicht, alle Personen oder eine einzelne.

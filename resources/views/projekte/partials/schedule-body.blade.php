@@ -19,6 +19,7 @@
                 }
                 // Rückmeldung wie überall beim Sofort-Speichern: das kleine grüne Gespeichert-Fenster (Ralf, 2026-10-06)
                 window.showToast({{ \Illuminate\Support\Js::from(__('Gespeichert.')) }});
+                window.dispatchEvent(new CustomEvent('project-schedule-changed', { detail: { projectId: {{ $project->id }} } }));
                 return true;
             }).catch(async (error) => {
                 await window.notifyDialog(error.message);
@@ -45,12 +46,14 @@
         async apply(stepId) {
             if (await window.reloadProjectSchedule({{ \Illuminate\Support\Js::from(route('projekte.termine.apply', $project)) }}, { reference_step_id: this.reference, apply_step_id: stepId })) {
                 window.showToast({{ \Illuminate\Support\Js::from(__('Gespeichert.')) }});
+                window.dispatchEvent(new CustomEvent('project-schedule-changed', { detail: { projectId: {{ $project->id }} } }));
             }
         },
         async applyAll() {
             const saved = await window.reloadProjectSchedule({{ \Illuminate\Support\Js::from(route('projekte.termine.apply', $project)) }}, { reference_step_id: this.reference });
             if (saved) {
                 window.showToast({{ \Illuminate\Support\Js::from(__('Gespeichert.')) }});
+                window.dispatchEvent(new CustomEvent('project-schedule-changed', { detail: { projectId: {{ $project->id }} } }));
             }
             window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-schedule' }));
         },

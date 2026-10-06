@@ -254,7 +254,7 @@
 
             <template x-for="m in milestones" :key="'ms-' + m.step_id">
                 <div
-                    class="absolute z-[7] h-2.5 w-2.5 -translate-x-1/2 rotate-45 border border-white"
+                    class="absolute z-[11] h-2.5 w-2.5 -translate-x-1/2 rotate-45 border border-white"
                     :class="msLate(m) ? 'bg-red-600' : 'bg-gray-600'"
                     :style="{ left: msPct(m) + '%', bottom: '3px' }"
                     :title="msTip(m)"

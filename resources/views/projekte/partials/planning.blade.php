@@ -56,13 +56,26 @@
                 if (e.detail.projectId === {{ $project->id }}) this.refreshPeople();
             };
             window.addEventListener('project-people-changed', this.onPeopleChanged);
+            this.onScheduleChanged = (e) => {
+                if (e.detail.projectId === {{ $project->id }}) this.refreshPeriod();
+            };
+            window.addEventListener('project-schedule-changed', this.onScheduleChanged);
             this.onPlannedHoursChanged = () => this.refreshPeople();
             window.addEventListener('project-planned-hours-changed', this.onPlannedHoursChanged);
         },
         destroy() {
             this.destroyUtilCharts();
             window.removeEventListener('project-people-changed', this.onPeopleChanged);
+            window.removeEventListener('project-schedule-changed', this.onScheduleChanged);
             window.removeEventListener('project-planned-hours-changed', this.onPlannedHoursChanged);
+        },
+        // Bereich Zeitraum neu laden, wenn sich Termine oder Dauern geändert haben (der Diagramm-Entwurf geht dabei verloren)
+        async refreshPeriod() {
+            const container = document.getElementById('project-period-{{ $project->id }}');
+            if (! container) return;
+            const response = await fetch({{ \Illuminate\Support\Js::from(route('projekte.planung.zeitraum', ['project' => $project, 'overlay' => $isOverlay ? 1 : 0])) }}, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+            if (! response.ok) return;
+            container.innerHTML = (await response.json()).html;
         },
         async refreshPeople() {
             const container = document.getElementById('project-planning-groups-{{ $project->id }}');
@@ -223,24 +236,8 @@
         @include('projekte.partials.planned-hours-editor')
         </div>
 
-        @php $periodChart = app(\App\Services\ProjectPlanningCalculator::class)->periodChart($project); @endphp
-        <div class="shrink-0">
-            <button type="button" @click="toggleSection('zeitraum')" class="flex items-center gap-1.5 text-left" :aria-expanded="sections.zeitraum">
-                <svg class="h-4 w-4 shrink-0 text-gray-500 transition-transform" :class="sections.zeitraum ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
-                <h3 class="font-semibold text-gray-900">{{ __('Zeitraum') }}</h3>
-                @if ($periodChart && $periodChart['period']['mode'] !== 'match')
-                    <span class="rounded px-1.5 py-0.5 text-[11px] font-normal {{ $periodChart['period']['mode'] === 'overflow' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-600' }}">
-                        {{ $periodChart['period']['mode'] === 'overflow' ? __('Es fehlen :days AT', ['days' => $periodChart['period']['diff']]) : __('Puffer: :days AT', ['days' => $periodChart['period']['diff']]) }}
-                    </span>
-                @endif
-            </button>
-            <div x-show="sections.zeitraum" class="mt-1">
-                @if ($periodChart)
-                    @include('projekte.partials.period-chart', ['chart' => $periodChart, 'hasOverrides' => (bool) ($timeNeed['has_overrides'] ?? false), 'canEditPeriod' => auth()->user()->can('workflow_step.due_date')])
-                @else
-                    <p class="rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-500">{{ __('Für das Diagramm braucht das Projekt einen Workflow mit Arbeitsschritten sowie einen Projektstart und ein Projektende.') }}</p>
-                @endif
-            </div>
+        <div id="project-period-{{ $project->id }}" class="shrink-0">
+            @include('projekte.partials.period-section')
         </div>
 
         </div>

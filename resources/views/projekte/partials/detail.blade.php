@@ -552,6 +552,7 @@
                                                                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': {{ \Illuminate\Support\Js::from(csrf_token()) }} },
                                                                 body: JSON.stringify({ due_date: value || null }),
                                                             }).then(() => {
+                                                                window.dispatchEvent(new CustomEvent('project-schedule-changed', { detail: { projectId: {{ $project->id }} } }));
                                                                 @if ($pws->effectiveIsStart() || $pws->effectiveIsEnd())
                                                                     window.refreshUnderlyingProject({{ $project->id }});
                                                                 @endif
