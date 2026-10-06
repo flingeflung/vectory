@@ -40,7 +40,8 @@
             const result = { added: [], already: [], inactive: [], none: [] };
             team.members.forEach((member) => {
                 const boxes = [...this.$root.querySelectorAll('input[data-person]')].filter((box) => box.dataset.person === String(member.id));
-                if (boxes.some((box) => box.checked)) { result.already.push(member.name); return; }
+                // defaultChecked = so ist die Person gespeichert; checked ohne defaultChecked = nur vorgemerkt (z. B. durch ein Team vorher)
+                if (boxes.some((box) => box.defaultChecked)) { result.already.push(member.name); return; }
                 if (! member.active) { result.inactive.push(member.name); return; }
                 // Die Person kommt in alle Funktionsgruppen dieses Projekts, in denen sie Mitglied ist.
                 const groupIds = (this.groupsByPerson[member.id] || []).map((g) => String(g.id));
@@ -58,7 +59,7 @@
             const r = this.teamResult;
             if (! r) return [];
             const lines = [];
-            lines.push(r.added.length + ' ' + {{ \Illuminate\Support\Js::from(__('Person(en) vorgemerkt:')) }} + (r.added.length ? ' ' + r.added.join('; ') : ''));
+            if (r.added.length) lines.push(r.added.length + ' ' + {{ \Illuminate\Support\Js::from(__('Person(en) vorgemerkt:')) }} + ' ' + r.added.join('; '));
             if (r.already.length) lines.push(r.already.length + ' ' + {{ \Illuminate\Support\Js::from(__('bereits zugewiesen, übersprungen:')) }} + ' ' + r.already.join('; '));
             if (r.inactive.length) lines.push(r.inactive.length + ' ' + {{ \Illuminate\Support\Js::from(__('inaktiv, übersprungen:')) }} + ' ' + r.inactive.join('; '));
             if (r.none.length) lines.push(r.none.length + ' ' + {{ \Illuminate\Support\Js::from(__('in keiner zuweisbaren Funktionsgruppe, übersprungen:')) }} + ' ' + r.none.join('; '));
