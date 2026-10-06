@@ -225,7 +225,7 @@
     "Aufwandsprofil-Verbindung wiederherstellen?": "",
     "Aufwandsprofile": "",
     "Aus :year kopieren": "",
-    "Aus Projektstart und den Dauern der Schritte berechnetes Ende (Arbeitstage, ohne Wochenenden und Feiertage der Organisation)": "End calculated from the project start and the step durations (working days, excluding weekends and the organization's holidays)",
+    "Aus Projektstart und den Dauern der Schritte berechnetes Ende (Arbeitstage, ohne Wochenenden und Feiertage)": "End calculated from the project start and the step durations (working days, excluding weekends and holidays)",
     "Aus Versionskette gelöst": "",
     "Aus Workflow-Schritt „:step“ übernommen.": "Copied from workflow step “:step”.",
     "Aus Zuständigkeiten vorbelegen": "",

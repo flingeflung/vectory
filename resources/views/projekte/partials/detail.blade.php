@@ -525,7 +525,7 @@
                                             @if ($duration > 0)
                                                 {{ __('Dauer') }}: {{ $duration }} {{ __('AT') }}
                                                 @if ($calculatedEnd)
-                                                    <span class="text-gray-400" title="{{ __('Aus Projektstart und den Dauern der Schritte berechnetes Ende (Arbeitstage, ohne Wochenenden und Feiertage der Organisation)') }}">({{ __('berechnet') }}: {{ $calculatedEnd->format('d.m.Y') }})</span>
+                                                    <span class="text-gray-400" title="{{ __('Aus Projektstart und den Dauern der Schritte berechnetes Ende (Arbeitstage, ohne Wochenenden und Feiertage)') }}">({{ __('berechnet') }}: {{ $calculatedEnd->format('d.m.Y') }})</span>
                                                 @endif
                                             @else
                                                 {{ __('keine Dauer eingetragen') }}
