@@ -8,6 +8,9 @@
     'draggable' => true,
     'height' => null,
     'resizable' => false,
+    // Schlüssel, unter dem die Größe im Browser gemerkt wird (Standard: der Dialogname). Für Dialoge, deren Name
+    // eine Projekt-ID enthält, einen festen Schlüssel angeben, damit die Größe für alle Projekte gilt.
+    'sizeKey' => null,
     'fullscreen' => false,
     // Ralf, 2026-09-15: "bei komplizierten Eingaben ist ein Klick daneben
     // sehr ärgerlich" - für Dialoge mit aufwändig auszufüllenden Formularen
@@ -51,7 +54,7 @@ $maxWidth = [
 // scrollenden Mittelteil (siehe projekte/partials/detail.blade.php).
 $boxOverflowClass = 'overflow-hidden';
 $heightStyle = $height ? "height: {$height};" : '';
-$storageKey = "vectory-modal-size-{$name}";
+$storageKey = "vectory-modal-size-".($sizeKey ?? $name);
 $dialogId = $helpId ? \App\Support\DialogId::for($name) : null;
 @endphp
 
