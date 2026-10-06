@@ -22,6 +22,9 @@
         canEditPeriod: @js($canEditPeriod ?? false),
         applying: false,
         hover: null,
+        preview: null,
+        off: 0,
+        backupDays: null,
         original: null,
         wdCal: [],
         grid: { weekends: [], holidays: [], months: [], years: [], today: null },
@@ -58,9 +61,28 @@
         endIso(i) { return this.workdays[Math.min(this.total, this.cum(i)) - 1]; },
         dateDe(iso) { return iso ? iso.split('-').reverse().join('.') : ''; },
         // Kalenderposition (0..span) des rechten Rands von Schritt i
-        edge(i) { return i >= this.steps.length - 1 ? (this.used >= this.total ? this.span : this.wdCal[this.used - 1] + 1) : this.wdCal[this.cum(i)]; },
-        startPct(i) { return (i === 0 ? 0 : this.edge(i - 1)) / this.span * 100; },
-        widthPct(i) { return (this.edge(i) - (i === 0 ? 0 : this.edge(i - 1))) / this.span * 100; },
+        // Kalenderposition des k-ten Arbeitstags; off verschiebt alles beim Vorschau-Start (Puffer vorn statt hinten)
+        wd(k) { return this.wdCal[k + this.off]; },
+        edge(i) { return i >= this.steps.length - 1 ? (this.used >= this.total ? this.span : this.wd(this.used - 1) + 1) : this.wd(this.cum(i)); },
+        first() { return this.off ? this.wd(0) : 0; },
+        startPct(i) { return (i === 0 ? this.first() : this.edge(i - 1)) / this.span * 100; },
+        widthPct(i) { return (this.edge(i) - (i === 0 ? this.first() : this.edge(i - 1))) / this.span * 100; },
+        get newEndIdx() { return this.period.new_end ? this.calendar.indexOf(this.period.new_end) : -1; },
+        // Vorschau beim Überfahren der Knöpfe: zeigt, wie das Diagramm nach dem Klick aussähe
+        showPreview(kind) {
+            if (this.period.mode === 'match' || this.preview !== null) return;
+            this.preview = kind;
+            if (kind === 'durations') {
+                this.backupDays = this.steps.map((step) => step.days);
+                this.steps.forEach((step) => { step.days = step.scaled_days; });
+            }
+            if (kind === 'start' && this.period.mode === 'buffer') this.off = this.total - this.used;
+        },
+        hidePreview() {
+            if (this.backupDays) { this.steps.forEach((step, i) => { step.days = this.backupDays[i]; }); this.backupDays = null; }
+            this.off = 0;
+            this.preview = null;
+        },
         pct(k) { return k / this.span * 100; },
         // Meilenstein = Schritt mit eingetragenem Termin; außerhalb des Diagramms am Rand
         msPct(m) {
@@ -189,13 +211,13 @@
             </span>
             <template x-if="canEditPeriod">
                 <span class="inline-flex flex-wrap items-center gap-1.5">
-                    <button type="button" :disabled="applying" @click="applyPeriod('end', period.new_end)" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-[11px] font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:cursor-wait disabled:opacity-50" :title="@js(__('Setzt das Projektende so, dass der Zeitraum zu den Dauern passt. Der Projektstart bleibt.'))">
+                    <button type="button" :disabled="applying" @mouseenter="showPreview('end')" @mouseleave="hidePreview()" @focus="showPreview('end')" @blur="hidePreview()" @click="hidePreview(); applyPeriod('end', period.new_end)" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-[11px] font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:cursor-wait disabled:opacity-50" :title="@js(__('Setzt das Projektende so, dass der Zeitraum zu den Dauern passt. Der Projektstart bleibt.'))">
                         <span x-text="@js(__('Ende auf :date setzen')).replace(':date', dateDe(period.new_end))"></span>
                     </button>
-                    <button type="button" :disabled="applying || startInPast" @click="applyPeriod('start', period.new_start)" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-[11px] font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:cursor-not-allowed disabled:opacity-50" :title="startInPast ? @js(__('Der neue Start läge in der Vergangenheit.')) : @js(__('Setzt den Projektstart so, dass der Zeitraum zu den Dauern passt. Das Projektende bleibt.'))">
+                    <button type="button" :disabled="applying || startInPast" @mouseenter="showPreview('start')" @mouseleave="hidePreview()" @focus="showPreview('start')" @blur="hidePreview()" @click="hidePreview(); applyPeriod('start', period.new_start)" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-[11px] font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:cursor-not-allowed disabled:opacity-50" :title="startInPast ? @js(__('Der neue Start läge in der Vergangenheit.')) : @js(__('Setzt den Projektstart so, dass der Zeitraum zu den Dauern passt. Das Projektende bleibt.'))">
                         <span x-text="@js(__('Start auf :date setzen')).replace(':date', dateDe(period.new_start))"></span>
                     </button>
-                    <button type="button" :disabled="applying" @click="adjustDurations(hasOverrides)" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-[11px] font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:cursor-wait disabled:opacity-50" title="{{ __('Rechnet die Dauern der Schritte mit dem Faktor auf den Projektzeitraum um und speichert sie am Projekt. Der Workflow selbst bleibt unverändert.') }}">{{ __('Dauern an Projektzeitraum anpassen') }}</button>
+                    <button type="button" :disabled="applying" @mouseenter="showPreview('durations')" @mouseleave="hidePreview()" @focus="showPreview('durations')" @blur="hidePreview()" @click="hidePreview(); adjustDurations(hasOverrides)" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-[11px] font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:cursor-wait disabled:opacity-50" title="{{ __('Rechnet die Dauern der Schritte mit dem Faktor auf den Projektzeitraum um und speichert sie am Projekt. Der Workflow selbst bleibt unverändert.') }}">{{ __('Dauern an Projektzeitraum anpassen') }}</button>
                 </span>
             </template>
         </div>
@@ -219,21 +241,50 @@
             </template>
 
             <div
-                x-show="used < total"
+                x-show="period.mode === 'buffer' && used < total"
                 class="pointer-events-none absolute flex items-center justify-center overflow-hidden whitespace-nowrap text-[10px] text-gray-500"
                 :style="{ top: '16px', bottom: '16px', left: pct(edge(steps.length - 1)) + '%', width: (100 - pct(edge(steps.length - 1))) + '%', backgroundImage: 'repeating-linear-gradient(135deg, #e5e7eb 0, #e5e7eb 2px, #f9fafb 2px, #f9fafb 6px)' }"
                 :title="@js(__('Puffer: Zeit bis zum Projektende, die der Workflow nicht braucht'))"
             ><span x-text="@js(__('Puffer: :days AT')).replace(':days', period.diff)"></span></div>
             <div
-                x-show="period.mode === 'overflow' && endIdx >= 0"
+                x-show="period.mode === 'overflow' && endIdx >= 0 && preview !== 'durations'"
                 class="absolute top-0 h-full"
                 :style="{ left: pct(endIdx + 1) + '%', width: (100 - pct(endIdx + 1)) + '%', backgroundColor: 'rgba(239, 68, 68, 0.12)' }"
             ></div>
             <div
-                x-show="period.mode === 'overflow' && endIdx >= 0"
+                x-show="period.mode === 'overflow' && endIdx >= 0 && preview !== 'durations'"
                 class="pointer-events-none absolute top-0 z-[5] h-full w-0.5 -translate-x-px bg-red-500"
                 :style="{ left: pct(endIdx + 1) + '%' }"
                 :title="@js(__('Projektende')) + ' ' + dateDe(period.project_end) + ' – ' + @js(__('Der Workflow reicht :days AT darüber hinaus.')).replace(':days', period.diff)"
+            ></div>
+
+            <template x-if="preview === 'end' && newEndIdx >= 0">
+                <div class="pointer-events-none">
+                    <div
+                        class="absolute top-0 flex h-full items-center justify-center overflow-hidden whitespace-nowrap text-[10px] font-medium"
+                        :class="period.mode === 'buffer' ? 'text-red-700' : 'text-green-700'"
+                        :style="period.mode === 'buffer'
+                            ? { left: pct(newEndIdx + 1) + '%', width: (pct(endIdx + 1) - pct(newEndIdx + 1)) + '%', backgroundColor: 'rgba(239, 68, 68, 0.15)' }
+                            : { left: pct(endIdx + 1) + '%', width: (100 - pct(endIdx + 1)) + '%', backgroundColor: 'rgba(34, 197, 94, 0.18)' }"
+                        x-text="period.mode === 'buffer' ? @js(__('entfällt')) : @js(__('kommt dazu'))"
+                    ></div>
+                    <div class="absolute top-0 z-[5] h-full border-l-2 border-dashed border-blue-600" :style="{ left: pct(newEndIdx + 1) + '%' }"></div>
+                </div>
+            </template>
+            <template x-if="preview === 'start' && period.mode === 'buffer' && off > 0">
+                <div class="pointer-events-none">
+                    <div
+                        class="absolute top-0 flex h-full items-center justify-center overflow-hidden whitespace-nowrap text-[10px] font-medium text-red-700"
+                        :style="{ left: '0%', width: pct(first()) + '%', backgroundColor: 'rgba(239, 68, 68, 0.15)' }"
+                        x-text="@js(__('entfällt'))"
+                    ></div>
+                    <div class="absolute top-0 z-[5] h-full border-l-2 border-dashed border-blue-600" :style="{ left: pct(first()) + '%' }"></div>
+                </div>
+            </template>
+            <div
+                x-show="preview === 'start' && period.mode === 'overflow'"
+                class="pointer-events-none absolute left-1 top-0 z-[5] rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-800"
+                x-text="@js(__('Start früher: :date')).replace(':date', dateDe(period.new_start))"
             ></div>
 
             <template x-for="(step, i) in steps" :key="step.id">

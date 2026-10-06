@@ -175,7 +175,7 @@ class ProjectPlanningCalculator
      * Zeitraum umgerechneten (wie beim Knopf "Dauern an Projektzeitraum anpassen"), damit die Balken die Breite genau füllen.
      * Schritte ohne eingetragene Dauer zählen 1 Tag.
      *
-     * @return array{milestones: list<array{step_id: int, title: string, date: string}>, groups: list<array{id: int, name: string, from: int, to: int}>, workdays: list<string>, calendar: list<string>, holidays: object, steps: list<array{id: int, title: string, days: int, workflow_days: int, fixed: bool}>, sum: int, available: int, period: array<string, mixed>}|null
+     * @return array{milestones: list<array{step_id: int, title: string, date: string}>, groups: list<array{id: int, name: string, from: int, to: int}>, workdays: list<string>, calendar: list<string>, holidays: object, steps: list<array{id: int, title: string, days: int, workflow_days: int, fixed: bool, scaled_days: int}>, sum: int, available: int, period: array<string, mixed>}|null
      */
     public function periodChart(\App\Models\Project $project): ?array
     {
@@ -187,9 +187,10 @@ class ProjectPlanningCalculator
 
         $available = count($workdays);
         $need = (int) $breakdown['sum'];
+        $scaled = $need === $available ? [] : ($this->stepTimeline()->scaledDurations($project, $available) ?? []);
         $steps = [];
         foreach ($breakdown['steps'] as $row) {
-            $steps[] = ['id' => $row['id'], 'title' => $row['title'], 'days' => $row['days'], 'workflow_days' => $row['days'], 'fixed' => $row['default_used']];
+            $steps[] = ['id' => $row['id'], 'title' => $row['title'], 'days' => $row['days'], 'workflow_days' => $row['days'], 'fixed' => $row['default_used'], 'scaled_days' => $scaled[$row['id']] ?? $row['days']];
         }
 
         // Kalender von Projektstart bis -ende mit allen Tagen (auch Wochenenden, Feiertage) für das Raster im Hintergrund.
