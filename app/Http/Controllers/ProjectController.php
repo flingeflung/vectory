@@ -93,6 +93,18 @@ class ProjectController extends Controller
         $filters = ProjectFilterCatalog::filtersFromRequest($request);
         $user = $request->user();
 
+        // Sortierung wird je Benutzer gemerkt (Ralf, 2026-10-07): ein Klick auf die Spaltenüberschrift speichert sie, ohne sort-Parameter
+        // (z. B. Sidebar-Link Projekte) wird die zuletzt gewählte wiederhergestellt.
+        if ($sort !== null) {
+            UserPreference::persist((int) $user->id, UserPreference::PROJECT_SORT, ['sort' => $sort, 'direction' => $direction]);
+        } elseif (! $request->has('sort')) {
+            $storedSort = UserPreference::configFor((int) $user->id, UserPreference::PROJECT_SORT);
+            if (is_string($storedSort['sort'] ?? null) && (in_array($storedSort['sort'], self::SORTABLE_COLUMNS, true) || in_array($storedSort['sort'], self::sortableAttributeColumns(), true))) {
+                $sort = $storedSort['sort'];
+                $direction = ($storedSort['direction'] ?? 'asc') === 'desc' ? 'desc' : 'asc';
+            }
+        }
+
         // Projektfilter wurde abgeschickt -> die gerade sichtbare Feldauswahl wird
         // automatisch als neuer Standard gemerkt. Eigener Marker statt nur auf
         // filter_fields zu prüfen, da der bei komplett leerer Auswahl (z.B. nach

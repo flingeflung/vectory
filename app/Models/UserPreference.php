@@ -26,6 +26,8 @@ class UserPreference extends Model
 
     public const PROJECT_TIMES = 'project_times';
 
+    public const PROJECT_SORT = 'project_sort';
+
     protected function casts(): array
     {
         return ['config' => 'array'];
