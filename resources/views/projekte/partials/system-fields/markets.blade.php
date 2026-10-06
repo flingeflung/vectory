@@ -17,6 +17,8 @@
             }
 
             this.selectedSet = '';
+            // Die Häkchen wurden per Skript gesetzt: Änderung melden, sonst erscheinen die Speichern-Knöpfe nicht
+            this.$root.dispatchEvent(new Event('change', { bubbles: true }));
         },
     }"
 >
