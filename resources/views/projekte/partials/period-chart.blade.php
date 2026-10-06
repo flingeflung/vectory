@@ -140,7 +140,7 @@
 
     <div class="px-1">
         <div x-ref="track" style="height: 60px" class="relative select-none overflow-visible rounded" :class="groups.length ? 'ml-[9.5rem]' : ''">
-            <span x-show="groups.length" class="absolute right-full top-0 mr-2 text-[10px] font-medium text-gray-400">{{ __('Workflow') }}</span>
+            <span x-show="groups.length" style="left: -9.5rem; top: 24px" class="absolute text-[10px] font-medium text-gray-400">{{ __('Workflow') }}</span>
             {{-- Raster im Hintergrund --}}
             <template x-for="k in grid.weekends" :key="'we-' + k">
                 <div class="pointer-events-none absolute top-0 h-full" :style="{ left: pct(k) + '%', width: pct(1) + '%', backgroundColor: '#fdefc6' }"></div>
