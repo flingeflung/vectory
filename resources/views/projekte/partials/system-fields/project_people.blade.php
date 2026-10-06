@@ -5,6 +5,19 @@
      Bemerkungen/Änderungsprotokoll-Boxen (siehe project-notes.blade.php).
      Lädt sich NICHT neu, während gerade editiert wird (sonst gingen
      unfertige Änderungen verloren). --}}
+@php
+    $teamData = \App\Models\Team::assignableForTenant($project->tenant_id);
+    // Welche Funktionsgruppen dieses Projekts bieten eine Person an? Nur dort lässt sich ein Teammitglied automatisch zuweisen.
+    $groupsByPerson = [];
+    foreach ($allFunctionGroups as $group) {
+        if (! $group->active) {
+            continue;
+        }
+        foreach ($group->members as $member) {
+            $groupsByPerson[$member->id][] = ['id' => $group->id, 'short' => $group->short_name];
+        }
+    }
+@endphp
 <div
     id="project-people-field-{{ $project->id }}"
     x-data="{
@@ -13,6 +26,43 @@
         workflowGroups: {{ \Illuminate\Support\Js::from($availableWorkflows->mapWithKeys(fn ($workflow) => [(string) $workflow->id => $workflow->steps->flatMap->functionGroups->pluck('id')->unique()->values()->all()])) }},
         isWorkflowRelevant(groupId) {
             return (this.workflowGroups[this.selectedWorkflowId] || []).includes(groupId);
+        },
+        teams: {{ \Illuminate\Support\Js::from($teamData) }},
+        groupsByPerson: {{ \Illuminate\Support\Js::from($groupsByPerson) }},
+        teamId: '',
+        teamResult: null,
+        // Team zuweisen (Ralf, 2026-10-06): die Teamstruktur wird nicht gespeichert, es werden nur die einzelnen Personen
+        // angehakt. Wer im Projekt schon zugewiesen ist (egal in welcher Funktionsgruppe), wird übersprungen; bestehende
+        // Zuweisungen bleiben unverändert. Gespeichert wird wie sonst auch erst mit dem Speichern des Projekts.
+        applyTeam() {
+            const team = this.teams.find((t) => String(t.id) === String(this.teamId));
+            if (! team) return;
+            const result = { added: [], already: [], inactive: [], ambiguous: [], none: [] };
+            team.members.forEach((member) => {
+                const boxes = [...this.$root.querySelectorAll('input[data-person]')].filter((box) => box.dataset.person === String(member.id));
+                if (boxes.some((box) => box.checked)) { result.already.push(member.name); return; }
+                if (! member.active) { result.inactive.push(member.name); return; }
+                const groups = this.groupsByPerson[member.id] || [];
+                if (groups.length === 0) { result.none.push(member.name); return; }
+                if (groups.length > 1) { result.ambiguous.push(member.name + ' (' + groups.map((g) => g.short).join(', ') + ')'); return; }
+                const box = boxes.find((b) => String(b.dataset.group) === String(groups[0].id));
+                if (! box) { result.none.push(member.name); return; }
+                box.checked = true;
+                box.dispatchEvent(new Event('change', { bubbles: true }));
+                result.added.push(member.name);
+            });
+            this.teamResult = result;
+        },
+        teamResultLines() {
+            const r = this.teamResult;
+            if (! r) return [];
+            const lines = [];
+            lines.push(r.added.length + ' ' + {{ \Illuminate\Support\Js::from(__('Person(en) angehakt, gespeichert wird erst mit „Speichern“:')) }} + (r.added.length ? ' ' + r.added.join('; ') : ''));
+            if (r.already.length) lines.push(r.already.length + ' ' + {{ \Illuminate\Support\Js::from(__('bereits zugewiesen, übersprungen:')) }} + ' ' + r.already.join('; '));
+            if (r.inactive.length) lines.push(r.inactive.length + ' ' + {{ \Illuminate\Support\Js::from(__('inaktiv, übersprungen:')) }} + ' ' + r.inactive.join('; '));
+            if (r.ambiguous.length) lines.push(r.ambiguous.length + ' ' + {{ \Illuminate\Support\Js::from(__('in mehreren Funktionsgruppen, bitte unten selbst zuweisen:')) }} + ' ' + r.ambiguous.join('; '));
+            if (r.none.length) lines.push(r.none.length + ' ' + {{ \Illuminate\Support\Js::from(__('in keiner zuweisbaren Funktionsgruppe, übersprungen:')) }} + ' ' + r.none.join('; '));
+            return lines;
         },
         init() {
             this.onChanged = (e) => {
@@ -100,6 +150,22 @@
             <span class="inline-flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-blue-400"></span>{{ __('Im Workflow relevant') }}</span>
             <span class="inline-flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-amber-400"></span>{{ __('Person fehlt') }}</span>
         </div>
+        @if (count($teamData) > 0)
+            <div class="border-b border-gray-200 bg-gray-50 px-2 py-1.5">
+                <div class="flex items-center gap-2">
+                    <select x-model="teamId" @change="teamResult = null" class="min-w-0 flex-1 rounded-md border-gray-300 py-0.5 text-xs" title="{{ __('Alle Personen eines Teams auf einmal zuweisen. Wer schon zugewiesen ist, wird übersprungen.') }}">
+                        <option value="">{{ __('– Team wählen –') }}</option>
+                        <template x-for="team in teams" :key="team.id">
+                            <option :value="team.id" x-text="team.name + ' (' + team.members.length + ')'"></option>
+                        </template>
+                    </select>
+                    <button type="button" @click="applyTeam()" :disabled="! teamId" class="shrink-0 rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:opacity-50">{{ __('Team zuweisen') }}</button>
+                </div>
+                <div x-show="teamResult" x-cloak class="mt-1 space-y-0.5 text-[11px] text-gray-600">
+                    <template x-for="line in teamResultLines()" :key="line"><div x-text="line"></div></template>
+                </div>
+            </div>
+        @endif
         <div class="space-y-2 p-2">
         @if (! $hasAssignablePeople)
             <div class="text-amber-700">{{ __('Für diese Organisation sind noch keine Funktionsgruppen mit Personen angelegt. Bitte zuerst unter Admin > Personen & Rechte > Funktionsgruppen entsprechende Gruppen anlegen und Personen zuordnen.') }}</div>
@@ -146,6 +212,8 @@
                                     type="checkbox"
                                     name="project_people[{{ $group->id }}][]"
                                     value="{{ $person->id }}"
+                                    data-person="{{ $person->id }}"
+                                    data-group="{{ $group->id }}"
                                     class="shrink-0 rounded border-gray-300"
                                     @change="assignedCount += $event.target.checked ? 1 : -1"
                                     @checked(in_array($person->id, $currentPersonIds, true))

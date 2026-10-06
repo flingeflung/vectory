@@ -72,4 +72,26 @@ class TeamAdminTest extends TestCase
         $this->post(route('admin.teams.update', $foreign), ['name' => 'Gekapert']);
         $this->assertDatabaseHas('teams', ['id' => $foreign->id, 'name' => 'Fremdes Team']);
     }
+
+    public function test_project_people_field_offers_active_teams_for_assignment(): void
+    {
+        $tenant = Tenant::query()->firstOrFail();
+        $admin = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'organization_admin']);
+        $anna = $this->person($tenant, 'Anna');
+        $group = \App\Models\FunctionGroup::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $tenant->id, 'name' => 'Technische Redaktion', 'short_name' => 'TR']);
+        $group->members()->attach($anna->id, ['tenant_id' => $tenant->id]);
+        $project = \App\Models\Project::query()->create(['tenant_id' => $tenant->id, 'source_pn' => '279992', 'title' => 'Teamprojekt', 'status' => 1]);
+
+        $active = Team::query()->create(['tenant_id' => $tenant->id, 'name' => 'Team Aktiv']);
+        $active->members()->attach($anna->id, ['tenant_id' => $tenant->id, 'role' => 'lead']);
+        Team::query()->create(['tenant_id' => $tenant->id, 'name' => 'Team Inaktiv', 'active' => false]);
+
+        $this->actingAs($admin)->get(route('projekte.projektbeteiligte.show', $project))
+            ->assertOk()
+            ->assertSee(__('Team zuweisen'))
+            ->assertSee('Team Aktiv')
+            ->assertDontSee('Team Inaktiv')
+            ->assertSee('data-person="'.$anna->id.'"', false)
+            ->assertSee('data-group="'.$group->id.'"', false);
+    }
 }
