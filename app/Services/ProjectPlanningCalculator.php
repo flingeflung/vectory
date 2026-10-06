@@ -175,7 +175,7 @@ class ProjectPlanningCalculator
      * Zeitraum umgerechneten (wie beim Knopf "Dauern an Projektzeitraum anpassen"), damit die Balken die Breite genau füllen.
      * Schritte ohne eingetragene Dauer zählen 1 Tag.
      *
-     * @return array{groups: list<array{id: int, name: string, from: int, to: int}>, workdays: list<string>, calendar: list<string>, holidays: object, steps: list<array{id: int, title: string, days: int, workflow_days: int, fixed: bool}>, sum: int, available: int, period: array<string, mixed>}|null
+     * @return array{milestones: list<array{step_id: int, title: string, date: string}>, groups: list<array{id: int, name: string, from: int, to: int}>, workdays: list<string>, calendar: list<string>, holidays: object, steps: list<array{id: int, title: string, days: int, workflow_days: int, fixed: bool}>, sum: int, available: int, period: array<string, mixed>}|null
      */
     public function periodChart(\App\Models\Project $project): ?array
     {
@@ -260,7 +260,19 @@ class ProjectPlanningCalculator
                 return ['id' => (int) $group->id, 'name' => (string) $group->name, 'from' => min($from, $to), 'to' => max($from, $to)];
             })->all();
 
+        // Meilensteine: Schritte des aktuellen Workflows mit eingetragenem Termin
+        $milestones = \App\Models\ProjectWorkflowStep::query()->withoutGlobalScope('tenant')
+            ->where('project_id', $project->id)->whereNotNull('due_date')
+            ->whereHas('workflowStep', fn ($query) => $query->withoutGlobalScope('tenant')->where('workflow_id', $project->workflow_id))
+            ->with(['workflowStep' => fn ($query) => $query->withoutGlobalScope('tenant')])->get()
+            ->map(fn (\App\Models\ProjectWorkflowStep $row) => [
+                'step_id' => (int) $row->workflow_step_id,
+                'title' => (string) ($row->effectiveMilestoneTitle() ?: $row->workflowStep->title),
+                'date' => $row->due_date->toDateString(),
+            ])->sortBy('date')->values()->all();
+
         return [
+            'milestones' => $milestones,
             'groups' => $groups,
             'workdays' => $workdays,
             'calendar' => $calendar,

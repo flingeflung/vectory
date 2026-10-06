@@ -17,6 +17,7 @@
         steps: @js($chart['steps']),
         groups: @js($chart['groups']),
         period: @js($chart['period']),
+        milestones: @js($chart['milestones']),
         hasOverrides: @js($hasOverrides ?? false),
         canEditPeriod: @js($canEditPeriod ?? false),
         applying: false,
@@ -61,6 +62,22 @@
         startPct(i) { return (i === 0 ? 0 : this.edge(i - 1)) / this.span * 100; },
         widthPct(i) { return (this.edge(i) - (i === 0 ? 0 : this.edge(i - 1))) / this.span * 100; },
         pct(k) { return k / this.span * 100; },
+        // Meilenstein = Schritt mit eingetragenem Termin; außerhalb des Diagramms am Rand
+        msPct(m) {
+            let idx = this.calendar.indexOf(m.date);
+            if (idx < 0) idx = m.date < this.calendar[0] ? 0 : this.span - 1;
+            return (idx + 0.5) / this.span * 100;
+        },
+        // Zu spät: der berechnete Schritt endet erst nach seinem Meilenstein
+        msLate(m) {
+            const i = this.steps.findIndex((step) => step.id === m.step_id);
+            return i >= 0 && this.endIso(i) > m.date;
+        },
+        msTip(m) {
+            const i = this.steps.findIndex((step) => step.id === m.step_id);
+            const base = m.title + ' · ' + this.dateDe(m.date);
+            return this.msLate(m) ? base + ' – ' + @js(__('Der Schritt endet laut Plan erst am :date.')).replace(':date', this.dateDe(this.endIso(i))) : base;
+        },
         // Einsatzplan: Balken einer Funktionsgruppe von Schritt from bis Schritt to; die Stunden kommen aus Planstunden (Variable planned der Planungsseite)
         groupLeft(g) { return this.startPct(Math.min(g.from, this.steps.length - 1)); },
         groupWidth(g) { const to = Math.min(g.to, this.steps.length - 1); return this.pct(this.edge(to)) - this.groupLeft(g); },
@@ -235,6 +252,15 @@
                 :title="@js(__('Heute')) + ': ' + dateDe(todayIso)"
             ><div class="h-full w-0.5 bg-blue-600"></div></div>
 
+            <template x-for="m in milestones" :key="'ms-' + m.step_id">
+                <div
+                    class="absolute z-[7] h-2.5 w-2.5 -translate-x-1/2 rotate-45 border border-white"
+                    :class="msLate(m) ? 'bg-red-600' : 'bg-gray-600'"
+                    :style="{ left: msPct(m) + '%', bottom: '3px' }"
+                    :title="msTip(m)"
+                ></div>
+            </template>
+
             <template x-for="(step, i) in steps.slice(0, -1)" :key="'handle-' + step.id">
                 <div
                     class="absolute top-0 z-10 flex h-full w-3 -translate-x-1/2 cursor-col-resize items-center justify-center"
@@ -304,7 +330,12 @@
         </template>
     </div>
 
-    <div class="mt-2 flex items-center gap-3 text-gray-400">
+    <p x-show="milestones.length" class="mt-2 text-gray-500">
+        <span class="mr-1 inline-block h-2 w-2 rotate-45 bg-gray-600 align-middle"></span>{{ __('Meilenstein (Termin am Schritt)') }}
+        <span class="ml-3 mr-1 inline-block h-2 w-2 rotate-45 bg-red-600 align-middle"></span>{{ __('Schritt endet laut Plan nach dem Termin') }}
+    </p>
+
+    <div class="mt-2 flex flex-wrap items-center gap-3 text-gray-400">
         <span>{{ __('Vorerst nur Ansicht: Verschiebungen werden nicht gespeichert.') }}</span>
         <button type="button" x-show="changed" x-cloak @click="reset()" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Zurücksetzen') }}</button>
     </div>
