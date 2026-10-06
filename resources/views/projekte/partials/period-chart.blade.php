@@ -60,6 +60,12 @@
         cum(i) { let c = 0; for (let k = 0; k <= i; k++) c += this.steps[k].days; return c; },
         endIso(i) { return this.workdays[Math.min(this.total, this.cum(i)) - 1]; },
         dateDe(iso) { return iso ? iso.split('-').reverse().join('.') : ''; },
+        // Datum mit Wochentag in Kurzform für Tooltips, z. B. Mo, 05.10.2026
+        dateWd(iso) {
+            if (! iso) return '';
+            const [y, m, d] = iso.split('-').map(Number);
+            return ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][new Date(Date.UTC(y, m - 1, d)).getUTCDay()] + ', ' + this.dateDe(iso);
+        },
         // Kalenderposition (0..span) des rechten Rands von Schritt i
         // Kalenderposition des k-ten Arbeitstags; off verschiebt alles beim Vorschau-Start (Puffer vorn statt hinten)
         wd(k) { return this.wdCal[k + this.off]; },
@@ -97,8 +103,8 @@
         },
         msTip(m) {
             const i = this.steps.findIndex((step) => step.id === m.step_id);
-            const base = m.title + ' · ' + this.dateDe(m.date);
-            return this.msLate(m) ? base + ' – ' + @js(__('Der Schritt endet laut Plan erst am :date.')).replace(':date', this.dateDe(this.endIso(i))) : base;
+            const base = m.title + ' · ' + this.dateWd(m.date);
+            return this.msLate(m) ? base + ' – ' + @js(__('Der Schritt endet laut Plan erst am :date.')).replace(':date', this.dateWd(this.endIso(i))) : base;
         },
         // Einsatzplan: Balken einer Funktionsgruppe von Schritt from bis Schritt to; die Stunden kommen aus Planstunden (Variable planned der Planungsseite)
         groupLeft(g) { return this.startPct(Math.min(g.from, this.steps.length - 1)); },
@@ -110,11 +116,11 @@
             const to = Math.min(g.to, this.steps.length - 1);
             const start = this.workdays[this.cum(from) - this.steps[from].days];
             const hours = this.groupHours(g);
-            return g.name + ' · ' + (hours > 0 ? this.hoursLabel(hours) + ' · ' : '') + this.dateDe(start) + ' – ' + this.dateDe(this.endIso(to));
+            return g.name + ' · ' + (hours > 0 ? this.hoursLabel(hours) + ' · ' : '') + this.dateWd(start) + ' – ' + this.dateWd(this.endIso(to));
         },
         tip(i) {
             const start = this.workdays[this.cum(i) - this.steps[i].days];
-            return this.steps[i].title + ' · ' + this.steps[i].days + ' AT · ' + this.dateDe(start) + ' – ' + this.dateDe(this.endIso(i));
+            return this.steps[i].title + ' · ' + this.steps[i].days + ' AT · ' + this.dateWd(start) + ' – ' + this.dateWd(this.endIso(i));
         },
         // erstes Wort; ist es kurz (bis 3 Zeichen), das zweite dazu; bei weiteren Wörtern ein Auslassungszeichen
         shortLabel(title) {
@@ -253,7 +259,7 @@
                 <div class="pointer-events-none absolute top-0 h-full" :style="{ left: pct(k) + '%', width: pct(1) + '%', backgroundColor: '#fdefc6' }"></div>
             </template>
             <template x-for="h in grid.holidays" :key="'ho-' + h.k">
-                <div class="absolute top-0 h-full bg-rose-300" :style="{ left: pct(h.k) + '%', width: 'max(1px, ' + pct(1) + '%)', opacity: 0.6 }" :title="h.name + ' (' + dateDe(calendar[h.k]) + ')'"></div>
+                <div class="absolute top-0 h-full bg-rose-300" :style="{ left: pct(h.k) + '%', width: 'max(1px, ' + pct(1) + '%)', opacity: 0.6 }" :title="h.name + ' (' + dateWd(calendar[h.k]) + ')'"></div>
             </template>
             <template x-for="m in grid.months" :key="'mo-' + m.k">
                 <div class="pointer-events-none absolute top-0 h-full w-px bg-gray-300" :style="{ left: pct(m.k) + '%' }"></div>
@@ -277,7 +283,7 @@
                 x-show="period.mode === 'overflow' && endIdx >= 0 && preview !== 'durations'"
                 class="pointer-events-none absolute top-0 z-[5] h-full w-0.5 -translate-x-px bg-red-500"
                 :style="{ left: pct(endIdx + 1) + '%' }"
-                :title="@js(__('Projektende')) + ' ' + dateDe(period.project_end) + ' – ' + @js(__('Der Workflow reicht :days AT darüber hinaus.')).replace(':days', period.diff)"
+                :title="@js(__('Projektende')) + ' ' + dateWd(period.project_end) + ' – ' + @js(__('Der Workflow reicht :days AT darüber hinaus.')).replace(':days', period.diff)"
             ></div>
 
             <template x-if="preview === 'end' && newEndIdx >= 0">
@@ -322,7 +328,7 @@
                 x-show="grid.today !== null"
                 class="absolute top-0 z-[5] flex h-full w-2 -translate-x-1/2 justify-center"
                 :style="{ left: pct((grid.today ?? 0) + 0.5) + '%' }"
-                :title="@js(__('Heute')) + ': ' + dateDe(todayIso)"
+                :title="@js(__('Heute')) + ': ' + dateWd(todayIso)"
             ><div class="h-full w-0.5 bg-blue-600"></div></div>
 
             <template x-for="m in milestones" :key="'ms-' + m.step_id">
@@ -339,7 +345,7 @@
                     class="absolute top-0 z-10 flex h-full w-3 -translate-x-1/2 cursor-col-resize items-center justify-center"
                     :style="{ left: pct(edge(i)) + '%' }"
                     @pointerdown.prevent="startDrag(i, $event)"
-                    :title="dateDe(endIso(i))"
+                    :title="dateWd(endIso(i))"
                 >
                     <div class="h-5 w-1 rounded bg-gray-700/70"></div>
                 </div>
