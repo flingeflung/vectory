@@ -51,7 +51,8 @@
                     box.checked = true;
                     box.dispatchEvent(new Event('change', { bubbles: true }));
                 });
-                result.added.push(member.name + (targets.length > 1 ? ' (' + targets.length + ' ' + {{ \Illuminate\Support\Js::from(__('Funktionsgruppen')) }} + ')' : ''));
+                const shorts = (this.groupsByPerson[member.id] || []).filter((g) => targets.some((box) => String(box.dataset.group) === String(g.id))).map((g) => g.short);
+                result.added.push(member.name + (targets.length > 1 ? ' (' + shorts.join(', ') + ')' : ''));
             });
             this.teamResult = result;
         },
