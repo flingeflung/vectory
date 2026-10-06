@@ -3179,7 +3179,7 @@
                     });
 
                     if (!response.ok) {
-                        await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Anfrage konnte nicht verschickt werden - ist für diesen Kunden eine Info-E-Mail hinterlegt (:location)?', ['location' => \App\Models\SystemSetting::tenantConfigLocation()])) }});
+                        await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Anfrage konnte nicht verschickt werden - ist für diese Organisation eine Info-E-Mail hinterlegt (:location)?', ['location' => \App\Models\SystemSetting::tenantConfigLocation()])) }});
                         return;
                     }
 

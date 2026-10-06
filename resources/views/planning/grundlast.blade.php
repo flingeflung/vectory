@@ -22,7 +22,7 @@
 
     <div class="mb-3 shrink-0 space-y-2" x-data="{ creating: {{ old('_form') === 'create' ? 'true' : 'false' }}, createDirty: {{ old('_form') === 'create' && $errors->any() ? 'true' : 'false' }} }">
         <p class="text-xs text-gray-500">
-            {{ __('Kunde') }}:
+            {{ __('Organisation') }}:
             <span class="font-medium text-gray-700">{{ $tenant?->name ?? '–' }}</span>
         </p>
 

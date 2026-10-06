@@ -157,7 +157,7 @@ class TenantController extends Controller
     public function destroy(Tenant $tenant): RedirectResponse
     {
         abort_unless(SystemSetting::multiTenantEnabled(), 403);
-        abort_if($tenant->hasData(), 422, 'Dieser Kunde hat bereits Daten und kann nicht gelöscht werden.');
+        abort_if($tenant->hasData(), 422, 'Diese Organisation hat bereits Daten und kann nicht gelöscht werden.');
 
         $this->deleteManagedIcon($tenant, $tenant->icon_filename);
         $tenant->delete();

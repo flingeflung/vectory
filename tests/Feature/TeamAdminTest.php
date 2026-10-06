@@ -128,4 +128,35 @@ class TeamAdminTest extends TestCase
             ->assertSee('released', false)
             ->assertSee('HD'); // Organisation wird dazugeschrieben, weil Teams aus zwei Organisationen zur Auswahl stehen
     }
+
+    public function test_release_grants_access_to_unreleased_team_members_only_for_permitted_admins(): void
+    {
+        $home = Tenant::query()->firstOrFail();
+        $home->update(['is_home_tenant' => true]);
+        $customer = Tenant::query()->create(['name' => 'Maschinen', 'short_name' => 'MA']);
+        \App\Models\SystemSetting::set(\App\Models\SystemSetting::MULTI_TENANT_ENABLED, '1');
+        $central = User::factory()->create(['tenant_id' => $home->id, 'role' => 'central_admin']);
+        $person = $this->person($home, 'Ohnefreigabe');
+        $project = \App\Models\Project::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $customer->id, 'source_pn' => '279994', 'title' => 'Kundenprojekt', 'status' => 1]);
+        $team = Team::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $home->id, 'name' => 'Heimat-Team']);
+        $team->members()->attach($person->id, ['tenant_id' => $home->id, 'role' => 'member']);
+        $other = $this->person($home, 'Zweite');
+        $team->members()->attach($other->id, ['tenant_id' => $home->id, 'role' => 'member']);
+        \Illuminate\Support\Facades\DB::table('person_tenant')->insert(['person_id' => $other->id, 'tenant_id' => $customer->id]);
+
+        // Der Hinweis samt Checkbox erscheint für Admins
+        $this->actingAs($central)->withSession(['active_tenant_id' => $customer->id])
+            ->get(route('projekte.projektbeteiligte.show', $project))
+            ->assertOk()->assertSee(__('Freigabe erteilen'));
+
+        $this->postJson(route('projekte.projektbeteiligte.release', $project), ['team_id' => $team->id])
+            ->assertOk()->assertJson(['released' => [$person->fullName()], 'skipped' => []]);
+        $this->assertTrue($person->fresh()->isVisibleInTenant($customer->id));
+
+        // Normale Benutzer dürfen keine Freigabe erteilen
+        $plain = User::factory()->create(['tenant_id' => $customer->id, 'role' => 'user']);
+        $this->actingAs($plain)->withSession(['active_tenant_id' => $customer->id])
+            ->postJson(route('projekte.projektbeteiligte.release', $project), ['team_id' => $team->id])
+            ->assertForbidden();
+    }
 }

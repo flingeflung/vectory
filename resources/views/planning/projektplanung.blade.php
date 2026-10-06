@@ -161,7 +161,7 @@
             <tbody>
                 @forelse ($selectedPersonGroups as $tenantId => $people)
                     @if ($showTenantGroups)
-                        <tr><th colspan="{{ ($displayMode === 'month' ? $days->count() : $weeks->count()) + 1 }}" class="border-y border-gray-300 bg-slate-100 p-0 text-left font-semibold text-slate-700"><span class="sticky left-0 inline-block px-2 py-1">{{ $tenants->get($tenantId)?->name ?? __('Unbekannter Kunde') }}</span></th></tr>
+                        <tr><th colspan="{{ ($displayMode === 'month' ? $days->count() : $weeks->count()) + 1 }}" class="border-y border-gray-300 bg-slate-100 p-0 text-left font-semibold text-slate-700"><span class="sticky left-0 inline-block px-2 py-1">{{ $tenants->get($tenantId)?->name ?? __('Unbekannte Organisation') }}</span></th></tr>
                     @endif
                     @foreach ($people as $person)
                         <tr class="border-b border-gray-200 bg-gray-50">
@@ -362,7 +362,7 @@
             <div x-ref="personList" class="max-h-[60vh] overflow-y-auto p-4 text-sm">
                 @forelse ($personGroups as $tenantId => $people)
                     <div class="mb-4 last:mb-0">
-                        <div class="mb-1 text-xs font-semibold text-gray-500">{{ $tenants->get($tenantId)?->name ?? __('Unbekannter Kunde') }}</div>
+                        <div class="mb-1 text-xs font-semibold text-gray-500">{{ $tenants->get($tenantId)?->name ?? __('Unbekannte Organisation') }}</div>
                         <div class="space-y-1">
                             @foreach ($people as $person)
                                 <label class="flex items-center gap-2 rounded px-1 py-1 hover:bg-gray-50">

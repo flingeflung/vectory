@@ -13,10 +13,10 @@
                 <div class="flex flex-wrap items-end gap-3">
                     @if ($canSearchAllTenants)
                         <div>
-                            <label class="block text-xs text-gray-500">{{ __('Kunde') }}</label>
+                            <label class="block text-xs text-gray-500">{{ __('Organisation') }}</label>
                             <select name="tenant_id" onchange="this.form.submit()" class="mt-0.5 rounded-md border-gray-300 text-xs">
                                 <option value="all" @selected(request('tenant_id') === 'all')>{{ __('– Alle –') }}</option>
-                                <option value="" @selected(! request()->filled('tenant_id'))>{{ __('Aktiver Kunde (+ Zugriff)') }}</option>
+                                <option value="" @selected(! request()->filled('tenant_id'))>{{ __('Aktive Organisation (+ Zugriff)') }}</option>
                                 @foreach ($tenants as $tenant)
                                     <option value="{{ $tenant->id }}" @selected(request('tenant_id') == $tenant->id)>{{ $tenant->short_name ?? $tenant->name }}</option>
                                 @endforeach
@@ -141,7 +141,7 @@
                     onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'personen-zugriffsmatrix' }))"
                     class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover"
                 >
-                    {{ __('Kundenzugriff') }}
+                    {{ __('Organisationszugriff') }}
                 </button>
             @endif
 
@@ -173,13 +173,13 @@
                     @php
                         $tenantFilterValue = $filters['tenant_id'] ?? '';
                         if ($tenantFilterValue === 'all') {
-                            $searchCriteria = __('Alle Kunden');
+                            $searchCriteria = __('Alle Organisationen');
                         } elseif ($tenantFilterValue !== '') {
                             $filterTenant = $tenants->firstWhere('id', (int) $tenantFilterValue);
-                            $searchCriteria = __('Personen des Kunden :tenant', ['tenant' => $filterTenant?->short_name ?? $filterTenant?->name ?? '?']);
+                            $searchCriteria = __('Personen der Organisation :tenant', ['tenant' => $filterTenant?->short_name ?? $filterTenant?->name ?? '?']);
                         } else {
                             $activeTenant = \App\Support\CurrentTenant::current();
-                            $searchCriteria = __('Personen des Kunden :tenant + solche mit Zugriff darauf', ['tenant' => $activeTenant?->short_name ?? $activeTenant?->name ?? '?']);
+                            $searchCriteria = __('Personen der Organisation :tenant + solche mit Zugriff darauf', ['tenant' => $activeTenant?->short_name ?? $activeTenant?->name ?? '?']);
                         }
                     @endphp
                     {{ $searchCriteria }}:
@@ -300,7 +300,7 @@
         <x-modal name="personen-zugriffsmatrix" max-width="4xl" :draggable="true">
             <div class="flex max-h-[85vh] flex-col">
                 <div class="flex shrink-0 cursor-move items-center justify-between rounded-t-lg border-b border-gray-200 bg-gray-100 px-4 py-2 select-none" data-drag-handle>
-                    <div class="text-sm font-semibold text-gray-900">{{ __('Kundenzugriff-Matrix') }}</div>
+                    <div class="text-sm font-semibold text-gray-900">{{ __('Organisationszugriff-Matrix') }}</div>
                     <button
                         type="button"
                         onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'personen-zugriffsmatrix' }))"

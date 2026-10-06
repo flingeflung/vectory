@@ -2,7 +2,7 @@
     {{-- Ralf, 2026-09-18: "ein Hinweis für den Benutzer, damit er sieht, in
          welchem Kontext er gerade arbeitet" - dieser Katalog gehört der
          angezeigten PERSON, nicht zwingend dem gerade aktiven Kunden. --}}
-    <p class="text-xs text-gray-500">{{ __('Kunde') }}: <span class="font-medium text-gray-700">{{ $tenantName ?? '–' }}</span></p>
+    <p class="text-xs text-gray-500">{{ __('Organisation') }}: <span class="font-medium text-gray-700">{{ $tenantName ?? '–' }}</span></p>
     <div x-show="!creating">
         <button type="button" @click="creating = true; $nextTick(() => $refs.newName.focus())" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover">
             + {{ \App\Models\SystemSetting::companyLabel() }} {{ __('anlegen') }}

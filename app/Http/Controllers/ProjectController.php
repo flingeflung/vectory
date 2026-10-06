@@ -27,6 +27,7 @@ use App\Models\ProjectWorkflowStepPerson;
 use App\Models\RecentlyViewedProject;
 use App\Models\Setting;
 use App\Models\SystemSetting;
+use App\Models\Team;
 use App\Models\UserPreference;
 use App\Models\UserTablePreference;
 use App\Models\Tenant;
@@ -36,6 +37,7 @@ use App\Services\CriticalProjects\CriticalProjectEvaluator;
 use App\Services\ProjectDirectoryLocator;
 use App\Services\ProjectNumberAllocator;
 use App\Services\ProjectPlanningCalculator;
+use App\Support\AccessLevel;
 use App\Support\CurrentTenant;
 use App\Support\ProjectColumnCatalog;
 use App\Support\ProjectFilterCatalog;
@@ -494,7 +496,7 @@ class ProjectController extends Controller
         abort_if($requester === null, 422, __('Ihr Konto ist keiner Person zugeordnet.'));
 
         $tenant = Tenant::query()->where('id', CurrentTenant::id())->first();
-        abort_if($tenant?->notification_email === null, 422, __('Für diesen Kunden ist noch keine Info-E-Mail hinterlegt (:location).', ['location' => SystemSetting::tenantConfigLocation()]));
+        abort_if($tenant?->notification_email === null, 422, __('Für diese Organisation ist noch keine Info-E-Mail hinterlegt (:location).', ['location' => SystemSetting::tenantConfigLocation()]));
 
         Mail::to($tenant->notification_email)->send(new ProjectRequestMail(
             $requester,
@@ -535,6 +537,39 @@ class ProjectController extends Controller
      * nicht von selbst ab, gleiches Live-Abgleich-Muster wie bei den
      * Bemerkungen/Änderungsprotokoll-Boxen).
      */
+    /**
+     * "Freigabe erteilen" im Overlay Projektbeteiligte (Ralf, 2026-10-06): schaltet die Mitglieder eines Teams, die für die Organisation des
+     * Projekts noch nicht freigegeben sind, direkt dafür frei (Organisationszugriff, wie in den Personendetails). Gilt sofort, unabhängig vom
+     * Speichern des Projekts. Nur Admins mit dem Recht "Projektbeteiligte hinzufügen/entfernen"; Admins einer einzelnen Organisation nur für
+     * Personen ihrer eigenen Organisation, Zentral- und Super-Admins für alle.
+     */
+    public function releaseTeamPeople(Request $request, Project $project): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user->can('project.view') && $user->can('project.people.manage') && AccessLevel::isAdmin($user), 403);
+        abort_unless(SystemSetting::multiTenantEnabled(), 403);
+
+        $teamId = (int) $request->input('team_id');
+        abort_unless(collect(Team::assignableForProject($project->tenant_id))->contains('id', $teamId), 404);
+
+        $team = Team::query()->withoutGlobalScope('tenant')->findOrFail($teamId);
+        $released = [];
+        $skipped = [];
+        foreach ($team->members()->withoutGlobalScope('tenant')->get() as $person) {
+            if ($person->isVisibleInTenant($project->tenant_id)) {
+                continue;
+            }
+            if ($user->canAccessAllOrganizations() || $person->tenant_id === $user->tenant_id) {
+                $person->accessibleTenants()->syncWithoutDetaching([$project->tenant_id]);
+                $released[] = $person->fullName();
+            } else {
+                $skipped[] = $person->fullName();
+            }
+        }
+
+        return response()->json(['released' => $released, 'skipped' => $skipped]);
+    }
+
     public function peopleField(Request $request, Project $project): View
     {
         abort_unless($request->user()->can('project.view'), 403);

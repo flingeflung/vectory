@@ -44,7 +44,7 @@
                             @if ($person->tenant_id === $tenant->id)
                                 @include('admin.personen.partials.home-icon')
                             @elseif (in_array($tenant->id, $grants->get($person->id, []), true))
-                                <span class="text-green-600" title="{{ __('Kundenzugriff') }}">✓</span>
+                                <span class="text-green-600" title="{{ __('Organisationszugriff') }}">✓</span>
                             @endif
                         </td>
                     @endforeach

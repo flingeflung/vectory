@@ -45,7 +45,7 @@
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('Projektpfad (gesperrt)') }}</label>
                         <input type="text" name="project_path" class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
-                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Ordner, unter dem die Projektverzeichnisse dieses Kunden angelegt werden. Nur über Vectory erreichbar.') }}</p>
+                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Ordner, unter dem die Projektverzeichnisse dieser Organisation angelegt werden. Nur über Vectory erreichbar.') }}</p>
                     </div>
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('Arbeitsverzeichnis-Pfad') }}</label>
@@ -55,7 +55,7 @@
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('Info-E-Mail') }} <span class="text-red-500">*</span></label>
                         <input type="email" name="notification_email" required class="mt-0.5 w-full rounded-md border-gray-300 text-xs">
-                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Pflichtfeld. Empfänger für automatische Mitteilungen an diesen Kunden, z. B. Projektanfragen und Rückmeldungen zu Freigaben. Wenn noch keine Sammel-Adresse existiert, tragen Sie zunächst irgendeine gültige Adresse ein - sie lässt sich jederzeit ändern.') }}</p>
+                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Pflichtfeld. Empfänger für automatische Mitteilungen an diese Organisation, z. B. Projektanfragen und Rückmeldungen zu Freigaben. Wenn noch keine Sammel-Adresse existiert, tragen Sie zunächst irgendeine gültige Adresse ein - sie lässt sich jederzeit ändern.') }}</p>
                     </div>
                     <div class="flex justify-end gap-2">
                         <button type="button" @click="newTenant = false" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
@@ -130,7 +130,7 @@
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('Projektpfad (gesperrt)') }}</label>
                         <input type="text" name="project_path" value="{{ $selectedTenant->project_path }}" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
-                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Ordner, unter dem die Projektverzeichnisse dieses Kunden angelegt werden. Nur über Vectory erreichbar.') }}</p>
+                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Ordner, unter dem die Projektverzeichnisse dieser Organisation angelegt werden. Nur über Vectory erreichbar.') }}</p>
                     </div>
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('Arbeitsverzeichnis-Pfad') }}</label>
@@ -140,7 +140,7 @@
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('Info-E-Mail') }} <span class="text-red-500">*</span></label>
                         <input type="email" name="notification_email" value="{{ $selectedTenant->notification_email }}" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
-                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Pflichtfeld. Empfänger für automatische Mitteilungen an diesen Kunden, z. B. Projektanfragen und Rückmeldungen zu Freigaben. Wenn noch keine Sammel-Adresse existiert, tragen Sie zunächst irgendeine gültige Adresse ein - sie lässt sich jederzeit ändern.') }}</p>
+                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Pflichtfeld. Empfänger für automatische Mitteilungen an diese Organisation, z. B. Projektanfragen und Rückmeldungen zu Freigaben. Wenn noch keine Sammel-Adresse existiert, tragen Sie zunächst irgendeine gültige Adresse ein - sie lässt sich jederzeit ändern.') }}</p>
                     </div>
                     <div class="flex flex-wrap gap-4">
                         <label class="block text-xs text-gray-500">{{ __('Maximale Anzahl Projekte im Gantt') }}

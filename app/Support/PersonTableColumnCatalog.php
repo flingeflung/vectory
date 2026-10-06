@@ -19,7 +19,7 @@ class PersonTableColumnCatalog
             ['key' => 'type', 'label' => __('Typ')],
             ['key' => 'resource_planning', 'label' => __('Ressourcenplanung')],
             ['key' => 'calendar', 'label' => __('Kalender')],
-            $multiTenantEnabled ? ['key' => 'tenant', 'label' => __('Kunde')] : null,
+            $multiTenantEnabled ? ['key' => 'tenant', 'label' => __('Organisation')] : null,
             ['key' => 'company', 'label' => SystemSetting::companyLabel()],
             ['key' => 'role', 'label' => __('Rolle')],
             ['key' => 'department', 'label' => __('Abteilung')],

@@ -17,9 +17,9 @@
                         <label class="flex items-start gap-2">
                             <input type="checkbox" name="multi_tenant_enabled" value="1" @checked($multiTenantEnabled) class="mt-0.5 rounded border-gray-300">
                             <span>
-                                <span class="block text-sm font-medium text-gray-700">{{ __('Mandantenfähigkeit aktiv') }}</span>
+                                <span class="block text-sm font-medium text-gray-700">{{ __('Mehrere Organisationen zulassen') }}</span>
                                 <span class="mt-1 block text-xs text-gray-400">
-                                    {{ __('Installations-weiter Lizenzmodell-Schalter, gilt für alle Mandanten. Aus: Installation direkt bei einem Kunden, ein einzelner (Standard-)Mandant, keine Umschalter-Oberfläche sichtbar. An: Installation bei einem Dienstleister mit mehreren Kunden - Kundenverwaltung und Mandanten-Umschalter werden verfügbar.') }}
+                                    {{ __('Installations-weiter Lizenzmodell-Schalter, gilt für alle Organisationen. Aus: Installation direkt bei einer Organisation, eine einzelne (Standard-)Organisation, keine Umschalter-Oberfläche sichtbar. An: Installation bei einem Dienstleister mit mehreren Organisationen - Organisationsverwaltung und Organisations-Umschalter werden verfügbar.') }}
                                 </span>
                             </span>
                         </label>
@@ -53,7 +53,7 @@
         </div>
 
         <p class="mt-4 text-xs text-gray-400">
-            {{ __('Kundenverwaltung findet der normale Admin in seinem eigenen Konfig-Bereich, sobald Mandantenfähigkeit aktiv ist - der Super-Admin ist nach der Ersteinrichtung hier fertig.') }}
+            {{ __('Die Organisationsverwaltung findet der normale Admin in seinem eigenen Konfig-Bereich, sobald mehrere Organisationen zugelassen sind - der Super-Admin ist nach der Ersteinrichtung hier fertig.') }}
         </p>
 
         <div class="mt-6 rounded-lg border border-gray-200 bg-white p-4">

@@ -528,7 +528,7 @@
                 @else
                     <div class="flex-1 min-h-0 overflow-y-auto p-3">
                         <div class="text-xs text-gray-500">
-                            {{ __('Diese Person gehört zum Kunden „:name" und ist hier nur über eine Kundenzugriff-Freigabe sichtbar. Ihr Rechte-Set gilt für die ganze Person, nicht nur für diesen Kunden, und lässt sich deshalb nur bei „:name" ändern.', ['name' => $selectedPersonHomeTenantName ?? __('einem anderen Kunden')]) }}
+                            {{ __('Diese Person gehört zur Organisation „:name" und ist hier nur über eine Organisationszugriff-Freigabe sichtbar. Ihr Rechte-Set gilt für die ganze Person, nicht nur für diese Organisation, und lässt sich deshalb nur bei „:name" ändern.', ['name' => $selectedPersonHomeTenantName ?? __('einer anderen Organisation')]) }}
                         </div>
                         @php
                             $adminRoleTitle = [

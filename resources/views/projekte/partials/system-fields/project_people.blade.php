@@ -7,6 +7,9 @@
      unfertige Änderungen verloren). --}}
 @php
     $teamData = \App\Models\Team::assignableForProject($project->tenant_id);
+    $canGrantRelease = \App\Models\SystemSetting::multiTenantEnabled()
+        && auth()->user()->can('project.people.manage')
+        && \App\Support\AccessLevel::isAdmin(auth()->user());
     // Welche Funktionsgruppen dieses Projekts bieten eine Person an? Nur dort lässt sich ein Teammitglied automatisch zuweisen.
     $groupsByPerson = [];
     foreach ($allFunctionGroups as $group) {
@@ -36,6 +39,52 @@
         // vorgemerkt (angehakt); ein anderes Team ersetzt die Vormerkung des vorherigen. Wer im Projekt schon zugewiesen ist (egal in welcher Funktionsgruppe), wird übersprungen; bestehende
         // Zuweisungen bleiben unverändert. Gespeichert wird wie sonst auch erst mit dem Speichern des Projekts.
         teamBoxes: [],
+        canGrant: {{ \Illuminate\Support\Js::from($canGrantRelease) }},
+        orgName: {{ \Illuminate\Support\Js::from($project->tenant?->short_name ?? $project->tenant?->name) }},
+        grantRelease: false,
+        // Freigabe erteilen: schaltet die noch nicht freigegebenen Mitglieder des gewählten Teams für die Organisation des Projekts frei
+        // (gilt sofort, nicht erst mit dem Speichern), lädt danach die Personenauswahl neu und merkt das Team erneut vor.
+        async grantReleases() {
+            const team = this.teams.find((t) => String(t.id) === String(this.teamId));
+            const names = team ? team.members.filter((m) => ! m.released).map((m) => m.name) : [];
+            if (names.length === 0 || ! await window.confirmDialog({
+                title: {{ \Illuminate\Support\Js::from(__('Freigabe erteilen?')) }},
+                message: names.join('; ') + ' ' + {{ \Illuminate\Support\Js::from(__('werden für die Organisation :org freigegeben. Die Freigabe gilt sofort, auch ohne Speichern des Projekts.')) }}.replace(':org', this.orgName),
+                confirmLabel: {{ \Illuminate\Support\Js::from(__('Freigabe erteilen')) }},
+                cancelLabel: {{ \Illuminate\Support\Js::from(__('Abbrechen')) }},
+            })) {
+                this.grantRelease = false;
+                return;
+            }
+            const response = await fetch({{ \Illuminate\Support\Js::from(route('projekte.projektbeteiligte.release', $project)) }}, {
+                method: 'POST',
+                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                body: JSON.stringify({ team_id: this.teamId }),
+            });
+            this.grantRelease = false;
+            if (! response.ok) {
+                await window.notifyDialog({{ \Illuminate\Support\Js::from(__('Die Freigabe konnte nicht erteilt werden.')) }});
+                return;
+            }
+            await this.reloadPeopleBody();
+        },
+        async reloadPeopleBody() {
+            const response = await fetch({{ \Illuminate\Support\Js::from(route('projekte.projektbeteiligte.show', $project)) }});
+            if (! response.ok) return;
+            const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
+            const field = doc.getElementById({{ \Illuminate\Support\Js::from('project-people-field-'.$project->id) }});
+            const fresh = field?.querySelector('template')?.content.querySelector('[data-people-modal-body]');
+            const current = document.querySelector('[data-modal-name=project-people-{{ $project->id }}] [data-people-modal-body]');
+            if (! fresh || ! current) return;
+            this.clearTeam();
+            current.innerHTML = fresh.innerHTML;
+            const data = new Function('return (' + field.getAttribute('x-data') + ')')();
+            this.teams = data.teams;
+            this.groupsByPerson = data.groupsByPerson;
+            this.peopleSnapshot = this.peopleInputs().map((el) => ({ el, checked: el.checked }));
+            this.peopleTick++;
+            this.applyTeam();
+        },
         // Auswahltext eines Teams: bei Mitgliedern ohne Freigabe für diese Organisation steht dort, wie viele zuweisbar sind
         teamLabel(team) {
             const released = team.members.filter((m) => m.released).length;
@@ -211,7 +260,13 @@
                                 <option :value="team.id" x-text="teamLabel(team)"></option>
                             </template>
                         </select>
-                        <div x-show="teamHint" x-cloak class="mt-1 text-[11px] text-amber-700" x-text="teamHint"></div>
+                        <div x-show="teamHint" x-cloak class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-amber-700">
+                            <span x-text="teamHint"></span>
+                            <label x-show="canGrant" class="inline-flex items-center gap-1 whitespace-nowrap text-gray-700" title="{{ __('Schaltet diese Personen sofort für die Organisation des Projekts frei (Organisationszugriff in den Personendetails).') }}">
+                                <input type="checkbox" x-model="grantRelease" @change="if (grantRelease) grantReleases()" class="rounded border-gray-300">
+                                {{ __('Freigabe erteilen') }}
+                            </label>
+                        </div>
                     </div>
                 @endif
             </div>

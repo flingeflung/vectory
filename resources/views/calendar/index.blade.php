@@ -165,7 +165,7 @@
                         @if ($groupPeopleByTenant)
                             <tr>
                                 <th colspan="{{ $days->count() + 1 }}" class="sticky left-0 border-y border-gray-300 bg-slate-100 px-2 py-1 text-left font-semibold text-slate-700">
-                                    {{ $tenants->get($tenantId)?->name ?? __('Unbekannter Kunde') }}
+                                    {{ $tenants->get($tenantId)?->name ?? __('Unbekannte Organisation') }}
                                 </th>
                             </tr>
                         @endif

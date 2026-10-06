@@ -159,6 +159,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/projekte/projektschablonen/{projectTemplate}/info', [ProjectController::class, 'projectTemplateInfo'])->name('projekte.projektschablonen.info');
     Route::get('/projekte/{project}', [ProjectController::class, 'show'])->name('projekte.show');
     Route::get('/projekte/{project}/projektbeteiligte', [ProjectController::class, 'peopleField'])->name('projekte.projektbeteiligte.show');
+    Route::post('/projekte/{project}/projektbeteiligte/freigabe', [ProjectController::class, 'releaseTeamPeople'])->name('projekte.projektbeteiligte.release');
     Route::get('/projekte/{project}/planung/gruppen', [ProjectController::class, 'planningGroups'])->name('projekte.planung.gruppen');
     Route::get('/projekte/{project}/planung/auslastung', [ProjectController::class, 'planningUtilization'])->name('projekte.planung.auslastung');
     Route::patch('/projekte/{project}', [ProjectController::class, 'update'])->name('projekte.update');

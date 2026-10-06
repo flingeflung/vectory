@@ -193,7 +193,7 @@
                     </div>
                     @if ($multiTenantEnabled)
                         <div>
-                            <label class="block text-xs text-gray-500">{{ __('Kunde') }}</label>
+                            <label class="block text-xs text-gray-500">{{ __('Organisation') }}</label>
                             <div class="mt-0.5 w-full rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-sm text-gray-600" title="{{ $person->tenant?->name }}">
                                 {{ $person->tenant?->short_name ?? $person->tenant?->name ?? '–' }}
                             </div>
@@ -466,8 +466,8 @@
 
             @if ($multiTenantEnabled)
                 <div class="rounded-lg border border-gray-200 bg-white p-4" x-data="{ dirty: false }">
-                    <div class="mb-2 text-xs font-semibold text-gray-500">{{ __('Kundenzugriff') }}</div>
-                    <p class="mb-2 text-xs text-gray-400">{{ __('Zusätzliche Kunden, auf die diese Person umschalten darf (neben ihrem eigenen Mandanten). Ihr Rechte-Set bleibt dabei immer das ihres eigenen Mandanten – bei jedem freigegebenen Kunden gleich, unabhängig davon, welche Rechte-Sets dieser Kunde selbst definiert hat.') }}</p>
+                    <div class="mb-2 text-xs font-semibold text-gray-500">{{ __('Organisationszugriff') }}</div>
+                    <p class="mb-2 text-xs text-gray-400">{{ __('Zusätzliche Organisationen, auf die diese Person umschalten darf (neben ihrer eigenen Organisation). Ihr Rechte-Set bleibt dabei immer das ihrer eigenen Organisation – in jeder freigegebenen Organisation gleich, unabhängig davon, welche Rechte-Sets diese Organisation selbst definiert hat.') }}</p>
                     <form method="POST" action="{{ route('admin.personen.tenant-access.update', $person) }}" @input="dirty = window.formIsDirty($el)" class="space-y-2">
                         @csrf
                         @forelse ($otherTenants as $tenant)
@@ -482,7 +482,7 @@
                                 {{ $tenant->name }}
                             </label>
                         @empty
-                            <div class="text-sm text-gray-400">{{ __('Noch keine weiteren Kunden angelegt.') }}</div>
+                            <div class="text-sm text-gray-400">{{ __('Noch keine weiteren Organisationen angelegt.') }}</div>
                         @endforelse
                         @if ($otherTenants->isNotEmpty())
                             <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">

@@ -665,7 +665,7 @@ class PersonController extends Controller
         $accessLevel = $request->validate(['access_level' => ['required', Rule::in($allowedLevels)]])['access_level'];
         $personIsInHomeOrganization = Tenant::query()->whereKey($person->tenant_id)->value('is_home_tenant');
         abort_if($accessLevel === AccessLevel::CENTRAL_ADMIN && ! $personIsInHomeOrganization, 422, __('Ein Zentral-Admin muss zur zentralen Organisation gehören.'));
-        abort_if($accessLevel === AccessLevel::ORGANIZATION_ADMIN && $personIsInHomeOrganization, 422, __('Ein Organisations-Admin muss zu einer Kundenorganisation gehören.'));
+        abort_if($accessLevel === AccessLevel::ORGANIZATION_ADMIN && $personIsInHomeOrganization, 422, __('Ein Organisations-Admin muss zu einer anderen Organisation als der Heimat-Organisation gehören.'));
         abort_if($person->user->isSuperAdmin() && ! $request->user()->isSuperAdmin(), 403);
         abort_if($person->user->isCentralAdmin() && ! $request->user()->isSuperAdmin(), 403);
 

@@ -142,7 +142,7 @@
             class="min-h-0 flex-1 overflow-y-auto p-4"
         >
             @if ($allChecklists->isEmpty())
-                <div class="text-sm text-gray-400">{{ __('Für diesen Kunden sind noch keine Checklisten angelegt (Admin > Checklisten).') }}</div>
+                <div class="text-sm text-gray-400">{{ __('Für diese Organisation sind noch keine Checklisten angelegt (Admin > Checklisten).') }}</div>
             @else
                 <div x-ref="list" class="space-y-1.5 text-sm">
                     @foreach ($allChecklists as $checklist)

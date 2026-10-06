@@ -99,7 +99,7 @@
                             required
                             class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                         >
-                        <p class="text-xs text-gray-400">{{ __('Pflichtfeld. Empfänger für automatische Mitteilungen an diesen Kunden, z. B. Projektanfragen und Rückmeldungen zu Freigaben. Wenn noch keine Sammel-Adresse existiert, tragen Sie zunächst irgendeine gültige Adresse ein - sie lässt sich jederzeit ändern.') }}</p>
+                        <p class="text-xs text-gray-400">{{ __('Pflichtfeld. Empfänger für automatische Mitteilungen an diese Organisation, z. B. Projektanfragen und Rückmeldungen zu Freigaben. Wenn noch keine Sammel-Adresse existiert, tragen Sie zunächst irgendeine gültige Adresse ein - sie lässt sich jederzeit ändern.') }}</p>
 
                         <div class="flex flex-wrap gap-4">
                             <label class="block text-sm font-medium text-gray-700">{{ __('Maximale Anzahl Projekte im Gantt') }}

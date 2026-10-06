@@ -52,7 +52,7 @@
                     <span class="text-xs font-semibold text-gray-500">{{ __('Funktionsgruppen') }}</span>
                     <div class="flex items-center gap-1.5">
                     @if ($matrixTenants->isNotEmpty())
-                        <button type="button" @click="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'function-group-availability' }))" class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover" title="{{ __('Verfügbarkeit der Funktionsgruppen bei den Kunden festlegen') }}">
+                        <button type="button" @click="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'function-group-availability' }))" class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover" title="{{ __('Verfügbarkeit der Funktionsgruppen bei den Organisationen festlegen') }}">
                             {{ __('Matrix') }}
                         </button>
                     @endif
@@ -230,7 +230,7 @@
                                 {{ trans_choice(':count Mitglied|:count Mitglieder', $groupMemberIds->count(), ['count' => $groupMemberIds->count()]) }}
                             </span>
                         </div>
-                        <label class="flex items-center gap-1.5 text-xs text-gray-600" title="{{ __('Diese Gruppe wird bei Illustrationsaufträgen als Illustratoren-Auswahl verwendet. Nur eine Gruppe pro Kunde möglich - das Anhaken hier entfernt es bei jeder anderen Gruppe.') }}">
+                        <label class="flex items-center gap-1.5 text-xs text-gray-600" title="{{ __('Diese Gruppe wird bei Illustrationsaufträgen als Illustratoren-Auswahl verwendet. Nur eine Gruppe pro Organisation möglich - das Anhaken hier entfernt es bei jeder anderen Gruppe.') }}">
                             <input type="checkbox" name="is_illustration_group" value="1" @checked($selectedGroup->is_illustration_group) @disabled(! $canManageCatalog) class="rounded border-gray-300">
                             {{ __('Illustrations-/Grafikerstellungs-Gruppe') }}
                         </label>
@@ -303,7 +303,7 @@
             <div class="flex max-h-[80vh] min-h-0 flex-col">
                 <div class="flex shrink-0 cursor-move items-center justify-between border-b border-gray-200 bg-gray-100 px-4 py-2" data-drag-handle>
                     <div>
-                        <div class="text-sm font-semibold text-gray-900">{{ __('Funktionsgruppen je Kunde') }}</div>
+                        <div class="text-sm font-semibold text-gray-900">{{ __('Funktionsgruppen je Organisation') }}</div>
                         <div class="text-xs text-gray-500">{{ __('Hier legen Sie die Funktionsgruppen zentral fest und steuern die Verfügbarkeit.') }}</div>
                     </div>
                     <button type="button" onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'function-group-availability' }))" class="text-gray-400 hover:text-gray-600" aria-label="{{ __('Schließen') }}">&times;</button>
@@ -330,7 +330,7 @@
                                                 @if ($availabilityLocked)
                                                     <input type="hidden" name="availability[{{ $group->id }}][]" value="{{ $tenant->id }}">
                                                 @endif
-                                                <input type="checkbox" name="availability[{{ $group->id }}][]" value="{{ $tenant->id }}" @checked(($availability->get($group->id) ?? collect())->contains($tenant->id) || $availabilityLocked) @disabled($availabilityLocked) title="{{ $availabilityLocked ? __('Die Funktionsgruppe wird bei diesem Kunden bereits verwendet und kann nicht ausgeblendet werden.') : '' }}" class="rounded border-gray-300">
+                                                <input type="checkbox" name="availability[{{ $group->id }}][]" value="{{ $tenant->id }}" @checked(($availability->get($group->id) ?? collect())->contains($tenant->id) || $availabilityLocked) @disabled($availabilityLocked) title="{{ $availabilityLocked ? __('Die Funktionsgruppe wird in dieser Organisation bereits verwendet und kann nicht ausgeblendet werden.') : '' }}" class="rounded border-gray-300">
                                             </td>
                                         @endforeach
                                     </tr>

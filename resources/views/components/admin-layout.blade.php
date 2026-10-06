@@ -52,7 +52,7 @@
                             {{ __('Gültig für Organisation :home & :tenant, Konfiguration bei :home im Admin-Bereich', ['home' => $tenantLabel($homeTenant), 'tenant' => $tenantLabel($currentTenant)]) }}
                         @endif
                     @else
-                        {{ __('Gültig für Kunde: :tenant', ['tenant' => $tenantLabel($currentTenant)]) }}
+                        {{ __('Gültig für Organisation: :tenant', ['tenant' => $tenantLabel($currentTenant)]) }}
                     @endif
                 </div>
             @endif
