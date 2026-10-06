@@ -222,7 +222,7 @@
                     :value="endIso(i)"
                     :disabled="i === steps.length - 1"
                     @change="setEndDate(i, $event.target.value, $event.target)"
-                    class="w-[6.5rem] rounded border-gray-300 px-1 py-0.5 text-xs [&::-webkit-calendar-picker-indicator]:m-0 [&::-webkit-calendar-picker-indicator]:p-0 disabled:bg-gray-50 disabled:text-gray-500"
+                    class="w-[5.5rem] rounded border-gray-300 px-1 py-0.5 text-xs [&::-webkit-calendar-picker-indicator]:m-0 [&::-webkit-calendar-picker-indicator]:p-0 disabled:bg-gray-50 disabled:text-gray-500"
                     title="{{ __('Berechnetes Ende des Schritts') }}"
                 >
                 <input
