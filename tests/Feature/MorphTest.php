@@ -123,5 +123,7 @@ class MorphTest extends TestCase
         $this->assertSame($home->id, auth()->user()->tenant_id);
         // ... gearbeitet wird aber weiter in der beim Morphen gewählten Organisation.
         $this->assertSame($customer->id, CurrentTenant::id());
+        // ... und sie steht im Organisations-Umschalter.
+        $this->assertContains($customer->id, CurrentTenant::availableTenants()->pluck('id')->all());
     }
 }

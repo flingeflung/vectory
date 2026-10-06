@@ -191,7 +191,12 @@ class CurrentTenant
             ? DB::table('person_tenant')->where('person_id', $user->person_id)->pluck('tenant_id')
             : collect();
 
-        $ids = collect([$user->tenant_id])->merge($extraIds)->unique();
+        $ids = collect([$user->tenant_id])->merge($extraIds);
+        // Gemorpht (Super-Admin als User): die beim Morphen gewählte Organisation steht im Umschalter mit zur Auswahl.
+        if (Morph::active($user) && isset(Morph::state()['tenant_id'])) {
+            $ids->push(Morph::state()['tenant_id']);
+        }
+        $ids = $ids->unique();
 
         return Tenant::query()->active()->whereIn('id', $ids)->orderBy('name')->get();
     }
