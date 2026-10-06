@@ -21,7 +21,9 @@
 <div
     id="project-people-field-{{ $project->id }}"
     x-data="{
-        editingPeople: false,
+        peopleModalOpen: false,
+        peopleSnapshot: [],
+        peopleTick: 0,
         selectedWorkflowId: {{ \Illuminate\Support\Js::from((string) ($project->workflow_id ?? '')) }},
         workflowGroups: {{ \Illuminate\Support\Js::from($availableWorkflows->mapWithKeys(fn ($workflow) => [(string) $workflow->id => $workflow->steps->flatMap->functionGroups->pluck('id')->unique()->values()->all()])) }},
         isWorkflowRelevant(groupId) {
@@ -66,9 +68,40 @@
             if (r.none.length) lines.push(r.none.length + ' ' + {{ \Illuminate\Support\Js::from(__('in keiner zuweisbaren Funktionsgruppe, übersprungen:')) }} + ' ' + r.none.join('; '));
             return lines;
         },
+        // Overlay Projektbeteiligte Personen (Ralf, 2026-10-06): beim Öffnen wird der Stand der Häkchen gemerkt; wird das
+        // Overlay ohne Speichern geschlossen, stellt es diesen Stand wieder her (die Felder liegen im Projektformular).
+        peopleInputs() {
+            const body = document.querySelector('#project-people-field-{{ $project->id }} [data-people-modal-body]');
+            return body ? [...body.querySelectorAll('input[type=checkbox], input[type=radio]')] : [];
+        },
+        peopleDirty() {
+            return this.peopleSnapshot.some((entry) => entry.el.checked !== entry.checked);
+        },
+        get hasPeopleChanges() {
+            this.peopleTick;
+            return this.peopleDirty();
+        },
+        onPeopleModal(open) {
+            if (open && ! this.peopleModalOpen) {
+                this.peopleModalOpen = true;
+                this.peopleSnapshot = this.peopleInputs().map((el) => ({ el, checked: el.checked }));
+                this.teamId = '';
+                this.teamResult = null;
+                this.peopleTick++;
+            } else if (! open && this.peopleModalOpen) {
+                this.peopleModalOpen = false;
+                this.peopleSnapshot.forEach((entry) => {
+                    if (entry.el.checked === entry.checked) return;
+                    entry.el.checked = entry.checked;
+                    entry.el.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+                this.peopleSnapshot = [];
+            }
+        },
         init() {
+            window.projectPeopleModalIsDirty = () => this.peopleDirty();
             this.onChanged = (e) => {
-                if (e.detail.projectId === {{ $project->id }} && ! this.editingPeople) {
+                if (e.detail.projectId === {{ $project->id }} && ! this.peopleModalOpen) {
                     this.refresh();
                 }
             };
@@ -77,6 +110,7 @@
             window.addEventListener('project-workflow-selection-changed', this.onWorkflowSelectionChanged);
         },
         destroy() {
+            delete window.projectPeopleModalIsDirty;
             window.removeEventListener('project-people-changed', this.onChanged);
             window.removeEventListener('project-workflow-selection-changed', this.onWorkflowSelectionChanged);
         },
@@ -92,13 +126,10 @@
 >
     <div class="flex items-center gap-2">
         <label class="text-xs text-gray-500">{{ __('Projektbeteiligte Personen') }}</label>
-        <x-edit-icon-button x-show="!editingPeople" @click="editingPeople = true" :title="__('Ändern')" />
-        <button type="button" x-show="editingPeople" x-cloak @click="editingPeople = false" class="{{ $secondaryBtn }}">
-            {{ __('Fertig') }}
-        </button>
+        <x-edit-icon-button :modal="'project-people-'.$project->id" :title="__('Ändern')" />
     </div>
 
-    <div x-show="!editingPeople">
+    <div>
         @php
             $groupedPeople = $project->projectPeople->groupBy('function_group_id');
             // Unterscheidung wichtig: "niemand zugeordnet" (normal, Klick auf
@@ -147,30 +178,43 @@
         @endif
     </div>
 
-    <div x-show="editingPeople" x-cloak class="mt-0.5 max-h-56 overflow-y-auto rounded border border-gray-300 bg-white text-xs">
-        <div class="sticky top-0 z-20 flex flex-wrap gap-3 border-b border-gray-200 bg-white px-2 py-1.5 text-[10px] text-gray-500">
-            <span class="inline-flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-blue-400"></span>{{ __('Im Workflow relevant') }}</span>
-            <span class="inline-flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-amber-400"></span>{{ __('Person fehlt') }}</span>
-        </div>
-        @if (count($teamData) > 0)
-            <div class="border-b border-gray-200 bg-gray-50 px-2 py-1.5">
-                <div class="flex items-center gap-2">
-                    <select x-model="teamId" @change="teamResult = null; applyTeam()" class="min-w-0 flex-1 rounded-md border-gray-300 py-0.5 text-xs" title="{{ __('Alle Personen eines Teams auf einmal vormerken. Wer schon zugewiesen ist, wird übersprungen.') }}">
-                        <option value="">{{ __('– Team wählen –') }}</option>
-                        <template x-for="team in teams" :key="team.id">
-                            <option :value="team.id" x-text="team.name + ' (' + team.members.length + ')'"></option>
-                        </template>
-                    </select>
+    <x-modal name="project-people-{{ $project->id }}" max-width="4xl" :draggable="true" :resizable="true" :dirty-check="'projectPeopleModalIsDirty'">
+        <div x-effect="onPeopleModal(show)" class="flex h-full min-h-0 flex-col">
+            <div data-drag-handle class="flex shrink-0 cursor-move select-none items-center justify-between rounded-t-lg border-b border-gray-200 bg-gray-100 px-4 py-3">
+                <div>
+                    <h3 class="font-semibold text-gray-900">{{ __('Projektbeteiligte Personen') }}</h3>
+                    <p class="text-xs text-gray-500">{{ $project->source_pn }} – {{ $project->title }}</p>
                 </div>
-                <div x-show="teamResult" x-cloak class="mt-1 space-y-0.5 text-[11px] text-gray-600">
-                    <template x-for="line in teamResultLines()" :key="line"><div x-text="line"></div></template>
-                </div>
+                <button type="button" onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-people-{{ $project->id }}' }))" class="text-gray-400 hover:text-gray-600" aria-label="{{ __('Schließen') }}">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
             </div>
-        @endif
-        <div class="space-y-2 p-2">
+
+            <div class="shrink-0 border-b border-gray-200 bg-white px-4 py-2 text-xs">
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-gray-500">
+                    <span class="inline-flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-blue-400"></span>{{ __('Im Workflow relevant') }}</span>
+                    <span class="inline-flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-amber-400"></span>{{ __('Person fehlt') }}</span>
+                </div>
+                @if (count($teamData) > 0)
+                    <div class="mt-2">
+                        <select x-model="teamId" @change="teamResult = null; applyTeam()" class="w-full max-w-sm rounded-md border-gray-300 py-1 text-xs" title="{{ __('Alle Personen eines Teams auf einmal vormerken. Wer schon zugewiesen ist, wird übersprungen.') }}">
+                            <option value="">{{ __('– Team wählen –') }}</option>
+                            <template x-for="team in teams" :key="team.id">
+                                <option :value="team.id" x-text="team.name + ' (' + team.members.length + ')'"></option>
+                            </template>
+                        </select>
+                        <div x-show="teamResult" x-cloak class="mt-1 space-y-0.5 text-[11px] text-gray-600">
+                            <template x-for="line in teamResultLines()" :key="line"><div x-text="line"></div></template>
+                        </div>
+                    </div>
+                @endif
+            </div>
+
+            <div data-people-modal-body @change="peopleTick++" class="min-h-0 flex-1 overflow-y-auto p-4 text-xs">
         @if (! $hasAssignablePeople)
             <div class="text-amber-700">{{ __('Für diese Organisation sind noch keine Funktionsgruppen mit Personen angelegt. Bitte zuerst unter Admin > Personen & Rechte > Funktionsgruppen entsprechende Gruppen anlegen und Personen zuordnen.') }}</div>
         @endif
+        <div class="grid grid-cols-1 items-start gap-3 md:grid-cols-2 xl:grid-cols-3">
         @foreach ($allFunctionGroups as $group)
             @php
                 $currentEntries = $project->projectPeople->where('function_group_id', $group->id);
@@ -206,7 +250,7 @@
                     @if ($visibleMembers->isEmpty())
                         <div class="text-[11px] text-amber-700">{{ __('Keine zuweisbare Person verfügbar.') }}</div>
                     @else
-                        <div class="grid grid-cols-2 gap-x-3 gap-y-0.5">
+                        <div class="space-y-0.5">
                             @foreach ($visibleMembers as $person)
                             <label class="grid grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-1 {{ $person->active ? 'text-gray-600' : 'text-gray-400' }}">
                                 <input
@@ -237,5 +281,12 @@
             @endif
         @endforeach
         </div>
-    </div>
+            </div>
+
+            <div class="flex shrink-0 justify-end gap-2 border-t border-gray-200 bg-white px-4 py-3">
+                <button type="button" onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-people-{{ $project->id }}' }))" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover whitespace-nowrap">{{ __('Abbrechen') }}</button>
+                <button type="submit" form="project-detail-form" x-show="hasPeopleChanges" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover whitespace-nowrap">{{ __('Speichern') }}</button>
+            </div>
+        </div>
+    </x-modal>
 </div>

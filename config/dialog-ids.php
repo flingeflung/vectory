@@ -44,6 +44,7 @@ return [
     'project-gantt' => 'D-WEQ7',
     'project-gantt-people' => 'D-XONP',
     'project-overlay' => 'D-MFQU',
+    'project-people' => 'D-XNXQ',
     'project-request' => 'D-2VX3',
     'project-schedule' => 'D-AO37',
     'project-template-info' => 'D-YBGB',
