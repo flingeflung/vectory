@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\ConfigController;
 use App\Http\Controllers\Admin\CopyTemplateController;
 use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\FunctionGroupController;
+use App\Http\Controllers\Admin\TeamController;
 use App\Http\Controllers\Admin\HelpArticleController;
 use App\Http\Controllers\Admin\HolidayController;
 use App\Http\Controllers\Admin\JobTypeController;
@@ -277,6 +278,11 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     Route::delete('/funktionsgruppen/{group}', [FunctionGroupController::class, 'destroy'])->name('function-groups.destroy');
     Route::post('/funktionsgruppen/{group}/mitglieder', [FunctionGroupController::class, 'updateMembers'])->name('function-groups.members.update');
     Route::post('/funktionsgruppen/personen/{person}', [FunctionGroupController::class, 'updatePersonGroups'])->name('function-groups.personen.update');
+
+    Route::get('/teams', [TeamController::class, 'index'])->name('teams');
+    Route::post('/teams', [TeamController::class, 'store'])->name('teams.store');
+    Route::post('/teams/{team}', [TeamController::class, 'update'])->name('teams.update');
+    Route::delete('/teams/{team}', [TeamController::class, 'destroy'])->name('teams.destroy');
 
     Route::get('/maerkte', [MarketController::class, 'index'])->name('maerkte');
     Route::post('/maerkte/gruppen', [MarketController::class, 'setsStore'])->name('maerkte.gruppen.store');

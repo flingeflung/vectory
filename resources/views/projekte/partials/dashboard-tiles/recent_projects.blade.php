@@ -10,7 +10,7 @@
                             src="{{ asset('images/project-type-icons/'.$typeSub->symbol) }}"
                             alt="{{ $typeSub->name }}"
                             title="{{ $typeSub->main ? $typeSub->main->name.': '.$typeSub->name : $typeSub->name }}"
-                            class="h-3 w-auto max-w-full"
+                            class="h-3 w-3 shrink-0 object-contain"
                         >
                     @endif
                 </div>

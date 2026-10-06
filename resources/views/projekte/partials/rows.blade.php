@@ -80,7 +80,7 @@
                     @if ($typeSub)
                         <div class="flex items-center gap-2">
                             @if ($typeSub->symbol)
-                                <img src="{{ asset('images/project-type-icons/'.$typeSub->symbol) }}" alt="" class="h-5 w-auto shrink-0">
+                                <img src="{{ asset('images/project-type-icons/'.$typeSub->symbol) }}" alt="" class="h-[25px] w-[25px] shrink-0 object-contain">
                             @endif
                             <div class="leading-tight">
                                 <div class="text-xs text-gray-500">{{ $typeSub->main->name }}:</div>
