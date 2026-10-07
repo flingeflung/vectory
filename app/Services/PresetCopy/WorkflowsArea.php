@@ -22,7 +22,7 @@ use Illuminate\Support\Facades\DB;
 class WorkflowsArea implements PresetArea
 {
     private const STEP_COLUMNS = [
-        'title', 'short_title', 'milestone_title', 'sort', 'duration_days', 'is_active', 'is_start', 'is_end',
+        'title', 'short_title', 'milestone_title', 'sort', 'duration_days', 'duration_locked', 'is_active', 'is_start', 'is_end',
         'is_market_launch', 'has_due_date', 'send_email', 'show_in_translation', 'js_function', 'js_function_param',
         'description', 'email_text', 'msg_task_function_group_ids', 'lifecycle_status',
     ];

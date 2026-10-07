@@ -111,7 +111,7 @@ class ProjectStepTimeline
             return null;
         }
         $steps = WorkflowStep::query()->withoutGlobalScope('tenant')->where('workflow_id', $project->workflow_id)
-            ->where('lifecycle_status', WorkflowGroupWindow::WORK_LIFECYCLE_STATUS)->orderBy('sort')->get(['id', 'title', 'duration_days']);
+            ->where('lifecycle_status', WorkflowGroupWindow::WORK_LIFECYCLE_STATUS)->orderBy('sort')->get(['id', 'title', 'duration_days', 'duration_locked']);
         if ($steps->isEmpty()) {
             return null;
         }
@@ -122,7 +122,7 @@ class ProjectStepTimeline
             $hasOverride = array_key_exists($step->id, $overrides) && $overrides[$step->id] !== null;
             $raw = $hasOverride ? $overrides[$step->id] : $step->duration_days;
             $days = max(self::MIN_STEP_DAYS, (int) $raw);
-            $rows[] = ['id' => (int) $step->id, 'title' => (string) $step->title, 'days' => $days, 'default_used' => (int) $raw < self::MIN_STEP_DAYS];
+            $rows[] = ['id' => (int) $step->id, 'title' => (string) $step->title, 'days' => $days, 'default_used' => (int) $raw < self::MIN_STEP_DAYS, 'locked' => (bool) $step->duration_locked];
         }
 
         return ['steps' => $rows, 'sum' => array_sum(array_column($rows, 'days'))];
@@ -143,13 +143,14 @@ class ProjectStepTimeline
             return null;
         }
 
-        $fixedCount = count(array_filter($steps, fn ($step) => $step['fixed']));
-        $weights = array_map(fn ($step) => $step['days'], array_filter($steps, fn ($step) => ! $step['fixed']));
+        // Ohne Dauer (zählt 1 Tag) oder gesperrt: bleibt, wie er ist, und wird beim Umrechnen nicht angefasst
+        $keptDays = array_sum(array_map(fn ($step) => $step['days'], array_filter($steps, fn ($step) => $step['fixed'] || $step['locked'])));
+        $weights = array_map(fn ($step) => $step['days'], array_filter($steps, fn ($step) => ! $step['fixed'] && ! $step['locked']));
         if ($weights === []) {
             return [];
         }
 
-        $target = max(count($weights), $availableDays - $fixedCount);
+        $target = max(count($weights), $availableDays - $keptDays);
         $sum = array_sum($weights);
         $scaled = [];
         $ints = [];
@@ -189,7 +190,7 @@ class ProjectStepTimeline
         return $steps === null ? null : array_map(fn ($step) => $step['days'], $steps);
     }
 
-    /** @return array<int, array{days: int, fixed: bool}>|null Schritt-ID => Dauer (Wert am Projekt, sonst Standard, mindestens 1) und ob keine Dauer eingetragen ist */
+    /** @return array<int, array{days: int, fixed: bool, locked: bool}>|null Schritt-ID => Dauer (Wert am Projekt, sonst Standard, mindestens 1) und ob keine Dauer eingetragen ist */
     private function breakdownById(Project $project): ?array
     {
         if (! $project->workflow_id) {
@@ -203,7 +204,7 @@ class ProjectStepTimeline
         $result = [];
         foreach ($steps as $step) {
             $raw = array_key_exists($step->id, $overrides) && $overrides[$step->id] !== null ? (int) $overrides[$step->id] : (int) $step->duration_days;
-            $result[$step->id] = ['days' => max(self::MIN_STEP_DAYS, $raw), 'fixed' => $raw < self::MIN_STEP_DAYS];
+            $result[$step->id] = ['days' => max(self::MIN_STEP_DAYS, $raw), 'fixed' => $raw < self::MIN_STEP_DAYS, 'locked' => (bool) $step->duration_locked];
         }
 
         return $result;
@@ -213,7 +214,7 @@ class ProjectStepTimeline
     {
         return $this->workflowCache[$workflowId] ??= [
             'steps' => WorkflowStep::query()->withoutGlobalScope('tenant')->where('workflow_id', $workflowId)
-                ->where('lifecycle_status', WorkflowGroupWindow::WORK_LIFECYCLE_STATUS)->orderBy('sort')->get(['id', 'duration_days'])->all(),
+                ->where('lifecycle_status', WorkflowGroupWindow::WORK_LIFECYCLE_STATUS)->orderBy('sort')->get(['id', 'duration_days', 'duration_locked'])->all(),
             'windows' => WorkflowGroupWindow::query()->withoutGlobalScope('tenant')->where('workflow_id', $workflowId)->get()->keyBy('function_group_id'),
         ];
     }

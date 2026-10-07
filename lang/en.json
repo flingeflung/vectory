@@ -372,6 +372,7 @@
     "Dauer (Tage)": "Duration (days)",
     "Dauer in Arbeitstagen (AT)": "Duration in working days (WD)",
     "Dauer in Arbeitstagen (AT) - wie in „Termine berechnen“": "",
+    "Dauer sperren: In der Planung bleibt die Dauer dieses Schritts beim Verschieben anderer Schritte unverändert, der Schritt wandert mit.": "Lock duration: In planning, the duration of this step stays unchanged when other steps are shifted; the step moves along.",
     "Dauern an Projektzeitraum anpassen": "Adjust durations to project period",
     "Dauern anpassen?": "Adjust durations?",
     "Deaktivieren": "",

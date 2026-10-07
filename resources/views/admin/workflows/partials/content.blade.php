@@ -388,6 +388,11 @@
                                                         {{ __('Dauer (Tage)') }}
                                                         <input type="number" name="steps[{{ $step->id }}][duration_days]" min="0" value="{{ old("steps.{$step->id}.duration_days", $step->duration_days) }}" class="w-16 rounded-md border-gray-300 text-xs">
                                                     </label>
+                                                    <label class="inline-flex cursor-pointer items-center text-gray-300 hover:text-gray-500 has-[:checked]:text-gray-700" title="{{ __('Dauer sperren: In der Planung bleibt die Dauer dieses Schritts beim Verschieben anderer Schritte unverändert, der Schritt wandert mit.') }}">
+                                                        <input type="checkbox" name="steps[{{ $step->id }}][duration_locked]" value="1" @checked($isResubmit && old("steps.{$step->id}.duration_days") !== null ? old("steps.{$step->id}.duration_locked") !== null : $step->duration_locked) class="peer sr-only">
+                                                        <svg class="h-4 w-4 peer-checked:hidden" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M14.5 1A4.5 4.5 0 0010 5.5V9H3a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-1.5V5.5a3 3 0 116 0v2.75a.75.75 0 001.5 0V5.5A4.5 4.5 0 0014.5 1z" clip-rule="evenodd" /></svg>
+                                                        <svg class="hidden h-4 w-4 peer-checked:block" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 1a4 4 0 00-4 4v3H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-1V5a4 4 0 00-4-4zm2 7V5a2 2 0 10-4 0v3h4z" clip-rule="evenodd" /></svg>
+                                                    </label>
                                                     @error("steps.{$step->id}.duration_days")
                                                         <span class="text-red-600">{{ $message }}</span>
                                                     @enderror

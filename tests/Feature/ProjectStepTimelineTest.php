@@ -274,4 +274,20 @@ class ProjectStepTimelineTest extends TestCase
         $plain = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'user']);
         $this->actingAs($plain)->postJson(route('projekte.termine.save-durations', $project), ['durations' => [$this->steps[0]->id => 2]])->assertForbidden();
     }
+
+    public function test_locked_steps_keep_their_duration_when_scaling_and_reach_the_chart(): void
+    {
+        // Zeitraum 10 AT; 6 + 4 + 4 Tage, der mittlere Schritt ist gesperrt -> bleibt bei 4, die beiden anderen teilen sich die übrigen 6
+        $this->steps([[2, 6], [2, 4], [2, 4]]);
+        $this->steps[1]->update(['duration_locked' => true]);
+        $project = $this->assignment()->project;
+
+        $scaled = app(ProjectPlanningCalculator::class)->scaledDurations($project);
+        $this->assertSame([$this->steps[0]->id, $this->steps[2]->id], array_keys($scaled));
+        $this->assertSame(6, array_sum($scaled));
+
+        $chart = app(ProjectPlanningCalculator::class)->periodChart($project);
+        $this->assertSame([false, true, false], array_column($chart['steps'], 'locked'));
+        $this->assertSame(4, $chart['steps'][1]['scaled_days']);
+    }
 }
