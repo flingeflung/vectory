@@ -61,9 +61,11 @@
         get off() { return this.lead + this.previewOff; },
         get liveAvail() { return this.period.available - this.lead; },
         // Differenz Zeitraum - Bedarf laut Diagramm: positiv = Puffer, negativ = es fehlen Tage
-        get liveDiff() { return this.liveAvail - this.used; },
+        // echte Dauern ohne die vorübergehenden Werte der Vorschau, damit Zeile und Knöpfe unter der Maus nicht verschwinden
+        get realDays() { return this.backupDays ?? this.steps.map((step) => step.days); },
+        get liveDiff() { return this.liveAvail - this.realDays.reduce((a, days) => a + days, 0); },
         get liveMode() { return this.liveDiff === 0 ? 'match' : (this.liveDiff > 0 ? 'buffer' : 'overflow'); },
-        get changed() { return this.original !== null && (this.lead !== 0 || this.steps.some((step, i) => step.days !== this.original[i])); },
+        get changed() { return this.original !== null && (this.lead !== 0 || this.realDays.some((days, i) => days !== this.original[i])); },
         cum(i) { let c = 0; for (let k = 0; k <= i; k++) c += this.steps[k].days; return c; },
         endIso(i) { return this.workdays[Math.min(this.total, this.off + this.cum(i)) - 1]; },
         dateDe(iso) { return iso ? iso.split('-').reverse().join('.') : ''; },
@@ -268,7 +270,7 @@
         :class="liveMode === 'overflow' ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-gray-200 bg-gray-50 text-gray-600'"
     >
         <span title="{{ __('Summe der Dauern der Workflow-Schritte „In Bearbeitung“ (in Arbeitstagen) gegenüber den Arbeitstagen zwischen Projektstart und -ende.') }}">
-            {{ __('Zeitbedarf laut Workflow') }}: <span class="font-semibold"><span x-text="used"></span> {{ __('AT') }}</span>
+            {{ __('Zeitbedarf laut Workflow') }}: <span class="font-semibold"><span x-text="realDays.reduce((a, days) => a + days, 0)"></span> {{ __('AT') }}</span>
             &middot; {{ __('Projektzeitraum') }}: <span class="font-semibold"><span x-text="liveAvail"></span> {{ __('AT') }}</span>
             &middot;
             <span class="font-semibold" x-text="(liveMode === 'overflow' ? @js(__('Es fehlen :days AT')) : @js(__('Puffer: :days AT'))).replace(':days', Math.abs(liveDiff))"></span>
