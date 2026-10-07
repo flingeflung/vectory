@@ -431,16 +431,16 @@
         </div>
     </div>
 
-    <div class="mt-2 flex flex-wrap gap-2">
+    <div class="mt-2 flex flex-wrap gap-1">
         <template x-for="(step, i) in steps" :key="'field-' + step.id">
-            <div class="flex items-center gap-1 rounded-md border px-1.5 py-1" :class="hover === i ? 'border-gray-500 bg-gray-50' : 'border-gray-200'" @mouseenter="hover = i" @mouseleave="hover = null">
+            <div class="flex items-center gap-1 rounded-md border px-1.5 py-0.5" :class="hover === i ? 'border-gray-500 bg-gray-50' : 'border-gray-200'" @mouseenter="hover = i" @mouseleave="hover = null">
                 <span class="inline-block h-3 w-3 shrink-0 rounded-sm" :style="{ backgroundColor: palette[i % palette.length] }"></span>
                 <span class="max-w-[10rem] truncate font-medium text-gray-700" x-text="shortLabel(step.title)" :title="step.title"></span>
                 <input
                     type="date"
                     :value="endIso(i)"
                     @change="setEndDate(i, $event.target.value, $event.target)"
-                    class="w-[5.5rem] rounded border-gray-300 px-1 py-0.5 text-xs [&::-webkit-calendar-picker-indicator]:m-0 [&::-webkit-calendar-picker-indicator]:p-0 disabled:bg-gray-50 disabled:text-gray-500"
+                    class="w-[5.5rem] rounded border-gray-300 px-1 py-px text-xs [&::-webkit-calendar-picker-indicator]:m-0 [&::-webkit-calendar-picker-indicator]:p-0 disabled:bg-gray-50 disabled:text-gray-500"
                     title="{{ __('Berechnetes Ende des Schritts') }}"
                 >
                 <input
@@ -450,7 +450,7 @@
                     @focus="$event.target.select()"
                     @mouseup.prevent
                     @change="setDays(i, $event.target.value, $event.target)"
-                    class="w-10 rounded border-gray-300 px-1 py-0.5 text-right text-xs"
+                    class="w-10 rounded border-gray-300 px-1 py-px text-right text-xs"
                     :title="'{{ __('Dauer in Arbeitstagen (AT)') }}' + (step.fixed ? ' – {{ __('keine Dauer im Workflow eingetragen, zählt 1 Tag') }}' : ' – {{ __('laut Workflow') }}: ' + step.workflow_days)"
                 >
                 <span class="text-gray-500">{{ __('AT') }}</span>
