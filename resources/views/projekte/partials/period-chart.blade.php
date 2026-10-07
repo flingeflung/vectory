@@ -32,6 +32,9 @@
         palette: ['#93c5fd', '#6ee7b7', '#fcd34d', '#f9a8d4', '#c4b5fd', '#fdba74', '#5eead4', '#fca5a5'],
         init() {
             this.original = this.steps.map((step) => step.days);
+            let lockedIds = [];
+            try { lockedIds = JSON.parse(localStorage.getItem('vectory-period-locks-{{ $project->id }}') || '[]'); } catch (e) { lockedIds = []; }
+            this.steps.forEach((step) => { step.locked = lockedIds.includes(step.id); });
             const monthNames = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
             const now = new Date();
             const todayIso = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
@@ -139,20 +142,29 @@
             if (label.length <= 3 && words.length > 1) { label += ' ' + words[1]; used = 2; }
             return words.length > used ? label + ' …' : label;
         },
-        // Grenze hinter Schritt i auf Arbeitstag-Position unit schieben (relativ zum Start des ersten Schritts; jeder der beiden Schritte behält mindestens 1 AT)
+        // Gesperrte Schritte behalten ihre Dauer und wandern beim Verschieben mit; ausgleichen tut der nächste nicht gesperrte Schritt davor bzw. dahinter
+        unlockedBefore(i) { for (let k = i; k >= 0; k--) { if (! this.steps[k].locked) return k; } return -1; },
+        unlockedAfter(i) { for (let k = i; k < this.steps.length; k++) { if (! this.steps[k].locked) return k; } return -1; },
+        toggleLock(i) {
+            this.steps[i].locked = ! this.steps[i].locked;
+            try { localStorage.setItem('vectory-period-locks-{{ $project->id }}', JSON.stringify(this.steps.filter((step) => step.locked).map((step) => step.id))); } catch (e) {}
+        },
+        // Grenze hinter Schritt i auf Arbeitstag-Position unit schieben (relativ zum Start des ersten Schritts); jeder ausgleichende Schritt behält mindestens 1 AT
         moveBoundary(i, unit) {
             if (i < 0 || i >= this.steps.length - 1) return;
-            const left = this.cum(i) - this.steps[i].days;
-            const right = this.cum(i + 1);
-            const clamped = Math.min(Math.max(unit, left + 1), right - 1);
-            this.steps[i].days = clamped - left;
-            this.steps[i + 1].days = right - clamped;
+            const before = this.unlockedBefore(i);
+            const after = this.unlockedAfter(i + 1);
+            if (before < 0 || after < 0) return;
+            const delta = Math.max(1 - this.steps[before].days, Math.min(unit - this.cum(i), this.steps[after].days - 1));
+            this.steps[before].days += delta;
+            this.steps[after].days -= delta;
         },
-        // Ende des letzten Schritts verschieben: ändert nur dessen Dauer, der Rest bis zum Ende der Achse ist Puffer
+        // Ende des letzten Schritts verschieben: der Rest bis zum Ende der Achse ist Puffer
         moveEnd(i, unit) {
-            const left = this.cum(i) - this.steps[i].days;
-            const room = this.total - this.off - left;
-            this.steps[i].days = Math.min(Math.max(unit - left, 1), room);
+            const before = this.unlockedBefore(i);
+            if (before < 0) return;
+            const room = this.total - this.off - this.used;
+            this.steps[before].days += Math.max(1 - this.steps[before].days, Math.min(unit - this.cum(i), room));
         },
         moveEdge(i, unit) {
             if (i >= this.steps.length - 1) this.moveEnd(i, unit);
@@ -177,8 +189,10 @@
         // Linker Rand: der erste Schritt beginnt später (wird kürzer), alle späteren Schritte behalten ihre Lage; mindestens 1 AT bleibt
         startDragLeft(event) {
             this.drag((e) => {
-                const target = Math.min(Math.max(this.calendarUnit(e), 0), this.lead + this.steps[0].days - 1);
-                this.steps[0].days -= target - this.lead;
+                const first = this.unlockedAfter(0);
+                if (first < 0) return;
+                const target = Math.min(Math.max(this.calendarUnit(e), 0), this.lead + this.steps[first].days - 1);
+                this.steps[first].days -= target - this.lead;
                 this.lead = target;
             });
         },
@@ -193,9 +207,12 @@
         setDays(i, value, el) {
             const n = Math.max(1, parseInt(value, 10) || 1);
             if (i < this.steps.length - 1) {
-                const delta = Math.min(n - this.steps[i].days, this.steps[i + 1].days - 1);
-                this.steps[i].days += delta;
-                this.steps[i + 1].days -= delta;
+                const after = this.unlockedAfter(i + 1);
+                if (after >= 0) {
+                    const delta = Math.min(n - this.steps[i].days, this.steps[after].days - 1);
+                    this.steps[i].days += delta;
+                    this.steps[after].days -= delta;
+                }
             } else {
                 this.steps[i].days = Math.min(n, this.total - this.off - (this.used - this.steps[i].days));
             }
@@ -437,10 +454,22 @@
         <template x-for="(step, i) in steps" :key="'field-' + step.id">
             <div class="flex items-center gap-1 rounded-md border px-1.5 py-0.5" :class="hover === i ? 'border-gray-500 bg-gray-50' : 'border-gray-200'" @mouseenter="hover = i" @mouseleave="hover = null">
                 <span class="inline-block h-3 w-3 shrink-0 rounded-sm" :style="{ backgroundColor: palette[i % palette.length] }"></span>
+                <button
+                    type="button"
+                    @click="toggleLock(i)"
+                    class="shrink-0 rounded p-px"
+                    :class="step.locked ? 'text-gray-700' : 'text-gray-300 hover:text-gray-500'"
+                    :title="step.locked ? @js(__('Gesperrt: Die Dauer bleibt unverändert, der Schritt wandert beim Verschieben mit. Zum Entsperren klicken.')) : @js(__('Sperren: Die Dauer bleibt beim Verschieben anderer Schritte unverändert, der Schritt wandert mit.'))"
+                    :aria-pressed="step.locked ? 'true' : 'false'"
+                >
+                    <svg x-show="step.locked" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 1a4 4 0 00-4 4v3H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-1V5a4 4 0 00-4-4zm2 7V5a2 2 0 10-4 0v3h4z" clip-rule="evenodd" /></svg>
+                    <svg x-show="! step.locked" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M14.5 1A4.5 4.5 0 0010 5.5V9H3a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-1.5V5.5a3 3 0 116 0v2.75a.75.75 0 001.5 0V5.5A4.5 4.5 0 0014.5 1z" clip-rule="evenodd" /></svg>
+                </button>
                 <span class="max-w-[10rem] truncate font-medium text-gray-700" x-text="shortLabel(step.title)" :title="step.title"></span>
                 <input
                     type="date"
                     :value="endIso(i)"
+                    :disabled="step.locked"
                     @change="setEndDate(i, $event.target.value, $event.target)"
                     class="w-[5.5rem] rounded border-gray-300 px-1 py-px text-xs [&::-webkit-calendar-picker-indicator]:m-0 [&::-webkit-calendar-picker-indicator]:p-0 disabled:bg-gray-50 disabled:text-gray-500"
                     title="{{ __('Berechnetes Ende des Schritts') }}"
@@ -449,10 +478,11 @@
                     type="number"
                     min="1"
                     :value="step.days"
+                    :disabled="step.locked"
                     @focus="$event.target.select()"
                     @mouseup="if ($event.offsetX < $event.target.clientWidth - 18) $event.preventDefault()"
                     @change="setDays(i, $event.target.value, $event.target)"
-                    class="w-10 rounded border-gray-300 px-1 py-px text-right text-xs"
+                    class="w-10 rounded border-gray-300 px-1 py-px text-right text-xs disabled:bg-gray-50 disabled:text-gray-500"
                     :title="'{{ __('Dauer in Arbeitstagen (AT)') }}' + (step.fixed ? ' – {{ __('keine Dauer im Workflow eingetragen, zählt 1 Tag') }}' : ' – {{ __('laut Workflow') }}: ' + step.workflow_days)"
                 >
                 <span class="text-gray-500">{{ __('AT') }}</span>
