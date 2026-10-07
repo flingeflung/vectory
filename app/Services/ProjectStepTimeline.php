@@ -32,6 +32,8 @@ class ProjectStepTimeline
     /** @var array<int, array<int, int|null>> */
     private array $projectDurationCache = [];
 
+    private array $projectLockCache = [];
+
     /**
      * @return array{offsets: array<int, array{0: float, 1: float}>, compressed: bool, sum: float, available: int, factor: float}|null
      *                                                                                                                                null = keine Zeitleiste möglich (kein Workflow, keine Arbeitsschritte, keine Arbeitstage).
@@ -117,12 +119,13 @@ class ProjectStepTimeline
         }
 
         $overrides = $this->projectDurations($project->id);
+        $locks = $this->projectLocks($project->id);
         $rows = [];
         foreach ($steps as $step) {
             $hasOverride = array_key_exists($step->id, $overrides) && $overrides[$step->id] !== null;
             $raw = $hasOverride ? $overrides[$step->id] : $step->duration_days;
             $days = max(self::MIN_STEP_DAYS, (int) $raw);
-            $rows[] = ['id' => (int) $step->id, 'title' => (string) $step->title, 'days' => $days, 'default_used' => (int) $raw < self::MIN_STEP_DAYS, 'locked' => (bool) $step->duration_locked];
+            $rows[] = ['id' => (int) $step->id, 'title' => (string) $step->title, 'days' => $days, 'default_used' => (int) $raw < self::MIN_STEP_DAYS, 'locked' => $this->isLocked($step, $locks)];
         }
 
         return ['steps' => $rows, 'sum' => array_sum(array_column($rows, 'days'))];
@@ -201,10 +204,11 @@ class ProjectStepTimeline
             return null;
         }
         $overrides = $this->projectDurations($project->id);
+        $locks = $this->projectLocks($project->id);
         $result = [];
         foreach ($steps as $step) {
             $raw = array_key_exists($step->id, $overrides) && $overrides[$step->id] !== null ? (int) $overrides[$step->id] : (int) $step->duration_days;
-            $result[$step->id] = ['days' => max(self::MIN_STEP_DAYS, $raw), 'fixed' => $raw < self::MIN_STEP_DAYS, 'locked' => (bool) $step->duration_locked];
+            $result[$step->id] = ['days' => max(self::MIN_STEP_DAYS, $raw), 'fixed' => $raw < self::MIN_STEP_DAYS, 'locked' => $this->isLocked($step, $locks)];
         }
 
         return $result;
@@ -217,6 +221,19 @@ class ProjectStepTimeline
                 ->where('lifecycle_status', WorkflowGroupWindow::WORK_LIFECYCLE_STATUS)->orderBy('sort')->get(['id', 'duration_days', 'duration_locked'])->all(),
             'windows' => WorkflowGroupWindow::query()->withoutGlobalScope('tenant')->where('workflow_id', $workflowId)->get()->keyBy('function_group_id'),
         ];
+    }
+
+    /** Sperre: Wert am Projekt, sonst die Voreinstellung am Workflow-Schritt. */
+    private function isLocked(object $step, array $locks): bool
+    {
+        return array_key_exists($step->id, $locks) && $locks[$step->id] !== null ? (bool) $locks[$step->id] : (bool) $step->duration_locked;
+    }
+
+    /** @return array<int, bool|null> Schritt-ID => am Projekt abweichend gesetzte Sperre (null = Voreinstellung) */
+    private function projectLocks(int $projectId): array
+    {
+        return $this->projectLockCache[$projectId] ??= ProjectWorkflowStep::query()->withoutGlobalScope('tenant')
+            ->where('project_id', $projectId)->pluck('duration_locked', 'workflow_step_id')->all();
     }
 
     /** @return array<int, int|null> Schritt-ID => am Projekt hinterlegte Dauer */

@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable([
     'tenant_id', 'project_id', 'workflow_step_id', 'legacy_id', 'sort', 'is_current',
     'started_at', 'due_date', 'milestone_done_at', 'completed_at', 'completed_by_person_id',
-    'milestone_title', 'duration_days', 'is_start', 'is_end',
+    'milestone_title', 'duration_days', 'duration_locked', 'is_start', 'is_end',
 ])]
 #[ObservedBy(ProjectWorkflowStepObserver::class)]
 class ProjectWorkflowStep extends Model
@@ -24,6 +24,7 @@ class ProjectWorkflowStep extends Model
     {
         return [
             'is_current' => 'boolean',
+            'duration_locked' => 'boolean',
             'started_at' => 'datetime',
             'due_date' => 'date',
             'milestone_done_at' => 'datetime',

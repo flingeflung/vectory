@@ -32,14 +32,6 @@
         palette: ['#93c5fd', '#6ee7b7', '#fcd34d', '#f9a8d4', '#c4b5fd', '#fdba74', '#5eead4', '#fca5a5'],
         init() {
             this.original = this.steps.map((step) => step.days);
-            // Sperre: Voreinstellung vom Workflow-Schritt, eine hier im Projekt abweichend gesetzte Sperre wird im Browser gemerkt
-            let overrides = {};
-            try { overrides = JSON.parse(localStorage.getItem('vectory-period-locks-{{ $project->id }}') || '{}') || {}; } catch (e) { overrides = {}; }
-            if (Array.isArray(overrides)) overrides = {};
-            this.steps.forEach((step) => {
-                step.lockedDefault = !! step.locked;
-                step.locked = overrides[step.id] !== undefined ? !! overrides[step.id] : !! step.locked;
-            });
             const monthNames = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
             const now = new Date();
             const todayIso = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
@@ -150,11 +142,21 @@
         // Gesperrte Schritte behalten ihre Dauer und wandern beim Verschieben mit; ausgleichen tut der nächste nicht gesperrte Schritt davor bzw. dahinter
         unlockedBefore(i) { for (let k = i; k >= 0; k--) { if (! this.steps[k].locked) return k; } return -1; },
         unlockedAfter(i) { for (let k = i; k < this.steps.length; k++) { if (! this.steps[k].locked) return k; } return -1; },
-        toggleLock(i) {
-            this.steps[i].locked = ! this.steps[i].locked;
-            const overrides = {};
-            this.steps.forEach((step) => { if (step.locked !== step.lockedDefault) overrides[step.id] = step.locked; });
-            try { localStorage.setItem('vectory-period-locks-{{ $project->id }}', JSON.stringify(overrides)); } catch (e) {}
+        // Schloss umschalten und sofort am Projekt speichern (Voreinstellung steht am Workflow-Schritt); ohne Recht nur vorübergehend
+        async toggleLock(i) {
+            const step = this.steps[i];
+            step.locked = ! step.locked;
+            if (! this.canEditPeriod) return;
+            const response = await fetch(@js(route('projekte.termine.set-duration-lock', $project)), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                body: JSON.stringify({ step_id: step.id, locked: step.locked }),
+            });
+            if (! response.ok) {
+                step.locked = ! step.locked;
+                const data = await response.json().catch(() => ({}));
+                await window.notifyDialog(data.message || @js(__('Die Sperre konnte nicht gespeichert werden.')));
+            }
         },
         // Grenze hinter Schritt i auf Arbeitstag-Position unit schieben (relativ zum Start des ersten Schritts); jeder ausgleichende Schritt behält mindestens 1 AT
         moveBoundary(i, unit) {

@@ -290,4 +290,29 @@ class ProjectStepTimelineTest extends TestCase
         $this->assertSame([false, true, false], array_column($chart['steps'], 'locked'));
         $this->assertSame(4, $chart['steps'][1]['scaled_days']);
     }
+
+    public function test_duration_lock_can_be_overridden_per_project(): void
+    {
+        $this->steps([[2, 4], [2, 3]]);
+        $this->steps[0]->update(['duration_locked' => true]);   // Voreinstellung am Workflow-Schritt
+        $project = $this->assignment()->project;
+        $admin = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'organization_admin']);
+
+        $locks = fn () => array_column(app(ProjectPlanningCalculator::class)->periodChart($project->fresh())['steps'], 'locked');
+        $this->assertSame([true, false], $locks());
+
+        // Im Projekt entsperren und den zweiten Schritt sperren
+        $this->actingAs($admin)->postJson(route('projekte.termine.set-duration-lock', $project), ['step_id' => $this->steps[0]->id, 'locked' => false])->assertOk();
+        $this->actingAs($admin)->postJson(route('projekte.termine.set-duration-lock', $project), ['step_id' => $this->steps[1]->id, 'locked' => true])->assertOk();
+        $this->assertSame([false, true], $locks());
+        $this->assertTrue((bool) $this->steps[0]->fresh()->duration_locked);   // der Workflow bleibt unverändert
+
+        // Zurück auf die Voreinstellung: nichts Abweichendes bleibt gespeichert
+        $this->actingAs($admin)->postJson(route('projekte.termine.set-duration-lock', $project), ['step_id' => $this->steps[0]->id, 'locked' => true])->assertOk();
+        $this->assertNull(\App\Models\ProjectWorkflowStep::query()->withoutGlobalScope('tenant')->where('project_id', $project->id)->where('workflow_step_id', $this->steps[0]->id)->value('duration_locked'));
+        $this->assertSame([true, true], $locks());
+
+        $plain = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'user']);
+        $this->actingAs($plain)->postJson(route('projekte.termine.set-duration-lock', $project), ['step_id' => $this->steps[0]->id, 'locked' => false])->assertForbidden();
+    }
 }

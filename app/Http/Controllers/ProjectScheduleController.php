@@ -191,6 +191,29 @@ class ProjectScheduleController extends Controller
     }
 
     /**
+     * Sperre der Dauer eines Schritts am Projekt setzen (Ralf, 2026-10-07). Entspricht der Wert der Voreinstellung am Workflow-Schritt,
+     * wird nichts Abweichendes gespeichert (null = Voreinstellung gilt).
+     */
+    public function setDurationLock(Request $request, Project $project): JsonResponse
+    {
+        abort_unless($request->user()->can('project.view') && $request->user()->can('workflow_step.due_date'), 403);
+
+        $validated = $request->validate(['step_id' => ['required', 'integer'], 'locked' => ['required', 'boolean']]);
+        $step = \App\Models\WorkflowStep::query()->withoutGlobalScope('tenant')
+            ->where('workflow_id', $project->workflow_id)->where('id', $validated['step_id'])->first();
+        abort_if($step === null, 422, __('Der Schritt gehört nicht zum Workflow des Projekts.'));
+
+        $row = ProjectWorkflowStep::query()->withoutGlobalScope('tenant')
+            ->where('project_id', $project->id)->where('workflow_step_id', $step->id)->first()
+            ?? new ProjectWorkflowStep(['tenant_id' => $project->tenant_id, 'project_id' => $project->id, 'workflow_step_id' => $step->id]);
+        $locked = (bool) $validated['locked'];
+        $row->duration_locked = $locked === (bool) $step->duration_locked ? null : $locked;
+        $row->save();
+
+        return response()->json(['locked' => $locked]);
+    }
+
+    /**
      * Projektstart oder -ende setzen (Ralf, 2026-10-07): Zeitraum an die Dauern des Workflows anpassen. Ist ein Workflow-Schritt als
      * Start bzw. Ende markiert, ist DER die Quelle des Projektdatums (ProjectWorkflowStepObserver) - dann wird dessen Termin gesetzt
      * und das Projektdatum folgt; sonst wird das Projektdatum direkt gesetzt.
