@@ -5,14 +5,14 @@
     Aufruf aus JS:
       const ok = await window.confirmDialog('Text …');
       const ok = await window.confirmDialog({ title, message, confirmLabel, cancelLabel });
-      Warnhinweis nach DIN EN 82079-1 / ISO 3864 (Ralf, 2026-10-07): zusätzlich signal ('hinweis' | 'achtung' | 'vorsicht' | 'warnung' | 'gefahr'),
-      consequence (Folge) und remedy (Abhilfe); message nennt Art und Quelle. Ohne signal bleibt der bisherige Dialog.
+      Warnhinweis nach DIN EN 82079-1 / ISO 3864 (Ralf, 2026-10-07): zusätzlich signal ('hinweis' | 'achtung' | 'vorsicht' | 'warnung' | 'gefahr')
+      und consequence (Folge als schlichter Satz, ohne Beschriftung); message nennt Art und Quelle. Ohne signal bleibt der bisherige Dialog.
       await window.notifyDialog('Text …'); // reiner Hinweis, nur ein OK-Button
 --}}
 <div
     x-data="{
         show: false, title: '', message: '', confirmLabel: '', cancelLabel: '', alertOnly: false, resolve: null,
-        signal: '', consequence: '', remedy: '',
+        signal: '', consequence: '',
         // Signalwort-Stufen: Farbe des Kopfstreifens und des Bestätigen-Knopfs
         levels: {
             hinweis: { word: @js(__('Hinweis')), band: 'bg-blue-600 text-white', button: 'bg-btn-primary hover:bg-btn-primary-hover' },
@@ -28,7 +28,6 @@
         message = $event.detail.message;
         signal = $event.detail.signal || '';
         consequence = $event.detail.consequence || '';
-        remedy = $event.detail.remedy || '';
         confirmLabel = $event.detail.confirmLabel;
         cancelLabel = $event.detail.cancelLabel;
         alertOnly = $event.detail.alertOnly;
@@ -85,8 +84,7 @@
             <div x-show="signal" class="space-y-2">
                 <h3 class="text-sm font-semibold text-gray-900" x-text="title"></h3>
                 <p class="text-sm text-gray-700" x-text="message"></p>
-                <p x-show="consequence" class="text-sm text-gray-700"><span class="font-semibold">{{ __('Folge') }}:</span> <span x-text="consequence"></span></p>
-                <p x-show="remedy" class="text-sm text-gray-700"><span class="font-semibold">{{ __('Abhilfe') }}:</span> <span x-text="remedy"></span></p>
+                <p x-show="consequence" class="text-sm text-gray-700" x-text="consequence"></p>
             </div>
             <div x-show="! signal" class="flex items-start gap-3">
                 <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100">
@@ -132,7 +130,6 @@
                 alertOnly: false,
                 signal: opts.signal ?? '',
                 consequence: opts.consequence ?? '',
-                remedy: opts.remedy ?? '',
                 resolve,
             },
         }));
