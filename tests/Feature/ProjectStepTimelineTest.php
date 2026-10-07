@@ -319,4 +319,24 @@ class ProjectStepTimelineTest extends TestCase
         $plain = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'user']);
         $this->actingAs($plain)->postJson(route('projekte.termine.set-duration-lock', $project), ['step_id' => $this->steps[0]->id, 'locked' => false])->assertForbidden();
     }
+
+    public function test_planned_hours_can_be_relinked_to_the_template_after_breaking_the_link(): void
+    {
+        $this->steps([[2, 4]]);
+        $project = $this->assignment()->project;
+        $template = \App\Models\ProjectTemplate::query()->create(['tenant_id' => $this->tenant->id, 'name' => 'Profil', 'active' => true, 'duration_value' => 1, 'duration_unit' => 'week']);
+        $template->functionGroups()->attach($this->group->id, ['tenant_id' => $this->tenant->id, 'planned_hours' => 8]);
+        $project->update(['project_template_id' => $template->id]);
+        $admin = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'organization_admin']);
+
+        // verknüpft: nichts zu tun
+        $this->actingAs($admin)->post(route('projekte.planstunden.relink', $project))->assertStatus(409);
+
+        // lösen, eigenen Wert setzen, wieder verknüpfen
+        $this->actingAs($admin)->post(route('projekte.planstunden.loesen', $project))->assertOk();
+        $this->assertSame(1, $project->fresh()->functionGroupHours()->count());
+        $this->actingAs($admin)->post(route('projekte.planstunden.relink', $project))->assertOk();
+        $this->assertSame(0, $project->fresh()->functionGroupHours()->count());
+        $this->assertTrue($project->fresh()->plannedHoursLinkedToTemplate());
+    }
 }

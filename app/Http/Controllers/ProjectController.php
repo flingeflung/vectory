@@ -1710,6 +1710,28 @@ class ProjectController extends Controller
     }
 
     /**
+     * Rückkehr zum Aufwandsprofil (Ralf, 2026-10-07): Knopf im Reiter Planstunden. Verwirft die eigenen Planstunden, das Projekt hängt
+     * danach wieder am Aufwandsprofil. Gleiche Wirkung wie das Aufschließen des Profil-Felds in den Projektdetails mit anschließendem Speichern.
+     */
+    public function relinkPlannedHours(Request $request, Project $project): Response
+    {
+        abort_unless($request->user()->can('project.edit'), 403);
+        abort_unless($request->user()->can('planning.view'), 403);
+        abort_if($project->plannedHoursLinkedToTemplate(), 409);
+        abort_unless($project->projectTemplate, 422, __('Diesem Projekt ist kein Aufwandsprofil zugewiesen.'));
+
+        $discarded = $project->effectivePlannedHours();
+        $project->functionGroupHours()->sync([]);
+
+        Activity::log($project, ActivityType::PlannedHoursChanged, __('Planstunden wieder mit dem Aufwandsprofil „:template" verknüpft (eigene Werte, :hours h, verworfen).', [
+            'template' => $project->projectTemplate->name,
+            'hours' => number_format($discarded ?? 0, 2, ',', '.'),
+        ]));
+
+        return $this->plannedHoursEditorResponse($project->fresh());
+    }
+
+    /**
      * Planstunden je Funktionsgruppe speichern (Ralf, 2026-09-27) - nur möglich, wenn die
      * Schablonen-Verbindung bereits gelöst ist (siehe breakPlannedHoursLink() oben). Gleiches
      * Muster wie ProjectTemplateController::updateFunctionGroups(): eine leere/0-Eingabe

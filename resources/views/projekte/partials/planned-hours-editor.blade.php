@@ -11,7 +11,7 @@
             async loesen() {
                 if (! await window.confirmDialog({
                     title: {{ Illuminate\Support\Js::from(__('Verbindung zum Aufwandsprofil lösen?')) }},
-                    message: {{ Illuminate\Support\Js::from(__('Die Verbindung zum Aufwandsprofil wird für dieses Projekt endgültig gelöst - eine spätere Rückkehr zur Aufwandsprofil-Verknüpfung ist nicht mehr möglich. Das Aufwandsprofil selbst bleibt unverändert. Die aktuelle Aufschlüsselung je Funktionsgruppe wird als Startpunkt übernommen und bleibt danach unabhängig änderbar.')) }},
+                    message: {{ Illuminate\Support\Js::from(__('Die Verbindung zum Aufwandsprofil wird für dieses Projekt gelöst. Das Aufwandsprofil selbst bleibt unverändert. Die aktuelle Aufschlüsselung je Funktionsgruppe wird als Startpunkt übernommen und bleibt danach unabhängig änderbar. Mit „Wieder verknüpfen“ kehren Sie später zum Aufwandsprofil zurück, dabei gehen die eigenen Werte verloren.')) }},
                     confirmLabel: {{ Illuminate\Support\Js::from(__('Lösen')) }},
                     cancelLabel: {{ Illuminate\Support\Js::from(__('Abbrechen')) }},
                 })) { return; }
@@ -70,6 +70,26 @@
         x-data="{
             dirty: false,
             hours: {{ Illuminate\Support\Js::from($zeiten['ownBreakdown']) }},
+            async relink() {
+                if (! await window.confirmDialog({
+                    title: {{ Illuminate\Support\Js::from(__('Wieder mit dem Aufwandsprofil verknüpfen?')) }},
+                    message: {{ Illuminate\Support\Js::from(__('Die eigenen Planstunden dieses Projekts werden verworfen. Danach gelten wieder die Planstunden des Aufwandsprofils.')) }},
+                    confirmLabel: {{ Illuminate\Support\Js::from(__('Wieder verknüpfen')) }},
+                    cancelLabel: {{ Illuminate\Support\Js::from(__('Abbrechen')) }},
+                })) { return; }
+                const response = await fetch({{ Illuminate\Support\Js::from(route('projekte.planstunden.relink', $project)) }}, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'text/html' },
+                });
+                if (! response.ok) {
+                    await window.notifyDialog({{ Illuminate\Support\Js::from(__('Wieder verknüpfen fehlgeschlagen. Bitte erneut versuchen.')) }});
+                    return;
+                }
+                document.getElementById('project-planned-hours-editor').outerHTML = await response.text();
+                const planTotal = document.getElementById('project-planned-hours-editor').dataset.planTotal;
+                window.dispatchEvent(new CustomEvent('project-planned-hours-changed', { detail: planTotal === '' ? null : Number(planTotal) }));
+                window.dispatchEvent(new CustomEvent('planstunden-linked-state-changed'));
+            },
             async save() {
                 const params = new URLSearchParams();
                 Object.entries(this.hours).forEach(([id, val]) => params.append('hours[' + id + ']', val ?? ''));
@@ -99,8 +119,16 @@
                 <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
                 {{ __('Planstunden je Funktionsgruppe') }}
             </p>
-            <p class="text-xs text-gray-400">
+            <p class="flex items-center gap-2 text-xs text-gray-400">
                 {{ __('Summe') }}: <span x-text="Object.values(hours).reduce((sum, v) => sum + (parseFloat(v) || 0), 0).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })"></span> h
+                @if ($project->projectTemplate)
+                    <button
+                        type="button"
+                        @click="relink()"
+                        class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                        title="{{ __('Verwirft die eigenen Planstunden; danach gelten wieder die Planstunden des Aufwandsprofils „:name“.', ['name' => $project->projectTemplate->name]) }}"
+                    >{{ __('Wieder verknüpfen') }}</button>
+                @endif
             </p>
         </div>
         <div class="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">

@@ -166,6 +166,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/projekte/{project}/planung/auslastung', [ProjectController::class, 'planningUtilization'])->name('projekte.planung.auslastung');
     Route::patch('/projekte/{project}', [ProjectController::class, 'update'])->name('projekte.update');
     Route::post('/projekte/{project}/planstunden/loesen', [ProjectController::class, 'breakPlannedHoursLink'])->name('projekte.planstunden.loesen');
+    Route::post('/projekte/{project}/planstunden/verknuepfen', [ProjectController::class, 'relinkPlannedHours'])->name('projekte.planstunden.relink');
     Route::post('/projekte/{project}/planstunden', [ProjectController::class, 'updatePlannedFunctionGroupHours'])->name('projekte.planstunden');
     // Personenbezogene Zeitenansichten erfordern planning.view.
     Route::get('/projekte/{project}/zeiten/personen', [ProjectController::class, 'zeitenPersonBreakdown'])->name('projekte.zeiten.personen');
