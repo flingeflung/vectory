@@ -5,13 +5,30 @@
     Aufruf aus JS:
       const ok = await window.confirmDialog('Text …');
       const ok = await window.confirmDialog({ title, message, confirmLabel, cancelLabel });
+      Warnhinweis nach DIN EN 82079-1 / ISO 3864 (Ralf, 2026-10-07): zusätzlich signal ('hinweis' | 'achtung' | 'vorsicht' | 'warnung' | 'gefahr'),
+      consequence (Folge) und remedy (Abhilfe); message nennt Art und Quelle. Ohne signal bleibt der bisherige Dialog.
       await window.notifyDialog('Text …'); // reiner Hinweis, nur ein OK-Button
 --}}
 <div
-    x-data="{ show: false, title: '', message: '', confirmLabel: '', cancelLabel: '', alertOnly: false, resolve: null }"
+    x-data="{
+        show: false, title: '', message: '', confirmLabel: '', cancelLabel: '', alertOnly: false, resolve: null,
+        signal: '', consequence: '', remedy: '',
+        // Signalwort-Stufen: Farbe des Kopfstreifens und des Bestätigen-Knopfs
+        levels: {
+            hinweis: { word: @js(__('Hinweis')), band: 'bg-blue-600 text-white', button: 'bg-btn-primary hover:bg-btn-primary-hover' },
+            achtung: { word: @js(__('Achtung')), band: 'bg-amber-400 text-gray-900', button: 'bg-amber-600 hover:bg-amber-700' },
+            vorsicht: { word: @js(__('Vorsicht')), band: 'bg-yellow-300 text-gray-900', button: 'bg-yellow-600 hover:bg-yellow-700' },
+            warnung: { word: @js(__('Warnung')), band: 'bg-orange-500 text-white', button: 'bg-orange-600 hover:bg-orange-700' },
+            gefahr: { word: @js(__('Gefahr')), band: 'bg-red-600 text-white', button: 'bg-red-600 hover:bg-red-700' },
+        },
+        get level() { return this.levels[this.signal] || null; },
+    }"
     x-on:open-confirm-dialog.window="
         title = $event.detail.title;
         message = $event.detail.message;
+        signal = $event.detail.signal || '';
+        consequence = $event.detail.consequence || '';
+        remedy = $event.detail.remedy || '';
         confirmLabel = $event.detail.confirmLabel;
         cancelLabel = $event.detail.cancelLabel;
         alertOnly = $event.detail.alertOnly;
@@ -48,7 +65,8 @@
 
         <div
             x-show="show"
-            class="relative w-full max-w-sm rounded-lg bg-white p-5 shadow-xl"
+            class="relative w-full overflow-hidden rounded-lg bg-white p-5 shadow-xl"
+            :class="signal ? 'max-w-md' : 'max-w-sm'"
             x-transition:enter="ease-out duration-200"
             x-transition:enter-start="opacity-0 translate-y-2 scale-95"
             x-transition:enter-end="opacity-100 translate-y-0 scale-100"
@@ -56,7 +74,21 @@
             x-transition:leave-start="opacity-100 translate-y-0 scale-100"
             x-transition:leave-end="opacity-0 translate-y-2 scale-95"
         >
-            <div class="flex items-start gap-3">
+            {{-- Kopfstreifen mit Warndreieck und Signalwort (nur bei signal) --}}
+            <div x-show="level" class="-mx-5 -mt-5 mb-4 flex items-center gap-2 px-5 py-2 text-sm font-bold uppercase tracking-wider" :class="level ? level.band : ''">
+                <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3.5l9.5 16.5h-19L12 3.5z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v4.5M12 17.2v.05" />
+                </svg>
+                <span x-text="level ? level.word : ''"></span>
+            </div>
+            <div x-show="signal" class="space-y-2">
+                <h3 class="text-sm font-semibold text-gray-900" x-text="title"></h3>
+                <p class="text-sm text-gray-700" x-text="message"></p>
+                <p x-show="consequence" class="text-sm text-gray-700"><span class="font-semibold">{{ __('Folge') }}:</span> <span x-text="consequence"></span></p>
+                <p x-show="remedy" class="text-sm text-gray-700"><span class="font-semibold">{{ __('Abhilfe') }}:</span> <span x-text="remedy"></span></p>
+            </div>
+            <div x-show="! signal" class="flex items-start gap-3">
                 <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100">
                     <svg class="h-5 w-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m0 3.75h.007v.008H12v-.008ZM21 12a9 9 0 11-18 0 9 9 0 0118 0Z" />
@@ -80,7 +112,7 @@
                     type="button"
                     @click="show = false; resolve(true)"
                     class="rounded-md px-3 py-1.5 text-sm font-medium text-white"
-                    :class="alertOnly ? 'bg-btn-primary hover:bg-btn-primary-hover' : 'bg-red-600 hover:bg-red-700'"
+                    :class="alertOnly ? 'bg-btn-primary hover:bg-btn-primary-hover' : (level ? level.button : 'bg-red-600 hover:bg-red-700')"
                     x-text="confirmLabel"
                 ></button>
             </div>
@@ -98,6 +130,9 @@
                 confirmLabel: opts.confirmLabel ?? {{ \Illuminate\Support\Js::from(__('Änderungen verwerfen')) }},
                 cancelLabel: opts.cancelLabel ?? {{ \Illuminate\Support\Js::from(__('Weiter bearbeiten')) }},
                 alertOnly: false,
+                signal: opts.signal ?? '',
+                consequence: opts.consequence ?? '',
+                remedy: opts.remedy ?? '',
                 resolve,
             },
         }));

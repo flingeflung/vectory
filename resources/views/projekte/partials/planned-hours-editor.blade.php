@@ -10,8 +10,11 @@
         x-data="{
             async loesen() {
                 if (! await window.confirmDialog({
+                    signal: 'hinweis',
                     title: {{ Illuminate\Support\Js::from(__('Verbindung zum Aufwandsprofil lösen?')) }},
-                    message: {{ Illuminate\Support\Js::from(__('Die Verbindung zum Aufwandsprofil wird für dieses Projekt gelöst. Das Aufwandsprofil selbst bleibt unverändert. Die aktuelle Aufschlüsselung je Funktionsgruppe wird als Startpunkt übernommen und bleibt danach unabhängig änderbar. Mit „Wieder verknüpfen“ kehren Sie später zum Aufwandsprofil zurück, dabei gehen die eigenen Werte verloren.')) }},
+                    message: {{ Illuminate\Support\Js::from(__('Die Planstunden dieses Projekts werden vom Aufwandsprofil getrennt. Die aktuelle Aufschlüsselung je Funktionsgruppe wird als Startpunkt übernommen und lässt sich danach unabhängig ändern.')) }},
+                    consequence: {{ Illuminate\Support\Js::from(__('Änderungen am Aufwandsprofil wirken nicht mehr auf dieses Projekt.')) }},
+                    remedy: {{ Illuminate\Support\Js::from(__('Mit „Wieder verknüpfen“ kehren Sie zum Aufwandsprofil zurück. Dabei gehen die eigenen Werte verloren.')) }},
                     confirmLabel: {{ Illuminate\Support\Js::from(__('Lösen')) }},
                     cancelLabel: {{ Illuminate\Support\Js::from(__('Abbrechen')) }},
                 })) { return; }
@@ -72,8 +75,11 @@
             hours: {{ Illuminate\Support\Js::from($zeiten['ownBreakdown']) }},
             async relink() {
                 if (! await window.confirmDialog({
+                    signal: 'achtung',
                     title: {{ Illuminate\Support\Js::from(__('Wieder mit dem Aufwandsprofil verknüpfen?')) }},
-                    message: {{ Illuminate\Support\Js::from(__('Die eigenen Planstunden dieses Projekts werden verworfen. Danach gelten wieder die Planstunden des Aufwandsprofils.')) }},
+                    message: {{ Illuminate\Support\Js::from(__('Die eigenen Planstunden dieses Projekts werden durch die Planstunden des Aufwandsprofils ersetzt.')) }},
+                    consequence: {{ Illuminate\Support\Js::from(__('Die eigenen Werte gehen verloren und lassen sich nicht wiederherstellen.')) }},
+                    remedy: {{ Illuminate\Support\Js::from(__('Wenn Sie die eigenen Werte behalten möchten, wählen Sie „Abbrechen“.')) }},
                     confirmLabel: {{ Illuminate\Support\Js::from(__('Wieder verknüpfen')) }},
                     cancelLabel: {{ Illuminate\Support\Js::from(__('Abbrechen')) }},
                 })) { return; }
