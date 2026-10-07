@@ -23,6 +23,7 @@
         canEditPeriod: @js($canEditPeriod ?? false),
         applying: false,
         hover: null,
+        groupsOpen: (() => { try { return localStorage.getItem('vectory-period-groups-open') !== '0'; } catch (e) { return true; } })(),
         preview: null,
         lead: 0,
         previewOff: 0,
@@ -149,6 +150,10 @@
         // Gesperrte Schritte behalten ihre Dauer und wandern beim Verschieben mit; ausgleichen tut der nächste nicht gesperrte Schritt davor bzw. dahinter
         unlockedBefore(i) { for (let k = i; k >= 0; k--) { if (! this.steps[k].locked) return k; } return -1; },
         unlockedAfter(i) { for (let k = i; k < this.steps.length; k++) { if (! this.steps[k].locked) return k; } return -1; },
+        toggleGroups() {
+            this.groupsOpen = ! this.groupsOpen;
+            try { localStorage.setItem('vectory-period-groups-open', this.groupsOpen ? '1' : '0'); } catch (e) {}
+        },
         // Schloss umschalten und sofort am Projekt speichern (Voreinstellung steht am Workflow-Schritt); ohne Recht nur vorübergehend
         async toggleLock(i) {
             const step = this.steps[i];
@@ -460,8 +465,11 @@
         </div>
 
         <div x-show="groups.length" class="mt-2 space-y-1">
-            <div class="text-[10px] font-medium text-gray-400">{{ __('Einsatzplan') }}</div>
-            <template x-for="g in groups" :key="'group-' + g.id">
+            <button type="button" @click="toggleGroups()" :aria-expanded="groupsOpen" class="flex items-center gap-1 text-[10px] font-medium text-gray-400 hover:text-gray-600">
+                <svg class="h-3 w-3 transition-transform" :class="groupsOpen ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+                {{ __('Einsatzplan') }}
+            </button>
+            <template x-for="g in (groupsOpen ? groups : [])" :key="'group-' + g.id">
                 <div class="flex items-center gap-2">
                     <span class="w-36 shrink-0 truncate text-gray-600" x-text="g.name" :title="g.name"></span>
                     <div class="relative h-5 flex-1 rounded bg-gray-100">
