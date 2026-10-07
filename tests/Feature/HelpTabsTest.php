@@ -44,7 +44,7 @@ class HelpTabsTest extends TestCase
         $ask = fn (string $tab) => $this->get(route('hilfe', ['route' => 'projekte', 'dialog' => $dialogId, 'tab' => $tab]));
 
         $ask('planung.auslastung')->assertOk()->assertSee('Auslastungstext')->assertDontSee('Dialogtext');
-        $ask('planung.terminplan')->assertOk()->assertSee('Planungstext')->assertDontSee('Auslastungstext');
+        $ask('planung.terminuebersicht')->assertOk()->assertSee('Planungstext')->assertDontSee('Auslastungstext');
         $ask('zeiten.gesamt')->assertOk()->assertSee('Dialogtext');
         $ask('')->assertOk()->assertSee('Dialogtext');
     }

@@ -45,7 +45,8 @@ return [
     // Projektdetails (D-MFQU), Reiter Planung und Zeiten
     'D-MFQU#planung.planstunden' => 'Alle, die das Projekt sehen. Ändern nur mit dem Planungsrecht (planning.view); Administratoren immer.',
     'D-MFQU#planung.auslastung' => 'Mit den Rechten „Projekte ansehen“ und „Planung: erweiterte Planung und personenbezogene Auswertungen“ (planning.view); Administratoren immer.',
-    'D-MFQU#planung.terminplan' => 'Alle, die das Projekt sehen.',
+    'D-MFQU#planung.terminuebersicht' => 'Alle, die das Projekt sehen.',
+    'D-MFQU#planung.ablaufplan' => 'Alle, die das Projekt sehen. Ändern nur mit dem Recht für Termine der Workflow-Schritte (workflow_step.due_date); Administratoren immer.',
     'D-MFQU#zeiten.uebersicht' => 'Alle, die das Projekt sehen (Summen ohne Personenbezug).',
     'D-MFQU#zeiten.personen' => 'Mit den Rechten „Projekte ansehen“ und „Planung: erweiterte Planung und personenbezogene Auswertungen“ (planning.view); Administratoren immer.',
     'D-MFQU#zeiten.gesamt' => 'Alle, die das Projekt sehen. Die Aufschlüsselung nach Personen oder Jobs nur mit dem Planungsrecht (planning.view).',

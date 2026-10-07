@@ -15,7 +15,7 @@
         distributing: false,
         utilBounds: { minYear: {{ min(2026, (int) ($project->start_date?->year ?? 2026)) }}, maxYear: {{ (int) now()->year + 5 }}, startYear: {{ $project->start_date?->year ?? 'null' }}, startMonth: {{ $project->start_date?->month ?? 'null' }} },
         util: { view: 'month', year: {{ now()->year }}, month: {{ now()->month }}, person: '', loading: false, loaded: false, people: [] },
-        subTab: window.projectPlanungSubTab || 'terminplan',
+        subTab: ['terminuebersicht', 'ablaufplan', 'planstunden', 'auslastung'].includes(window.projectPlanungSubTab) ? window.projectPlanungSubTab : 'terminuebersicht',
         // Dauern der Schritte an den Projektzeitraum anpassen (Ralf, 2026-10-06)
         adjusting: false,
         // Ein-/ausklappbare Bereiche in Planstunden (Ralf, 2026-10-06), Zustand im Browser gemerkt
@@ -213,16 +213,23 @@
         },
     }"
 >
-    {{-- Unterreiter wie im Tab "Zeiten" (Ralf, 2026-10-03): Planstunden (bisheriger Inhalt) | Terminplan. --}}
+    {{-- Unterreiter (Ralf, 2026-10-07), vom Groben zum Feinen: Terminübersicht (Zeitraum, Meilensteine, Verbund) | Ablaufplan (Schritte dieses Projekts) | Planstunden | Auslastung. --}}
     <div class="shrink-0 flex gap-1 border-b border-gray-100">
-        <button type="button" @click="subTab = 'terminplan'" :class="subTab === 'terminplan' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700'" class="border-b-2 px-3 py-1.5 text-xs font-medium">{{ __('Terminplan') }}</button>
+        <button type="button" @click="subTab = 'terminuebersicht'" :class="subTab === 'terminuebersicht' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700'" class="border-b-2 px-3 py-1.5 text-xs font-medium">{{ __('Terminübersicht') }}</button>
+        <button type="button" @click="subTab = 'ablaufplan'" :class="subTab === 'ablaufplan' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700'" class="border-b-2 px-3 py-1.5 text-xs font-medium">{{ __('Ablaufplan') }}</button>
         <button type="button" @click="subTab = 'planstunden'" :class="subTab === 'planstunden' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700'" class="border-b-2 px-3 py-1.5 text-xs font-medium">{{ __('Planstunden') }}</button>
         @can('planning.view')
             <button type="button" @click="subTab = 'auslastung'; if (! util.loaded) loadUtilization()" :class="subTab === 'auslastung' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700'" class="border-b-2 px-3 py-1.5 text-xs font-medium">{{ __('Auslastung') }}</button>
         @endcan
     </div>
 
-    <div x-show="subTab === 'planstunden'" data-help-tab="planung.planstunden" class="{{ $isOverlay ? 'flex min-h-0 flex-1 flex-col gap-2' : 'space-y-2' }}">
+    <div x-show="subTab === 'ablaufplan'" x-cloak data-help-tab="planung.ablaufplan" class="{{ $isOverlay ? 'min-h-0 flex-1 overflow-y-auto pr-1' : '' }}">
+        <div id="project-period-{{ $project->id }}">
+            @include('projekte.partials.period-section')
+        </div>
+    </div>
+
+    <div x-show="subTab === 'planstunden'" x-cloak data-help-tab="planung.planstunden" class="{{ $isOverlay ? 'flex min-h-0 flex-1 flex-col gap-2' : 'space-y-2' }}">
         {{-- Oberer Teil scrollt für sich, wenn der Platz knapp wird (Ralf, 2026-10-07); die Gruppenliste darunter behält mindestens 12 rem --}}
         <div class="{{ $isOverlay ? 'min-h-0 space-y-2 overflow-y-auto pr-1' : 'space-y-2' }}">
         <div class="shrink-0">
@@ -234,10 +241,6 @@
         <div x-show="sections.bedarf" class="flex shrink-0 flex-col gap-2">
         @php $timeNeed = app(\App\Services\ProjectPlanningCalculator::class)->timeNeed($project); @endphp
         @include('projekte.partials.planned-hours-editor')
-        </div>
-
-        <div id="project-period-{{ $project->id }}" class="shrink-0">
-            @include('projekte.partials.period-section')
         </div>
 
         </div>
@@ -325,7 +328,7 @@
     </div>
     @endcan
 
-    <div x-show="subTab === 'terminplan'" x-cloak data-help-tab="planung.terminplan" class="{{ $isOverlay ? 'min-h-0 flex-1 overflow-y-auto' : '' }}">
+    <div x-show="subTab === 'terminuebersicht'" x-cloak data-help-tab="planung.terminuebersicht" class="{{ $isOverlay ? 'min-h-0 flex-1 overflow-y-auto' : '' }}">
         @include('projekte.partials.terminplan')
     </div>
 </div>

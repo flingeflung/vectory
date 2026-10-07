@@ -220,7 +220,11 @@ class ProjectStepTimelineTest extends TestCase
         $this->steps[1]->update(['duration_days' => 5]);
         $chart = app(ProjectPlanningCalculator::class)->periodChart($project->fresh());
         $this->assertSame('overflow', $chart['period']['mode']);
-        $this->assertCount(13, $chart['workdays']);
+        // 13 Arbeitstage Bedarf plus 3 davor: der frühere Start (24.2.) liegt nicht in der Vergangenheit, deshalb wird die Achse nach links verlängert
+        $this->assertSame(3, $chart['pre']);
+        $this->assertCount(16, $chart['workdays']);
+        $this->assertSame('2027-02-24', $chart['workdays'][0]);
+        $this->assertSame('2027-02-24', $chart['calendar'][0]);
         $this->assertSame('2027-03-17', end($chart['calendar']));
         $this->assertSame('2027-03-17', $chart['period']['new_end']);
         $this->assertSame('2027-02-24', $chart['period']['new_start']);   // 3 Arbeitstage vor Mo 1.3.
