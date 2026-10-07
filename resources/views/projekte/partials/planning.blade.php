@@ -272,8 +272,8 @@
     </div>
 
     @can('planning.view')
-    <div x-show="subTab === 'auslastung'" x-cloak data-help-tab="planung.auslastung" class="{{ $isOverlay ? 'min-h-0 flex-1 overflow-y-auto' : '' }}">
-        <div class="mb-2 flex flex-wrap items-center gap-2 text-xs">
+    <div x-show="subTab === 'auslastung'" x-cloak data-help-tab="planung.auslastung" class="{{ $isOverlay ? 'flex min-h-0 flex-1 flex-col' : '' }}">
+        <div class="mb-2 flex shrink-0 flex-wrap items-center gap-2 text-xs">
             <div class="inline-flex overflow-hidden rounded-md border border-gray-300">
                 <button type="button" @click="util.view = 'month'; loadUtilization()" :class="util.view === 'month' ? 'bg-btn-primary text-white' : 'bg-btn-secondary text-gray-700 hover:bg-btn-secondary-hover'" class="px-3 py-1 font-medium">{{ __('Monat') }}</button>
                 <button type="button" @click="util.view = 'year'; loadUtilization()" :class="util.view === 'year' ? 'bg-btn-primary text-white' : 'bg-btn-secondary text-gray-700 hover:bg-btn-secondary-hover'" class="border-l border-gray-300 px-3 py-1 font-medium">{{ __('Jahr') }}</button>
@@ -303,7 +303,7 @@
             <span x-show="util.loading" x-cloak><x-loading-spinner class="h-4 w-4" /></span>
             <span class="text-gray-400">{{ __('Die folgenden Planungsdaten gelten ausschließlich für dieses Projekt bzw. bei einem Hauptprojekt für dieses mit allen Unterprojekten. Für die Gesamtübersicht aller Projekte siehe Hauptnavigation: Planung.') }}</span>
         </div>
-        <div x-ref="utilBody"></div>
+        <div x-ref="utilBody" class="{{ $isOverlay ? 'min-h-0 flex-1 overflow-y-auto' : '' }}"></div>
     </div>
     @endcan
 
