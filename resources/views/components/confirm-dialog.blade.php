@@ -16,7 +16,8 @@
         // Signalwort-Stufen: Farbe des Kopfstreifens und des Bestätigen-Knopfs
         levels: {
             hinweis: { word: @js(__('Hinweis')), band: 'bg-blue-600 text-white', button: 'bg-btn-primary hover:bg-btn-primary-hover' },
-            achtung: { word: @js(__('Achtung')), band: 'bg-amber-400 text-gray-900', button: 'bg-amber-600 hover:bg-amber-700' },
+            // ohne Signalwort: Achtung ist in der Norm für Personenschäden gedacht, hier genügt das Warndreieck (Ralf, 2026-10-07)
+            achtung: { word: '', band: 'bg-amber-400 text-gray-900', button: 'bg-amber-600 hover:bg-amber-700' },
             vorsicht: { word: @js(__('Vorsicht')), band: 'bg-yellow-300 text-gray-900', button: 'bg-yellow-600 hover:bg-yellow-700' },
             warnung: { word: @js(__('Warnung')), band: 'bg-orange-500 text-white', button: 'bg-orange-600 hover:bg-orange-700' },
             gefahr: { word: @js(__('Gefahr')), band: 'bg-red-600 text-white', button: 'bg-red-600 hover:bg-red-700' },
