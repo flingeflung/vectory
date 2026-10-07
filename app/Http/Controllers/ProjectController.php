@@ -97,12 +97,6 @@ class ProjectController extends Controller
         // (z. B. Sidebar-Link Projekte) wird die zuletzt gewählte wiederhergestellt.
         if ($sort !== null) {
             UserPreference::persist((int) $user->id, UserPreference::PROJECT_SORT, ['sort' => $sort, 'direction' => $direction]);
-        } elseif (! $request->has('sort')) {
-            $storedSort = UserPreference::configFor((int) $user->id, UserPreference::PROJECT_SORT);
-            if (is_string($storedSort['sort'] ?? null) && (in_array($storedSort['sort'], self::SORTABLE_COLUMNS, true) || in_array($storedSort['sort'], self::sortableAttributeColumns(), true))) {
-                $sort = $storedSort['sort'];
-                $direction = ($storedSort['direction'] ?? 'asc') === 'desc' ? 'desc' : 'asc';
-            }
         }
 
         // Projektfilter wurde abgeschickt -> die gerade sichtbare Feldauswahl wird
@@ -1771,6 +1765,15 @@ class ProjectController extends Controller
             ? $requested
             : null;
         $direction = $request->query('direction') === 'desc' ? 'desc' : 'asc';
+
+        // Ohne sort-Parameter gilt die zuletzt gewählte Sortierung des Benutzers - überall gleich (Übersicht, Nachladen, Blättern in den
+        // Details), sonst weichen die Reihenfolgen voneinander ab (Ralf, 2026-10-07)
+        if ($sort === null && ! $request->has('sort') && $request->user()) {
+            $stored = UserPreference::configFor((int) $request->user()->id, UserPreference::PROJECT_SORT);
+            if (is_string($stored['sort'] ?? null) && (in_array($stored['sort'], self::SORTABLE_COLUMNS, true) || in_array($stored['sort'], self::sortableAttributeColumns(), true))) {
+                return [$stored['sort'], ($stored['direction'] ?? 'asc') === 'desc' ? 'desc' : 'asc'];
+            }
+        }
 
         return [$sort, $direction];
     }

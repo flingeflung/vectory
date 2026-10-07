@@ -32,4 +32,25 @@ class ProjectSortMemoryTest extends TestCase
         $this->actingAs($user)->get(route('projekte', ['sort' => 'title', 'direction' => 'desc']));
         $this->actingAs($user)->get(route('projekte'))->assertSeeInOrder(['270003', '270002', '270001']);
     }
+
+    public function test_paging_in_the_details_follows_the_remembered_sort(): void
+    {
+        $tenant = Tenant::query()->firstOrFail();
+        $projects = [];
+        foreach (['270001', '270002', '270003'] as $pn) {
+            $projects[$pn] = Project::query()->create(['tenant_id' => $tenant->id, 'source_pn' => $pn, 'title' => 'P'.$pn, 'status' => 0]);
+        }
+        $user = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'organization_admin']);
+
+        // Standard: PN absteigend -> auf 270002 folgt 270001
+        $response = $this->actingAs($user)->get(route('projekte.show', $projects['270002']));
+        $this->assertSame('270003', $response->viewData('previousProject')?->source_pn);
+        $this->assertSame('270001', $response->viewData('nextProject')?->source_pn);
+
+        // PN aufsteigend gewählt (nur in der Übersicht) -> beim Blättern ohne sort-Parameter gilt dieselbe Reihenfolge
+        $this->actingAs($user)->get(route('projekte', ['sort' => 'source_pn', 'direction' => 'asc']));
+        $response = $this->actingAs($user)->get(route('projekte.show', $projects['270002']));
+        $this->assertSame('270001', $response->viewData('previousProject')?->source_pn);
+        $this->assertSame('270003', $response->viewData('nextProject')?->source_pn);
+    }
 }
