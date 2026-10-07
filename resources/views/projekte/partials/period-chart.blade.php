@@ -17,6 +17,7 @@
         steps: @js($chart['steps']),
         groups: @js($chart['groups']),
         period: @js($chart['period']),
+        pre: @js($chart['pre']),
         milestones: @js($chart['milestones']),
         hasOverrides: @js($hasOverrides ?? false),
         canEditPeriod: @js($canEditPeriod ?? false),
@@ -62,7 +63,8 @@
         get todayIso() { const now = new Date(); return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0'); },
         get startInPast() { return this.period.new_start !== null && this.period.new_start < this.todayIso; },
         // Vorlauf: Arbeitstage am Anfang, an denen noch kein Schritt läuft (linken Rand nach rechts gezogen); dazu die Vorschau-Verschiebung
-        get off() { return this.lead + this.previewOff; },
+        get off() { return this.pre + this.lead + this.previewOff; },
+        get startIdx() { return this.calendar.indexOf(this.period.project_start); },
         get liveAvail() { return this.period.available - this.lead; },
         // Differenz Zeitraum - Bedarf laut Diagramm: positiv = Puffer, negativ = es fehlen Tage
         // echte Dauern ohne die vorübergehenden Werte der Vorschau, damit Zeile und Knöpfe unter der Maus nicht verschwinden
@@ -96,6 +98,7 @@
                 this.steps.forEach((step) => { step.days = step.scaled_days; });
             }
             if (kind === 'start' && this.period.mode === 'buffer') this.previewOff = this.total - this.used;
+            if (kind === 'start' && this.period.mode === 'overflow' && this.pre > 0) this.previewOff = -this.pre;
         },
         hidePreview() {
             if (this.backupDays) { this.steps.forEach((step, i) => { step.days = this.backupDays[i]; }); this.backupDays = null; }
@@ -204,7 +207,7 @@
             this.drag((e) => {
                 const first = this.unlockedAfter(0);
                 if (first < 0) return;
-                const target = Math.min(Math.max(this.calendarUnit(e), 0), this.lead + this.steps[first].days - 1);
+                const target = Math.min(Math.max(this.calendarUnit(e) - this.pre, 0), this.lead + this.steps[first].days - 1);
                 this.steps[first].days -= target - this.lead;
                 this.lead = target;
             });
@@ -245,7 +248,7 @@
                 failed = await fetch(@js(route('projekte.termine.set-period', $project)), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
-                    body: JSON.stringify({ side: 'start', date: this.workdays[this.lead] }),
+                    body: JSON.stringify({ side: 'start', date: this.workdays[this.pre + this.lead] }),
                 }).then((r) => r.ok ? null : r);
             }
             this.applying = false;
@@ -342,9 +345,20 @@
                 :title="@js(__('Puffer: Zeit bis zum Projektende, die der Workflow nicht braucht'))"
             ><span x-show="preview !== 'end'" x-text="@js(__('Puffer: :days AT')).replace(':days', liveDiff)"></span></div>
             <div
+                x-show="pre > 0 && startIdx > 0 && preview !== 'start'"
+                class="absolute top-0 h-full"
+                :style="{ left: '0%', width: pct(startIdx) + '%', backgroundColor: 'rgba(239, 68, 68, 0.12)' }"
+            ></div>
+            <div
+                x-show="pre > 0 && startIdx > 0 && preview !== 'start'"
+                class="pointer-events-none absolute top-0 z-[5] h-full w-0.5 -translate-x-px bg-red-500"
+                :style="{ left: pct(startIdx) + '%' }"
+                :title="@js(__('Projektstart')) + ' ' + dateWd(period.project_start)"
+            ></div>
+            <div
                 x-show="lead > 0"
                 class="pointer-events-none absolute flex items-center justify-center overflow-hidden whitespace-nowrap text-[10px] text-gray-500"
-                :style="{ top: '16px', bottom: '16px', left: '0%', width: pct(first()) + '%', backgroundImage: 'repeating-linear-gradient(135deg, #e5e7eb 0, #e5e7eb 2px, #f9fafb 2px, #f9fafb 6px)' }"
+                :style="{ top: '16px', bottom: '16px', left: pct(startIdx) + '%', width: (pct(first()) - pct(startIdx)) + '%', backgroundImage: 'repeating-linear-gradient(135deg, #e5e7eb 0, #e5e7eb 2px, #f9fafb 2px, #f9fafb 6px)' }"
             ><span x-text="@js(__('Puffer: :days AT')).replace(':days', lead)"></span></div>
             <div
                 x-show="period.mode === 'overflow' && endIdx >= 0 && preview !== 'durations'"
@@ -382,7 +396,7 @@
                 </div>
             </template>
             <div
-                x-show="preview === 'start' && period.mode === 'overflow'"
+                x-show="preview === 'start' && period.mode === 'overflow' && pre === 0"
                 class="pointer-events-none absolute left-1 top-0 z-[5] rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-800"
                 x-text="@js(__('Start früher: :date')).replace(':date', dateDe(period.new_start))"
             ></div>
@@ -416,7 +430,7 @@
                 class="absolute top-0 z-10 flex h-full w-3 -translate-x-1/2 cursor-col-resize items-center justify-center"
                 :style="{ left: pct(first()) + '%' }"
                 @pointerdown.prevent="startDragLeft($event)"
-                :title="dateWd(workdays[lead])"
+                :title="dateWd(workdays[pre + lead])"
             >
                 <div class="h-5 w-1 rounded bg-gray-700/70"></div>
             </div>

@@ -175,7 +175,7 @@ class ProjectPlanningCalculator
      * Zeitraum umgerechneten (wie beim Knopf "Dauern an Projektzeitraum anpassen"), damit die Balken die Breite genau füllen.
      * Schritte ohne eingetragene Dauer zählen 1 Tag.
      *
-     * @return array{milestones: list<array{step_id: int, title: string, date: string}>, groups: list<array{id: int, name: string, from: int, to: int}>, workdays: list<string>, calendar: list<string>, holidays: object, steps: list<array{id: int, title: string, days: int, workflow_days: int, fixed: bool, locked: bool, scaled_days: int}>, sum: int, available: int, period: array<string, mixed>}|null
+     * @return array{pre: int, milestones: list<array{step_id: int, title: string, date: string}>, groups: list<array{id: int, name: string, from: int, to: int}>, workdays: list<string>, calendar: list<string>, holidays: object, steps: list<array{id: int, title: string, days: int, workflow_days: int, fixed: bool, locked: bool, scaled_days: int}>, sum: int, available: int, period: array<string, mixed>}|null
      */
     public function periodChart(\App\Models\Project $project): ?array
     {
@@ -216,6 +216,7 @@ class ProjectPlanningCalculator
         // Vorschläge für "Zeitraum anpassen": neues Ende bei festem Start, neuer Start bei festem Ende
         $newEnd = $need > 0 ? ($workdays[$need - 1] ?? null) : null;
         $newStart = null;
+        $prependWorkdays = [];
         if ($need > 0 && $need <= $available) {
             $newStart = $workdays[$available - $need];
         } elseif ($need > $available) {
@@ -227,6 +228,22 @@ class ProjectPlanningCalculator
                 }
             }
             $newStart = $cursor->toDateString();
+        }
+
+        // Ist der Zeitraum zu knapp und läge der frühere Start nicht in der Vergangenheit, wird die Achse auch nach links verlängert,
+        // damit die Vorschau "Start früher" die Balken dorthin schieben kann (Ralf, 2026-10-07)
+        $pre = 0;
+        if ($need > $available && $newStart !== null && $newStart >= CarbonImmutable::today()->toDateString()) {
+            $prependCalendar = [];
+            for ($date = CarbonImmutable::parse($newStart); $date->lessThan($start); $date = $date->addDay()) {
+                $prependCalendar[] = $date->toDateString();
+                if (! $isFree($date)) {
+                    $prependWorkdays[] = $date->toDateString();
+                    $pre++;
+                }
+            }
+            $workdays = [...array_slice($prependWorkdays, 0), ...$workdays];
+            $calendar = [...$prependCalendar, ...$calendar];
         }
         $period = [
             'mode' => $need === $available ? 'match' : ($need < $available ? 'buffer' : 'overflow'),
@@ -241,7 +258,7 @@ class ProjectPlanningCalculator
 
         $holidayNames = Holiday::query()->withoutGlobalScope('tenant')
             ->where('tenant_id', $project->tenant_id)->where('active', true)
-            ->whereBetween('date', [$start->toDateString(), $chartEnd->toDateString()])
+            ->whereBetween('date', [$calendar[0], $chartEnd->toDateString()])
             ->get(['date', 'name'])
             ->mapWithKeys(fn (Holiday $holiday) => [$holiday->date->toDateString() => (string) $holiday->name])
             ->all();
@@ -282,6 +299,7 @@ class ProjectPlanningCalculator
             'sum' => $need,
             'available' => $available,
             'period' => $period,
+            'pre' => $pre,
         ];
     }
 
