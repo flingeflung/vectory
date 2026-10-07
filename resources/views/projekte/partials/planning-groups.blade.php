@@ -2,7 +2,7 @@
      und von ProjectController::planningGroups() allein gerendert, um den Bereich nach einer
      Änderung der Projektbeteiligten live nachzuladen. Erwartet $project, $planningGroups,
      $entriesByGroup, $isOverlay. --}}
-    <div class="{{ $isOverlay ? 'min-h-[12rem] flex-1 overflow-y-auto pr-1' : '' }} space-y-2">
+    <div class="{{ $isOverlay ? 'min-h-0 flex-1 overflow-y-auto pr-1' : '' }} space-y-2">
     @forelse ($planningGroups as $group)
         @php($entries = $entriesByGroup->get($group->id) ?? collect())
         <section class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">

@@ -18,12 +18,6 @@
         subTab: ['terminuebersicht', 'ablaufplan', 'planstunden', 'auslastung'].includes(window.projectPlanungSubTab) ? window.projectPlanungSubTab : 'terminuebersicht',
         // Dauern der Schritte an den Projektzeitraum anpassen (Ralf, 2026-10-06)
         adjusting: false,
-        // Ein-/ausklappbare Bereiche in Planstunden (Ralf, 2026-10-06), Zustand im Browser gemerkt
-        sections: (() => { const defaults = { bedarf: true, zeitraum: true, verteilung: true }; try { return { ...defaults, ...JSON.parse(localStorage.getItem('vectory-planning-sections') || '{}') }; } catch (e) { return defaults; } })(),
-        toggleSection(name) {
-            this.sections[name] = ! this.sections[name];
-            try { localStorage.setItem('vectory-planning-sections', JSON.stringify(this.sections)); } catch (e) {}
-        },
         async adjustDurations(hasOverrides) {
             if (hasOverrides && ! await window.confirmDialog({
                 title: {{ \Illuminate\Support\Js::from(__('Dauern anpassen?')) }},
@@ -230,29 +224,14 @@
     </div>
 
     <div x-show="subTab === 'planstunden'" x-cloak data-help-tab="planung.planstunden" class="{{ $isOverlay ? 'flex min-h-0 flex-1 flex-col gap-2' : 'space-y-2' }}">
-        {{-- Oberer Teil scrollt für sich, wenn der Platz knapp wird (Ralf, 2026-10-07); die Gruppenliste darunter behält mindestens 12 rem --}}
-        <div class="{{ $isOverlay ? 'min-h-0 space-y-2 overflow-y-auto pr-1' : 'space-y-2' }}">
-        <div class="shrink-0">
-            <button type="button" @click="toggleSection('bedarf')" class="flex items-center gap-1.5 text-left" :aria-expanded="sections.bedarf">
-                <svg class="h-4 w-4 shrink-0 text-gray-500 transition-transform" :class="sections.bedarf ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
-                <h3 class="font-semibold text-gray-900">{{ __('Planstunden') }}</h3>
-            </button>
-        </div>
-        <div x-show="sections.bedarf" class="flex shrink-0 flex-col gap-2">
         @php $timeNeed = app(\App\Services\ProjectPlanningCalculator::class)->timeNeed($project); @endphp
         @include('projekte.partials.planned-hours-editor')
-        </div>
-
-        </div>
 
         @can('planning.view')
         <div class="shrink-0 flex items-start justify-between gap-3">
             <div>
-                <button type="button" @click="toggleSection('verteilung')" class="flex items-center gap-1.5 text-left" :aria-expanded="sections.verteilung">
-                    <svg class="h-4 w-4 shrink-0 text-gray-500 transition-transform" :class="sections.verteilung ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
-                    <h3 class="font-semibold text-gray-900">{{ __('Planstunden und Verteilung auf Projektbeteiligte') }}</h3>
-                </button>
-                <div x-show="sections.verteilung">
+                <h3 class="font-semibold text-gray-900">{{ __('Planstunden und Verteilung auf Projektbeteiligte') }}</h3>
+                <div>
                 <p class="text-xs text-gray-500">
                     @if ($project->functionGroupHours->isNotEmpty())
                         {{ __('Die Planstunden wurden vom Aufwandsprofil gelöst und gelten nur für dieses Projekt.') }}
@@ -278,14 +257,14 @@
                 >{{ __('Alle Std. verteilen') }}</button>
                 </div>
             </div>
-            <div x-show="sections.verteilung && Object.keys(planned).length > 0" class="flex shrink-0 gap-2.5 text-xs text-gray-500">
+            <div x-show="Object.keys(planned).length > 0" class="flex shrink-0 gap-2.5 text-xs text-gray-500">
                 <span><span class="mr-1 inline-block h-2 w-2 rounded-full bg-amber-400"></span>{{ __('Noch zu verteilen') }}</span>
                 <span><span class="mr-1 inline-block h-2 w-2 rounded-full bg-green-400"></span>{{ __('Vollständig verteilt') }}</span>
                 <span><span class="mr-1 inline-block h-2 w-2 rounded-full bg-red-400"></span>{{ __('Mehr als geplant verteilt') }}</span>
             </div>
         </div>
 
-        <div id="project-planning-groups-{{ $project->id }}" x-show="sections.verteilung" class="contents">
+        <div id="project-planning-groups-{{ $project->id }}" class="contents">
             @include('projekte.partials.planning-groups')
         </div>
 
