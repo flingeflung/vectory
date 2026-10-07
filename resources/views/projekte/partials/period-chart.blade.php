@@ -30,8 +30,11 @@
         wdCal: [],
         grid: { weekends: [], holidays: [], months: [], years: [], today: null },
         palette: ['#93c5fd', '#6ee7b7', '#fcd34d', '#f9a8d4', '#c4b5fd', '#fdba74', '#5eead4', '#fca5a5'],
+        dirtyHook: null,
         init() {
             this.original = this.steps.map((step) => step.days);
+            this.dirtyHook = () => this.changed;
+            window.periodChartIsDirty = this.dirtyHook;
             const monthNames = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
             const now = new Date();
             const todayIso = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
@@ -50,6 +53,7 @@
             this.wdCal = this.workdays.map((iso) => index[iso]);
             if (index[todayIso] !== undefined) this.grid.today = index[todayIso];
         },
+        destroy() { if (window.periodChartIsDirty === this.dirtyHook) window.periodChartIsDirty = null; },
         get total() { return this.workdays.length; },
         get span() { return this.calendar.length; },
         // Summe der Dauern; kleiner als total = Puffer bis zum Projektende, total ist bei zu knappem Zeitraum über das Projektende hinaus verlängert

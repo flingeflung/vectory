@@ -836,7 +836,7 @@
         </script>
 
         {{-- Global Projekt-Detail-Overlay: von überall im Tool per PN-Klick (x-pn-link) öffenbar. --}}
-        <x-modal name="project-overlay" max-width="2xl" :dirty-check="'projectOverlayIsDirty'" :draggable="true" :resizable="true">
+        <x-modal name="project-overlay" max-width="2xl" :dirty-check="'projectOverlayHasUnsaved'" :draggable="true" :resizable="true">
             <div class="relative h-full">
                 <div id="project-overlay-body" class="flex h-full min-h-0 flex-col text-sm text-gray-500">
                     <div class="p-4">{{ __('Lädt…') }}</div>
@@ -2641,6 +2641,9 @@
                     const current = serializeForm(mainForm());
                     return current !== null && current !== savedSnapshot;
                 };
+
+                // Beim Schließen und Blättern zählt auch ein noch nicht gespeicherter Entwurf im Zeitraum-Diagramm der Planung (Ralf, 2026-10-07)
+                window.projectOverlayHasUnsaved = () => window.projectOverlayIsDirty() || (window.periodChartIsDirty ? window.periodChartIsDirty() : false);
 
                 // Ralf, 2026-09-12: ein Hintergrund-Abgleich, der Teile des
                 // großen Formulars neu lädt (z.B. "Projektbeteiligte

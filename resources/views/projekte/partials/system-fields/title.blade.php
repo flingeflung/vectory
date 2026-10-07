@@ -5,7 +5,7 @@
             <a
                 href="{{ route('projekte.show', $navParams($project->hauptprojekt)) }}"
                 @if ($isOverlay)
-                    onclick="event.preventDefault(); window.confirmDiscardIfDirty('projectOverlayIsDirty').then(ok => ok && window.dispatchEvent(new CustomEvent('open-project', { detail: { id: {{ $project->hauptprojekt->id }}, sort: {{ \Illuminate\Support\Js::from($sort ?? null) }}, direction: {{ \Illuminate\Support\Js::from($direction ?? 'asc') }}, filters: {{ \Illuminate\Support\Js::from($filters ?? []) }} } })))"
+                    onclick="event.preventDefault(); window.confirmDiscardIfDirty('projectOverlayHasUnsaved').then(ok => ok && window.dispatchEvent(new CustomEvent('open-project', { detail: { id: {{ $project->hauptprojekt->id }}, sort: {{ \Illuminate\Support\Js::from($sort ?? null) }}, direction: {{ \Illuminate\Support\Js::from($direction ?? 'asc') }}, filters: {{ \Illuminate\Support\Js::from($filters ?? []) }} } })))"
                 @endif
                 class="font-medium text-indigo-600 hover:underline"
             >{{ $project->hauptprojekt->source_pn }} – {{ $project->hauptprojekt->title }}</a>
@@ -19,7 +19,7 @@
                         <a
                             href="{{ route('projekte.show', $navParams($unterprojekt)) }}"
                             @if ($isOverlay)
-                                onclick="event.preventDefault(); window.confirmDiscardIfDirty('projectOverlayIsDirty').then(ok => ok && window.dispatchEvent(new CustomEvent('open-project', { detail: { id: {{ $unterprojekt->id }}, sort: {{ \Illuminate\Support\Js::from($sort ?? null) }}, direction: {{ \Illuminate\Support\Js::from($direction ?? 'asc') }}, filters: {{ \Illuminate\Support\Js::from($filters ?? []) }} } })))"
+                                onclick="event.preventDefault(); window.confirmDiscardIfDirty('projectOverlayHasUnsaved').then(ok => ok && window.dispatchEvent(new CustomEvent('open-project', { detail: { id: {{ $unterprojekt->id }}, sort: {{ \Illuminate\Support\Js::from($sort ?? null) }}, direction: {{ \Illuminate\Support\Js::from($direction ?? 'asc') }}, filters: {{ \Illuminate\Support\Js::from($filters ?? []) }} } })))"
                             @endif
                             class="font-medium text-indigo-600 hover:underline"
                         >{{ $unterprojekt->source_pn }} – {{ $unterprojekt->title }}</a>
