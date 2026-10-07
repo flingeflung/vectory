@@ -412,6 +412,8 @@
                     :class="{ 'rounded-l': i === 0, 'rounded-r': i === steps.length - 1 }"
                     :style="{ top: '16px', bottom: '16px', left: startPct(i) + '%', width: widthPct(i) + '%', backgroundColor: palette[i % palette.length], opacity: hover === null ? 0.85 : (hover === i ? 1 : 0.35), outline: hover === i ? '2px solid #1f2937' : 'none', zIndex: hover === i ? 6 : 0 }"
                     :title="tip(i)"
+                    @mouseenter="hover = i"
+                    @mouseleave="hover = null"
                 ></div>
             </template>
 
