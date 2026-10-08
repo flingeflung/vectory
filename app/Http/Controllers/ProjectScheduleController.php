@@ -146,7 +146,7 @@ class ProjectScheduleController extends Controller
      */
     public function adjustDurations(Request $request, Project $project, \App\Services\ProjectPlanningCalculator $calculator): JsonResponse
     {
-        abort_unless($request->user()->can('project.view') && $request->user()->can('workflow_step.due_date'), 403);
+        abort_unless($project->mayBeOpenedBy($request->user()) && $request->user()->can('workflow_step.due_date'), 403);
 
         $durations = $calculator->scaledDurations($project);
         abort_if($durations === null, 422, __('Für dieses Projekt lassen sich die Dauern nicht anpassen: Es fehlt ein Workflow oder ein vollständiger Projektzeitraum.'));
@@ -170,7 +170,7 @@ class ProjectScheduleController extends Controller
      */
     public function saveDurations(Request $request, Project $project): JsonResponse
     {
-        abort_unless($request->user()->can('project.view') && $request->user()->can('workflow_step.due_date'), 403);
+        abort_unless($project->mayBeOpenedBy($request->user()) && $request->user()->can('workflow_step.due_date'), 403);
 
         $validated = $request->validate(['durations' => ['required', 'array', 'min:1'], 'durations.*' => ['integer', 'min:1', 'max:3650']]);
         $allowed = \App\Models\WorkflowStep::query()->withoutGlobalScope('tenant')
@@ -196,7 +196,7 @@ class ProjectScheduleController extends Controller
      */
     public function setDurationLock(Request $request, Project $project): JsonResponse
     {
-        abort_unless($request->user()->can('project.view') && $request->user()->can('workflow_step.due_date'), 403);
+        abort_unless($project->mayBeOpenedBy($request->user()) && $request->user()->can('workflow_step.due_date'), 403);
 
         $validated = $request->validate(['step_id' => ['required', 'integer'], 'locked' => ['required', 'boolean']]);
         $step = \App\Models\WorkflowStep::query()->withoutGlobalScope('tenant')
@@ -220,7 +220,7 @@ class ProjectScheduleController extends Controller
      */
     public function setPeriod(Request $request, Project $project): JsonResponse
     {
-        abort_unless($request->user()->can('project.view') && $request->user()->can('workflow_step.due_date'), 403);
+        abort_unless($project->mayBeOpenedBy($request->user()) && $request->user()->can('workflow_step.due_date'), 403);
 
         $validated = $request->validate(['side' => ['required', 'in:start,end'], 'date' => ['required', 'date']]);
         $isStart = $validated['side'] === 'start';

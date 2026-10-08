@@ -522,7 +522,7 @@ class ProjectController extends Controller
      */
     public function show(Request $request, Project $project): View|Response
     {
-        abort_unless($request->user()->can('project.view'), 403);
+        abort_unless($project->mayBeOpenedBy($request->user()), 403);
 
         RecentlyViewedProject::record($project, $request->user());
 
@@ -578,7 +578,7 @@ class ProjectController extends Controller
 
     public function peopleField(Request $request, Project $project): View
     {
-        abort_unless($request->user()->can('project.view'), 403);
+        abort_unless($project->mayBeOpenedBy($request->user()), 403);
 
         $project->loadMissing(['projectPeople.person', 'projectPeople.functionGroup', 'functionGroupHours', 'projectTemplate.functionGroups']);
 
@@ -598,7 +598,7 @@ class ProjectController extends Controller
      */
     public function planningGroups(Request $request, Project $project): JsonResponse
     {
-        abort_unless($request->user()->can('project.view') && $request->user()->can('planning.view'), 403);
+        abort_unless($project->mayBeOpenedBy($request->user()) && $request->user()->can('planning.view'), 403);
 
         $project->loadMissing(['projectPeople.person', 'projectPeople.functionGroup', 'functionGroupHours', 'projectTemplate.functionGroups']);
         $allFunctionGroups = $this->functionGroupsWithEligibleMembers($project, $request);
@@ -622,7 +622,7 @@ class ProjectController extends Controller
      */
     public function planningPeriod(Request $request, Project $project): JsonResponse
     {
-        abort_unless($request->user()->can('project.view') && $request->user()->can('planning.view'), 403);
+        abort_unless($project->mayBeOpenedBy($request->user()) && $request->user()->can('planning.view'), 403);
 
         return response()->json([
             'html' => view('projekte.partials.period-section', ['project' => $project, 'isOverlay' => $request->boolean('overlay', true)])->render(),
@@ -636,7 +636,7 @@ class ProjectController extends Controller
      */
     public function planningUtilization(Request $request, Project $project, ProjectPlanningCalculator $calculator): JsonResponse
     {
-        abort_unless($request->user()->can('project.view') && $request->user()->can('planning.view'), 403);
+        abort_unless($project->mayBeOpenedBy($request->user()) && $request->user()->can('planning.view'), 403);
 
         $data = ProjectUtilization::for(
             $project,
@@ -1324,7 +1324,7 @@ class ProjectController extends Controller
      */
     public function zeitenPersonBreakdown(Request $request, Project $project): Response
     {
-        abort_unless($request->user()->can('project.view'), 403);
+        abort_unless($project->mayBeOpenedBy($request->user()), 403);
         abort_unless($request->user()->can('planning.view'), 403);
 
         // Die gewählte Woche wird je Benutzer gemerkt (Ralf, 2026-10-05), damit sie beim Blättern zwischen Projekten
@@ -1445,7 +1445,7 @@ class ProjectController extends Controller
      */
     public function zeitenGesamtansicht(Request $request, Project $project): Response
     {
-        abort_unless($request->user()->can('project.view'), 403);
+        abort_unless($project->mayBeOpenedBy($request->user()), 403);
         $data = $request->validate([
             'mode' => ['nullable', Rule::in(['project', 'person', 'job'])],
             'person_id' => ['nullable', 'integer'],
@@ -2048,15 +2048,17 @@ class ProjectController extends Controller
     }
 
     /**
-     * Projekte, die in der Liste erscheinen (Ralf, 2026-10-08): Wer die Details nicht öffnen darf (Recht project.view), sieht
-     * die Projekte nicht - außer die Organisation erlaubt das ausdrücklich (Stammdaten, Standard: nein).
+     * Projekte, die in der Liste erscheinen (Ralf, 2026-10-08): wer alle Projekte öffnen darf (Recht project.view, Admins) oder
+     * dessen Organisation die Anzeige erlaubt (Stammdaten, Standard: nein), sieht alle; sonst nur Projekte, an denen die Person
+     * als Projektbeteiligte eingetragen ist.
      */
     private function listableProjects(): Builder
     {
         $query = Project::query();
+        $user = auth()->user();
         $showAll = (bool) Tenant::query()->whereKey(CurrentTenant::id())->value('show_unopenable_projects');
-        if (! $showAll && ! auth()->user()?->can('project.view')) {
-            $query->whereRaw('1 = 0');
+        if (! $showAll && ! $user?->can('project.view')) {
+            $query->whereIn('projects.id', ProjectPerson::query()->where('person_id', (int) $user?->person_id)->select('project_id'));
         }
 
         return $query;

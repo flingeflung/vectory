@@ -24,7 +24,7 @@ class StammIdController extends Controller
     public function chain(Request $request, Project $project): View
     {
         abort_unless($project->tenant_id === CurrentTenant::id(), 404);
-        abort_unless($request->user()->can('project.view'), 403);
+        abort_unless($project->mayBeOpenedBy($request->user()), 403);
 
         return view('projekte.partials.stamm-id-chain', [
             'project' => $project,

@@ -182,9 +182,9 @@
                     <div class="rounded-md border border-gray-200 bg-gray-50 p-2">
                         <label class="flex items-center gap-2 text-sm text-gray-700">
                             <input type="checkbox" name="show_unopenable_projects" value="1" @checked($selectedTenant->show_unopenable_projects) class="rounded border-gray-300">
-                            {{ __('Projekte auch ohne Berechtigung in der Projektliste anzeigen') }}
+                            {{ __('Alle Projekte in der Projektliste anzeigen, auch ohne Beteiligung') }}
                         </label>
-                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Wenn nicht angehakt, sehen Personen ohne das Recht „Projekt: Details aufrufen“ keine Projekte in der Liste. Wenn angehakt, sehen sie die Projekte, können die Details aber nicht öffnen.') }}</p>
+                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Projekte, bei denen eine Person als Projektbeteiligte eingetragen ist, sieht sie immer. Wenn angehakt, sieht sie auch alle anderen Projekte in der Liste, kann deren Details aber nur mit dem Recht „Projekt: Details aufrufen“ öffnen. Wenn nicht angehakt, sieht sie ohne dieses Recht nur ihre eigenen Projekte.') }}</p>
                     </div>
                     <div class="rounded-md border border-gray-200 bg-gray-50 p-2">
                         <label class="flex items-center gap-2 text-sm text-gray-700">

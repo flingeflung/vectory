@@ -249,6 +249,20 @@ class Project extends Model
         return $this->belongsToMany(Market::class, 'project_market')->orderBy('sort');
     }
 
+    /**
+     * Details öffnen darf, wer das Recht "Projekt: Details aufrufen" hat (Admins immer) oder bei genau diesem Projekt als
+     * Projektbeteiligte eingetragen ist (Ralf, 2026-10-08; bei Verbundprojekten zählt nur das jeweilige Projekt selbst).
+     */
+    public function mayBeOpenedBy(?User $user): bool
+    {
+        if ($user === null) {
+            return false;
+        }
+
+        return $user->can('project.view')
+            || ($user->person_id !== null && $this->projectPeople()->where('person_id', $user->person_id)->exists());
+    }
+
     public function projectPeople(): HasMany
     {
         return $this->hasMany(ProjectPerson::class);

@@ -1504,7 +1504,6 @@
     "Projektbez.": "Project name",
     "Projektbezeichnung": "Project name",
     "Projekte": "Projects",
-    "Projekte auch ohne Berechtigung in der Projektliste anzeigen": "",
     "Projekte dieser Gruppe anzeigen": "Show projects in this group",
     "Projekte gesamt": "Total projects",
     "Projekte gruppieren": "Group projects",
@@ -1877,7 +1876,6 @@
     "Wenn eine Jobgruppe (gleicher Name) oder ein Jobtyp (gleiches Kürzel) hier schon existiert, wird sie übersprungen, nichts wird überschrieben. Zuordnungen zu Personen und gebuchte Stunden werden nicht übernommen.": "",
     "Wenn eine Kategorie inaktiv ist, bleibt sie bei bestehenden Projekten sichtbar, ist aber für neue nicht mehr wählbar.": "If a category is inactive, it remains visible in existing projects but can no longer be selected for new ones.",
     "Wenn jemand am Hauptprojekt :pn Stunden bucht, werden sie sofort nach diesen Prozenten auf die Unterprojekte verteilt - dort entstehen dann die eigentlichen Buchungen. Eine spätere Änderung der Prozente wirkt nur auf künftige Buchungen.": "",
-    "Wenn nicht angehakt, sehen Personen ohne das Recht „Projekt: Details aufrufen“ keine Projekte in der Liste. Wenn angehakt, sehen sie die Projekte, können die Details aber nicht öffnen.": "",
     "Wert": "",
     "Werte": "Values",
     "Wieder einblenden": "Show again",
@@ -2237,5 +2235,7 @@
     "– noch keine Einträge –": "– no entries yet –",
     "– ohne Rechte-Set –": "– without permission set –",
     "– zuerst Funktionsgruppe wählen –": "",
-    "„:name\" teilen mit:": "Share “:name\" with:"
+    "„:name\" teilen mit:": "Share “:name\" with:",
+    "Alle Projekte in der Projektliste anzeigen, auch ohne Beteiligung": "Show all projects in the project list, even without participation",
+    "Projekte, bei denen eine Person als Projektbeteiligte eingetragen ist, sieht sie immer. Wenn angehakt, sieht sie auch alle anderen Projekte in der Liste, kann deren Details aber nur mit dem Recht „Projekt: Details aufrufen“ öffnen. Wenn nicht angehakt, sieht sie ohne dieses Recht nur ihre eigenen Projekte.": "A person always sees projects where they are entered as a project participant. If checked, they also see all other projects in the list, but can only open their details with the right \"Project: open details\". If not checked, without this right they only see their own projects."
 }

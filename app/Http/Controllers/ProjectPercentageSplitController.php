@@ -24,7 +24,7 @@ class ProjectPercentageSplitController extends Controller
         // Ralf, 2026-09-28: eigenes Recht project.jobload.manage statt project.edit
         // (siehe Migration) - ohne das Recht bleibt der Reiter sichtbar, nur lesend
         // (siehe canManageJobload im View).
-        abort_unless($request->user()->can('project.view'), 403);
+        abort_unless($project->mayBeOpenedBy($request->user()), 403);
 
         $unterprojekte = $this->unterprojekte($project);
         abort_unless($project->verbund_rolle === 1 && $unterprojekte->isNotEmpty(), 404);

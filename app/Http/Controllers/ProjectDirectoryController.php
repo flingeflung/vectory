@@ -14,7 +14,7 @@ class ProjectDirectoryController extends Controller
 
     public function show(Request $request, Project $project): View
     {
-        abort_unless($request->user()->can('project.view'), 403);
+        abort_unless($project->mayBeOpenedBy($request->user()), 403);
 
         // AV ist Standard, das SV nur mit Recht project.directory.locked
         // (Ralf, 2026-09-26) - ohne Recht existiert der SV-Reiter nicht.

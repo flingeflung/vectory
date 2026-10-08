@@ -12,7 +12,6 @@ return [
     'calendar-entry' => 'D-77PW',
     'checklisten-auswaehlen' => 'D-0681',
     'company-manager' => 'D-K137',
-    'confirm-user-deletion' => 'D-TQUR',
     'critical-project-details' => 'D-E2OZ',
     'critical-project-organizations' => 'D-VIQW',
     'critical-project-rules' => 'D-G032',
