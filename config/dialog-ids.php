@@ -27,6 +27,7 @@ return [
     'jobload-week-detail' => 'D-U7GO',
     'kacheln-verwalten' => 'D-9TT8',
     'legacy-role-manager' => 'D-R37O',
+    'mail-timers' => 'D-3S92',
     'morph' => 'D-4BH2',
     'multichange' => 'D-EWKG',
     'papierformate-katalog' => 'D-2BOP',
