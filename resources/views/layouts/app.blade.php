@@ -2718,6 +2718,19 @@
                     const response = await fetch('/projekte/' + id + currentProjectQuery(), {
                         headers: { 'X-Overlay': '1' },
                     });
+                    if (!response.ok) {
+                        // Keine Rohfehler im Overlay anzeigen: Hinweis statt Fehlertext, Overlay bleibt zu bzw. behält den alten Inhalt.
+                        hideLoading();
+                        if (!isPaging) {
+                            window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-overlay' }));
+                        }
+                        await window.notifyDialog(response.status === 403
+                            ? {{ \Illuminate\Support\Js::from(__('Für dieses Projekt fehlt Ihnen die Berechtigung, die Details zu öffnen.')) }}
+                            : (response.status === 404
+                                ? {{ \Illuminate\Support\Js::from(__('Dieses Projekt wurde nicht gefunden.')) }}
+                                : {{ \Illuminate\Support\Js::from(__('Das Projekt konnte nicht geöffnet werden. Bitte versuchen Sie es erneut.')) }}));
+                        return;
+                    }
                     body().innerHTML = await response.text();
                     hideLoading();
                     savedSnapshot = null;
