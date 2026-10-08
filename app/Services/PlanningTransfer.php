@@ -49,7 +49,8 @@ final class PlanningTransfer
 
         return [
             self::WORKFLOW => (bool) $project->workflow_id,
-            self::DURATIONS => $rows()->where(fn ($query) => $query->whereNotNull('duration_days')->orWhereNotNull('duration_locked'))->exists(),
+            // Dauern und Sperren hat jedes Projekt mit Arbeitsschritten (eigene Werte oder die Voreinstellung des Workflows)
+            self::DURATIONS => (bool) $project->workflow_id && WorkflowStep::query()->where('workflow_id', $project->workflow_id)->where('lifecycle_status', 2)->exists(),
             self::PLANNED_HOURS => (bool) $project->project_template_id || $project->functionGroupHours()->exists(),
             self::PEOPLE => $project->projectPeople()->exists(),
             self::MILESTONES => (int) $project->schedule_model === 2
@@ -136,17 +137,13 @@ final class PlanningTransfer
             return ['skipped', __('Nur zwischen Projekten mit demselben Workflow möglich.')];
         }
 
+        // Das Ziel bekommt genau die Dauern und Sperren der Quelle - auch deren Voreinstellung des Workflows (leere Werte setzen eigene Werte
+        // des Ziels zurück)
         $sourceRows = ProjectWorkflowStep::query()->where('project_id', $source->id)->get()->keyBy('workflow_step_id');
-        if ($sourceRows->every(fn (ProjectWorkflowStep $row) => $row->duration_days === null && $row->duration_locked === null)) {
-            return ['skipped', __('Das Quellprojekt hat keine eigenen Dauern oder Sperren.')];
-        }
 
         $changed = 0;
         foreach (WorkflowStep::query()->where('workflow_id', $target->workflow_id)->get() as $step) {
-            $from = $sourceRows->get($step->id);
-            if ($from === null) {
-                continue;
-            }
+            $from = $sourceRows->get($step->id) ?? new ProjectWorkflowStep(['duration_days' => null, 'duration_locked' => null]);
             $row = ProjectWorkflowStep::query()->firstOrCreate(
                 ['project_id' => $target->id, 'workflow_step_id' => $step->id],
                 ['tenant_id' => $target->tenant_id, 'sort' => $step->sort]

@@ -229,8 +229,10 @@ class PlanningTransferTest extends TestCase
 
         $this->assertSame($template->id, (int) $target->fresh()->project_template_id);
         $this->assertSame(1, $target->projectPeople()->count());
+        // Dauern/Sperren: das Ziel bekommt die der Quelle - hier die Voreinstellung des Workflows, eigene Werte des Ziels entfallen
         $row = $this->stepRow($target, $this->steps[0], []);
-        $this->assertSame(5, (int) $row->duration_days);
+        $this->assertNull($row->duration_days);
+        // die Termine am Schritt (altes Terminmodell) bleiben, weil die Quelle keine hat
         $this->assertSame('2027-03-20', $row->due_date->toDateString());
     }
 

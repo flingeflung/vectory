@@ -730,8 +730,9 @@
             </thead>
             <tbody>
                 <template x-for="row in tableRows" :key="row.key">
-                    <tr class="border-t border-gray-100" :class="row.type === 'phase' && hover === row.i ? 'bg-gray-50' : ''" @mouseenter="hover = row.type === 'phase' ? row.i : null" @mouseleave="hover = null">
-                        <td class="py-0.5 pr-1">
+                    <tr class="h-8 border-t border-gray-100" :class="row.type === 'phase' && hover === row.i ? 'bg-gray-50' : ''" @mouseenter="hover = row.type === 'phase' ? row.i : null" @mouseleave="hover = null">
+                        <td class="whitespace-nowrap py-0 align-middle pr-1">
+                            <div class="flex h-6 items-center gap-1">
                             <template x-if="row.type === 'phase'">
                                 <div class="flex items-center gap-1">
                                     <span class="inline-block h-3 w-3 shrink-0 rounded-sm" :style="{ backgroundColor: palette[row.i % palette.length] }"></span>
@@ -751,52 +752,62 @@
                             <template x-if="row.type === 'milestone'">
                                 <span class="ml-0.5 inline-block h-2.5 w-2.5 rotate-45 bg-indigo-600 align-middle" :title="@js(__('Meilenstein'))"></span>
                             </template>
+                        </div>
                         </td>
-                        <td class="py-0.5 pr-2">
+                        <td class="whitespace-nowrap py-0 align-middle pr-2">
+                            <div class="flex h-6 items-center gap-1">
                             <template x-if="row.type === 'phase'">
                                 <span class="block max-w-[16rem] truncate font-medium text-gray-700" x-text="steps[row.i].title" :title="steps[row.i].title"></span>
                             </template>
                             <template x-if="row.type === 'milestone'">
                                 <span class="block max-w-[16rem] truncate text-gray-700" x-text="row.m.title" :title="row.m.title"></span>
                             </template>
+                        </div>
                         </td>
-                        <td class="py-0.5 pr-2 text-gray-500">
+                        <td class="whitespace-nowrap py-0 align-middle pr-2 text-gray-500">
+                            <div class="flex h-6 items-center gap-1">
                             <span class="inline-flex items-center gap-1">
                                 <span x-show="row.type === 'phase'" x-text="dateDe(startIso(row.i))" :title="@js(__('Beginn der Phase (berechnet)'))"></span>
                                 @if ((int) $project->schedule_model === 2)
                                     <template x-if="row.type === 'phase' && canEditPeriod">
-                                        <button type="button" @click="openFix('step_start:' + steps[row.i].id, @js(__('Start von')) + ' ' + steps[row.i].title, startIso(row.i))" class="rounded p-0.5 text-gray-300 hover:bg-gray-100 hover:text-gray-700" title="{{ __('Fixpunkt: Der Projektstart wird so gesetzt, dass diese Phase an einem Datum Ihrer Wahl beginnt.') }}"><svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1.2" fill="currentColor" /></svg></button>
+                                        <button type="button" @click="openFix('step_start:' + steps[row.i].id, @js(__('Start von')) + ' ' + steps[row.i].title, startIso(row.i))" class="inline-flex h-6 w-6 items-center justify-center rounded text-gray-300 hover:bg-gray-100 hover:text-gray-700" title="{{ __('Fixpunkt hier setzen, um die Termine neu zu berechnen') }}"><x-icon name="target" class="h-3.5 w-3.5" /></button>
                                     </template>
                                 @endif
                             </span>
+                        </div>
                         </td>
-                        <td class="py-0.5 pr-2">
+                        <td class="whitespace-nowrap py-0 align-middle pr-2">
+                            <div class="flex h-6 items-center gap-1">
                             <template x-if="row.type === 'phase'">
                                 <input
                                     type="date"
                                     :value="endIso(row.i)"
                                     :disabled="steps[row.i].locked"
                                     @change="setEndDate(row.i, $event.target.value, $event.target)"
-                                    class="w-[6.5rem] rounded border-gray-300 px-1 py-px text-xs [&::-webkit-calendar-picker-indicator]:m-0 [&::-webkit-calendar-picker-indicator]:p-0 disabled:bg-gray-50 disabled:text-gray-500"
+                                    class="w-[6.5rem] h-6 rounded border-gray-300 px-1 py-0 text-xs [&::-webkit-calendar-picker-indicator]:m-0 [&::-webkit-calendar-picker-indicator]:p-0 disabled:bg-gray-50 disabled:text-gray-500"
                                     title="{{ __('Berechnetes Ende der Phase') }}"
                                 >
                             </template>
                             <span x-show="row.type === 'milestone'" class="text-gray-700" x-text="dateDe(row.m.date)"></span>
                             @if ((int) $project->schedule_model === 2)
                                 <template x-if="row.type === 'phase' && canEditPeriod">
-                                    <button type="button" @click="openFix('step_end:' + steps[row.i].id, @js(__('Ende von')) + ' ' + steps[row.i].title, endIso(row.i))" class="ml-0.5 rounded p-0.5 text-gray-300 hover:bg-gray-100 hover:text-gray-700 align-middle" title="{{ __('Fixpunkt: Der Projektstart wird so gesetzt, dass diese Phase an einem Datum Ihrer Wahl endet.') }}"><svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1.2" fill="currentColor" /></svg></button>
+                                    <button type="button" @click="openFix('step_end:' + steps[row.i].id, @js(__('Ende von')) + ' ' + steps[row.i].title, endIso(row.i))" class="inline-flex h-6 w-6 items-center justify-center rounded text-gray-300 hover:bg-gray-100 hover:text-gray-700" title="{{ __('Fixpunkt hier setzen, um die Termine neu zu berechnen') }}"><x-icon name="target" class="h-3.5 w-3.5" /></button>
                                 </template>
                                 <template x-if="row.type === 'milestone' && canEditPeriod && row.m.anchor_type !== 'fixed'">
-                                    <button type="button" @click="openFix('milestone:' + row.m.id, row.m.title, row.m.date)" class="ml-0.5 rounded p-0.5 text-gray-300 hover:bg-gray-100 hover:text-gray-700 align-middle" title="{{ __('Fixpunkt: Der Projektstart wird so gesetzt, dass dieser Meilenstein an einem Datum Ihrer Wahl liegt.') }}"><svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1.2" fill="currentColor" /></svg></button>
+                                    <button type="button" @click="openFix('milestone:' + row.m.id, row.m.title, row.m.date)" class="inline-flex h-6 w-6 items-center justify-center rounded text-gray-300 hover:bg-gray-100 hover:text-gray-700" title="{{ __('Fixpunkt hier setzen, um die Termine neu zu berechnen') }}"><x-icon name="target" class="h-3.5 w-3.5" /></button>
                                 </template>
                             @endif
+                        </div>
                         </td>
-                        <td class="py-0.5 pr-2 text-gray-500">
+                        <td class="whitespace-nowrap py-0 align-middle pr-2 text-gray-500">
+                            <div class="flex h-6 items-center gap-1">
                             <span x-show="row.type === 'phase'" x-text="steps[row.i].end_name" :title="steps[row.i].end_name"></span>
                             <span x-show="row.type === 'milestone'" x-text="row.m.rule"></span>
+                        </div>
                         </td>
-                        <td class="py-0.5 pr-2 text-gray-500" x-text="weekNo(row.date)"></td>
-                        <td class="py-0.5 pr-2">
+                        <td class="whitespace-nowrap py-0 align-middle pr-2 text-gray-500" x-text="weekNo(row.date)"></td>
+                        <td class="whitespace-nowrap py-0 align-middle pr-2">
+                            <div class="flex h-6 items-center gap-1">
                             <template x-if="row.type === 'phase'">
                                 <input
                                     type="number"
@@ -806,19 +817,22 @@
                                     @focus="$event.target.select()"
                                     @mouseup="if ($event.offsetX < $event.target.clientWidth - 18) $event.preventDefault()"
                                     @change="setDays(row.i, $event.target.value, $event.target)"
-                                    class="w-14 rounded border-gray-300 px-1 py-px text-right text-xs disabled:bg-gray-50 disabled:text-gray-500"
+                                    class="h-6 w-14 rounded border-gray-300 px-1 py-0 text-right text-xs disabled:bg-gray-50 disabled:text-gray-500"
                                     :title="'{{ __('Dauer in Arbeitstagen (AT)') }}' + (steps[row.i].fixed ? ' – {{ __('keine Dauer im Workflow eingetragen, zählt 1 Tag') }}' : ' – {{ __('laut Workflow') }}: ' + steps[row.i].workflow_days)"
                                 >
                             </template>
+                        </div>
                         </td>
                         @if ((int) $project->schedule_model === 2)
-                            <td class="py-0.5">
+                            <td class="whitespace-nowrap py-0 align-middle">
+                            <div class="flex h-6 items-center gap-1">
                                 <template x-if="row.type === 'milestone' && canEditPeriod">
                                     <button type="button" @click="editMs(row.m)" class="rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700" title="{{ __('Meilenstein ändern') }}">
                                         <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" /></svg>
                                     </button>
                                 </template>
-                            </td>
+                            </div>
+                        </td>
                         @endif
                     </tr>
                 </template>
