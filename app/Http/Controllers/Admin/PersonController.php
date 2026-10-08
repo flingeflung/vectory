@@ -633,8 +633,8 @@ class PersonController extends Controller
     }
 
     /**
-     * Person sofort abmelden (Ralf, 2026-10-08): alle laufenden Sitzungen der Person werden beendet, optional wird sie
-     * zusätzlich deaktiviert (dann ist auch die erneute Anmeldung gesperrt). Der Benutzer muss sich neu anmelden.
+     * Person sofort abmelden (Ralf, 2026-10-08): alle laufenden Sitzungen der Person werden beendet, die Person muss sich
+     * neu anmelden. Soll sie nicht wieder hinein, wird sie separat über "Aktiv" deaktiviert.
      */
     public function forceLogout(Request $request, Person $person): RedirectResponse|Response
     {
@@ -647,12 +647,7 @@ class PersonController extends Controller
         \Illuminate\Support\Facades\DB::table('sessions')->where('user_id', $user->id)->delete();
         $user->forceFill(['remember_token' => \Illuminate\Support\Str::random(60)])->save();
 
-        $deactivate = $request->boolean('deactivate');
-        if ($deactivate) {
-            $person->update(['active' => false]);
-        }
-
-        return $this->accountResponse($request, $person, null, $deactivate ? 'logged-out-deactivated' : 'logged-out');
+        return $this->accountResponse($request, $person, null, 'logged-out');
     }
 
     private function accountResponse(Request $request, Person $person, ?\Illuminate\Support\MessageBag $errors, string $status = 'saved'): RedirectResponse|Response

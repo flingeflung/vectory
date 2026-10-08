@@ -35,16 +35,6 @@ class ForceLogoutTest extends TestCase
         $this->assertTrue((bool) $person->fresh()->active);
     }
 
-    public function test_sessions_are_ended_and_person_deactivated_on_request(): void
-    {
-        [$admin, $person, $user] = $this->setUpPerson();
-
-        $this->actingAs($admin)->post(route('admin.personen.force-logout', $person), ['deactivate' => 1])->assertRedirect();
-
-        $this->assertSame(0, DB::table('sessions')->where('user_id', $user->id)->count());
-        $this->assertFalse((bool) $person->fresh()->active);
-    }
-
     public function test_a_normal_user_may_not_force_logout(): void
     {
         [, $person, $user] = $this->setUpPerson();

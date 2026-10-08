@@ -281,6 +281,7 @@
     "Bearbeitungsstatus": "Processing status",
     "Beendet": "Ended",
     "Beendet alle laufenden Sitzungen der Person sofort. Sie muss sich neu anmelden.": "Ends all running sessions of the person immediately. They have to log in again.",
+    "Beendet alle laufenden Sitzungen der Person sofort. Sie muss sich neu anmelden. Soll die Person auch danach nicht wieder hinein, entfernen Sie zusätzlich das Häkchen bei „Aktiv“ und speichern.": "Ends all running sessions of the person immediately. They have to log in again. If the person should not get back in afterwards, also remove the tick at \"Active\" and save.",
     "Beendete und verworfene Projekte werden nicht mehr geprüft.": "",
     "Begriff": "",
     "Behält die Stamm-ID :id.": "",
