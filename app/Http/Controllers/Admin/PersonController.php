@@ -632,6 +632,29 @@ class PersonController extends Controller
         return $this->accountResponse($request, $person, null, 'password-link-sent');
     }
 
+    /**
+     * Person sofort abmelden (Ralf, 2026-10-08): alle laufenden Sitzungen der Person werden beendet, optional wird sie
+     * zusätzlich deaktiviert (dann ist auch die erneute Anmeldung gesperrt). Der Benutzer muss sich neu anmelden.
+     */
+    public function forceLogout(Request $request, Person $person): RedirectResponse|Response
+    {
+        abort_unless($this->personVisibleInCurrentTenant($request, $person), 404);
+        abort_unless($this->personFullyEditableByCurrentUser($request, $person), 403);
+        $this->abortIfProtectedFromEditing($request, $person);
+        abort_unless($person->user, 404);
+
+        $user = $person->user;
+        \Illuminate\Support\Facades\DB::table('sessions')->where('user_id', $user->id)->delete();
+        $user->forceFill(['remember_token' => \Illuminate\Support\Str::random(60)])->save();
+
+        $deactivate = $request->boolean('deactivate');
+        if ($deactivate) {
+            $person->update(['active' => false]);
+        }
+
+        return $this->accountResponse($request, $person, null, $deactivate ? 'logged-out-deactivated' : 'logged-out');
+    }
+
     private function accountResponse(Request $request, Person $person, ?\Illuminate\Support\MessageBag $errors, string $status = 'saved'): RedirectResponse|Response
     {
         $person->unsetRelation('user');
