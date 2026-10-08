@@ -85,6 +85,7 @@ class WorkflowsArea implements PresetArea
                 }
                 WorkflowGroupWindow::query()->withoutGlobalScope('tenant')->where('workflow_id', $existing->id)->delete();
                 \App\Models\WorkflowMilestone::query()->withoutGlobalScopes()->where('workflow_id', $existing->id)->delete();
+                \App\Models\WorkflowMailTimer::query()->withoutGlobalScopes()->where('workflow_id', $existing->id)->delete();
                 WorkflowStep::query()->withoutGlobalScope('tenant')->where('workflow_id', $existing->id)->delete();
                 $existing->update($source->only(['short_name', 'description', 'active', 'published_at']));
                 $notes = $this->copySteps($source, $existing, $targetTenantId);
@@ -172,7 +173,8 @@ class WorkflowsArea implements PresetArea
 
         // Einsatzplan (von/bis-Schritt je Funktionsgruppe) mitnehmen, nur für im Ziel freigeschaltete Gruppen.
         WorkflowGroupWindow::copyToWorkflow($source, $target, $stepMap, $available);
-        \App\Models\WorkflowMilestone::copyToWorkflow($source, $target, $stepMap);
+        $milestoneMap = \App\Models\WorkflowMilestone::copyToWorkflow($source, $target, $stepMap);
+        \App\Models\WorkflowMailTimer::copyToWorkflow($source, $target, $stepMap, $milestoneMap);
 
         return array_values($missing);
     }

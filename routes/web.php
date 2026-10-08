@@ -342,6 +342,9 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     Route::delete('/workflows/schritte/{step}', [WorkflowController::class, 'stepDestroy'])->name('workflows.schritte.destroy');
     Route::post('/workflows/ansicht', [WorkflowController::class, 'saveViewState'])->name('workflows.view-state');
     Route::post('/workflows/{workflow}/einsatzplan', [WorkflowController::class, 'saveDeploymentPlan'])->name('workflows.deployment-plan');
+    Route::post('/workflows/{workflow}/erinnerungen', [WorkflowController::class, 'mailTimerStore'])->name('workflows.mailtimers.store');
+    Route::patch('/workflows/{workflow}/erinnerungen/{mailTimer}', [WorkflowController::class, 'mailTimerUpdate'])->name('workflows.mailtimers.update');
+    Route::delete('/workflows/{workflow}/erinnerungen/{mailTimer}', [WorkflowController::class, 'mailTimerDestroy'])->name('workflows.mailtimers.destroy');
     Route::post('/workflows/{workflow}/meilensteine', [WorkflowController::class, 'milestoneStore'])->name('workflows.milestones.store');
     Route::patch('/workflows/{workflow}/meilensteine/{milestone}', [WorkflowController::class, 'milestoneUpdate'])->name('workflows.milestones.update');
     Route::delete('/workflows/{workflow}/meilensteine/{milestone}', [WorkflowController::class, 'milestoneDestroy'])->name('workflows.milestones.destroy');

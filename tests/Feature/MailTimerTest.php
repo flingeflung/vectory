@@ -270,4 +270,56 @@ class MailTimerTest extends TestCase
         $this->timer($project);
         $this->actingAs($admin)->get(route('projekte.show', $project), ['X-Overlay' => '1'])->assertOk()->assertSee('window.openMailTimers('.$project->id.')', false);
     }
+
+    public function test_workflow_admin_manages_standard_reminders_and_freezes_them_when_published(): void
+    {
+        $admin = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'organization_admin']);
+        $this->actingAs($admin);
+        $milestone = WorkflowMilestone::query()->create(['tenant_id' => $this->tenant->id, 'workflow_id' => $this->workflow->id, 'name' => 'Messe', 'anchor_type' => 'workflow_end', 'offset_days' => 1]);
+        $payload = ['workflow_step_id' => $this->steps['b']->id, 'mail_template_id' => $this->template->id, 'reference' => 'milestone:'.$milestone->id, 'offset_days' => -49, 'function_group_ids' => [$this->group->id], 'only_if_in_step' => 1];
+
+        $this->post(route('admin.workflows.mailtimers.store', $this->workflow), $payload)->assertRedirect();
+        $row = WorkflowMailTimer::query()->where('workflow_id', $this->workflow->id)->sole();
+        $this->assertSame('milestone', $row->reference_type);
+        $this->assertSame($milestone->id, $row->reference_milestone_id);
+        $this->assertSame(-49, $row->offset_days);
+
+        $this->patch(route('admin.workflows.mailtimers.update', [$this->workflow, $row]), [...$payload, 'reference' => 'phase_end:'.$this->steps['b']->id, 'offset_days' => -7])->assertRedirect();
+        $row->refresh();
+        $this->assertSame('phase_end', $row->reference_type);
+        $this->assertNull($row->reference_milestone_id);
+        $this->assertSame($this->steps['b']->id, $row->reference_step_id);
+
+        $this->get(route('admin.workflows', ['workflow' => $this->workflow->id]))->assertOk()->assertSee('Erinnerungen per Mail')->assertSee('1 Woche vor Ende von');
+
+        $this->post(route('admin.workflows.mailtimers.store', $this->workflow), [...$payload, 'function_group_ids' => []])->assertSessionHasErrors();
+        $this->delete(route('admin.workflows.mailtimers.destroy', [$this->workflow, $row]))->assertRedirect();
+        $this->assertSame(0, WorkflowMailTimer::query()->where('workflow_id', $this->workflow->id)->count());
+
+        $this->workflow->update(['published_at' => now()]);
+        $this->postJson(route('admin.workflows.mailtimers.store', $this->workflow), $payload)->assertStatus(422);
+    }
+
+    public function test_new_version_takes_standard_reminders_along_with_translated_references(): void
+    {
+        $admin = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'organization_admin']);
+        $this->actingAs($admin);
+        $milestone = WorkflowMilestone::query()->create(['tenant_id' => $this->tenant->id, 'workflow_id' => $this->workflow->id, 'name' => 'Messe', 'anchor_type' => 'workflow_end', 'offset_days' => 1]);
+        WorkflowMailTimer::query()->create([
+            'tenant_id' => $this->tenant->id, 'workflow_id' => $this->workflow->id, 'workflow_step_id' => $this->steps['b']->id, 'mail_template_id' => $this->template->id,
+            'reference_type' => 'milestone', 'reference_milestone_id' => $milestone->id, 'offset_days' => -49, 'only_if_in_step' => true, 'function_group_ids' => [$this->group->id],
+        ]);
+
+        $this->workflow->update(['published_at' => now()]);
+        $this->post(route('admin.workflows.new-version', $this->workflow))->assertRedirect();
+
+        $copy = Workflow::query()->where('tenant_id', $this->tenant->id)->where('id', '!=', $this->workflow->id)->sole();
+        $copied = WorkflowMailTimer::query()->where('workflow_id', $copy->id)->sole();
+        $newStep = WorkflowStep::query()->where('workflow_id', $copy->id)->where('title', 'B')->sole();
+        $newMilestone = WorkflowMilestone::query()->where('workflow_id', $copy->id)->sole();
+        $this->assertSame($newStep->id, $copied->workflow_step_id);
+        $this->assertSame($newMilestone->id, $copied->reference_milestone_id);
+        $this->assertSame($this->template->id, $copied->mail_template_id);
+        $this->assertSame([$this->group->id], $copied->function_group_ids);
+    }
 }

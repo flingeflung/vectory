@@ -117,7 +117,7 @@ class WorkflowController extends Controller
 
                 return ['id' => $group->id, 'name' => $group->name, 'from' => min($from, $to), 'to' => max($from, $to)];
             });
-        $viewState = UserPreference::configFor((int) auth()->id(), UserPreference::WORKFLOW_VIEW) + ['einsatzplan' => true, 'schritte' => true, 'meilensteine' => true];
+        $viewState = UserPreference::configFor((int) auth()->id(), UserPreference::WORKFLOW_VIEW) + ['einsatzplan' => true, 'schritte' => true, 'meilensteine' => true, 'erinnerungen' => true];
         $milestones = $selectedWorkflow
             ? WorkflowMilestone::query()->where('workflow_id', $selectedWorkflow->id)->orderBy('sort')->orderBy('id')->get()
             : collect();
@@ -128,6 +128,8 @@ class WorkflowController extends Controller
             'workSteps' => $workSteps,
             'deploymentRows' => $deploymentRows,
             'milestones' => $milestones,
+            'mailTimers' => $selectedWorkflow ? \App\Models\WorkflowMailTimer::query()->where('workflow_id', $selectedWorkflow->id)->orderBy('id')->get() : collect(),
+            'mailTemplates' => \App\Models\MailTemplate::query()->where('tenant_id', $tenantId)->orderBy('name')->get(['id', 'name']),
             'viewState' => $viewState,
             'steps' => $steps,
             'isPublished' => $isPublished,
@@ -215,6 +217,70 @@ class WorkflowController extends Controller
         return redirect()->route('admin.workflows', ['workflow' => $workflow->id])->with('status', 'workflows-updated');
     }
 
+    /** Standard-Erinnerung (Mail-Timer-Vorlage) am Workflow-Schritt anlegen; nur solange der Workflow nicht veröffentlicht ist. */
+    public function mailTimerStore(Request $request, Workflow $workflow): RedirectResponse
+    {
+        $this->abortUnlessEditableMilestones($workflow);
+        \App\Models\WorkflowMailTimer::query()->create([...$this->validatedMailTimer($request, $workflow), 'tenant_id' => $workflow->tenant_id, 'workflow_id' => $workflow->id]);
+
+        return redirect()->route('admin.workflows', ['workflow' => $workflow->id])->with('status', 'workflows-updated');
+    }
+
+    public function mailTimerUpdate(Request $request, Workflow $workflow, \App\Models\WorkflowMailTimer $mailTimer): RedirectResponse
+    {
+        $this->abortUnlessEditableMilestones($workflow);
+        abort_unless($mailTimer->workflow_id === $workflow->id, 404);
+        $mailTimer->update($this->validatedMailTimer($request, $workflow));
+
+        return redirect()->route('admin.workflows', ['workflow' => $workflow->id])->with('status', 'workflows-updated');
+    }
+
+    public function mailTimerDestroy(Workflow $workflow, \App\Models\WorkflowMailTimer $mailTimer): RedirectResponse
+    {
+        $this->abortUnlessEditableMilestones($workflow);
+        abort_unless($mailTimer->workflow_id === $workflow->id, 404);
+        $mailTimer->delete();
+
+        return redirect()->route('admin.workflows', ['workflow' => $workflow->id])->with('status', 'workflows-updated');
+    }
+
+    /** @return array<string, mixed> */
+    private function validatedMailTimer(Request $request, Workflow $workflow): array
+    {
+        $validated = $request->validate([
+            'workflow_step_id' => ['required', 'integer'],
+            'mail_template_id' => ['required', 'integer'],
+            'reference' => ['required', 'string', 'regex:/\A(milestone|phase_end):\d+\z/'],
+            'offset_days' => ['nullable', 'integer', 'between:-3650,3650'],
+            'function_group_ids' => ['required', 'array', 'min:1'],
+            'function_group_ids.*' => ['integer'],
+            'only_if_in_step' => ['nullable', 'boolean'],
+        ], ['function_group_ids.required' => __('Bitte wählen Sie mindestens eine Funktionsgruppe als Empfänger.'), 'function_group_ids.min' => __('Bitte wählen Sie mindestens eine Funktionsgruppe als Empfänger.')]);
+
+        abort_unless(WorkflowStep::query()->where('workflow_id', $workflow->id)->whereKey($validated['workflow_step_id'])->exists(), 422, __('Bitte wählen Sie einen Schritt dieses Workflows.'));
+        abort_unless(\App\Models\MailTemplate::query()->where('tenant_id', $workflow->tenant_id)->whereKey($validated['mail_template_id'])->exists(), 422, __('Bitte wählen Sie eine Mail-Vorlage.'));
+
+        [$type, $referenceId] = explode(':', $validated['reference'], 2);
+        if ($type === 'milestone') {
+            abort_unless(WorkflowMilestone::query()->where('workflow_id', $workflow->id)->whereKey($referenceId)->exists(), 422, __('Bitte wählen Sie einen Meilenstein dieses Workflows.'));
+        } else {
+            abort_unless(WorkflowStep::query()->where('workflow_id', $workflow->id)->whereKey($referenceId)->exists(), 422, __('Bitte wählen Sie ein Phasenende dieses Workflows.'));
+        }
+        $groupIds = FunctionGroup::query()->availableForTenant((int) $workflow->tenant_id, false)->whereIn('id', $validated['function_group_ids'])->pluck('id')->map(fn ($id) => (int) $id)->all();
+        abort_if($groupIds === [], 422, __('Bitte wählen Sie mindestens eine Funktionsgruppe als Empfänger.'));
+
+        return [
+            'workflow_step_id' => (int) $validated['workflow_step_id'],
+            'mail_template_id' => (int) $validated['mail_template_id'],
+            'reference_type' => $type,
+            'reference_milestone_id' => $type === 'milestone' ? (int) $referenceId : null,
+            'reference_step_id' => $type === 'phase_end' ? (int) $referenceId : null,
+            'offset_days' => (int) ($validated['offset_days'] ?? 0),
+            'only_if_in_step' => $request->boolean('only_if_in_step', true),
+            'function_group_ids' => $groupIds,
+        ];
+    }
+
     private function abortUnlessEditableMilestones(Workflow $workflow): void
     {
         abort_unless($workflow->tenant_id === CurrentTenant::id(), 404);
@@ -254,7 +320,7 @@ class WorkflowController extends Controller
     public function saveViewState(Request $request): Response
     {
         $data = $request->validate([
-            'section' => ['required', Rule::in(['einsatzplan', 'schritte', 'meilensteine'])],
+            'section' => ['required', Rule::in(['einsatzplan', 'schritte', 'meilensteine', 'erinnerungen'])],
             'open' => ['required', 'boolean'],
         ]);
         $userId = $request->user()->id;
@@ -420,7 +486,8 @@ class WorkflowController extends Controller
             });
 
             WorkflowGroupWindow::copyToWorkflow($workflow, $newWorkflow, $stepIdMap);
-            WorkflowMilestone::copyToWorkflow($workflow, $newWorkflow, $stepIdMap);
+            $milestoneIdMap = WorkflowMilestone::copyToWorkflow($workflow, $newWorkflow, $stepIdMap);
+            \App\Models\WorkflowMailTimer::copyToWorkflow($workflow, $newWorkflow, $stepIdMap, $milestoneIdMap);
 
             $workflow->update(['superseded_by_id' => $newWorkflow->id, 'active' => false]);
 
@@ -491,7 +558,8 @@ class WorkflowController extends Controller
             });
 
             WorkflowGroupWindow::copyToWorkflow($workflow, $newWorkflow, $stepIdMap);
-            WorkflowMilestone::copyToWorkflow($workflow, $newWorkflow, $stepIdMap);
+            $milestoneIdMap = WorkflowMilestone::copyToWorkflow($workflow, $newWorkflow, $stepIdMap);
+            \App\Models\WorkflowMailTimer::copyToWorkflow($workflow, $newWorkflow, $stepIdMap, $milestoneIdMap);
 
             return $newWorkflow;
         });

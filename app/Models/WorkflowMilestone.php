@@ -38,17 +38,19 @@ class WorkflowMilestone extends Model
      * $stepIdMap: alte Schritt-ID => neue Schritt-ID; Meilensteine, deren Bezugsschritt nicht übertragen wurde, entfallen.
      *
      * @param  array<int, int>  $stepIdMap
+     * @return array<int, int> alte Meilenstein-ID => neue Meilenstein-ID
      */
-    public static function copyToWorkflow(Workflow $source, Workflow $target, array $stepIdMap): void
+    public static function copyToWorkflow(Workflow $source, Workflow $target, array $stepIdMap): array
     {
         $rows = static::query()->withoutGlobalScopes()->where('workflow_id', $source->id)->orderBy('sort')->orderBy('id')->get();
+        $milestoneIdMap = [];
 
         foreach ($rows as $row) {
             $stepId = $row->anchor_workflow_step_id;
             if ($stepId !== null && ! isset($stepIdMap[$stepId])) {
                 continue;
             }
-            static::query()->withoutGlobalScopes()->create([
+            $copy = static::query()->withoutGlobalScopes()->create([
                 'tenant_id' => $target->tenant_id,
                 'workflow_id' => $target->id,
                 'name' => $row->name,
@@ -59,6 +61,9 @@ class WorkflowMilestone extends Model
                 'is_market_launch' => $row->is_market_launch,
                 'check_direction' => $row->check_direction,
             ]);
+            $milestoneIdMap[$row->id] = $copy->id;
         }
+
+        return $milestoneIdMap;
     }
 }
