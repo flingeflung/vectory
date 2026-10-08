@@ -73,6 +73,10 @@ class ProjectCopyController extends Controller
             ->whereNotIn('key', self::NO_EFFECT_KEYS)
             ->orderBy('section')->orderBy('sort')
             ->pluck('label', 'key');
+        // Planungs-Bereiche der Vorlage (Ralf, 2026-10-08) erscheinen mit der Vorsilbe plan_ in derselben Übersicht
+        foreach (\App\Models\CopyTemplate::COPYABLE_PLANNING_PARTS as $planningPart) {
+            $copyableFields->put('plan_'.$planningPart, \App\Services\PlanningTransfer::parts()[$planningPart]);
+        }
 
         // Ralf: "wenn 'kopieren' angehakt ist, dann Prüfung, ob eine der
         // Personen inaktiv ist, und ggf. Hinweis geben, bevor der
@@ -138,6 +142,7 @@ class ProjectCopyController extends Controller
 
         $template = CopyTemplate::query()->with('fields')->findOrFail($validated['template_id']);
         $checkedKeys = $template->fields->pluck('key')->all();
+        $planningParts = $template->planningParts();
         // label_editable-System-Felder liegen NICHT im attributes-JSON wie
         // normale Zusatzfelder (Ausnahme aktuell: "Modell/System" - das ist
         // eine echte n:m-Verknüpfung, eigener switch-case unten, siehe
@@ -158,7 +163,7 @@ class ProjectCopyController extends Controller
         $userId = $request->user()->id;
 
         $newProjectIds = DB::transaction(function () use (
-            $sourceProject, $tenantId, $baseTitle, $count, $checkedKeys, $customFieldKeys, $asNewVersion, $incrementingAttributes, $sourceAttributes, $userId
+            $sourceProject, $tenantId, $baseTitle, $count, $checkedKeys, $customFieldKeys, $asNewVersion, $incrementingAttributes, $sourceAttributes, $userId, $planningParts
         ) {
             // Zeilen-Lock auf den Mandanten als Mutex - gleiches Prinzip wie
             // ProjectController::store(), damit mehrere gleichzeitige
@@ -333,6 +338,11 @@ class ProjectCopyController extends Controller
                         $plannedStep->update(['is_current' => true, 'started_at' => now()]);
                         $newProject->update(['status' => 0]);
                     }
+                }
+
+                // Planungs-Bereiche der Vorlage (Ralf, 2026-10-08): Dauern/Sperren, Planstunden, Termine - dieselben Bausteine wie "Planung übertragen"
+                if ($planningParts !== []) {
+                    app(\App\Services\PlanningTransfer::class)->transfer($sourceProject->fresh(), $newProject->fresh(), $planningParts, false);
                 }
 
                 $basePath = $this->directoryLocator->basePath($tenantId);

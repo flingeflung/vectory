@@ -141,4 +141,35 @@ class PlanningTransferTest extends TestCase
         $this->actingAs($plain)->get(route('projekte.planung-uebertragen.form', $mine))->assertForbidden();
         $this->actingAs($this->admin)->get(route('projekte.planung-uebertragen.form', $mine))->assertOk()->assertSee('Planung dieses Projekts an andere senden');
     }
+
+    public function test_copy_template_planning_parts_are_applied_when_copying_a_project(): void
+    {
+        $attribute = \App\Models\Attribute::query()->where('tenant_id', $this->tenant->id)->whereIn('key', ['workflow_id', 'title', 'project_type'])->get();
+        $workflowAttribute = $attribute->firstWhere('key', 'workflow_id');
+        $titleAttribute = $attribute->firstWhere('key', 'title');
+        if ($workflowAttribute === null || $titleAttribute === null) {
+            $this->markTestSkipped('System-Attribute fehlen in der Testdatenbank.');
+        }
+
+        $source = $this->project('270030', $this->workflow->id);
+        $this->stepRow($source, $this->steps[0], ['duration_days' => 7, 'duration_locked' => true, 'due_date' => '2027-03-12']);
+        $template = \App\Models\CopyTemplate::query()->create(['tenant_id' => $this->tenant->id, 'name' => 'Mit Planung', 'sort' => 1]);
+        $template->fields()->attach([$workflowAttribute->id, $titleAttribute->id]);
+
+        // Planungs-Bereiche in der Vorlage ein-/ausschalten
+        $this->actingAs($this->admin)->post(route('admin.projektkopie-vorlagen.planung.toggle', $template), ['part' => 'durations']);
+        $this->assertSame(['durations'], $template->fresh()->planningParts());
+        $this->actingAs($this->admin)->get(route('admin.projektkopie-vorlagen', ['vorlage' => $template->id]))->assertOk()->assertSee('Dauern und Sperren der Schritte')->assertSee('Termine der Schritte (Meilensteine)');
+        $this->actingAs($this->admin)->post(route('admin.projektkopie-vorlagen.planung.toggle', $template), ['part' => 'bogus'])->assertStatus(422);
+
+        $this->actingAs($this->admin)->post(route('projekte.kopieren.store', $source), [
+            'template_id' => $template->id, 'count' => 1, 'title' => 'Kopie', 'copy_mode' => 'new',
+        ]);
+        $copy = Project::query()->where('title', 'Kopie')->first();
+        $this->assertNotNull($copy);
+        $row = ProjectWorkflowStep::query()->where('project_id', $copy->id)->where('workflow_step_id', $this->steps[0]->id)->first();
+        $this->assertSame(7, (int) $row->duration_days);
+        $this->assertTrue((bool) $row->duration_locked);
+        $this->assertNull($row->due_date);   // Termine nur, wenn die Vorlage sie vorsieht
+    }
 }

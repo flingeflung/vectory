@@ -116,6 +116,31 @@
                     </div>
 
                     <div class="space-y-4">
+                        {{-- Planungs-Bereiche (Ralf, 2026-10-08): zusätzlich zu den Feldern --}}
+                        <div>
+                            <div class="mb-1.5 text-xs font-semibold text-gray-500">{{ __('Planung') }}</div>
+                            <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                                @foreach (\App\Services\PlanningTransfer::parts() as $partKey => $partLabel)
+                                    @continue(! in_array($partKey, \App\Models\CopyTemplate::COPYABLE_PLANNING_PARTS, true))
+                                    <label class="flex items-center gap-1.5 text-gray-700">
+                                        <input
+                                            type="checkbox"
+                                            class="rounded border-gray-300"
+                                            @checked(in_array($partKey, $selectedTemplate->planningParts(), true))
+                                            @click="
+                                                fetch({{ \Illuminate\Support\Js::from(route('admin.projektkopie-vorlagen.planung.toggle', $selectedTemplate)) }}, {
+                                                    method: 'POST',
+                                                    headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Content-Type': 'application/x-www-form-urlencoded' },
+                                                    body: 'part={{ $partKey }}',
+                                                });
+                                            "
+                                        >
+                                        {{ $partLabel }}
+                                    </label>
+                                @endforeach
+                            </div>
+                            <p class="mt-1 text-xs text-gray-400">{{ __('Dauern, Sperren und Termine werden nur kopiert, wenn auch der Workflow kopiert wird und dieselbe Workflow-Version gilt. Der Workflow und die Projektbeteiligten stehen bei den Feldern („Ablaufdaten“).') }}</p>
+                        </div>
                         @foreach ($sectionLabels as $section => $sectionLabel)
                             @if ($attributesBySection->get($section, collect())->isNotEmpty())
                                 <div>

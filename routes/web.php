@@ -392,6 +392,7 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     Route::delete('/projektkopie-vorlagen/{template}', [CopyTemplateController::class, 'destroy'])->name('projektkopie-vorlagen.destroy');
     Route::post('/projektkopie-vorlagen/{template}/feld', [CopyTemplateController::class, 'toggleField'])->name('projektkopie-vorlagen.feld.toggle');
     Route::post('/projektkopie-vorlagen/{template}/alle-markieren', [CopyTemplateController::class, 'markAll'])->name('projektkopie-vorlagen.alle-markieren');
+    Route::post('/projektkopie-vorlagen/{template}/planung', [CopyTemplateController::class, 'togglePlanningPart'])->name('projektkopie-vorlagen.planung.toggle');
     Route::post('/projektkopie-vorlagen/{template}/keinen-markieren', [CopyTemplateController::class, 'markNone'])->name('projektkopie-vorlagen.keinen-markieren');
 
     Route::post('/workflows/{workflow}/veroeffentlichen', [WorkflowController::class, 'publish'])->name('workflows.publish');

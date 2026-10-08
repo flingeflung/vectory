@@ -1,5 +1,6 @@
 @php
-    $templateFieldKeys = $templates->mapWithKeys(fn ($template) => [$template->id => $template->fields->pluck('key')->values()]);
+    $templateFieldKeys = $templates->mapWithKeys(fn ($template) => [$template->id => $template->fields->pluck('key')
+        ->merge(collect($template->planningParts())->map(fn ($part) => 'plan_'.$part))->values()]);
     $firstTemplateId = $templates->first()?->id;
 @endphp
 

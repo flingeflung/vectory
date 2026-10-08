@@ -395,6 +395,7 @@
     "Dauern an Projektzeitraum anpassen": "Adjust durations to project period",
     "Dauern anpassen?": "Adjust durations?",
     "Dauern und Sperren der Schritte": "Durations and locks of the steps",
+    "Dauern, Sperren und Termine werden nur kopiert, wenn auch der Workflow kopiert wird und dieselbe Workflow-Version gilt. Der Workflow und die Projektbeteiligten stehen bei den Feldern („Ablaufdaten“).": "Durations, locks and dates are only copied if the workflow is copied as well and the same workflow version applies. The workflow and the project participants are listed with the fields (\"Process data\").",
     "Deaktivieren": "",
     "Deine E-Mail-Adresse ist nicht bestätigt.": "Your email address has not been confirmed.",
     "Der Datensatz „:name“ von :person wird gelöscht. Das lässt sich nicht rückgängig machen.": "",

@@ -143,6 +143,19 @@ class CopyTemplateController extends Controller
         return redirect()->route('admin.projektkopie-vorlagen', ['vorlage' => $template->id]);
     }
 
+    /** Planungs-Bereich der Vorlage ein-/ausschalten (Ralf, 2026-10-08). */
+    public function togglePlanningPart(Request $request, CopyTemplate $template): RedirectResponse
+    {
+        abort_unless($template->tenant_id === CurrentTenant::id(), 404);
+        $part = (string) $request->input('part');
+        abort_unless(in_array($part, CopyTemplate::COPYABLE_PLANNING_PARTS, true), 422);
+
+        $parts = $template->planningParts();
+        $template->update(['planning_parts' => in_array($part, $parts, true) ? array_values(array_diff($parts, [$part])) : [...$parts, $part]]);
+
+        return redirect()->route('admin.projektkopie-vorlagen', ['vorlage' => $template->id]);
+    }
+
     public function markAll(CopyTemplate $template): RedirectResponse
     {
         abort_unless($template->tenant_id === CurrentTenant::id(), 404);
