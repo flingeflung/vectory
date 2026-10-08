@@ -81,13 +81,15 @@ Folgen:
 
 ## 6. Bestand
 
-- Vorhandene Testdaten werden nicht migriert. Der neue Code darf sie nicht beschädigen und zeigt sie nach der neuen Rechnung.
+- Die Vectory-Projekte der Organisationen **Heimat, Standard und Maschinen** werden in das neue Modell **migriert**. Die Vietto-Testdaten der Organisation Sanitär werden nicht migriert; der neue Code darf sie nicht beschädigen und zeigt sie nach der neuen Rechnung.
+- Die Migration überführt die heutigen Termine in Meilensteine und die Arbeitsschritte in Tasks. Wo ein vorhandener Termin nicht zur Kette der Dauern passt, bleibt er als Meilenstein mit festem Datum erhalten, und die Kette rechnet aus den Dauern. Ein Bericht listet die Projekte, bei denen dadurch ein Konflikt sichtbar wird.
+- Die Workflow-Vorlagen dieser Organisationen werden ebenfalls umgestellt: aus inaktiven „nur Termin“-Schritten werden Meilensteine, aus Terminen an Arbeitsschritten Meilensteine am Ende des Tasks.
 - Neue Projekte entstehen ausschließlich im neuen Modell. Eine ausgelieferte Neuinstallation enthält keine Altdaten.
 
 ## 7. Umbau in Stufen
 
 1. Konzept abstimmen und festhalten (dieses Dokument).
-2. Datenmodell und Rechnung: Tasks, Meilensteine, Kette, Fixpunkt, mit Tests.
+2. Datenmodell und Rechnung: Tasks, Meilensteine, Kette, Fixpunkt, mit Tests; Migration der Projekte und Vorlagen von Heimat, Standard und Maschinen mit Konfliktbericht.
 3. Ablaufplan als Tabelle und Diagramm mit Meilensteinen.
 4. Workflow-Verwaltung und Workflow-Ansicht für Meilensteine, Synchronität.
 5. Zielscheibe, Wegfall von „Termine berechnen“.
@@ -96,6 +98,6 @@ Folgen:
 ## 8. Offene Punkte
 
 1. Darstellung der Meilensteine in der Workflow-Ansicht.
-2. Wie die inaktiven „nur Termin“-Schritte der Vorlagen im neuen Modell angelegt werden (neu als Meilensteine eintragen oder per Regel umwandeln), da Altdaten nicht migriert werden.
+2. Genaue Umwandlungsregel für die inaktiven „nur Termin“-Schritte und für Termine, die nicht zur Kette passen (siehe Abschnitt 6).
 3. Ob ein Meilenstein später doch einen Task begrenzen können soll (heute bewusst nein).
 4. Verhalten der Verbundprojekte (Hauptprojekt und Unterprojekte) mit Fixpunkt und Meilensteinen.
