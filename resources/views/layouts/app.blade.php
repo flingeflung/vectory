@@ -159,6 +159,12 @@
                         window.location.href = response.url;
                         return new Promise(() => {});
                     }
+                    // Sitzung beendet (z.B. "Sofort abmelden" durch einen Admin) oder abgelaufen: bei 401/419 die ganze Seite
+                    // neu laden - der Server schickt dann zur Anmeldung, statt dass einzelne Funktionen Fehlermeldungen zeigen.
+                    if (response.status === 401 || response.status === 419) {
+                        window.location.reload();
+                        return new Promise(() => {});
+                    }
                     return response;
                 };
             })();
