@@ -197,6 +197,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/projekte/{project}/dauern-anpassen', [ProjectScheduleController::class, 'adjustDurations'])->name('projekte.termine.adjust-durations');
     Route::post('/projekte/{project}/zeitraum-setzen', [ProjectScheduleController::class, 'setPeriod'])->name('projekte.termine.set-period');
     Route::post('/projekte/{project}/dauern-speichern', [ProjectScheduleController::class, 'saveDurations'])->name('projekte.termine.save-durations');
+    Route::post('/projekte/{project}/fixpunkt', [ProjectScheduleController::class, 'fixPoint'])->name('projekte.termine.fixpunkt');
     Route::post('/projekte/{project}/meilensteine', [ProjectScheduleController::class, 'storeMilestone'])->name('projekte.meilensteine.store');
     Route::patch('/projekte/{project}/meilensteine/{milestone}', [ProjectScheduleController::class, 'updateMilestone'])->name('projekte.meilensteine.update');
     Route::delete('/projekte/{project}/meilensteine/{milestone}', [ProjectScheduleController::class, 'destroyMilestone'])->name('projekte.meilensteine.destroy');

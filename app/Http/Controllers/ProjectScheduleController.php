@@ -250,6 +250,37 @@ class ProjectScheduleController extends Controller
         return response()->json(['date' => $date->toDateString()]);
     }
 
+    /**
+     * Fixpunkt (Zielscheibe, Ralf, 2026-10-09): Das Projekt wird so verschoben, dass der gewählte Punkt (Start/Ende des Workflows oder einer
+     * Phase, ein Meilenstein) auf das Datum fällt. Einmalige Rechenaktion; mit preview=1 nur Vorschau des neuen Projektzeitraums.
+     */
+    public function fixPoint(Request $request, Project $project): JsonResponse
+    {
+        abort_unless($project->mayBeOpenedBy($request->user()) && $request->user()->can('workflow_step.due_date'), 403);
+        abort_unless((int) $project->schedule_model === 2, 422, __('Der Fixpunkt gibt es nur im neuen Terminmodell.'));
+
+        $validated = $request->validate([
+            'point' => ['required', 'string', 'regex:/\A(workflow_start|workflow_end|(step_start|step_end|milestone):\d+)\z/'],
+            'date' => ['required', 'date', 'after:2000-01-01', 'before:2100-01-01'],
+            'preview' => ['nullable', 'boolean'],
+        ]);
+
+        $scheduler = app(\App\Services\ProjectScheduler::class);
+        try {
+            $start = $scheduler->startDateFor($project, $validated['point'], \Carbon\CarbonImmutable::parse($validated['date']));
+        } catch (\InvalidArgumentException) {
+            abort(422, __('Dieser Punkt lässt sich nicht als Fixpunkt verwenden (z. B. ein Meilenstein mit festem Datum).'));
+        }
+
+        $plan = $scheduler->plan($project, $start);
+        $result = ['start' => $start->toDateString(), 'end' => $plan['end']?->toDateString()];
+        if (! $request->boolean('preview')) {
+            $project->update(['start_date' => $start->toDateString()]);
+        }
+
+        return response()->json($result);
+    }
+
     /** Meilenstein am Projekt anlegen (neues Terminmodell; docs/ablaufplan-konzept.md). */
     public function storeMilestone(Request $request, Project $project): JsonResponse
     {

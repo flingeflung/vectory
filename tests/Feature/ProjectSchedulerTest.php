@@ -317,4 +317,41 @@ class ProjectSchedulerTest extends TestCase
     {
         $this->assertSame([], app(ProjectScheduler::class)->milestonesByStep($this->project(model: 1)));
     }
+
+    public function test_fixed_point_previews_and_applies_the_new_project_period(): void
+    {
+        // B endet Mi 3.3.; Fixpunkt "Ende von B am Mi 10.3." -> Start Mo 8.3., Ende von C Mo 15.3.
+        $project = $this->project();
+        $admin = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'organization_admin']);
+        $point = 'step_end:'.$this->steps['b']->id;
+
+        $preview = $this->actingAs($admin)->postJson(route('projekte.termine.fixpunkt', $project), ['point' => $point, 'date' => '2027-03-10', 'preview' => true])->assertOk()->json();
+        $this->assertSame(['start' => '2027-03-08', 'end' => '2027-03-15'], $preview);
+        $this->assertSame('2027-03-01', $project->fresh()->start_date->toDateString());
+
+        $this->actingAs($admin)->postJson(route('projekte.termine.fixpunkt', $project), ['point' => $point, 'date' => '2027-03-10'])->assertOk();
+        $this->assertSame('2027-03-08', $project->fresh()->start_date->toDateString());
+        $this->assertSame('2027-03-10', $this->dueDate($project, $this->steps['b']));
+        $this->assertSame('2027-03-15', $project->fresh()->end_date->toDateString());
+    }
+
+    public function test_fixed_point_rejects_bad_input_and_the_old_model(): void
+    {
+        $project = $this->project();
+        $admin = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'organization_admin']);
+        $fixed = $this->milestone($project, ['anchor_type' => 'fixed', 'fixed_date' => '2027-05-05']);
+
+        $url = route('projekte.termine.fixpunkt', $project);
+        $this->actingAs($admin)->postJson($url, ['point' => 'unsinn', 'date' => '2027-03-10'])->assertStatus(422);
+        $this->actingAs($admin)->postJson($url, ['point' => 'step_end:999999', 'date' => '2027-03-10'])->assertStatus(422);
+        $this->actingAs($admin)->postJson($url, ['point' => 'milestone:'.$fixed->id, 'date' => '2027-03-10'])->assertStatus(422);
+        $this->actingAs($admin)->postJson($url, ['point' => 'workflow_end', 'date' => '1850-01-01'])->assertStatus(422);
+        $this->assertSame('2027-03-01', $project->fresh()->start_date->toDateString());
+
+        $old = $this->project(model: 1);
+        $this->actingAs($admin)->postJson(route('projekte.termine.fixpunkt', $old), ['point' => 'workflow_end', 'date' => '2027-03-10'])->assertStatus(422);
+
+        $user = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'user']);
+        $this->actingAs($user)->postJson($url, ['point' => 'workflow_end', 'date' => '2027-03-10'])->assertForbidden();
+    }
 }

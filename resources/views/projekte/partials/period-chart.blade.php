@@ -200,6 +200,39 @@
             const amount = days >= 60 ? Math.round(days / 30.4) + ' ' + @js(__('Monate')) : days + ' ' + (days === 1 ? @js(__('Tag')) : @js(__('Tage')));
             return m.title + ' · ' + this.dateWd(m.date) + ' – ' + amount + ' ' + (before ? @js(__('vor Projektstart')) : @js(__('nach Projektende')));
         },
+        fix: null,
+        fixUrl: @js(route('projekte.termine.fixpunkt', $project)),
+        openFix(point, label, current) {
+            this.fix = { point: point, label: label, date: current || '', current: current || '', preview: null, busy: false, error: '' };
+            this.$nextTick(() => { const el = this.$refs.fixDate; if (el) { el.focus(); if (el.showPicker) { try { el.showPicker(); } catch (e) {} } } });
+        },
+        async fixSend(preview) {
+            const response = await fetch(this.fixUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.msCsrf }, body: JSON.stringify({ point: this.fix.point, date: this.fix.date, preview: preview }) });
+            if (response.status === 422) {
+                const data = await response.json().catch(() => ({}));
+                this.fix.error = Object.values(data.errors || {}).flat()[0] || data.message || @js(__('Das Datum lässt sich nicht verwenden.'));
+                this.fix.preview = null;
+                return null;
+            }
+            if (! response.ok) { this.fix.error = @js(__('Das Speichern ist fehlgeschlagen.')); return null; }
+            this.fix.error = '';
+            return await response.json();
+        },
+        async fixPreview() {
+            if (! this.fix || ! this.fix.date) return;
+            this.fix.preview = await this.fixSend(true);
+        },
+        async applyFix() {
+            if (! this.fix || this.fix.busy || ! this.fix.date) return;
+            if (! (await this.msConfirmDiscard())) return;
+            this.fix.busy = true;
+            const result = await this.fixSend(false);
+            this.fix.busy = false;
+            if (! result) return;
+            this.fix = null;
+            window.dispatchEvent(new CustomEvent('project-schedule-changed', { detail: { projectId: this.projectId } }));
+            if (window.refreshUnderlyingProject) window.refreshUnderlyingProject(this.projectId);
+        },
         weekNo(iso) {
             if (! iso) return '';
             const [y, m, d] = iso.split('-').map(Number);
@@ -725,7 +758,14 @@
                             </template>
                         </td>
                         <td class="py-0.5 pr-2 text-gray-500">
-                            <span x-show="row.type === 'phase'" x-text="dateDe(startIso(row.i))" :title="@js(__('Beginn der Phase (berechnet)'))"></span>
+                            <span class="inline-flex items-center gap-1">
+                                <span x-show="row.type === 'phase'" x-text="dateDe(startIso(row.i))" :title="@js(__('Beginn der Phase (berechnet)'))"></span>
+                                @if ((int) $project->schedule_model === 2)
+                                    <template x-if="row.type === 'phase' && canEditPeriod">
+                                        <button type="button" @click="openFix('step_start:' + steps[row.i].id, @js(__('Start von')) + ' ' + steps[row.i].title, startIso(row.i))" class="rounded p-0.5 text-gray-300 hover:bg-gray-100 hover:text-gray-700" title="{{ __('Fixpunkt: Der Projektstart wird so gesetzt, dass diese Phase an einem Datum Ihrer Wahl beginnt.') }}"><svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1.2" fill="currentColor" /></svg></button>
+                                    </template>
+                                @endif
+                            </span>
                         </td>
                         <td class="py-0.5 pr-2">
                             <template x-if="row.type === 'phase'">
@@ -739,6 +779,14 @@
                                 >
                             </template>
                             <span x-show="row.type === 'milestone'" class="text-gray-700" x-text="dateDe(row.m.date)"></span>
+                            @if ((int) $project->schedule_model === 2)
+                                <template x-if="row.type === 'phase' && canEditPeriod">
+                                    <button type="button" @click="openFix('step_end:' + steps[row.i].id, @js(__('Ende von')) + ' ' + steps[row.i].title, endIso(row.i))" class="ml-0.5 rounded p-0.5 text-gray-300 hover:bg-gray-100 hover:text-gray-700 align-middle" title="{{ __('Fixpunkt: Der Projektstart wird so gesetzt, dass diese Phase an einem Datum Ihrer Wahl endet.') }}"><svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1.2" fill="currentColor" /></svg></button>
+                                </template>
+                                <template x-if="row.type === 'milestone' && canEditPeriod && row.m.anchor_type !== 'fixed'">
+                                    <button type="button" @click="openFix('milestone:' + row.m.id, row.m.title, row.m.date)" class="ml-0.5 rounded p-0.5 text-gray-300 hover:bg-gray-100 hover:text-gray-700 align-middle" title="{{ __('Fixpunkt: Der Projektstart wird so gesetzt, dass dieser Meilenstein an einem Datum Ihrer Wahl liegt.') }}"><svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1.2" fill="currentColor" /></svg></button>
+                                </template>
+                            @endif
                         </td>
                         <td class="py-0.5 pr-2 text-gray-500">
                             <span x-show="row.type === 'phase'" x-text="steps[row.i].end_name" :title="steps[row.i].end_name"></span>
@@ -774,6 +822,29 @@
             </tbody>
         </table>
         @if ((int) $project->schedule_model === 2)
+            <template x-if="canEditPeriod">
+                <div x-show="fix !== null" x-cloak @keydown.enter.prevent="applyFix()" class="mt-1 rounded-md border border-gray-200 bg-gray-50 p-2">
+                    <div class="flex flex-wrap items-end gap-2">
+                        <div>
+                            <span class="block text-[10px] text-gray-500">{{ __('Fixpunkt') }}</span>
+                            <span class="block font-medium text-gray-700" x-text="fix ? fix.label : ''"></span>
+                        </div>
+                        <label class="block">
+                            <span class="block text-[10px] text-gray-500">{{ __('auf Datum') }}</span>
+                            <input type="date" x-ref="fixDate" :value="fix ? fix.date : ''" @input="fix.date = $event.target.value" @change="fixPreview()" class="rounded border-gray-300 px-1.5 py-0.5 text-xs">
+                        </label>
+                        <p class="min-w-[12rem] flex-1 text-gray-600" x-show="fix && fix.preview">
+                            {{ __('Projektstart') }}: <span class="font-medium" x-text="fix && fix.preview ? dateDe(fix.preview.start) : ''"></span>
+                            · {{ __('Projektende') }}: <span class="font-medium" x-text="fix && fix.preview ? dateDe(fix.preview.end) : ''"></span>
+                        </p>
+                    </div>
+                    <p x-show="fix && fix.error" x-text="fix ? fix.error : ''" class="mt-1 text-red-600"></p>
+                    <div class="mt-2 flex items-center justify-end gap-2">
+                        <button type="button" @click="fix = null" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Abbrechen') }}</button>
+                        <button type="button" @click="applyFix()" :disabled="! fix || fix.busy || ! fix.date" class="rounded-md border border-transparent bg-btn-primary px-2.5 py-0.5 font-medium text-white hover:bg-btn-primary-hover disabled:cursor-wait disabled:opacity-60">{{ __('Speichern') }}</button>
+                    </div>
+                </div>
+            </template>
             <template x-if="canEditPeriod">
                 <div class="mt-1">
                     <button type="button" x-show="ms === null" @click="newMs()" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 font-medium text-gray-700 hover:bg-btn-secondary-hover" title="{{ __('Fügt einen Meilenstein hinzu: einen Zeitpunkt, der sich an Start oder Ende des Workflows oder einer Phase orientiert.') }}">+ {{ __('Meilenstein') }}</button>
