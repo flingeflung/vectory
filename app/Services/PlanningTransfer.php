@@ -115,8 +115,12 @@ final class PlanningTransfer
             return ['skipped', __('Nur zwischen Projekten mit demselben Workflow möglich.')];
         }
 
-        $changed = 0;
         $sourceRows = ProjectWorkflowStep::query()->where('project_id', $source->id)->get()->keyBy('workflow_step_id');
+        if ($sourceRows->every(fn (ProjectWorkflowStep $row) => $row->duration_days === null && $row->duration_locked === null)) {
+            return ['skipped', __('Das Quellprojekt hat keine eigenen Dauern oder Sperren.')];
+        }
+
+        $changed = 0;
         foreach (WorkflowStep::query()->where('workflow_id', $target->workflow_id)->get() as $step) {
             $from = $sourceRows->get($step->id);
             if ($from === null) {
@@ -143,6 +147,9 @@ final class PlanningTransfer
     /** @return array{0: string, 1: string} */
     private function plannedHours(Project $source, Project $target, bool $keepExisting): array
     {
+        if (! $source->project_template_id && ! $source->functionGroupHours()->exists()) {
+            return ['skipped', __('Das Quellprojekt hat weder ein Aufwandsprofil noch eigene Planstunden.')];
+        }
         $targetHasOwn = $target->functionGroupHours()->exists();
         if ($keepExisting && ($targetHasOwn || $target->project_template_id)) {
             return ['skipped', __('Das Ziel hat schon ein Aufwandsprofil oder eigene Planstunden.')];
@@ -165,6 +172,9 @@ final class PlanningTransfer
     {
         $key = fn (ProjectPerson $entry) => $entry->function_group_id.'-'.$entry->person_id;
         $sourceEntries = $source->projectPeople()->get();
+        if ($sourceEntries->isEmpty()) {
+            return ['skipped', __('Das Quellprojekt hat keine Projektbeteiligten.')];
+        }
         $targetEntries = $target->projectPeople()->get()->keyBy($key);
         $changed = 0;
 
@@ -206,6 +216,9 @@ final class PlanningTransfer
 
         $changed = 0;
         $sourceRows = ProjectWorkflowStep::query()->where('project_id', $source->id)->whereNotNull('due_date')->get();
+        if ($sourceRows->isEmpty()) {
+            return ['skipped', __('Das Quellprojekt hat keine Termine an den Schritten.')];
+        }
         foreach ($sourceRows as $from) {
             $row = ProjectWorkflowStep::query()->firstOrCreate(
                 ['project_id' => $target->id, 'workflow_step_id' => $from->workflow_step_id],

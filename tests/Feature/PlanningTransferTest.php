@@ -172,4 +172,26 @@ class PlanningTransferTest extends TestCase
         $this->assertTrue((bool) $row->duration_locked);
         $this->assertNull($row->due_date);   // Termine nur, wenn die Vorlage sie vorsieht
     }
+
+    public function test_empty_source_areas_never_wipe_the_target(): void
+    {
+        $source = $this->project('270040', $this->workflow->id);   // nichts geplant
+        $target = $this->project('270041', $this->workflow->id);
+        $template = ProjectTemplate::query()->create(['tenant_id' => $this->tenant->id, 'name' => 'Profil', 'active' => true, 'duration_value' => 1, 'duration_unit' => 'week']);
+        $target->update(['project_template_id' => $template->id]);
+        $person = Person::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $this->tenant->id, 'last_name' => 'Bleibt', 'active' => true]);
+        ProjectPerson::query()->create(['tenant_id' => $this->tenant->id, 'project_id' => $target->id, 'function_group_id' => $this->group->id, 'person_id' => $person->id]);
+        $this->stepRow($target, $this->steps[0], ['duration_days' => 5, 'due_date' => '2027-03-20']);
+
+        $this->actingAs($this->admin)->post(route('projekte.planung-uebertragen.run', $source), [
+            'direction' => 'send', 'scope' => 'single', 'other_project_id' => $target->id,
+            'parts' => ['durations', 'planned_hours', 'people', 'milestones'],
+        ])->assertOk()->assertSee('weder ein Aufwandsprofil noch eigene Planstunden')->assertSee('keine Projektbeteiligten');
+
+        $this->assertSame($template->id, (int) $target->fresh()->project_template_id);
+        $this->assertSame(1, $target->projectPeople()->count());
+        $row = $this->stepRow($target, $this->steps[0], []);
+        $this->assertSame(5, (int) $row->duration_days);
+        $this->assertSame('2027-03-20', $row->due_date->toDateString());
+    }
 }
