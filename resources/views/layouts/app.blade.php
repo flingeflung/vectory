@@ -3446,6 +3446,36 @@
             };
         </script>
 
+        {{-- Erinnerungen per Mail (Mail-Timer, Ralf, 2026-10-09): Liste und Anlegen werden per fetch() in den Rumpf geladen --}}
+        <x-modal name="mail-timers" max-width="3xl">
+            <div class="flex max-h-[85vh] flex-col">
+                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Erinnerungen per Mail') }}</h3>
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'mail-timers' }))"
+                        class="text-gray-400 hover:text-gray-600"
+                        aria-label="{{ __('Schließen') }}"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="mail-timers-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
+                    {{ __('Lädt…') }}
+                </div>
+            </div>
+        </x-modal>
+        <script>
+            window.openMailTimers = async (projectId, stepId) => {
+                const body = document.getElementById('mail-timers-body');
+                body.innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
+                window.dispatchEvent(new CustomEvent('open-modal', { detail: 'mail-timers' }));
+                body.innerHTML = await fetch(`/projekte/${projectId}/mailtimer` + (stepId ? `?step=${stepId}` : '')).then((response) => response.text());
+            };
+        </script>
+
         <x-modal name="project-schedule" max-width="5xl">
             <div class="flex max-h-[85vh] flex-col">
                 <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">

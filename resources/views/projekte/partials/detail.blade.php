@@ -222,6 +222,23 @@
                 </div>
 
                 <div class="mb-2 flex flex-wrap items-center gap-2">
+                    @php
+                        $mailTimerCount = $project->mailTimers()->count();
+                        $mailTimersPending = $mailTimerCount > 0 ? $project->mailTimers()->whereNull('sent_at')->whereNull('skipped_at')->count() : 0;
+                    @endphp
+                    @if ($mailTimerCount > 0)
+                        {{-- Auffälliger Knopf, solange das Projekt Erinnerungsmails (Mail-Timer) hat (Ralf, 2026-10-09) --}}
+                        <button
+                            type="button"
+                            @click="window.openMailTimers({{ $project->id }})"
+                            class="inline-flex items-center gap-1 rounded-md border border-amber-400 bg-amber-100 p-1 pr-1.5 text-amber-900 hover:bg-amber-200"
+                            title="{{ __('Erinnerungen per Mail: :open offen von :all', ['open' => $mailTimersPending, 'all' => $mailTimerCount]) }}"
+                            aria-label="{{ __('Erinnerungen per Mail') }}"
+                        >
+                            <x-icon name="mail-timer" class="h-5 w-5" />
+                            <span class="text-xs font-semibold">{{ $mailTimersPending }}</span>
+                        </button>
+                    @endif
                     <button
                         type="button"
                         @click="window.openIllustrationOrders({{ $project->id }})"
@@ -591,6 +608,14 @@
                                             </div>
                                         @endif
 
+                                        @can('project.edit')
+                                            <div class="mt-1 text-xs" @click.stop>
+                                                <button type="button" @click.stop="window.openMailTimers({{ $project->id }}, {{ $step->id }})" class="inline-flex items-center gap-1 text-gray-400 hover:text-gray-700" title="{{ __('Erinnerung per Mail zu diesem Schritt anlegen') }}">
+                                                    <x-icon name="mail-timer" class="h-3.5 w-3.5" />
+                                                    <span>{{ __('Erinnerung') }}</span>
+                                                </button>
+                                            </div>
+                                        @endcan
                                         @php
                                             // Meilensteine im Kasten des Schritts, in dessen Zeitspanne ihr Datum fällt (neues Terminmodell)
                                             $milestonesByStep ??= app(\App\Services\ProjectScheduler::class)->milestonesByStep($project);

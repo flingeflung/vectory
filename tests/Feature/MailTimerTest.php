@@ -215,4 +215,59 @@ class MailTimerTest extends TestCase
         $this->assertSame(1, $service->sendDue(CarbonImmutable::parse('2027-03-03'))['skipped']);
         $this->assertNotNull($timer->fresh()->skipped_at);
     }
+
+    public function test_timers_can_be_listed_created_and_deleted_in_the_project(): void
+    {
+        $project = $this->project();
+        $this->staff($project);
+        $admin = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'organization_admin']);
+
+        $this->actingAs($admin)->get(route('projekte.mailtimer.index', $project))->assertOk()->assertSee('noch keine Erinnerungen');
+
+        $this->actingAs($admin)->postJson(route('projekte.mailtimer.store', $project), [
+            'workflow_step_id' => $this->steps['b']->id, 'mail_template_id' => $this->template->id, 'reference' => 'phase_end:'.$this->steps['b']->id,
+            'offset_days' => -14, 'function_group_ids' => [$this->group->id], 'only_if_in_step' => true,
+        ])->assertOk();
+        $timer = MailTimer::query()->withoutGlobalScopes()->where('project_id', $project->id)->sole();
+        $this->assertSame('2027-02-19', $timer->send_date->toDateString());   // B endet Fr 5.3., 14 Tage davor
+        $this->assertSame($admin->id, $timer->created_by_user_id);
+
+        $this->actingAs($admin)->get(route('projekte.mailtimer.index', $project))->assertOk()
+            ->assertSee('19.02.2027')->assertSee('2 Wochen vor Ende von');
+
+        $this->actingAs($admin)->deleteJson(route('projekte.mailtimer.destroy', [$project, $timer]))->assertOk();
+        $this->assertSame(0, MailTimer::query()->withoutGlobalScopes()->where('project_id', $project->id)->count());
+    }
+
+    public function test_creating_a_timer_validates_input_and_needs_the_right(): void
+    {
+        $project = $this->project();
+        $admin = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'organization_admin']);
+        $url = route('projekte.mailtimer.store', $project);
+        $base = ['workflow_step_id' => $this->steps['b']->id, 'mail_template_id' => $this->template->id, 'reference' => 'fixed', 'fixed_date' => '2027-05-01', 'function_group_ids' => [$this->group->id]];
+
+        $this->actingAs($admin)->postJson($url, [...$base, 'function_group_ids' => []])->assertStatus(422);
+        $this->actingAs($admin)->postJson($url, [...$base, 'fixed_date' => null])->assertStatus(422);
+        $this->actingAs($admin)->postJson($url, [...$base, 'reference' => 'milestone:999999'])->assertStatus(422);
+        $this->actingAs($admin)->postJson($url, [...$base, 'mail_template_id' => 999999])->assertStatus(422);
+        $this->actingAs($admin)->postJson($url, [...$base, 'workflow_step_id' => 999999])->assertStatus(422);
+        $this->assertSame(0, MailTimer::query()->withoutGlobalScopes()->where('project_id', $project->id)->count());
+
+        $this->actingAs($admin)->postJson($url, $base)->assertOk();
+        $this->assertSame('2027-05-01', MailTimer::query()->withoutGlobalScopes()->where('project_id', $project->id)->sole()->send_date->toDateString());
+
+        $user = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'user']);
+        $this->actingAs($user)->postJson($url, $base)->assertForbidden();
+    }
+
+    public function test_project_page_shows_the_conspicuous_button_only_with_timers(): void
+    {
+        $project = $this->project();
+        $admin = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'organization_admin']);
+
+        $this->actingAs($admin)->get(route('projekte.show', $project), ['X-Overlay' => '1'])->assertOk()->assertDontSee('window.openMailTimers('.$project->id.')', false);
+
+        $this->timer($project);
+        $this->actingAs($admin)->get(route('projekte.show', $project), ['X-Overlay' => '1'])->assertOk()->assertSee('window.openMailTimers('.$project->id.')', false);
+    }
 }

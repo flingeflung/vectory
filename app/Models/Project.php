@@ -279,6 +279,12 @@ class Project extends Model
         return $this->hasMany(ProjectWorkflowStep::class)->orderBy('sort');
     }
 
+    /** Erinnerungsmails (Mail-Timer) des Projekts. */
+    public function mailTimers(): HasMany
+    {
+        return $this->hasMany(MailTimer::class)->orderBy('send_date');
+    }
+
     /** Meilensteine des Projekts (neues Terminmodell, docs/ablaufplan-konzept.md). */
     public function projectMilestones(): HasMany
     {
