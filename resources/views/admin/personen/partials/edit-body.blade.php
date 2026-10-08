@@ -168,6 +168,15 @@
                         <input type="checkbox" name="active" value="1" @checked($person->active) class="rounded border-gray-300">
                         {{ __('Aktiv') }}
                     </label>
+                    @if ($person->user && $person->user->mayLogIn())
+                        <div class="mb-1.5 flex items-center gap-2">
+                            <button type="submit" form="force-logout-form" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover" title="{{ __('Beendet alle laufenden Sitzungen der Person sofort. Sie muss sich neu anmelden.') }}">{{ __('Sofort abmelden') }}</button>
+                            <label class="flex items-center gap-1.5 text-xs text-gray-600" title="{{ __('Sperrt zusätzlich die erneute Anmeldung, bis die Person wieder aktiviert wird.') }}">
+                                <input type="checkbox" name="deactivate" value="1" form="force-logout-form" class="rounded border-gray-300">
+                                {{ __('zusätzlich deaktivieren') }}
+                            </label>
+                        </div>
+                    @endif
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
@@ -440,9 +449,9 @@
                         @csrf
                         <button type="submit" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover" title="{{ __('Sendet der Person einen Link, über den sie selbst ein neues Passwort wählt.') }}">{{ __('Link zum Zurücksetzen des Passworts senden') }}</button>
                     </form>
-                    <form method="POST" action="{{ route('admin.personen.force-logout', $person) }}" class="mb-2 flex flex-wrap items-center gap-3"
+                    <form id="force-logout-form" method="POST" action="{{ route('admin.personen.force-logout', $person) }}"
                           x-data="{ async submitLogout(e) {
-                              const deactivate = e.target.querySelector('[name=deactivate]').checked;
+                              const deactivate = new FormData(e.target).get('deactivate') !== null;
                               if (await window.confirmDialog({
                                   signal: 'achtung',
                                   title: {{ \Illuminate\Support\Js::from(__('Person sofort abmelden?')) }},
@@ -458,11 +467,6 @@
                           } }"
                           @submit.prevent="submitLogout($event)">
                         @csrf
-                        <button type="submit" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover" title="{{ __('Beendet alle laufenden Sitzungen der Person sofort. Sie muss sich neu anmelden.') }}">{{ __('Sofort abmelden') }}</button>
-                        <label class="flex items-center gap-1.5 text-xs text-gray-600" title="{{ __('Sperrt zusätzlich die erneute Anmeldung, bis die Person wieder aktiviert wird.') }}">
-                            <input type="checkbox" name="deactivate" value="1" class="rounded border-gray-300">
-                            {{ __('zusätzlich deaktivieren') }}
-                        </label>
                     </form>
                     @if ($canSetPassword)
                         <details class="mt-2">
