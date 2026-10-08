@@ -37,7 +37,8 @@ class TenantController extends Controller
 
         return view('admin.kunden.index', [
             'tenants' => $tenants,
-            'selectedTenant' => $request->filled('tenant') ? $tenants->firstWhere('id', (int) $request->query('tenant')) : null,
+            // ohne Auswahl die gerade aktive Organisation (Ralf, 2026-10-08: die Seite ersetzt die frühere Stammdaten-Seite)
+            'selectedTenant' => $tenants->firstWhere('id', $request->filled('tenant') ? (int) $request->query('tenant') : CurrentTenant::id()),
         ]);
     }
 

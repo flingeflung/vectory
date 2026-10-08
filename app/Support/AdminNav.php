@@ -44,8 +44,10 @@ class AdminNav
                 ['route' => 'admin.dialog-ids', 'match' => 'admin.dialog-ids', 'label' => __('Dialog-IDs'), 'gate' => 'access-superadmin'],
             ],
             __('Organisation') => [
-                ['route' => 'admin.config', 'match' => 'admin.config', 'label' => __('Stammdaten')],
-                ['route' => 'admin.kunden', 'match' => 'admin.kunden*', 'label' => __('Alle Organisationen'), 'if' => SystemSetting::multiTenantEnabled()],
+                // Stammdaten (Ralf, 2026-10-08): bei mehreren Organisationen die Organisationsseite mit den vier Stammdaten-Knöpfen unter dem Namen, sonst die Konfig-Seite
+                SystemSetting::multiTenantEnabled()
+                    ? ['route' => 'admin.kunden', 'match' => 'admin.kunden*', 'label' => __('Stammdaten')]
+                    : ['route' => 'admin.config', 'match' => 'admin.config', 'label' => __('Stammdaten')],
                 ['route' => 'admin.voreinstellungen', 'match' => 'admin.voreinstellungen*', 'label' => __('Konfiguration übernehmen'), 'if' => SystemSetting::multiTenantEnabled(), 'gate' => 'access-central-admin'],
             ],
             __('Planung') => [

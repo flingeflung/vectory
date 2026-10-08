@@ -127,6 +127,21 @@
                             <input type="text" name="short_name" value="{{ $selectedTenant->short_name }}" maxlength="10" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                         </div>
                     </div>
+                    {{-- Die vier Stammdaten-Verwalten-Overlays (früher eigene Seite "Stammdaten"), hier für die gewählte Organisation --}}
+                    <div class="flex flex-wrap items-center gap-1.5">
+                        @foreach ([
+                            'legacy-role-manager' => __('Rollen'),
+                            'department-manager' => __('Abteilungen'),
+                            'business-unit-manager' => __('Geschäftsbereiche'),
+                            'company-manager' => \App\Models\SystemSetting::companyLabelPlural(),
+                        ] as $managerModal => $managerLabel)
+                            <button
+                                type="button"
+                                onclick="window.__personOverlayTenantId = {{ $selectedTenant->id }}; window.dispatchEvent(new CustomEvent('open-modal', { detail: '{{ $managerModal }}' }))"
+                                class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                            >{{ $managerLabel }}</button>
+                        @endforeach
+                    </div>
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('Projektpfad (gesperrt)') }}</label>
                         <input type="text" name="project_path" value="{{ $selectedTenant->project_path }}" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">

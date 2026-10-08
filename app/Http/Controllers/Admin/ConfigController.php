@@ -11,9 +11,13 @@ use Illuminate\View\View;
 
 class ConfigController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): View|\Illuminate\Http\RedirectResponse
     {
         $multiTenantEnabled = SystemSetting::multiTenantEnabled();
+        // Bei mehreren Organisationen sind die Stammdaten-Knöpfe Teil der Organisationsseite (Ralf, 2026-10-08)
+        if ($multiTenantEnabled) {
+            return redirect()->route('admin.kunden');
+        }
 
         return view('admin.config.index', [
             'multiTenantEnabled' => $multiTenantEnabled,
