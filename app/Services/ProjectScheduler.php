@@ -120,6 +120,83 @@ class ProjectScheduler
     }
 
     /**
+     * Meilensteine je Workflow-Schritt für die Workflow-Ansicht (Ralf, 2026-10-09): Ein Meilenstein steht im Kasten des Schritts, in dessen
+     * Zeitspanne sein Datum fällt. Der Schritt „Geplant“ reicht nach vorn offen (alles vor der ersten Phase), „Beendet“ nach hinten offen
+     * (alles nach der letzten Phase); „Verworfen“ nimmt nie einen Meilenstein auf.
+     *
+     * @return array<int, list<array{name: string, date: CarbonImmutable, rule: string|null}>> Schritt-ID => Meilensteine, nach Datum
+     */
+    public function milestonesByStep(Project $project): array
+    {
+        $plan = (int) $project->schedule_model === 2 ? $this->plan($project) : null;
+        if ($plan === null || $plan['milestones'] === []) {
+            return [];
+        }
+
+        $phaseStarts = [];
+        foreach ($plan['phases'] as $phase) {
+            $phaseStarts[$phase['step_id']] = $phase['start']->toDateString();
+        }
+        $afterLast = $plan['end']?->addDay()->toDateString();
+
+        $boxes = [];
+        $steps = WorkflowStep::query()->withoutGlobalScopes()->where('workflow_id', $project->workflow_id)
+            ->whereIn('lifecycle_status', [1, 2, 3])->orderBy('sort')->get(['id', 'lifecycle_status']);
+        foreach ($steps as $step) {
+            $start = match ((int) $step->lifecycle_status) {
+                1 => '0000-00-00',
+                2 => $phaseStarts[$step->id] ?? null,
+                default => $afterLast,
+            };
+            if ($start !== null) {
+                $boxes[] = ['id' => (int) $step->id, 'start' => $start];
+            }
+        }
+        if ($boxes === []) {
+            return [];
+        }
+
+        $rules = ProjectMilestone::query()->withoutGlobalScopes()->where('project_id', $project->id)->get()->keyBy('id');
+        $stepTitles = $steps->isEmpty() ? [] : WorkflowStep::query()->withoutGlobalScopes()->where('workflow_id', $project->workflow_id)->pluck('title', 'id')->all();
+        $result = [];
+        foreach ($plan['milestones'] as $milestone) {
+            if ($milestone['date'] === null) {
+                continue;
+            }
+            $target = $boxes[0]['id'];
+            foreach ($boxes as $box) {
+                if ($box['start'] <= $milestone['date']->toDateString()) {
+                    $target = $box['id'];
+                }
+            }
+            $row = $rules->get($milestone['id']);
+            $result[$target][] = [
+                'name' => $milestone['name'],
+                'date' => $milestone['date'],
+                'rule' => $row ? $this->ruleText($row, $stepTitles) : null,
+            ];
+        }
+
+        return $result;
+    }
+
+    /** @param  array<int, string>  $stepTitles */
+    private function ruleText(ProjectMilestone $milestone, array $stepTitles): string
+    {
+        $offset = (int) $milestone->offset_days;
+        $suffix = $offset === 0 ? '' : ' '.($offset > 0 ? '+' : '−').abs($offset).' '.__('AT');
+        $step = $stepTitles[$milestone->anchor_workflow_step_id] ?? '';
+
+        return match ($milestone->anchor_type) {
+            'workflow_start' => __('Workflow-Start').$suffix,
+            'workflow_end' => __('Workflow-Ende').$suffix,
+            'step_start' => __('Start von :step', ['step' => $step]).$suffix,
+            'step_end' => __('Ende von :step', ['step' => $step]).$suffix,
+            default => __('festes Datum'),
+        };
+    }
+
+    /**
      * Fixpunkt: Welcher Projektstart lässt $point auf $date fallen?
      *
      * @param  string  $point  workflow_start | workflow_end | step_start:{id} | step_end:{id} | milestone:{id}

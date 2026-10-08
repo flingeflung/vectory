@@ -292,4 +292,29 @@ class ProjectSchedulerTest extends TestCase
         $old = $this->project(model: 1);
         $this->actingAs($admin)->postJson(route('projekte.meilensteine.store', $old), ['name' => 'X', 'anchor_type' => 'workflow_end'])->assertStatus(422);
     }
+
+    public function test_milestones_are_assigned_to_the_step_box_whose_span_contains_their_date(): void
+    {
+        // A = Mo 1.3., B = Di 2.3.-Mi 3.3., C = Do 4.3.-Mo 8.3.
+        $project = $this->project();
+        $this->milestone($project, ['name' => 'davor', 'anchor_type' => 'workflow_start', 'offset_days' => -2]);
+        $this->milestone($project, ['name' => 'in B', 'anchor_type' => 'step_start', 'anchor_workflow_step_id' => $this->steps['b']->id]);
+        $this->milestone($project, ['name' => 'Ende C', 'anchor_type' => 'step_end', 'anchor_workflow_step_id' => $this->steps['c']->id]);
+        $this->milestone($project, ['name' => 'danach', 'anchor_type' => 'workflow_end', 'offset_days' => 1]);
+        $this->milestone($project, ['name' => 'viel später', 'anchor_type' => 'fixed', 'fixed_date' => '2027-12-01']);
+
+        $byStep = app(ProjectScheduler::class)->milestonesByStep($project->fresh());
+        $names = fn (string $key) => array_column($byStep[$this->steps[$key]->id] ?? [], 'name');
+
+        $this->assertSame(['davor'], $names('plan'));
+        $this->assertSame([], $names('a'));
+        $this->assertSame(['in B'], $names('b'));
+        $this->assertSame(['Ende C'], $names('c'));
+        $this->assertSame(['danach', 'viel später'], $names('end'));
+    }
+
+    public function test_old_model_projects_have_no_milestones_by_step(): void
+    {
+        $this->assertSame([], app(ProjectScheduler::class)->milestonesByStep($this->project(model: 1)));
+    }
 }

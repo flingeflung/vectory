@@ -591,6 +591,18 @@
                                             </div>
                                         @endif
 
+                                        @php
+                                            // Meilensteine im Kasten des Schritts, in dessen Zeitspanne ihr Datum fällt (neues Terminmodell)
+                                            $milestonesByStep ??= app(\App\Services\ProjectScheduler::class)->milestonesByStep($project);
+                                        @endphp
+                                        @foreach ($milestonesByStep[$step->id] ?? [] as $milestone)
+                                            <div class="mt-1 flex items-center gap-1.5 text-xs text-gray-700" title="{{ $milestone['rule'] }}">
+                                                <span class="inline-block h-2 w-2 shrink-0 rotate-45 bg-gray-600"></span>
+                                                <span class="font-medium">{{ $milestone['name'] }}:</span>
+                                                <span>{{ $milestone['date']->format('d.m.Y') }}</span>
+                                            </div>
+                                        @endforeach
+
                                         <div class="mt-0.5 text-xs text-gray-600">
                                             @if ($isDone)
                                                 {{ __('Erledigt') }}: {{ $pws->completed_at->local()->format('d.m.Y') }}
