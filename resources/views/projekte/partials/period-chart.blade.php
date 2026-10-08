@@ -24,6 +24,7 @@
         applying: false,
         hover: null,
         groupsOpen: (() => { try { return localStorage.getItem('vectory-period-groups-open') !== '0'; } catch (e) { return true; } })(),
+        stepsOpen: (() => { try { return localStorage.getItem('vectory-period-steps-open') !== '0'; } catch (e) { return true; } })(),
         preview: null,
         lead: 0,
         previewOff: 0,
@@ -166,6 +167,10 @@
         // Gesperrte Schritte behalten ihre Dauer und wandern beim Verschieben mit; ausgleichen tut der nächste nicht gesperrte Schritt davor bzw. dahinter
         unlockedBefore(i) { for (let k = i; k >= 0; k--) { if (! this.steps[k].locked) return k; } return -1; },
         unlockedAfter(i) { for (let k = i; k < this.steps.length; k++) { if (! this.steps[k].locked) return k; } return -1; },
+        toggleSteps() {
+            this.stepsOpen = ! this.stepsOpen;
+            try { localStorage.setItem('vectory-period-steps-open', this.stepsOpen ? '1' : '0'); } catch (e) {}
+        },
         toggleGroups() {
             this.groupsOpen = ! this.groupsOpen;
             try { localStorage.setItem('vectory-period-groups-open', this.groupsOpen ? '1' : '0'); } catch (e) {}
@@ -503,7 +508,13 @@
         </div>
     </div>
 
-    <div class="mt-2 overflow-x-auto">
+    <div class="mt-2">
+        <button type="button" @click="toggleSteps()" :aria-expanded="stepsOpen" class="flex items-center gap-1 text-[10px] font-medium text-gray-400 hover:text-gray-600">
+            <svg class="h-3 w-3 transition-transform" :class="stepsOpen ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+            {{ __('Workflowschritte') }}
+        </button>
+    </div>
+    <div x-show="stepsOpen" class="overflow-x-auto">
         <table class="w-full min-w-[40rem] text-xs">
             <thead>
                 <tr class="text-left text-[10px] font-medium uppercase tracking-wide text-gray-400">
