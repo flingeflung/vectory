@@ -17,7 +17,7 @@ class CompleteActivationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'username' => ['required', 'string', 'min:4', 'max:50', 'regex:/\A[A-Za-z0-9._-]+\z/', Rule::unique('users', 'username')],
+            'username' => ['required', 'string', 'min:4', 'max:50', 'regex:/\A[\p{L}\p{N}._-]+\z/u', Rule::unique('users', 'username')],
             'password' => PasswordPolicy::rules(),
         ];
     }

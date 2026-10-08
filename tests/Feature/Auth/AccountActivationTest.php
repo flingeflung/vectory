@@ -177,4 +177,15 @@ class AccountActivationTest extends TestCase
         $this->assertNull(User::query()->where('email', 'inaktiv@example.test')->first());
         Mail::assertNothingSent();
     }
+
+    public function test_usernames_may_contain_umlauts_but_no_spaces_or_other_characters(): void
+    {
+        [$user, $token] = $this->preparedAccount('umlaut@example.test');
+        $password = ['password' => 'geheim1234', 'password_confirmation' => 'geheim1234'];
+
+        $this->post(route('activation.complete', $token), ['username' => 'ÜS DL'] + $password)->assertSessionHasErrors('username');
+        $this->post(route('activation.complete', $token), ['username' => 'ÜS@DL'] + $password)->assertSessionHasErrors('username');
+        $this->post(route('activation.complete', $token), ['username' => 'ÜS-DL'] + $password)->assertRedirect(route('login'));
+        $this->assertSame('ÜS-DL', $user->fresh()->username);
+    }
 }
