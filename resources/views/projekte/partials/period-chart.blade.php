@@ -57,6 +57,81 @@
             if (index[todayIso] !== undefined) this.grid.today = index[todayIso];
         },
         destroy() { if (window.periodChartIsDirty === this.dirtyHook) window.periodChartIsDirty = null; },
+        ms: null,
+        msSaving: false,
+        msError: '',
+        msUrl: @js(route('projekte.meilensteine.store', $project)),
+        msCsrf: @js(csrf_token()),
+        projectId: @js($project->id),
+        focusMs() { this.$nextTick(() => { if (this.$refs.msName) this.$refs.msName.focus(); }); },
+        newMs() {
+            this.ms = { id: null, name: '', anchor_type: 'workflow_end', anchor_workflow_step_id: this.steps.length ? this.steps[this.steps.length - 1].id : null, offset_days: 0, fixed_date: '' };
+            this.msError = '';
+            this.focusMs();
+        },
+        editMs(m) {
+            this.ms = { id: m.id, name: m.title, anchor_type: m.anchor_type, anchor_workflow_step_id: m.anchor_step_id || (this.steps.length ? this.steps[0].id : null), offset_days: m.offset_days, fixed_date: m.fixed_date || '' };
+            this.msError = '';
+            this.focusMs();
+        },
+        // Neu laden verwirft einen nicht gespeicherten Diagramm-Entwurf (Dauern): vorher nachfragen
+        async msConfirmDiscard() {
+            if (! this.changed) return true;
+            return await window.confirmDialog({
+                signal: 'achtung',
+                title: @js(__('Entwurf verwerfen?')),
+                message: @js(__('Im Diagramm gibt es nicht gespeicherte Änderungen an Dauern.')),
+                consequence: @js(__('Wenn Sie den Meilenstein jetzt speichern, gehen diese Änderungen verloren.')),
+                confirmLabel: @js(__('Verwerfen und fortfahren')),
+                cancelLabel: @js(__('Abbrechen')),
+            });
+        },
+        async msSend(method, url, body) {
+            const response = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.msCsrf }, body: body ? JSON.stringify(body) : undefined });
+            if (response.status === 422) {
+                const data = await response.json().catch(() => ({}));
+                this.msError = Object.values(data.errors || {}).flat()[0] || data.message || @js(__('Das Speichern ist fehlgeschlagen.'));
+                return false;
+            }
+            if (! response.ok) {
+                this.msError = @js(__('Das Speichern ist fehlgeschlagen.'));
+                return false;
+            }
+            this.ms = null;
+            window.dispatchEvent(new CustomEvent('project-schedule-changed', { detail: { projectId: this.projectId } }));
+            return true;
+        },
+        async saveMs() {
+            if (this.msSaving || ! this.ms) return;
+            if (! (await this.msConfirmDiscard())) return;
+            const isStep = ['step_start', 'step_end'].includes(this.ms.anchor_type);
+            const body = {
+                name: this.ms.name,
+                anchor_type: this.ms.anchor_type,
+                anchor_workflow_step_id: isStep ? this.ms.anchor_workflow_step_id : null,
+                offset_days: this.ms.anchor_type === 'fixed' ? 0 : (this.ms.offset_days === '' ? 0 : this.ms.offset_days),
+                fixed_date: this.ms.anchor_type === 'fixed' ? this.ms.fixed_date : null,
+            };
+            this.msSaving = true;
+            this.msError = '';
+            await this.msSend(this.ms.id ? 'PATCH' : 'POST', this.ms.id ? this.msUrl + '/' + this.ms.id : this.msUrl, body);
+            this.msSaving = false;
+        },
+        async deleteMs() {
+            if (this.msSaving || ! this.ms || ! this.ms.id) return;
+            const ok = await window.confirmDialog({
+                signal: 'achtung',
+                title: @js(__('Meilenstein löschen?')),
+                message: @js(__('Der Meilenstein wird aus diesem Projekt entfernt.')),
+                consequence: @js(__('Das lässt sich nicht rückgängig machen.')),
+                confirmLabel: @js(__('Löschen')),
+                cancelLabel: @js(__('Abbrechen')),
+            });
+            if (! ok || ! (await this.msConfirmDiscard())) return;
+            this.msSaving = true;
+            await this.msSend('DELETE', this.msUrl + '/' + this.ms.id, null);
+            this.msSaving = false;
+        },
         weekNo(iso) {
             if (! iso) return '';
             const [y, m, d] = iso.split('-').map(Number);
@@ -71,7 +146,8 @@
         get tableRows() {
             const rows = this.steps.map((step, i) => ({ type: 'phase', i: i, date: this.endIso(i), key: 'p-' + step.id }));
             this.milestones.filter((m) => m.kind === 'milestone').forEach((m) => rows.push({ type: 'milestone', m: m, date: m.date, key: m.key }));
-            return rows.sort((a, b) => (a.date === b.date ? (a.type === 'phase' ? -1 : 1) : (a.date < b.date ? -1 : 1)));
+            const key = (r) => r.date || '9999-12-31';
+            return rows.sort((a, b) => (key(a) === key(b) ? (a.type === 'phase' ? -1 : 1) : (key(a) < key(b) ? -1 : 1)));
         },
         get total() { return this.workdays.length; },
         get span() { return this.calendar.length; },
@@ -445,7 +521,7 @@
                 :title="@js(__('Heute')) + ': ' + dateWd(todayIso)"
             ><div class="h-full w-0.5 bg-blue-600"></div></div>
 
-            <template x-for="m in milestones" :key="'ms-' + m.key">
+            <template x-for="m in milestones.filter((x) => x.date)" :key="'ms-' + m.key">
                 <div
                     class="absolute z-[11] h-2.5 w-2.5 -translate-x-1/2 rotate-45 border border-white"
                     :class="msLate(m) ? 'bg-red-600' : 'bg-gray-600'"
@@ -525,6 +601,9 @@
                     <th class="py-1 pr-2">{{ __('Phasenende') }}</th>
                     <th class="py-1 pr-2">{{ __('KW') }}</th>
                     <th class="py-1 pr-2">{{ __('Dauer (AT)') }}</th>
+                    @if ((int) $project->schedule_model === 2)
+                        <th class="w-6 py-1"></th>
+                    @endif
                 </tr>
             </thead>
             <tbody>
@@ -595,10 +674,67 @@
                                 >
                             </template>
                         </td>
+                        @if ((int) $project->schedule_model === 2)
+                            <td class="py-0.5">
+                                <template x-if="row.type === 'milestone' && canEditPeriod">
+                                    <button type="button" @click="editMs(row.m)" class="rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700" title="{{ __('Meilenstein ändern') }}">
+                                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" /></svg>
+                                    </button>
+                                </template>
+                            </td>
+                        @endif
                     </tr>
                 </template>
             </tbody>
         </table>
+        @if ((int) $project->schedule_model === 2)
+            <template x-if="canEditPeriod">
+                <div class="mt-1">
+                    <button type="button" x-show="ms === null" @click="newMs()" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 font-medium text-gray-700 hover:bg-btn-secondary-hover" title="{{ __('Fügt einen Meilenstein hinzu: einen Zeitpunkt, der sich an Start oder Ende des Workflows oder einer Phase orientiert.') }}">+ {{ __('Meilenstein') }}</button>
+                    <form x-show="ms !== null" x-cloak @submit.prevent="saveMs()" class="rounded-md border border-gray-200 bg-gray-50 p-2">
+                        <div class="flex flex-wrap items-end gap-2">
+                            <label class="block">
+                                <span class="block text-[10px] text-gray-500">{{ __('Name') }}</span>
+                                <input type="text" x-ref="msName" x-model="ms.name" maxlength="255" class="w-48 rounded border-gray-300 px-1.5 py-0.5 text-xs">
+                            </label>
+                            <label class="block">
+                                <span class="block text-[10px] text-gray-500">{{ __('Bezug') }}</span>
+                                <select x-model="ms.anchor_type" class="rounded border-gray-300 py-0.5 pl-1.5 pr-6 text-xs">
+                                    <option value="workflow_start">{{ __('Workflow-Start') }}</option>
+                                    <option value="workflow_end">{{ __('Workflow-Ende') }}</option>
+                                    <option value="step_start">{{ __('Start einer Phase') }}</option>
+                                    <option value="step_end">{{ __('Ende einer Phase') }}</option>
+                                    <option value="fixed">{{ __('festes Datum') }}</option>
+                                </select>
+                            </label>
+                            <label class="block" x-show="['step_start', 'step_end'].includes(ms.anchor_type)">
+                                <span class="block text-[10px] text-gray-500">{{ __('Phase') }}</span>
+                                <select x-model.number="ms.anchor_workflow_step_id" class="max-w-[14rem] rounded border-gray-300 py-0.5 pl-1.5 pr-6 text-xs">
+                                    <template x-for="step in steps" :key="'ms-step-' + step.id">
+                                        <option :value="step.id" x-text="step.title"></option>
+                                    </template>
+                                </select>
+                            </label>
+                            <label class="block" x-show="ms.anchor_type !== 'fixed'">
+                                <span class="block text-[10px] text-gray-500" title="{{ __('Arbeitstage nach dem Bezugspunkt; ein negativer Wert liegt davor.') }}">{{ __('Abstand (AT)') }}</span>
+                                <input type="number" x-model.number="ms.offset_days" min="-3650" max="3650" class="w-16 rounded border-gray-300 px-1.5 py-0.5 text-right text-xs" title="{{ __('Arbeitstage nach dem Bezugspunkt; ein negativer Wert liegt davor.') }}">
+                            </label>
+                            <label class="block" x-show="ms.anchor_type === 'fixed'">
+                                <span class="block text-[10px] text-gray-500">{{ __('Datum') }}</span>
+                                <input type="date" x-model="ms.fixed_date" class="rounded border-gray-300 px-1.5 py-0.5 text-xs">
+                            </label>
+                        </div>
+                        <p x-show="msError" x-text="msError" class="mt-1 text-red-600"></p>
+                        <div class="mt-2 flex items-center gap-2">
+                            <button type="button" x-show="ms && ms.id" @click="deleteMs()" :disabled="msSaving" class="rounded-md border border-red-200 bg-white px-2 py-0.5 font-medium text-red-700 hover:bg-red-50 disabled:opacity-50">{{ __('Löschen') }}</button>
+                            <span class="flex-1"></span>
+                            <button type="button" @click="ms = null" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Abbrechen') }}</button>
+                            <button type="submit" :disabled="msSaving" class="rounded-md border border-transparent bg-btn-primary px-2.5 py-0.5 font-medium text-white hover:bg-btn-primary-hover disabled:cursor-wait disabled:opacity-60">{{ __('Speichern') }}</button>
+                        </div>
+                    </form>
+                </div>
+            </template>
+        @endif
     </div>
 
     <p x-show="milestones.length" class="mt-2 text-gray-500">

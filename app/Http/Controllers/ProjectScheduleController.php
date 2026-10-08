@@ -250,6 +250,77 @@ class ProjectScheduleController extends Controller
         return response()->json(['date' => $date->toDateString()]);
     }
 
+    /** Meilenstein am Projekt anlegen (neues Terminmodell; docs/ablaufplan-konzept.md). */
+    public function storeMilestone(Request $request, Project $project): JsonResponse
+    {
+        $this->authorizeMilestones($request, $project);
+
+        $data = $this->validatedMilestone($request, $project);
+        $sort = (int) \App\Models\ProjectMilestone::query()->withoutGlobalScopes()->where('project_id', $project->id)->max('sort') + 1;
+        \App\Models\ProjectMilestone::query()->withoutGlobalScopes()->create([...$data, 'tenant_id' => $project->tenant_id, 'project_id' => $project->id, 'sort' => $sort]);
+
+        return response()->json(['saved' => true]);
+    }
+
+    public function updateMilestone(Request $request, Project $project, \App\Models\ProjectMilestone $milestone): JsonResponse
+    {
+        $this->authorizeMilestones($request, $project);
+        abort_unless($milestone->project_id === $project->id, 404);
+
+        $milestone->update($this->validatedMilestone($request, $project));
+
+        return response()->json(['saved' => true]);
+    }
+
+    public function destroyMilestone(Request $request, Project $project, \App\Models\ProjectMilestone $milestone): JsonResponse
+    {
+        $this->authorizeMilestones($request, $project);
+        abort_unless($milestone->project_id === $project->id, 404);
+
+        $milestone->delete();
+
+        return response()->json(['deleted' => true]);
+    }
+
+    private function authorizeMilestones(Request $request, Project $project): void
+    {
+        abort_unless($project->mayBeOpenedBy($request->user()) && $request->user()->can('workflow_step.due_date'), 403);
+        abort_unless((int) $project->schedule_model === 2, 422, __('Meilensteine gibt es nur im neuen Terminmodell.'));
+    }
+
+    /** @return array<string, mixed> */
+    private function validatedMilestone(Request $request, Project $project): array
+    {
+        $types = [\App\Models\WorkflowMilestone::ANCHOR_WORKFLOW_START, \App\Models\WorkflowMilestone::ANCHOR_WORKFLOW_END, \App\Models\WorkflowMilestone::ANCHOR_STEP_START, \App\Models\WorkflowMilestone::ANCHOR_STEP_END, \App\Models\WorkflowMilestone::ANCHOR_FIXED];
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'anchor_type' => ['required', 'in:'.implode(',', $types)],
+            'anchor_workflow_step_id' => ['nullable', 'integer'],
+            'offset_days' => ['nullable', 'integer', 'between:-3650,3650'],
+            'fixed_date' => ['nullable', 'date'],
+        ], ['name.required' => __('Bitte geben Sie dem Meilenstein einen Namen.'), 'fixed_date.date' => __('Bitte geben Sie ein gültiges Datum an.')]);
+
+        $type = $validated['anchor_type'];
+        $isStep = in_array($type, [\App\Models\WorkflowMilestone::ANCHOR_STEP_START, \App\Models\WorkflowMilestone::ANCHOR_STEP_END], true);
+        $stepId = $isStep ? (int) ($validated['anchor_workflow_step_id'] ?? 0) : null;
+        if ($isStep) {
+            $allowed = \App\Models\WorkflowStep::query()->withoutGlobalScopes()->where('workflow_id', $project->workflow_id)
+                ->where('lifecycle_status', \App\Models\WorkflowGroupWindow::WORK_LIFECYCLE_STATUS)->whereKey($stepId)->exists();
+            abort_unless($allowed, 422, __('Bitte wählen Sie eine Phase dieses Workflows.'));
+        }
+        if ($type === \App\Models\WorkflowMilestone::ANCHOR_FIXED) {
+            abort_if(empty($validated['fixed_date']), 422, __('Bitte geben Sie ein Datum an.'));
+        }
+
+        return [
+            'name' => trim($validated['name']),
+            'anchor_type' => $type,
+            'anchor_workflow_step_id' => $stepId,
+            'offset_days' => $type === \App\Models\WorkflowMilestone::ANCHOR_FIXED ? 0 : (int) ($validated['offset_days'] ?? 0),
+            'fixed_date' => $type === \App\Models\WorkflowMilestone::ANCHOR_FIXED ? $validated['fixed_date'] : null,
+        ];
+    }
+
     public function updateField(Request $request, Project $project, ProjectWorkflowStep $projectWorkflowStep): JsonResponse
     {
         abort_unless($projectWorkflowStep->project_id === $project->id, 404);

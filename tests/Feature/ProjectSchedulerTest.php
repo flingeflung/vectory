@@ -245,4 +245,51 @@ class ProjectSchedulerTest extends TestCase
 
         $this->assertSame('2027-03-03', $this->dueDate($project, $this->steps['b']));
     }
+
+    public function test_milestones_can_be_created_changed_and_deleted_in_the_project(): void
+    {
+        $project = $this->project();
+        $admin = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'organization_admin']);
+
+        // anlegen: zwei Arbeitstage nach dem Ende von B (B endet Mi 3.3.)
+        $this->actingAs($admin)->postJson(route('projekte.meilensteine.store', $project), [
+            'name' => 'Abnahme', 'anchor_type' => 'step_end', 'anchor_workflow_step_id' => $this->steps['b']->id, 'offset_days' => 2,
+        ])->assertOk();
+        $milestone = ProjectMilestone::query()->withoutGlobalScopes()->where('project_id', $project->id)->sole();
+        $this->assertSame('2027-03-05', $milestone->date->toDateString());
+
+        // ändern: festes Datum
+        $this->actingAs($admin)->patchJson(route('projekte.meilensteine.update', [$project, $milestone]), ['name' => 'Messe', 'anchor_type' => 'fixed', 'fixed_date' => '2027-09-01'])->assertOk();
+        $milestone->refresh();
+        $this->assertSame('Messe', $milestone->name);
+        $this->assertSame('2027-09-01', $milestone->date->toDateString());
+        $this->assertNull($milestone->anchor_workflow_step_id);
+
+        // löschen
+        $this->actingAs($admin)->deleteJson(route('projekte.meilensteine.destroy', [$project, $milestone]))->assertOk();
+        $this->assertSame(0, ProjectMilestone::query()->withoutGlobalScopes()->where('project_id', $project->id)->count());
+    }
+
+    public function test_milestone_input_is_validated(): void
+    {
+        $project = $this->project();
+        $admin = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'organization_admin']);
+        $foreign = WorkflowStep::query()->create(['tenant_id' => $this->tenant->id, 'workflow_id' => Workflow::query()->create(['tenant_id' => $this->tenant->id, 'short_name' => 'X', 'name' => 'X', 'active' => true, 'sort' => 9])->id, 'title' => 'Fremd', 'sort' => 1, 'lifecycle_status' => 2, 'duration_days' => 1]);
+
+        $this->actingAs($admin)->postJson(route('projekte.meilensteine.store', $project), ['name' => '', 'anchor_type' => 'workflow_end'])->assertStatus(422);
+        $this->actingAs($admin)->postJson(route('projekte.meilensteine.store', $project), ['name' => 'X', 'anchor_type' => 'step_end', 'anchor_workflow_step_id' => $foreign->id])->assertStatus(422);
+        $this->actingAs($admin)->postJson(route('projekte.meilensteine.store', $project), ['name' => 'X', 'anchor_type' => 'fixed'])->assertStatus(422);
+        $this->assertSame(0, ProjectMilestone::query()->withoutGlobalScopes()->where('project_id', $project->id)->count());
+    }
+
+    public function test_milestones_need_the_right_and_the_new_model(): void
+    {
+        $user = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'user']);
+        $project = $this->project();
+        $this->actingAs($user)->postJson(route('projekte.meilensteine.store', $project), ['name' => 'X', 'anchor_type' => 'workflow_end'])->assertForbidden();
+
+        $admin = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'organization_admin']);
+        $old = $this->project(model: 1);
+        $this->actingAs($admin)->postJson(route('projekte.meilensteine.store', $old), ['name' => 'X', 'anchor_type' => 'workflow_end'])->assertStatus(422);
+    }
 }

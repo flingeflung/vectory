@@ -302,7 +302,7 @@ class ProjectPlanningCalculator
             ])->values()->all();
         if ($isNewModel) {
             $stepTitles = $stepRows->mapWithKeys(fn ($row) => [$row->workflow_step_id => $row->workflowStep->title]);
-            $own = \App\Models\ProjectMilestone::query()->withoutGlobalScopes()->where('project_id', $project->id)->whereNotNull('date')->orderBy('sort')->get();
+            $own = \App\Models\ProjectMilestone::query()->withoutGlobalScopes()->where('project_id', $project->id)->orderBy('sort')->get();
             foreach ($own as $row) {
                 $milestones[] = [
                     'key' => 'ms-'.$row->id,
@@ -311,6 +311,11 @@ class ProjectPlanningCalculator
                     'title' => (string) $row->name,
                     'date' => $row->date->toDateString(),
                     'rule' => $this->milestoneRule($row, $stepTitles->all()),
+                    'id' => (int) $row->id,
+                    'anchor_type' => $row->anchor_type,
+                    'anchor_step_id' => $row->anchor_workflow_step_id ? (int) $row->anchor_workflow_step_id : null,
+                    'offset_days' => (int) $row->offset_days,
+                    'fixed_date' => $row->fixed_date?->toDateString(),
                 ];
             }
         }
