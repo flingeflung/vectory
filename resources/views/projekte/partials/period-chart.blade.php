@@ -9,6 +9,7 @@
     - AT eines Schritts ändern: der Nachbar gleicht aus (beim letzten Schritt der Vorgänger).
     Die Summe der Dauern bleibt der Projektzeitraum in AT, jeder Schritt hat mindestens 1 AT. Vorerst nur Ansicht/Entwurf: nichts wird gespeichert.
 --}}
+@php $isNewModel = (int) $project->schedule_model === 2; @endphp
 <div
     x-data="{
         workdays: @js($chart['workdays']),
@@ -470,8 +471,8 @@
         },
         async applyPeriod(side, iso) {
             const message = side === 'end'
-                ? @js(__('Das Projektende wird auf :date gesetzt. Die Termine der Schritte ändern sich dabei nicht.'))
-                : @js(__('Der Projektstart wird auf :date gesetzt. Die Termine der Schritte ändern sich dabei nicht.'));
+                ? @js($isNewModel ? __('Das Projektende wird auf :date gesetzt. Alle Termine werden daraus neu berechnet.') : __('Das Projektende wird auf :date gesetzt. Die Termine der Schritte ändern sich dabei nicht.'))
+                : @js($isNewModel ? __('Der Projektstart wird auf :date gesetzt. Alle Termine werden daraus neu berechnet.') : __('Der Projektstart wird auf :date gesetzt. Die Termine der Schritte ändern sich dabei nicht.'));
             if (! await window.confirmDialog({
                 title: @js(__('Zeitraum anpassen?')),
                 message: message.replace(':date', this.dateDe(iso)),
@@ -906,10 +907,10 @@
             <button type="button" onclick="window.openProjectSchedule({{ $project->id }})" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 font-medium text-gray-700 hover:bg-btn-secondary-hover" title="{{ __('Berechnet die Termine der Schritte aus einem Fixpunkt und den Dauern und trägt sie auf Wunsch ein.') }}">{{ __('Termine berechnen …') }}</button>
         </template>
         @endif
-        <span x-show="changed" x-cloak class="text-amber-700">{{ __('Nicht gespeicherte Änderungen: Dauern (und ein späterer Projektstart) werden erst mit „Speichern“ am Projekt übernommen, die Termine der Schritte bleiben unverändert.') }}</span>
+        <span x-show="changed" x-cloak class="text-amber-700">{{ $isNewModel ? __('Nicht gespeicherte Änderungen: Dauern (und ein späterer Projektstart) werden erst mit „Speichern“ am Projekt übernommen, die Termine werden daraus neu berechnet.') : __('Nicht gespeicherte Änderungen: Dauern (und ein späterer Projektstart) werden erst mit „Speichern“ am Projekt übernommen, die Termine der Schritte bleiben unverändert.') }}</span>
         <span x-show="! canEditPeriod && changed" x-cloak class="text-gray-400">{{ __('Ihnen fehlt die Berechtigung, Termine und Dauern zu ändern.') }}</span>
         <span class="flex-1"></span>
         <button type="button" x-show="changed" x-cloak @click="reset()" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Zurücksetzen') }}</button>
-        <button type="button" x-show="changed && canEditPeriod" x-cloak :disabled="applying" @click="saveDurations()" class="rounded-md border border-transparent bg-btn-primary px-2.5 py-0.5 font-medium text-white hover:bg-btn-primary-hover disabled:cursor-wait disabled:opacity-50" title="{{ __('Speichert die geänderten Dauern am Projekt. Die Termine der Schritte ändern sich dabei nicht.') }}">{{ __('Speichern') }}</button>
+        <button type="button" x-show="changed && canEditPeriod" x-cloak :disabled="applying" @click="saveDurations()" class="rounded-md border border-transparent bg-btn-primary px-2.5 py-0.5 font-medium text-white hover:bg-btn-primary-hover disabled:cursor-wait disabled:opacity-50" title="{{ $isNewModel ? __('Speichert die geänderten Dauern am Projekt. Die Termine werden daraus neu berechnet.') : __('Speichert die geänderten Dauern am Projekt. Die Termine der Schritte ändern sich dabei nicht.') }}">{{ __('Speichern') }}</button>
     </div>
 </div>

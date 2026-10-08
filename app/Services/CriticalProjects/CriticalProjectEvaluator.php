@@ -40,7 +40,10 @@ class CriticalProjectEvaluator
         $workflowSteps = $project->projectWorkflowSteps
             ->filter(fn ($step) => $step->workflowStep?->workflow_id === $project->workflow_id);
 
-        foreach ($workflowSteps->filter(fn ($step) => ! $step->completed_at && $step->due_date && $step->due_date->lt($today)) as $step) {
+        // Neues Terminmodell: jede Phase hat ein berechnetes Ende, als Termin zählen nur benannte Phasenenden
+        $isNewModel = (int) $project->schedule_model === 2;
+        foreach ($workflowSteps->filter(fn ($step) => ! $step->completed_at && $step->due_date && $step->due_date->lt($today)
+            && (! $isNewModel || $step->workflowStep?->has_due_date)) as $step) {
             $findings->push($this->finding($definition('schedule.overdue'),
                 __(':step war am :date fällig.', ['step' => $step->workflowStep->title, 'date' => $step->due_date->format('d.m.Y')]),
                 null,

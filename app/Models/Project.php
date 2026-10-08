@@ -279,6 +279,12 @@ class Project extends Model
         return $this->hasMany(ProjectWorkflowStep::class)->orderBy('sort');
     }
 
+    /** Meilensteine des Projekts (neues Terminmodell, docs/ablaufplan-konzept.md). */
+    public function projectMilestones(): HasMany
+    {
+        return $this->hasMany(ProjectMilestone::class)->orderBy('sort')->orderBy('id');
+    }
+
     public function projectChecklists(): HasMany
     {
         return $this->hasMany(ProjectChecklist::class)->with('checklist.sections.points');

@@ -354,4 +354,43 @@ class ProjectSchedulerTest extends TestCase
         $user = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'user']);
         $this->actingAs($user)->postJson($url, ['point' => 'workflow_end', 'date' => '2027-03-10'])->assertForbidden();
     }
+
+    public function test_critical_projects_only_report_named_phase_ends_in_the_new_model(): void
+    {
+        $this->steps['b']->update(['has_due_date' => true]);
+        // Start vor langer Zeit: alle berechneten Phasenenden liegen in der Vergangenheit, keine Phase ist erledigt
+        $project = $this->project(CarbonImmutable::today()->subDays(120)->startOfWeek()->toDateString());
+
+        $findings = app(\App\Services\CriticalProjects\CriticalProjectEvaluator::class)->evaluate($project->fresh(), 0)->where('code', 'schedule.overdue');
+
+        $this->assertCount(1, $findings);
+        $this->assertStringContainsString('B', $findings->first()['detail'] ?? json_encode($findings->first()));
+    }
+
+    public function test_planning_transfer_copies_milestone_definitions_between_new_model_projects(): void
+    {
+        $source = $this->project();
+        $target = $this->project('2027-06-07');
+        $this->milestone($source, ['name' => 'Abnahme', 'anchor_type' => 'step_end', 'anchor_workflow_step_id' => $this->steps['b']->id, 'offset_days' => 2]);
+        $this->milestone($source, ['name' => 'Messe', 'anchor_type' => 'fixed', 'fixed_date' => '2027-09-01']);
+
+        $this->assertTrue(\App\Services\PlanningTransfer::available($source)[\App\Services\PlanningTransfer::MILESTONES]);
+        $this->assertFalse(\App\Services\PlanningTransfer::available($target)[\App\Services\PlanningTransfer::MILESTONES]);
+
+        $result = app(\App\Services\PlanningTransfer::class)->transfer($source->fresh(), $target->fresh(), [\App\Services\PlanningTransfer::MILESTONES], false);
+        $this->assertSame('done', $result[0]['status']);
+
+        $rows = ProjectMilestone::query()->withoutGlobalScopes()->where('project_id', $target->id)->orderBy('name')->get();
+        $this->assertSame(['Abnahme', 'Messe'], $rows->pluck('name')->all());
+        // das Ziel rechnet selbst: B endet dort Mi 9.6., +2 AT = Fr 11.6.
+        $this->assertSame('2027-06-11', $rows[0]->date->toDateString());
+        $this->assertSame('2027-09-01', $rows[1]->date->toDateString());
+
+        // ein zweiter Lauf ändert nichts, zwischen den Modellen wird übersprungen
+        $again = app(\App\Services\PlanningTransfer::class)->transfer($source->fresh(), $target->fresh(), [\App\Services\PlanningTransfer::MILESTONES], false);
+        $this->assertSame('unchanged', $again[0]['status']);
+        $old = $this->project(model: 1);
+        $mixed = app(\App\Services\PlanningTransfer::class)->transfer($source->fresh(), $old->fresh(), [\App\Services\PlanningTransfer::MILESTONES], false);
+        $this->assertSame('skipped', $mixed[0]['status']);
+    }
 }

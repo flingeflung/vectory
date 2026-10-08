@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Project;
+use App\Models\ProjectMilestone;
 use App\Models\ProjectWorkflowStep;
 use Illuminate\Support\Collection;
 
@@ -37,13 +38,20 @@ final class ProjectFamilyTimeline
             ->get()
             ->groupBy('project_id');
 
-        return $members->map(function (Project $member) use ($project, $main, $stepsByProject) {
+        $ownByProject = ProjectMilestone::query()->whereIn('project_id', $members->pluck('id'))->whereNotNull('date')->get()->groupBy('project_id');
+
+        return $members->map(function (Project $member) use ($project, $main, $stepsByProject, $ownByProject) {
             $milestones = ($stepsByProject->get($member->id) ?? collect())
                 ->filter(fn (ProjectWorkflowStep $step) => $step->workflowStep->workflow_id === $member->workflow_id)
                 ->map(fn (ProjectWorkflowStep $step) => [
                     'date' => $step->due_date->format('Y-m-d'),
                     'title' => $step->effectiveMilestoneTitle() ?: $step->workflowStep->title,
                 ])
+                ->concat(($ownByProject->get($member->id) ?? collect())->map(fn (ProjectMilestone $row) => [
+                    'date' => $row->date->format('Y-m-d'),
+                    'title' => $row->name,
+                ]))
+                ->sortBy('date')
                 ->values()
                 ->all();
 

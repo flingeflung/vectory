@@ -34,7 +34,7 @@ final class PlanningTransfer
             self::DURATIONS => __('Dauern und Sperren der Schritte'),
             self::PLANNED_HOURS => __('Aufwandsprofil bzw. eigene Planstunden'),
             self::PEOPLE => __('Projektbeteiligte (mit ihren Stunden)'),
-            self::MILESTONES => __('Termine der Schritte (Meilensteine)'),
+            self::MILESTONES => __('Termine und Meilensteine'),
         ];
     }
 
@@ -52,7 +52,9 @@ final class PlanningTransfer
             self::DURATIONS => $rows()->where(fn ($query) => $query->whereNotNull('duration_days')->orWhereNotNull('duration_locked'))->exists(),
             self::PLANNED_HOURS => (bool) $project->project_template_id || $project->functionGroupHours()->exists(),
             self::PEOPLE => $project->projectPeople()->exists(),
-            self::MILESTONES => $rows()->whereNotNull('due_date')->exists(),
+            self::MILESTONES => (int) $project->schedule_model === 2
+                ? $project->projectMilestones()->exists()
+                : $rows()->whereNotNull('due_date')->exists(),
             'workflow_id' => $project->workflow_id ? (int) $project->workflow_id : null,
         ];
     }
@@ -233,6 +235,14 @@ final class PlanningTransfer
             return ['skipped', __('Nur zwischen Projekten mit demselben Workflow möglich.')];
         }
 
+        // Neues Terminmodell: Meilenstein-Definitionen übertragen (die Termine rechnet das Ziel selbst); zwischen den Modellen nicht möglich
+        if ((int) $source->schedule_model !== (int) $target->schedule_model) {
+            return ['skipped', __('Nur zwischen Projekten im gleichen Terminmodell möglich.')];
+        }
+        if ((int) $source->schedule_model === 2) {
+            return $this->projectMilestones($source, $target, $keepExisting);
+        }
+
         $changed = 0;
         $sourceRows = ProjectWorkflowStep::query()->where('project_id', $source->id)->whereNotNull('due_date')->get();
         if ($sourceRows->isEmpty()) {
@@ -253,5 +263,30 @@ final class PlanningTransfer
         }
 
         return $changed > 0 ? ['done', __(':n Termine übernommen.', ['n' => $changed])] : ['unchanged', __('Nichts zu ändern.')];
+    }
+
+    /** @return array{0: string, 1: string} */
+    private function projectMilestones(Project $source, Project $target, bool $keepExisting): array
+    {
+        $sourceRows = $source->projectMilestones()->get();
+        if ($sourceRows->isEmpty()) {
+            return ['skipped', __('Das Quellprojekt hat keine Meilensteine.')];
+        }
+
+        $changed = 0;
+        $existing = $target->projectMilestones()->get()->keyBy('name');
+        foreach ($sourceRows as $from) {
+            $values = $from->only(['name', 'sort', 'anchor_type', 'anchor_workflow_step_id', 'offset_days', 'fixed_date', 'is_market_launch', 'check_direction', 'workflow_milestone_id']);
+            $row = $existing->get($from->name);
+            if ($row === null) {
+                \App\Models\ProjectMilestone::query()->withoutGlobalScopes()->create([...$values, 'tenant_id' => $target->tenant_id, 'project_id' => $target->id]);
+                $changed++;
+            } elseif (! $keepExisting) {
+                $row->update($values);
+                $changed += $row->wasChanged() ? 1 : 0;
+            }
+        }
+
+        return $changed > 0 ? ['done', __(':n Meilensteine übernommen.', ['n' => $changed])] : ['unchanged', __('Nichts zu ändern.')];
     }
 }

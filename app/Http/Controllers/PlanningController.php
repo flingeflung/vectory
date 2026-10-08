@@ -146,7 +146,7 @@ class PlanningController extends Controller
         $rangeEnd = $displayMode === 'month' ? $monthStart->endOfMonth()->startOfDay() : CarbonImmutable::create($year, 12, 31);
         $assignments = ProjectPerson::query()->withoutGlobalScope('tenant')
             ->whereIn('person_id', $selectedPersonIds)
-            ->with(['person', 'functionGroup', 'project.projectWorkflowSteps.workflowStep'])
+            ->with(['person', 'functionGroup', 'project.projectWorkflowSteps.workflowStep', 'project.projectMilestones'])
             ->whereHas('project', fn (Builder $query) => $query->whereIn('tenant_id', $selectedOrganizationIds)
                 ->whereIn('status', [0, 1])
                 ->where(function (Builder $query) use ($rangeStart, $rangeEnd) {
@@ -183,7 +183,11 @@ class PlanningController extends Controller
                             ->map(fn ($step) => [
                                 'date' => $step->due_date->toDateString(),
                                 'label' => $step->effectiveMilestoneTitle() ?: $step->workflowStep->title,
-                            ])->values()
+                            ])
+                            ->concat($project->projectMilestones->filter(fn ($row) => $row->date)->map(fn ($row) => [
+                                'date' => $row->date->toDateString(),
+                                'label' => $row->name,
+                            ]))->sortBy('date')->values()
                         : collect(),
                 ];
             })->sortBy(fn (array $row) => $row['project']->start_date?->toDateString() ?? '9999-12-31')->values();

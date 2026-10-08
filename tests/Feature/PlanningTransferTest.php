@@ -169,7 +169,7 @@ class PlanningTransferTest extends TestCase
             'name' => 'Mit Planung', 'fields' => $template->fields()->pluck('attributes.id')->all(), 'planning_parts' => ['durations', 'bogus'],
         ])->assertRedirect();
         $this->assertSame(['durations'], $template->fresh()->planningParts());
-        $this->actingAs($this->admin)->get(route('admin.projektkopie-vorlagen', ['vorlage' => $template->id]))->assertOk()->assertSee('Dauern und Sperren der Schritte')->assertSee('Termine der Schritte (Meilensteine)');
+        $this->actingAs($this->admin)->get(route('admin.projektkopie-vorlagen', ['vorlage' => $template->id]))->assertOk()->assertSee('Dauern und Sperren der Schritte')->assertSee('Termine und Meilensteine');
 
         $this->actingAs($this->admin)->post(route('projekte.kopieren.store', $source), [
             'template_id' => $template->id, 'count' => 1, 'title' => 'Kopie', 'copy_mode' => 'new',
