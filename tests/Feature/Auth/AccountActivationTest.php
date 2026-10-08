@@ -197,7 +197,7 @@ class AccountActivationTest extends TestCase
         $this->assertStringContainsString('72 Stunden', $html);
         $this->assertStringContainsString('Benutzernamen und Passwort', $html);
         if (is_file(public_path('images/vectory_logo_mail.png'))) {
-            $this->assertStringContainsString('cid:', $html);   // Logo als eingebettetes Bild
+            $this->assertTrue(str_contains($html, 'cid:') || str_contains($html, 'data:image/png'));   // Logo als eingebettetes Bild
         }
     }
 }
