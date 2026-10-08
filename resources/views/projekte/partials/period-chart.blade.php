@@ -132,6 +132,59 @@
             await this.msSend('DELETE', this.msUrl + '/' + this.ms.id, null);
             this.msSaving = false;
         },
+        msDrag: null,
+        // Meilensteine lassen sich nur ziehen, solange das Diagramm keinen ungespeicherten Entwurf hat (die Lage passt sonst nicht zum Server)
+        msDraggable(m) { return m.kind === 'milestone' && this.canEditPeriod && ! this.changed; },
+        // Arbeitstag-Index des Bezugspunkts im Diagramm
+        msAnchorIdx(m) {
+            if (m.anchor_type === 'workflow_start') return this.off;
+            if (m.anchor_type === 'workflow_end') return this.off + this.used - 1;
+            const i = this.steps.findIndex((step) => step.id === m.anchor_step_id);
+            if (i < 0) return null;
+            return m.anchor_type === 'step_start' ? this.off + this.cum(i) - this.steps[i].days : this.off + this.cum(i) - 1;
+        },
+        // Arbeitstag unter dem Mauszeiger (nächstliegender)
+        nearestWorkday(e) {
+            const rect = this.$refs.track.getBoundingClientRect();
+            const c = (e.clientX - rect.left) / rect.width * this.span - 0.5;
+            let best = 0;
+            let bestDist = Infinity;
+            this.wdCal.forEach((k, idx) => {
+                const dist = Math.abs(k - c);
+                if (dist < bestDist) { bestDist = dist; best = idx; }
+            });
+            return best;
+        },
+        startMsDrag(m) {
+            if (! this.msDraggable(m)) return;
+            const anchor = m.anchor_type === 'fixed' ? 0 : this.msAnchorIdx(m);
+            if (anchor === null) return;
+            this.msDrag = { id: m.id, date: m.date, idx: null, moved: false };
+            const onMove = (e) => {
+                const idx = this.nearestWorkday(e);
+                this.msDrag.idx = idx;
+                this.msDrag.date = this.workdays[idx];
+                this.msDrag.moved = true;
+            };
+            const up = async () => {
+                window.removeEventListener('pointermove', onMove);
+                window.removeEventListener('pointerup', up);
+                const drag = this.msDrag;
+                this.msDrag = null;
+                if (! drag || ! drag.moved || drag.date === m.date) return;
+                const fixed = m.anchor_type === 'fixed';
+                const saved = await this.msSend('PATCH', this.msUrl + '/' + m.id, {
+                    name: m.title,
+                    anchor_type: m.anchor_type,
+                    anchor_workflow_step_id: m.anchor_step_id,
+                    offset_days: fixed ? 0 : drag.idx - anchor,
+                    fixed_date: fixed ? drag.date : null,
+                });
+                if (! saved && window.notifyDialog) window.notifyDialog(this.msError);
+            };
+            window.addEventListener('pointermove', onMove);
+            window.addEventListener('pointerup', up);
+        },
         weekNo(iso) {
             if (! iso) return '';
             const [y, m, d] = iso.split('-').map(Number);
@@ -202,8 +255,9 @@
         pct(k) { return k / this.span * 100; },
         // Meilenstein = Schritt mit eingetragenem Termin; außerhalb des Diagramms am Rand
         msPct(m) {
-            let idx = this.calendar.indexOf(m.date);
-            if (idx < 0) idx = m.date < this.calendar[0] ? 0 : this.span - 1;
+            const date = this.msDrag && this.msDrag.id === m.id ? this.msDrag.date : m.date;
+            let idx = this.calendar.indexOf(date);
+            if (idx < 0) idx = date < this.calendar[0] ? 0 : this.span - 1;
             return (idx + 0.5) / this.span * 100;
         },
         // Zu spät: der berechnete Schritt endet erst nach seinem Meilenstein
@@ -213,7 +267,7 @@
         },
         msTip(m) {
             const i = this.steps.findIndex((step) => step.id === m.step_id);
-            const base = m.title + ' · ' + this.dateWd(m.date);
+            const base = m.title + ' · ' + this.dateWd(m.date) + (this.msDraggable(m) ? ' – ' + @js(__('Zum Verschieben ziehen')) : '');
             return this.msLate(m) ? base + ' – ' + @js(__('Der Schritt endet laut Plan erst am :date.')).replace(':date', this.dateWd(this.endIso(i))) : base;
         },
         // Einsatzplan: Balken einer Funktionsgruppe von Schritt from bis Schritt to; die Stunden kommen aus Planstunden (Variable planned der Planungsseite)
@@ -524,7 +578,8 @@
             <template x-for="m in milestones.filter((x) => x.date)" :key="'ms-' + m.key">
                 <div
                     class="absolute z-[11] h-2.5 w-2.5 -translate-x-1/2 rotate-45 border border-white"
-                    :class="msLate(m) ? 'bg-red-600' : 'bg-gray-600'"
+                    :class="[msLate(m) ? 'bg-red-600' : 'bg-gray-600', msDraggable(m) ? 'cursor-grab touch-none' : '', msDrag && msDrag.id === m.id ? 'scale-125 cursor-grabbing' : '']"
+                    @pointerdown.prevent="startMsDrag(m)"
                     :style="{ left: msPct(m) + '%', bottom: '3px' }"
                     :title="msTip(m)"
                 ></div>
