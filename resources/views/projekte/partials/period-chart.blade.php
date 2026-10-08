@@ -185,6 +185,21 @@
             window.addEventListener('pointermove', onMove);
             window.addEventListener('pointerup', up);
         },
+        // Meilensteine außerhalb des Zeitstrahls stehen in den Randbereichen links/rechts (nächster zuerst), der Maßstab bleibt unverändert
+        msInside(m) { return m.date && m.date >= this.calendar[0] && m.date <= this.calendar[this.calendar.length - 1]; },
+        get outsideLeft() { return this.milestones.filter((m) => m.date && m.date < this.calendar[0]).sort((a, b) => (a.date < b.date ? 1 : -1)); },
+        get outsideRight() { return this.milestones.filter((m) => m.date && m.date > this.calendar[this.calendar.length - 1]).sort((a, b) => (a.date < b.date ? -1 : 1)); },
+        daysBetween(a, b) {
+            const [y1, m1, d1] = a.split('-').map(Number);
+            const [y2, m2, d2] = b.split('-').map(Number);
+            return Math.round((Date.UTC(y2, m2 - 1, d2) - Date.UTC(y1, m1 - 1, d1)) / 86400000);
+        },
+        // Abstand in Worten, z. B. 12 Monate vor Projektstart
+        msOutsideTip(m, before) {
+            const days = Math.abs(before ? this.daysBetween(m.date, this.period.project_start) : this.daysBetween(this.period.project_end, m.date));
+            const amount = days >= 60 ? Math.round(days / 30.4) + ' ' + @js(__('Monate')) : days + ' ' + (days === 1 ? @js(__('Tag')) : @js(__('Tage')));
+            return m.title + ' · ' + this.dateWd(m.date) + ' – ' + amount + ' ' + (before ? @js(__('vor Projektstart')) : @js(__('nach Projektende')));
+        },
         weekNo(iso) {
             if (! iso) return '';
             const [y, m, d] = iso.split('-').map(Number);
@@ -477,7 +492,7 @@
         </template>
     </div>
 
-    <div class="px-1">
+    <div class="px-1" :class="! groups.length ? [outsideLeft.length ? 'pl-6' : '', outsideRight.length ? 'pr-6' : ''] : ''">
         <div x-ref="track" style="height: 60px" class="relative select-none overflow-visible rounded" :class="groups.length ? 'ml-[9.5rem]' : ''">
             <span x-show="groups.length" style="left: -9.5rem; top: 24px" class="absolute text-[10px] font-medium text-gray-400">{{ __('Workflow') }}</span>
             {{-- Raster im Hintergrund --}}
@@ -575,7 +590,7 @@
                 :title="@js(__('Heute')) + ': ' + dateWd(todayIso)"
             ><div class="h-full w-0.5 bg-blue-600"></div></div>
 
-            <template x-for="m in milestones.filter((x) => x.date)" :key="'ms-' + m.key">
+            <template x-for="m in milestones.filter((x) => msInside(x))" :key="'ms-' + m.key">
                 <div
                     class="absolute z-[11] h-2.5 w-2.5 -translate-x-1/2 rotate-45 border border-white"
                     :class="[msLate(m) ? 'bg-red-600' : 'bg-gray-600', msDraggable(m) ? 'cursor-grab touch-none' : '', msDrag && msDrag.id === m.id ? 'scale-125 cursor-grabbing' : '']"
@@ -584,6 +599,22 @@
                     :title="msTip(m)"
                 ></div>
             </template>
+
+            {{-- Meilensteine außerhalb des Zeitraums: Randbereiche mit Pfeil nach außen und Abstand im Tooltip --}}
+            <template x-for="(m, j) in outsideLeft.slice(0, 4)" :key="'out-l-' + m.key">
+                <div class="absolute z-[11] flex cursor-help items-center gap-0.5" :style="{ right: 'calc(100% + 2px)', bottom: (3 + j * 14) + 'px' }" :title="msOutsideTip(m, true)">
+                    <span class="text-[10px] leading-none text-gray-600">&#9664;</span>
+                    <span class="inline-block h-2.5 w-2.5 rotate-45 border border-white bg-gray-600"></span>
+                </div>
+            </template>
+            <template x-for="(m, j) in outsideRight.slice(0, 4)" :key="'out-r-' + m.key">
+                <div class="absolute z-[11] flex cursor-help items-center gap-0.5" :style="{ left: 'calc(100% + 2px)', bottom: (3 + j * 14) + 'px' }" :title="msOutsideTip(m, false)">
+                    <span class="inline-block h-2.5 w-2.5 rotate-45 border border-white bg-gray-600"></span>
+                    <span class="text-[10px] leading-none text-gray-600">&#9654;</span>
+                </div>
+            </template>
+            <span x-show="outsideLeft.length > 4" class="absolute text-[10px] text-gray-500" style="right: calc(100% + 2px); top: 0" :title="@js(__('Weitere Meilensteine vor dem Zeitraum: siehe Tabelle'))" x-text="'+' + (outsideLeft.length - 4)"></span>
+            <span x-show="outsideRight.length > 4" class="absolute text-[10px] text-gray-500" style="left: calc(100% + 2px); top: 0" :title="@js(__('Weitere Meilensteine nach dem Zeitraum: siehe Tabelle'))" x-text="'+' + (outsideRight.length - 4)"></span>
 
             <div
                 class="absolute top-0 z-10 flex h-full w-3 -translate-x-1/2 cursor-col-resize items-center justify-center"
