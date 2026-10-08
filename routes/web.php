@@ -366,11 +366,10 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     // "reorder" als ID interpretiert (gleiche Falle wie bei Workflows/
     // Projektkategorien).
     Route::post('/projektattribute/reorder', [AttributeController::class, 'reorder'])->name('projektattribute.reorder');
+    Route::post('/projektattribute/matrix', [AttributeController::class, 'saveMatrix'])->name('projektattribute.matrix.save');
     Route::post('/projektattribute/{attribute}', [AttributeController::class, 'update'])->name('projektattribute.update');
     Route::delete('/projektattribute/{attribute}', [AttributeController::class, 'destroy'])->name('projektattribute.destroy');
     Route::post('/projektattribute/{attribute}/pulldown', [AttributeController::class, 'updatePulldown'])->name('projektattribute.pulldown.update');
-    Route::post('/projektattribute/{attribute}/projektart', [AttributeController::class, 'toggleProjectType'])->name('projektattribute.projektart.toggle');
-    Route::post('/projektattribute/{attribute}/alle-projektarten', [AttributeController::class, 'toggleAllTypes'])->name('projektattribute.alle-projektarten.toggle');
 
     Route::get('/papierformate', [PaperFormatController::class, 'index'])->name('papierformate');
     Route::get('/papierformate/katalog', [PaperFormatController::class, 'catalog'])->name('papierformate.katalog');

@@ -293,58 +293,41 @@ class AttributeController extends Controller
     }
 
     /**
-     * Kästchen-Raster-Toggle (analog Viettos ajax_projattr_set.php, aber
-     * mit CSRF-Schutz/Auth/parametrisierten Queries statt der dortigen
-     * rohen SQL-String-Verkettung).
+     * Raster "Projektart x Attribut" speichern (Ralf, 2026-10-08, vorher wirkte jeder Klick sofort): je Attribut des Rasters die
+     * angehakten Projektarten und - in Stammdaten/Ablaufdaten - der Schalter "gilt für alle". Bei "alle" bleiben die Zuordnungen
+     * unverändert (wie beim früheren Umschalter); wird "alle" abgewählt, sind zunächst alle Arten angehakt, es ändert sich also
+     * nichts, bis jemand Arten abwählt.
      */
-    public function toggleProjectType(Request $request, Attribute $attribute): RedirectResponse
+    public function saveMatrix(Request $request): RedirectResponse
     {
-        abort_unless($attribute->tenant_id === CurrentTenant::id(), 404);
-        abort_unless($attribute->isRestrictable(), 422);
+        $section = (string) $request->input('section');
+        $attributes = Attribute::query()->where('tenant_id', CurrentTenant::id())
+            ->whereIn('id', array_map('intval', (array) $request->input('attributes', [])))->get()
+            ->filter(fn (Attribute $attribute) => $attribute->isRestrictable() && $attribute->section === $section);
+        $subIds = ProjectTypeSub::query()->where('tenant_id', CurrentTenant::id())->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $allIds = array_map('intval', (array) $request->input('all', []));
 
-        $subId = $request->integer('project_type_sub_id');
-        $exists = DB::table('attribute_project_type')->where('attribute_id', $attribute->id)->where('project_type_sub_id', $subId)->exists();
+        DB::transaction(function () use ($request, $attributes, $subIds, $allIds) {
+            foreach ($attributes as $attribute) {
+                $appliesToAll = $attribute->section !== Attribute::SECTION_TYPSPEZIFISCH && in_array($attribute->id, $allIds, true);
+                if ($attribute->section !== Attribute::SECTION_TYPSPEZIFISCH) {
+                    $attribute->update(['applies_to_all_types' => $appliesToAll]);
+                }
+                if ($appliesToAll) {
+                    continue;
+                }
 
-        if ($exists) {
-            DB::table('attribute_project_type')->where('attribute_id', $attribute->id)->where('project_type_sub_id', $subId)->delete();
-        } else {
-            DB::table('attribute_project_type')->insert([
-                'attribute_id' => $attribute->id,
-                'project_type_sub_id' => $subId,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-
-        return $this->redirectToSection($attribute->section);
-    }
-
-    /**
-     * Schalter "gilt für alle Projektarten" (Ralf, 2026-09-20). Beim Umschalten
-     * auf "nur ausgewählte" werden zunächst ALLE Projektarten des Mandanten
-     * zugewiesen - es ändert sich also nichts, bis jemand Arten abwählt (statt
-     * dass das Feld schlagartig überall verschwindet).
-     */
-    public function toggleAllTypes(Request $request, Attribute $attribute): RedirectResponse
-    {
-        abort_unless($attribute->tenant_id === CurrentTenant::id(), 404);
-        abort_unless($attribute->isRestrictable() && $attribute->section !== Attribute::SECTION_TYPSPEZIFISCH, 422);
-
-        $appliesToAll = ! $attribute->applies_to_all_types;
-        $attribute->update(['applies_to_all_types' => $appliesToAll]);
-
-        if (! $appliesToAll) {
-            $subIds = ProjectTypeSub::query()->where('tenant_id', $attribute->tenant_id)->pluck('id');
-            foreach ($subIds as $subId) {
-                DB::table('attribute_project_type')->updateOrInsert(
-                    ['attribute_id' => $attribute->id, 'project_type_sub_id' => $subId],
-                    ['created_at' => now(), 'updated_at' => now()]
-                );
+                $chosen = array_values(array_intersect(array_map('intval', (array) $request->input('assign.'.$attribute->id, [])), $subIds));
+                DB::table('attribute_project_type')->where('attribute_id', $attribute->id)->delete();
+                foreach ($chosen as $subId) {
+                    DB::table('attribute_project_type')->insert([
+                        'attribute_id' => $attribute->id, 'project_type_sub_id' => $subId, 'created_at' => now(), 'updated_at' => now(),
+                    ]);
+                }
             }
-        }
+        });
 
-        // Nach dem Umschalten bleibt man in der Geltungs-Ansicht (Raster), nicht zurück bei den Feldern.
-        return $this->redirectToSection($attribute->section, 'geltung');
+        return $this->redirectToSection($section, $request->input('ansicht'));
     }
 
     /**

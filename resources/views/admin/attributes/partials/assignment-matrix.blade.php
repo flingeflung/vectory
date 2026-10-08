@@ -9,9 +9,42 @@
 
     Erwartet: $matrixAttributes, $title, $description, $withAllSwitch, $categories, $assignments.
 --}}
-<div class="rounded-lg border border-gray-200 bg-white p-4">
-    <div class="mb-2 text-xs font-semibold text-gray-500">{{ $title }}</div>
-    <p class="mb-2 text-xs text-gray-400">{{ $description }}</p>
+@php $matrixId = 'attr-matrix-'.$matrixAttributes->first()->section; @endphp
+{{-- Seit 2026-10-08 (Ralf): das Raster speichert gemeinsam über "Speichern" statt jeden Klick sofort. --}}
+<div class="rounded-lg border border-gray-200 bg-white p-4" x-data="{ dirty: false }">
+    <div class="mb-2 flex items-start justify-between gap-3">
+        <div>
+            <div class="text-xs font-semibold text-gray-500">{{ $title }}</div>
+            <p class="mt-0.5 text-xs text-gray-400">{{ $description }}</p>
+        </div>
+        <button type="submit" form="{{ $matrixId }}" x-show="dirty" x-cloak class="shrink-0 rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
+            {{ __('Speichern') }}
+        </button>
+    </div>
+    <form
+        id="{{ $matrixId }}"
+        method="POST"
+        action="{{ route('admin.projektattribute.matrix.save') }}"
+        x-data="{
+            // Ist alle gewählt, sind die Zellen der Spalte gesperrt und gelten als angehakt
+            syncAll(event) {
+                const box = event.target;
+                if (box.dataset.matrixAll === undefined) return;
+                this.$el.querySelectorAll('[data-matrix-cell=\'' + box.dataset.matrixAll + '\']').forEach((cell) => {
+                    cell.disabled = box.checked;
+                    if (box.checked) cell.checked = true;
+                    cell.classList.toggle('opacity-40', box.checked);
+                });
+            },
+        }"
+        @change="syncAll($event); dirty = window.formIsDirty($el, window.__attributesDirtyForms)"
+        @submit="dirty = false; window.__attributesDirtyForms.delete($el)"
+    >
+    @csrf
+    <input type="hidden" name="section" value="{{ $matrixAttributes->first()->section }}">
+    @foreach ($matrixAttributes as $attribute)
+        <input type="hidden" name="attributes[]" value="{{ $attribute->id }}">
+    @endforeach
     {{-- Höhe passt sich dem verbleibenden Platz im Fenster an (Ralf, 2026-09-20: die Kopfzeile darf beim
          Scrollen nie wegrutschen - dafür darf die Tabelle nicht höher sein als der sichtbare Bereich, sonst
          scrollt zusätzlich die Seite und die Kopfzeile verschwindet oben). Neu berechnet beim Einblenden und Verändern der Fenstergröße. --}}
@@ -51,13 +84,10 @@
                                 title="{{ __('Klicken markiert die ganze Spalte') }}"
                             >{{ $attribute->label }}</div>
                             @if ($withAllSwitch)
-                                <form method="POST" action="{{ route('admin.projektattribute.alle-projektarten.toggle', $attribute) }}">
-                                    @csrf
-                                    <label class="mt-0.5 inline-flex items-center gap-1 font-normal text-gray-500">
-                                        <input type="checkbox" @checked($attribute->applies_to_all_types) onchange="this.form.submit()" class="rounded border-gray-300">
-                                        {{ __('alle') }}
-                                    </label>
-                                </form>
+                                <label class="mt-0.5 inline-flex items-center gap-1 font-normal text-gray-500">
+                                    <input type="checkbox" name="all[]" value="{{ $attribute->id }}" data-matrix-all="{{ $attribute->id }}" @checked($attribute->applies_to_all_types) class="rounded border-gray-300">
+                                    {{ __('alle') }}
+                                </label>
                             @endif
                         </th>
                     @endforeach
@@ -91,14 +121,10 @@
                                         @else
                                             @checked(in_array($sub->id, $assignments->get($attribute->id, []), true))
                                         @endif
+                                        name="assign[{{ $attribute->id }}][]"
+                                        value="{{ $sub->id }}"
+                                        data-matrix-cell="{{ $attribute->id }}"
                                         title="{{ $sub->name }} – {{ $attribute->label }}"
-                                        @click="
-                                            fetch({{ \Illuminate\Support\Js::from(route('admin.projektattribute.projektart.toggle', $attribute)) }}, {
-                                                method: 'POST',
-                                                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Content-Type': 'application/x-www-form-urlencoded' },
-                                                body: 'project_type_sub_id={{ $sub->id }}',
-                                            });
-                                        "
                                     >
                                 </td>
                             @endforeach
@@ -108,4 +134,5 @@
             </tbody>
         </table>
     </div>
+    </form>
 </div>

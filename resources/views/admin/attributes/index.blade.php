@@ -406,7 +406,7 @@
                         @include('admin.attributes.partials.assignment-matrix', [
                             'matrixAttributes' => $restrictableBySection->get($section),
                             'title' => __('Geltung nach Projektart'),
-                            'description' => __('Standard: ein Feld gilt für alle Projektarten. Wird „alle“ abgewählt, gilt es nur für die angehakten Arten; bei den übrigen wird es nicht angezeigt (bereits eingetragene Werte bleiben erhalten). Ein Klick wirkt sofort, kein Speichern-Button nötig. Ein Klick auf eine Überschrift markiert die Spalte bzw. Zeile.'),
+                            'description' => __('Standard: ein Feld gilt für alle Projektarten. Wird „alle“ abgewählt, gilt es nur für die angehakten Arten; bei den übrigen wird es nicht angezeigt (bereits eingetragene Werte bleiben erhalten). Änderungen gelten erst nach „Speichern“. Ein Klick auf eine Überschrift markiert die Spalte bzw. Zeile.'),
                             'withAllSwitch' => true,
                         ])
                         </div>
@@ -416,7 +416,7 @@
                         @include('admin.attributes.partials.assignment-matrix', [
                             'matrixAttributes' => $attributesBySection->get('typspezifisch'),
                             'title' => __('Zuordnung zu Projektarten'),
-                            'description' => __('Klick schaltet die Zuordnung sofort um, kein Speichern-Button nötig. Ein Klick auf eine Überschrift markiert die Spalte bzw. Zeile.'),
+                            'description' => __('Änderungen gelten erst nach „Speichern“. Ein Klick auf eine Überschrift markiert die Spalte bzw. Zeile.'),
                             'withAllSwitch' => false,
                         ])
                         </div>
