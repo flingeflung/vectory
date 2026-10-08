@@ -46,7 +46,7 @@ Folgen:
 - Abstände sind Arbeitstage, vor oder nach dem Bezugspunkt.
 - **Ein Meilenstein hängt von Tasks ab, nie umgekehrt.** Verschiebt sich ein Task, wandern abhängige Meilensteine mit. Ein Meilenstein verschiebt nie einen Task.
 - **Ein Meilenstein bezieht sich nie auf einen anderen Meilenstein.** Dadurch sind Zirkelbezüge ausgeschlossen.
-- Ein Meilenstein ist nur eine Marke. Liegt er außerhalb von Start und Ende oder passt ein Task nicht zu ihm, erscheint ein Warnhinweis, der Plan ändert sich nicht.
+- Ein Meilenstein ist nur eine Marke und begrenzt keinen Task; der Plan ändert sich dadurch nie. Ein Konflikt (Meilenstein außerhalb von Start und Ende, oder ein Task, der laut Plan nach dem Meilenstein endet, obwohl er davor fertig sein soll) wird als Befund in **Kritische Projekte** gemeldet, nicht im Ablaufplan erzwungen.
 - Die heutigen „Termine“ (Redaktionsschluss, Publiziert, Fertig gedruckt, Markteinführung usw.) sind in Zukunft Meilensteine.
 
 ### Fixpunkt (Zielscheibe)
@@ -76,7 +76,7 @@ Folgen:
 
 - Datenmodell: neue Tabelle für Meilensteine (Workflow-Vorlage und Projekt), Bezug und Abstand, Reihenfolge; die heutigen Felder `due_date`, `milestone_title`, `has_due_date`, `is_start`, `is_end` und der Schalter für inaktive Schritte werden abgelöst.
 - Rechnung: `ProjectPlanningCalculator`, `ProjectStepTimeline`, `WorkflowScheduleCalculator` (entfällt in der heutigen Form).
-- Weitere Verbraucher der Termine: Kritische Projekte (`CriticalProjectEvaluator`), Planung übertragen (Bereich „Termine der Schritte“), Projektkopie-Vorlagen (Bereich Meilensteine), Projektfamilie/Verbund (`ProjectFamilyTimeline`), Illustrationsaufträge, Aktivierung von Schritten, Import aus Vietto, Hilfetexte.
+- Weitere Verbraucher der Termine: Kritische Projekte (`CriticalProjectEvaluator`, zusätzlich neue Befunde für Meilenstein-Konflikte), Planung übertragen (Bereich „Termine der Schritte“), Projektkopie-Vorlagen (Bereich Meilensteine), Projektfamilie/Verbund (`ProjectFamilyTimeline`), Illustrationsaufträge, Aktivierung von Schritten, Import aus Vietto, Hilfetexte.
 - Oberfläche: Ablaufplan, Terminübersicht, Workflow-Verwaltung, Projektdetails.
 
 ## 6. Bestand
@@ -99,5 +99,5 @@ Folgen:
 
 1. Darstellung der Meilensteine in der Workflow-Ansicht.
 2. Genaue Umwandlungsregel für die inaktiven „nur Termin“-Schritte und für Termine, die nicht zur Kette passen (siehe Abschnitt 6).
-3. Ob ein Meilenstein später doch einen Task begrenzen können soll (heute bewusst nein).
+3. Genaue Befundregeln für Meilenstein-Konflikte in Kritische Projekte (welche Konflikte, welche Dringlichkeitsstufe); die Meilensteine selbst begrenzen keinen Task.
 4. Verhalten der Verbundprojekte (Hauptprojekt und Unterprojekte) mit Fixpunkt und Meilensteinen.
