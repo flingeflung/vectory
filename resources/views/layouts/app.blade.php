@@ -3391,6 +3391,36 @@
             Tabelle bei jedem Schritt komplett neu rendert statt einzelner
             Werte.
         --}}
+        {{-- Planung übertragen (Ralf, 2026-10-08): Formular und Bericht werden per fetch() in den Rumpf geladen --}}
+        <x-modal name="planning-transfer" max-width="xl">
+            <div class="flex max-h-[85vh] flex-col">
+                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('Planung übertragen') }}</h3>
+                    <button
+                        type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'planning-transfer' }))"
+                        class="text-gray-400 hover:text-gray-600"
+                        aria-label="{{ __('Schließen') }}"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="planning-transfer-body" class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm">
+                    {{ __('Lädt…') }}
+                </div>
+            </div>
+        </x-modal>
+        <script>
+            window.openPlanningTransfer = async (projectId) => {
+                const body = document.getElementById('planning-transfer-body');
+                body.innerHTML = {{ \Illuminate\Support\Js::from(__('Lädt…')) }};
+                window.dispatchEvent(new CustomEvent('open-modal', { detail: 'planning-transfer' }));
+                body.innerHTML = await fetch(`/projekte/${projectId}/planung-uebertragen`).then((response) => response.text());
+            };
+        </script>
+
         <x-modal name="project-schedule" max-width="5xl">
             <div class="flex max-h-[85vh] flex-col">
                 <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">

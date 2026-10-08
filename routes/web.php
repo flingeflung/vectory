@@ -198,6 +198,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/projekte/{project}/zeitraum-setzen', [ProjectScheduleController::class, 'setPeriod'])->name('projekte.termine.set-period');
     Route::post('/projekte/{project}/dauern-speichern', [ProjectScheduleController::class, 'saveDurations'])->name('projekte.termine.save-durations');
     Route::post('/projekte/{project}/dauer-sperre', [ProjectScheduleController::class, 'setDurationLock'])->name('projekte.termine.set-duration-lock');
+    Route::get('/projekte/{project}/planung-uebertragen', [\App\Http\Controllers\PlanningTransferController::class, 'form'])->name('projekte.planung-uebertragen.form');
+    Route::post('/projekte/{project}/planung-uebertragen', [\App\Http\Controllers\PlanningTransferController::class, 'run'])->name('projekte.planung-uebertragen.run');
     Route::patch('/projekte/{project}/termine/{projectWorkflowStep}/start-end', [ProjectScheduleController::class, 'setStartEnd'])->name('projekte.termine.start-end');
     Route::get('/projekte/{project}/illustrationsauftraege', [GraphicOrderController::class, 'index'])->name('projekte.illustration-orders.index');
     Route::post('/projekte/{project}/illustrationsauftraege', [GraphicOrderController::class, 'store'])->name('projekte.illustration-orders.store');

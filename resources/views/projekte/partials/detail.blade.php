@@ -240,6 +240,17 @@
                     >
                         <x-icon name="checklist" class="h-5 w-5" />
                     </button>
+                    @can('project.edit')
+                        <button
+                            type="button"
+                            @click="window.openPlanningTransfer({{ $project->id }})"
+                            class="{{ $iconBtn }}"
+                            title="{{ __('Planung übertragen') }}"
+                            aria-label="{{ __('Planung übertragen') }}"
+                        >
+                            <x-icon name="transfer" class="h-5 w-5" />
+                        </button>
+                    @endcan
                     @can('project.create')
                         <button
                             type="button"
