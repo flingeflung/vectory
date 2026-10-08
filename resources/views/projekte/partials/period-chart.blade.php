@@ -526,7 +526,7 @@
         </template>
     </div>
 
-    <div class="px-1" :class="! groups.length ? [outsideLeft.length ? 'pl-6' : '', outsideRight.length ? 'pr-6' : ''] : ''">
+    <div class="px-1" :class="[outsideLeft.length && ! groups.length ? 'pl-6' : '', outsideRight.length ? 'pr-4' : '']">
         <div x-ref="track" style="height: 60px" class="relative select-none overflow-visible rounded" :class="groups.length ? 'ml-[9.5rem]' : ''">
             <span x-show="groups.length" style="left: -9.5rem; top: 24px" class="absolute text-[10px] font-medium text-gray-400">{{ __('Workflow') }}</span>
             {{-- Raster im Hintergrund --}}
