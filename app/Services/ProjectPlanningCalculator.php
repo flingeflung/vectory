@@ -188,9 +188,18 @@ class ProjectPlanningCalculator
         $available = count($workdays);
         $need = (int) $breakdown['sum'];
         $scaled = $need === $available ? [] : ($this->stepTimeline()->scaledDurations($project, $available) ?? []);
+        // Termin-Zeilen der Schritte des aktuellen Workflows (Phasenende-Name und Termin)
+        $stepRows = \App\Models\ProjectWorkflowStep::query()->withoutGlobalScopes()
+            ->where('project_id', $project->id)
+            ->whereHas('workflowStep', fn ($query) => $query->withoutGlobalScopes()->where('workflow_id', $project->workflow_id))
+            ->with(['workflowStep' => fn ($query) => $query->withoutGlobalScopes()])->get()->keyBy('workflow_step_id');
         $steps = [];
         foreach ($breakdown['steps'] as $row) {
-            $steps[] = ['id' => $row['id'], 'title' => $row['title'], 'days' => $row['days'], 'workflow_days' => $row['days'], 'fixed' => $row['default_used'], 'locked' => $row['locked'], 'scaled_days' => $scaled[$row['id']] ?? $row['days']];
+            $steps[] = [
+                'id' => $row['id'], 'title' => $row['title'], 'days' => $row['days'], 'workflow_days' => $row['days'], 'fixed' => $row['default_used'],
+                'locked' => $row['locked'], 'scaled_days' => $scaled[$row['id']] ?? $row['days'],
+                'end_name' => (string) ($stepRows->get($row['id'])?->effectiveMilestoneTitle() ?? ''),
+            ];
         }
 
         // Kalender von Projektstart bis -ende mit allen Tagen (auch Wochenenden, Feiertage) für das Raster im Hintergrund.
@@ -278,16 +287,34 @@ class ProjectPlanningCalculator
                 return ['id' => (int) $group->id, 'name' => (string) $group->name, 'from' => min($from, $to), 'to' => max($from, $to)];
             })->all();
 
-        // Meilensteine: Schritte des aktuellen Workflows mit eingetragenem Termin
-        $milestones = \App\Models\ProjectWorkflowStep::query()->withoutGlobalScope('tenant')
-            ->where('project_id', $project->id)->whereNotNull('due_date')
-            ->whereHas('workflowStep', fn ($query) => $query->withoutGlobalScope('tenant')->where('workflow_id', $project->workflow_id))
-            ->with(['workflowStep' => fn ($query) => $query->withoutGlobalScope('tenant')])->get()
+        // Marken im Diagramm: Altmodell = Schritte mit eingetragenem Termin; neues Modell (schedule_model 2) = benannte Phasenenden
+        // und die Meilensteine des Projekts (docs/ablaufplan-konzept.md)
+        $isNewModel = (int) $project->schedule_model === 2;
+        $milestones = $stepRows->filter(fn (\App\Models\ProjectWorkflowStep $row) => $row->due_date !== null
+                && (! $isNewModel || trim((string) $row->effectiveMilestoneTitle()) !== ''))
             ->map(fn (\App\Models\ProjectWorkflowStep $row) => [
+                'key' => 'step-'.$row->workflow_step_id,
+                'kind' => 'phase_end',
                 'step_id' => (int) $row->workflow_step_id,
                 'title' => (string) ($row->effectiveMilestoneTitle() ?: $row->workflowStep->title),
                 'date' => $row->due_date->toDateString(),
-            ])->sortBy('date')->values()->all();
+                'rule' => null,
+            ])->values()->all();
+        if ($isNewModel) {
+            $stepTitles = $stepRows->mapWithKeys(fn ($row) => [$row->workflow_step_id => $row->workflowStep->title]);
+            $own = \App\Models\ProjectMilestone::query()->withoutGlobalScopes()->where('project_id', $project->id)->whereNotNull('date')->orderBy('sort')->get();
+            foreach ($own as $row) {
+                $milestones[] = [
+                    'key' => 'ms-'.$row->id,
+                    'kind' => 'milestone',
+                    'step_id' => null,
+                    'title' => (string) $row->name,
+                    'date' => $row->date->toDateString(),
+                    'rule' => $this->milestoneRule($row, $stepTitles->all()),
+                ];
+            }
+        }
+        usort($milestones, fn (array $x, array $y) => [$x['date'], $x['kind'] === 'milestone'] <=> [$y['date'], $y['kind'] === 'milestone']);
 
         return [
             'milestones' => $milestones,
@@ -441,5 +468,21 @@ class ProjectPlanningCalculator
         }
 
         return $dates;
+    }
+
+    /** @param  array<int, string>  $stepTitles */
+    private function milestoneRule(\App\Models\ProjectMilestone $milestone, array $stepTitles): string
+    {
+        $offset = (int) $milestone->offset_days;
+        $suffix = $offset === 0 ? '' : ' '.($offset > 0 ? '+' : '−').abs($offset).' '.__('AT');
+        $step = $stepTitles[$milestone->anchor_workflow_step_id] ?? '';
+
+        return match ($milestone->anchor_type) {
+            'workflow_start' => __('Workflow-Start').$suffix,
+            'workflow_end' => __('Workflow-Ende').$suffix,
+            'step_start' => __('Start von :step', ['step' => $step]).$suffix,
+            'step_end' => __('Ende von :step', ['step' => $step]).$suffix,
+            default => __('festes Datum'),
+        };
     }
 }

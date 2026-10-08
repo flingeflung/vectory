@@ -56,6 +56,22 @@
             if (index[todayIso] !== undefined) this.grid.today = index[todayIso];
         },
         destroy() { if (window.periodChartIsDirty === this.dirtyHook) window.periodChartIsDirty = null; },
+        weekNo(iso) {
+            if (! iso) return '';
+            const [y, m, d] = iso.split('-').map(Number);
+            const date = new Date(Date.UTC(y, m - 1, d));
+            const day = date.getUTCDay() || 7;
+            date.setUTCDate(date.getUTCDate() + 4 - day);
+            const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+            return Math.ceil(((date - yearStart) / 86400000 + 1) / 7);
+        },
+        startIso(i) { return this.workdays[Math.max(0, this.off + this.cum(i) - this.steps[i].days)]; },
+        // Tabelle: Phasen in Reihenfolge, Meilensteine (neues Terminmodell) an ihrer zeitlichen Stelle
+        get tableRows() {
+            const rows = this.steps.map((step, i) => ({ type: 'phase', i: i, date: this.endIso(i), key: 'p-' + step.id }));
+            this.milestones.filter((m) => m.kind === 'milestone').forEach((m) => rows.push({ type: 'milestone', m: m, date: m.date, key: m.key }));
+            return rows.sort((a, b) => (a.date === b.date ? (a.type === 'phase' ? -1 : 1) : (a.date < b.date ? -1 : 1)));
+        },
         get total() { return this.workdays.length; },
         get span() { return this.calendar.length; },
         // Summe der Dauern; kleiner als total = Puffer bis zum Projektende, total ist bei zu knappem Zeitraum über das Projektende hinaus verlängert
@@ -424,7 +440,7 @@
                 :title="@js(__('Heute')) + ': ' + dateWd(todayIso)"
             ><div class="h-full w-0.5 bg-blue-600"></div></div>
 
-            <template x-for="m in milestones" :key="'ms-' + m.step_id">
+            <template x-for="m in milestones" :key="'ms-' + m.key">
                 <div
                     class="absolute z-[11] h-2.5 w-2.5 -translate-x-1/2 rotate-45 border border-white"
                     :class="msLate(m) ? 'bg-red-600' : 'bg-gray-600'"
@@ -487,44 +503,91 @@
         </div>
     </div>
 
-    <div class="mt-2 flex flex-wrap gap-1">
-        <template x-for="(step, i) in steps" :key="'field-' + step.id">
-            <div class="flex items-center gap-1 rounded-md border px-1.5 py-0.5" :class="hover === i ? 'border-gray-500 bg-gray-50' : 'border-gray-200'" @mouseenter="hover = i" @mouseleave="hover = null">
-                <span class="inline-block h-3 w-3 shrink-0 rounded-sm" :style="{ backgroundColor: palette[i % palette.length] }"></span>
-                <button
-                    type="button"
-                    @click="toggleLock(i)"
-                    class="shrink-0 rounded p-px"
-                    :class="step.locked ? 'text-gray-700' : 'text-gray-300 hover:text-gray-500'"
-                    :title="step.locked ? @js(__('Gesperrt: Die Dauer bleibt unverändert, der Schritt wandert beim Verschieben mit. Zum Entsperren klicken.')) : @js(__('Sperren: Die Dauer bleibt beim Verschieben anderer Schritte unverändert, der Schritt wandert mit.'))"
-                    :aria-pressed="step.locked ? 'true' : 'false'"
-                >
-                    <svg x-show="step.locked" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 1a4 4 0 00-4 4v3H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-1V5a4 4 0 00-4-4zm2 7V5a2 2 0 10-4 0v3h4z" clip-rule="evenodd" /></svg>
-                    <svg x-show="! step.locked" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M14.5 1A4.5 4.5 0 0010 5.5V9H3a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-1.5V5.5a3 3 0 116 0v2.75a.75.75 0 001.5 0V5.5A4.5 4.5 0 0014.5 1z" clip-rule="evenodd" /></svg>
-                </button>
-                <span class="max-w-[10rem] truncate font-medium text-gray-700" x-text="shortLabel(step.title)" :title="step.title"></span>
-                <input
-                    type="date"
-                    :value="endIso(i)"
-                    :disabled="step.locked"
-                    @change="setEndDate(i, $event.target.value, $event.target)"
-                    class="w-[5.5rem] rounded border-gray-300 px-1 py-px text-xs [&::-webkit-calendar-picker-indicator]:m-0 [&::-webkit-calendar-picker-indicator]:p-0 disabled:bg-gray-50 disabled:text-gray-500"
-                    title="{{ __('Berechnetes Ende des Schritts') }}"
-                >
-                <input
-                    type="number"
-                    min="1"
-                    :value="step.days"
-                    :disabled="step.locked"
-                    @focus="$event.target.select()"
-                    @mouseup="if ($event.offsetX < $event.target.clientWidth - 18) $event.preventDefault()"
-                    @change="setDays(i, $event.target.value, $event.target)"
-                    class="w-10 rounded border-gray-300 px-1 py-px text-right text-xs disabled:bg-gray-50 disabled:text-gray-500"
-                    :title="'{{ __('Dauer in Arbeitstagen (AT)') }}' + (step.fixed ? ' – {{ __('keine Dauer im Workflow eingetragen, zählt 1 Tag') }}' : ' – {{ __('laut Workflow') }}: ' + step.workflow_days)"
-                >
-                <span class="text-gray-500">{{ __('AT') }}</span>
-            </div>
-        </template>
+    <div class="mt-2 overflow-x-auto">
+        <table class="w-full min-w-[40rem] text-xs">
+            <thead>
+                <tr class="text-left text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                    <th class="w-14 py-1 pr-1"></th>
+                    <th class="py-1 pr-2">{{ __('Phase') }}</th>
+                    <th class="py-1 pr-2">{{ __('Start') }}</th>
+                    <th class="py-1 pr-2">{{ __('Ende') }}</th>
+                    <th class="py-1 pr-2">{{ __('Phasenende') }}</th>
+                    <th class="py-1 pr-2">{{ __('KW') }}</th>
+                    <th class="py-1 pr-2">{{ __('Dauer (AT)') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                <template x-for="row in tableRows" :key="row.key">
+                    <tr class="border-t border-gray-100" :class="row.type === 'phase' && hover === row.i ? 'bg-gray-50' : ''" @mouseenter="hover = row.type === 'phase' ? row.i : null" @mouseleave="hover = null">
+                        <td class="py-0.5 pr-1">
+                            <template x-if="row.type === 'phase'">
+                                <div class="flex items-center gap-1">
+                                    <span class="inline-block h-3 w-3 shrink-0 rounded-sm" :style="{ backgroundColor: palette[row.i % palette.length] }"></span>
+                                    <button
+                                        type="button"
+                                        @click="toggleLock(row.i)"
+                                        class="shrink-0 rounded p-px"
+                                        :class="steps[row.i].locked ? 'text-gray-700' : 'text-gray-300 hover:text-gray-500'"
+                                        :title="steps[row.i].locked ? @js(__('Gesperrt: Die Dauer bleibt unverändert, der Schritt wandert beim Verschieben mit. Zum Entsperren klicken.')) : @js(__('Sperren: Die Dauer bleibt beim Verschieben anderer Schritte unverändert, der Schritt wandert mit.'))"
+                                        :aria-pressed="steps[row.i].locked ? 'true' : 'false'"
+                                    >
+                    <svg x-show="steps[row.i].locked" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 1a4 4 0 00-4 4v3H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-1V5a4 4 0 00-4-4zm2 7V5a2 2 0 10-4 0v3h4z" clip-rule="evenodd" /></svg>
+                    <svg x-show="! steps[row.i].locked" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M14.5 1A4.5 4.5 0 0010 5.5V9H3a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-1.5V5.5a3 3 0 116 0v2.75a.75.75 0 001.5 0V5.5A4.5 4.5 0 0014.5 1z" clip-rule="evenodd" /></svg>
+                                    </button>
+                                </div>
+                            </template>
+                            <template x-if="row.type === 'milestone'">
+                                <span class="ml-0.5 inline-block h-2.5 w-2.5 rotate-45 bg-gray-600 align-middle" :title="@js(__('Meilenstein'))"></span>
+                            </template>
+                        </td>
+                        <td class="py-0.5 pr-2">
+                            <template x-if="row.type === 'phase'">
+                                <span class="block max-w-[16rem] truncate font-medium text-gray-700" x-text="steps[row.i].title" :title="steps[row.i].title"></span>
+                            </template>
+                            <template x-if="row.type === 'milestone'">
+                                <span class="block max-w-[16rem] truncate text-gray-700" x-text="row.m.title" :title="row.m.title"></span>
+                            </template>
+                        </td>
+                        <td class="py-0.5 pr-2 text-gray-500">
+                            <span x-show="row.type === 'phase'" x-text="dateDe(startIso(row.i))" :title="@js(__('Beginn der Phase (berechnet)'))"></span>
+                        </td>
+                        <td class="py-0.5 pr-2">
+                            <template x-if="row.type === 'phase'">
+                                <input
+                                    type="date"
+                                    :value="endIso(row.i)"
+                                    :disabled="steps[row.i].locked"
+                                    @change="setEndDate(row.i, $event.target.value, $event.target)"
+                                    class="w-[6.5rem] rounded border-gray-300 px-1 py-px text-xs [&::-webkit-calendar-picker-indicator]:m-0 [&::-webkit-calendar-picker-indicator]:p-0 disabled:bg-gray-50 disabled:text-gray-500"
+                                    title="{{ __('Berechnetes Ende der Phase') }}"
+                                >
+                            </template>
+                            <span x-show="row.type === 'milestone'" class="text-gray-700" x-text="dateDe(row.m.date)"></span>
+                        </td>
+                        <td class="py-0.5 pr-2 text-gray-500">
+                            <span x-show="row.type === 'phase'" x-text="steps[row.i].end_name" :title="steps[row.i].end_name"></span>
+                            <span x-show="row.type === 'milestone'" x-text="row.m.rule"></span>
+                        </td>
+                        <td class="py-0.5 pr-2 text-gray-500" x-text="weekNo(row.date)"></td>
+                        <td class="py-0.5 pr-2">
+                            <template x-if="row.type === 'phase'">
+                                <input
+                                    type="number"
+                                    min="1"
+                                    :value="steps[row.i].days"
+                                    :disabled="steps[row.i].locked"
+                                    @focus="$event.target.select()"
+                                    @mouseup="if ($event.offsetX < $event.target.clientWidth - 18) $event.preventDefault()"
+                                    @change="setDays(row.i, $event.target.value, $event.target)"
+                                    class="w-14 rounded border-gray-300 px-1 py-px text-right text-xs disabled:bg-gray-50 disabled:text-gray-500"
+                                    :title="'{{ __('Dauer in Arbeitstagen (AT)') }}' + (steps[row.i].fixed ? ' – {{ __('keine Dauer im Workflow eingetragen, zählt 1 Tag') }}' : ' – {{ __('laut Workflow') }}: ' + steps[row.i].workflow_days)"
+                                >
+                            </template>
+                        </td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
     </div>
 
     <p x-show="milestones.length" class="mt-2 text-gray-500">
