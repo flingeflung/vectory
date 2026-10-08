@@ -9,7 +9,7 @@
 return [
     // Hauptnavigation
     'dashboard' => 'Alle angemeldeten Benutzer.',
-    'projekte' => 'Alle angemeldeten Benutzer sehen die Projektübersicht. Die Details eines Projekts öffnen nur Benutzer mit dem Recht „Projekt: Details aufrufen“ (project.view); Administratoren immer.',
+    'projekte' => 'Die Projektübersicht zeigt jedem Benutzer die Projekte, bei denen er als Projektbeteiligter eingetragen ist; alle Projekte sehen Benutzer mit dem Recht „Projekt: Details aufrufen“ (project.view), Administratoren oder – je Organisation einstellbar – jeder. Die Details eines Projekts öffnen nur Projektbeteiligte dieses Projekts, Benutzer mit dem Recht (project.view) und Administratoren.',
     'critical-projects.index' => 'Alle angemeldeten Benutzer. Normale Benutzer sehen nur Projekte, an denen sie als Person beteiligt sind. Administratoren und Benutzer mit dem Recht „Kritische Projekte: alle Projekte freigegebener Organisationen sehen“ (critical_projects.view_all) sehen alle.',
     'aufgaben' => 'Alle angemeldeten Benutzer. Standardmäßig sehen sie ihre eigenen Aufgaben, die anderer Personen nur mit dem Recht „Aufgaben: alle Personen sehen“ (tasks.view_all); Administratoren immer.',
     'illustrationen' => 'Alle angemeldeten Benutzer. Die Personenlisten zeigen nur Personen, die für die Rolle des Benutzers sichtbar sind.',
