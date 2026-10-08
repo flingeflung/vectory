@@ -9,6 +9,7 @@ use App\Models\Tenant;
 use App\Models\UserPreference;
 use App\Models\Workflow;
 use App\Models\WorkflowGroupWindow;
+use App\Models\WorkflowMilestone;
 use App\Models\WorkflowStep;
 use App\Support\CurrentTenant;
 use Illuminate\Http\RedirectResponse;
@@ -116,13 +117,17 @@ class WorkflowController extends Controller
 
                 return ['id' => $group->id, 'name' => $group->name, 'from' => min($from, $to), 'to' => max($from, $to)];
             });
-        $viewState = UserPreference::configFor((int) auth()->id(), UserPreference::WORKFLOW_VIEW) + ['einsatzplan' => true, 'schritte' => true];
+        $viewState = UserPreference::configFor((int) auth()->id(), UserPreference::WORKFLOW_VIEW) + ['einsatzplan' => true, 'schritte' => true, 'meilensteine' => true];
+        $milestones = $selectedWorkflow
+            ? WorkflowMilestone::query()->where('workflow_id', $selectedWorkflow->id)->orderBy('sort')->orderBy('id')->get()
+            : collect();
 
         return [
             'workflows' => $workflows,
             'selectedWorkflow' => $selectedWorkflow,
             'workSteps' => $workSteps,
             'deploymentRows' => $deploymentRows,
+            'milestones' => $milestones,
             'viewState' => $viewState,
             'steps' => $steps,
             'isPublished' => $isPublished,
@@ -181,11 +186,75 @@ class WorkflowController extends Controller
         return redirect()->route('admin.workflows', ['workflow' => $workflow->id])->with('status', 'workflows-updated');
     }
 
-    /** Auf-/Zuklappzustand der beiden Bereiche (Einsatzplan, Schritte) je Benutzer merken. */
+    /** Meilenstein in der Workflow-Vorlage anlegen (nur solange der Workflow nicht veröffentlicht ist). */
+    public function milestoneStore(Request $request, Workflow $workflow): RedirectResponse
+    {
+        $this->abortUnlessEditableMilestones($workflow);
+        $data = $this->validatedMilestone($request, $workflow);
+        $sort = (int) WorkflowMilestone::query()->where('workflow_id', $workflow->id)->max('sort') + 1;
+        WorkflowMilestone::query()->create([...$data, 'tenant_id' => $workflow->tenant_id, 'workflow_id' => $workflow->id, 'sort' => $sort]);
+
+        return redirect()->route('admin.workflows', ['workflow' => $workflow->id])->with('status', 'workflows-updated');
+    }
+
+    public function milestoneUpdate(Request $request, Workflow $workflow, WorkflowMilestone $milestone): RedirectResponse
+    {
+        $this->abortUnlessEditableMilestones($workflow);
+        abort_unless($milestone->workflow_id === $workflow->id, 404);
+        $milestone->update($this->validatedMilestone($request, $workflow));
+
+        return redirect()->route('admin.workflows', ['workflow' => $workflow->id])->with('status', 'workflows-updated');
+    }
+
+    public function milestoneDestroy(Workflow $workflow, WorkflowMilestone $milestone): RedirectResponse
+    {
+        $this->abortUnlessEditableMilestones($workflow);
+        abort_unless($milestone->workflow_id === $workflow->id, 404);
+        $milestone->delete();
+
+        return redirect()->route('admin.workflows', ['workflow' => $workflow->id])->with('status', 'workflows-updated');
+    }
+
+    private function abortUnlessEditableMilestones(Workflow $workflow): void
+    {
+        abort_unless($workflow->tenant_id === CurrentTenant::id(), 404);
+        abort_if($workflow->isPublished(), 422, __('Dieser Workflow ist veröffentlicht - die Meilensteine lassen sich nur über eine neue Version ändern.'));
+    }
+
+    /** @return array<string, mixed> */
+    private function validatedMilestone(Request $request, Workflow $workflow): array
+    {
+        $types = [WorkflowMilestone::ANCHOR_WORKFLOW_START, WorkflowMilestone::ANCHOR_WORKFLOW_END, WorkflowMilestone::ANCHOR_STEP_START, WorkflowMilestone::ANCHOR_STEP_END];
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'anchor_type' => ['required', Rule::in($types)],
+            'anchor_workflow_step_id' => ['nullable', 'integer'],
+            'offset_days' => ['nullable', 'integer', 'between:-3650,3650'],
+            'is_market_launch' => ['nullable', 'boolean'],
+        ], ['name.required' => __('Bitte geben Sie dem Meilenstein einen Namen.')]);
+
+        $isStep = in_array($validated['anchor_type'], [WorkflowMilestone::ANCHOR_STEP_START, WorkflowMilestone::ANCHOR_STEP_END], true);
+        $stepId = $isStep ? (int) ($validated['anchor_workflow_step_id'] ?? 0) : null;
+        if ($isStep) {
+            $allowed = WorkflowStep::query()->where('workflow_id', $workflow->id)
+                ->where('lifecycle_status', WorkflowGroupWindow::WORK_LIFECYCLE_STATUS)->whereKey($stepId)->exists();
+            abort_unless($allowed, 422, __('Bitte wählen Sie eine Phase dieses Workflows.'));
+        }
+
+        return [
+            'name' => trim($validated['name']),
+            'anchor_type' => $validated['anchor_type'],
+            'anchor_workflow_step_id' => $stepId,
+            'offset_days' => (int) ($validated['offset_days'] ?? 0),
+            'is_market_launch' => $request->boolean('is_market_launch'),
+        ];
+    }
+
+    /** Auf-/Zuklappzustand der Bereiche (Einsatzplan, Meilensteine, Schritte) je Benutzer merken. */
     public function saveViewState(Request $request): Response
     {
         $data = $request->validate([
-            'section' => ['required', Rule::in(['einsatzplan', 'schritte'])],
+            'section' => ['required', Rule::in(['einsatzplan', 'schritte', 'meilensteine'])],
             'open' => ['required', 'boolean'],
         ]);
         $userId = $request->user()->id;
@@ -351,6 +420,7 @@ class WorkflowController extends Controller
             });
 
             WorkflowGroupWindow::copyToWorkflow($workflow, $newWorkflow, $stepIdMap);
+            WorkflowMilestone::copyToWorkflow($workflow, $newWorkflow, $stepIdMap);
 
             $workflow->update(['superseded_by_id' => $newWorkflow->id, 'active' => false]);
 
@@ -421,6 +491,7 @@ class WorkflowController extends Controller
             });
 
             WorkflowGroupWindow::copyToWorkflow($workflow, $newWorkflow, $stepIdMap);
+            WorkflowMilestone::copyToWorkflow($workflow, $newWorkflow, $stepIdMap);
 
             return $newWorkflow;
         });

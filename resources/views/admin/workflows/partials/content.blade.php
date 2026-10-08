@@ -136,6 +136,7 @@
                 </div>
 
                 @include('admin.workflows.partials.deployment-plan')
+                @include('admin.workflows.partials.milestones')
 
                 <div class="flex-1 min-h-0 overflow-y-auto p-3 space-y-2" x-data="{
                         stepsOpen: {{ $viewState['schritte'] ? 'true' : 'false' }},
@@ -225,6 +226,7 @@
                 </div>
 
                 @include('admin.workflows.partials.deployment-plan')
+                @include('admin.workflows.partials.milestones')
 
                 <div class="flex-1 min-h-0 overflow-y-auto p-3 space-y-2" x-data="{
                         stepsOpen: {{ $viewState['schritte'] ? 'true' : 'false' }},
