@@ -67,6 +67,7 @@ class CriticalProjectController extends Controller
                 'projectWorkflowSteps' => fn ($query) => $query->withoutGlobalScope('tenant'),
                 'projectWorkflowSteps.workflowStep' => fn ($query) => $query->withoutGlobalScope('tenant'),
                 'projectWorkflowSteps.workflowStep.functionGroups',
+                'projectMilestones' => fn ($query) => $query->withoutGlobalScope('tenant'),
                 'functionGroupHours', 'projectTemplate.functionGroups',
             ])->get();
         $booked = DB::table('job_hours')->whereIn('project_id', $projects->pluck('id'))

@@ -329,6 +329,7 @@ class ProjectScheduleController extends Controller
             'anchor_workflow_step_id' => ['nullable', 'integer'],
             'offset_days' => ['nullable', 'integer', 'between:-3650,3650'],
             'fixed_date' => ['nullable', 'date'],
+            'check_direction' => ['nullable', 'in:target,prerequisite'],
         ], ['name.required' => __('Bitte geben Sie dem Meilenstein einen Namen.'), 'fixed_date.date' => __('Bitte geben Sie ein gültiges Datum an.')]);
 
         $type = $validated['anchor_type'];
@@ -349,6 +350,7 @@ class ProjectScheduleController extends Controller
             'anchor_workflow_step_id' => $stepId,
             'offset_days' => $type === \App\Models\WorkflowMilestone::ANCHOR_FIXED ? 0 : (int) ($validated['offset_days'] ?? 0),
             'fixed_date' => $type === \App\Models\WorkflowMilestone::ANCHOR_FIXED ? $validated['fixed_date'] : null,
+            'check_direction' => ($validated['check_direction'] ?? null) ?: null,
         ];
     }
 

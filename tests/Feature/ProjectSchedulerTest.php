@@ -393,4 +393,38 @@ class ProjectSchedulerTest extends TestCase
         $mixed = app(\App\Services\PlanningTransfer::class)->transfer($source->fresh(), $old->fresh(), [\App\Services\PlanningTransfer::MILESTONES], false);
         $this->assertSame('skipped', $mixed[0]['status']);
     }
+
+    public function test_critical_projects_check_milestones_with_a_target_or_prerequisite(): void
+    {
+        // Projekt Mo 1.3. bis Mo 8.3.2027
+        $project = $this->project();
+        $this->milestone($project, ['name' => 'Messe', 'anchor_type' => 'fixed', 'fixed_date' => '2027-03-05', 'check_direction' => 'target']);          // Projektende 8.3. liegt danach
+        $this->milestone($project, ['name' => 'Gut', 'anchor_type' => 'fixed', 'fixed_date' => '2027-03-20', 'check_direction' => 'target']);           // ok
+        $this->milestone($project, ['name' => 'Prototyp', 'anchor_type' => 'fixed', 'fixed_date' => '2027-03-03', 'check_direction' => 'prerequisite']);  // Start 1.3. liegt davor
+        $this->milestone($project, ['name' => 'Frueh', 'anchor_type' => 'fixed', 'fixed_date' => '2027-02-20', 'check_direction' => 'prerequisite']);    // ok
+        $this->milestone($project, ['name' => 'Ohne', 'anchor_type' => 'fixed', 'fixed_date' => '2027-03-02']);                                        // keine Prüfung
+
+        $findings = app(\App\Services\CriticalProjects\CriticalProjectEvaluator::class)->evaluate($project->fresh(), 0);
+
+        $target = $findings->where('code', 'schedule.milestone_target');
+        $prerequisite = $findings->where('code', 'schedule.milestone_prerequisite');
+        $this->assertCount(1, $target);
+        $this->assertStringContainsString('Messe', $target->first()['detail']);
+        $this->assertCount(1, $prerequisite);
+        $this->assertStringContainsString('Prototyp', $prerequisite->first()['detail']);
+    }
+
+    public function test_check_direction_is_saved_with_the_milestone(): void
+    {
+        $project = $this->project();
+        $admin = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'organization_admin']);
+
+        $this->actingAs($admin)->postJson(route('projekte.meilensteine.store', $project), ['name' => 'Messe', 'anchor_type' => 'workflow_end', 'check_direction' => 'target'])->assertOk();
+        $this->assertSame('target', ProjectMilestone::query()->withoutGlobalScopes()->where('project_id', $project->id)->value('check_direction'));
+
+        $this->actingAs($admin)->postJson(route('projekte.meilensteine.store', $project), ['name' => 'X', 'anchor_type' => 'workflow_end', 'check_direction' => 'quatsch'])->assertStatus(422);
+        $milestone = ProjectMilestone::query()->withoutGlobalScopes()->where('project_id', $project->id)->sole();
+        $this->actingAs($admin)->patchJson(route('projekte.meilensteine.update', [$project, $milestone]), ['name' => 'Messe', 'anchor_type' => 'workflow_end', 'check_direction' => ''])->assertOk();
+        $this->assertNull($milestone->fresh()->check_direction);
+    }
 }

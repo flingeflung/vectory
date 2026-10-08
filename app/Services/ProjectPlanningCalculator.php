@@ -316,6 +316,7 @@ class ProjectPlanningCalculator
                     'anchor_step_id' => $row->anchor_workflow_step_id ? (int) $row->anchor_workflow_step_id : null,
                     'offset_days' => (int) $row->offset_days,
                     'fixed_date' => $row->fixed_date?->toDateString(),
+                    'check_direction' => $row->check_direction,
                 ];
             }
         }

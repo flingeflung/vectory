@@ -230,6 +230,7 @@ class WorkflowController extends Controller
             'anchor_type' => ['required', Rule::in($types)],
             'anchor_workflow_step_id' => ['nullable', 'integer'],
             'offset_days' => ['nullable', 'integer', 'between:-3650,3650'],
+            'check_direction' => ['nullable', Rule::in(['target', 'prerequisite'])],
         ], ['name.required' => __('Bitte geben Sie dem Meilenstein einen Namen.')]);
 
         $isStep = in_array($validated['anchor_type'], [WorkflowMilestone::ANCHOR_STEP_START, WorkflowMilestone::ANCHOR_STEP_END], true);
@@ -245,6 +246,7 @@ class WorkflowController extends Controller
             'anchor_type' => $validated['anchor_type'],
             'anchor_workflow_step_id' => $stepId,
             'offset_days' => (int) ($validated['offset_days'] ?? 0),
+            'check_direction' => ($validated['check_direction'] ?? null) ?: null,
         ];
     }
 

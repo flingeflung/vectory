@@ -36,11 +36,11 @@
             });
         },
         add() {
-            this.form = { id: null, name: '', anchor_type: 'workflow_end', anchor_workflow_step_id: this.phases.length ? this.phases[this.phases.length - 1].id : '', offset_days: 0 };
+            this.form = { id: null, name: '', anchor_type: 'workflow_end', anchor_workflow_step_id: this.phases.length ? this.phases[this.phases.length - 1].id : '', offset_days: 0, check_direction: '' };
             this.$nextTick(() => this.$refs.name && this.$refs.name.focus());
         },
         edit(row) {
-            this.form = { id: row.id, name: row.name, anchor_type: row.anchor_type, anchor_workflow_step_id: row.anchor_workflow_step_id || (this.phases.length ? this.phases[0].id : ''), offset_days: row.offset_days };
+            this.form = { id: row.id, name: row.name, anchor_type: row.anchor_type, anchor_workflow_step_id: row.anchor_workflow_step_id || (this.phases.length ? this.phases[0].id : ''), offset_days: row.offset_days, check_direction: row.check_direction || '' };
             this.$nextTick(() => this.$refs.name && this.$refs.name.focus());
         },
         get isStep() { return this.form && ['step_start', 'step_end'].includes(this.form.anchor_type); },
@@ -79,7 +79,7 @@
                             <td class="py-1 text-right">
                                 @if ($editable)
                                     <button type="button" class="rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700" title="{{ __('Meilenstein ändern') }}"
-                                        @click="edit({{ \Illuminate\Support\Js::from(['id' => $row->id, 'name' => $row->name, 'anchor_type' => $row->anchor_type, 'anchor_workflow_step_id' => $row->anchor_workflow_step_id, 'offset_days' => $row->offset_days]) }})">
+                                        @click="edit({{ \Illuminate\Support\Js::from(['id' => $row->id, 'name' => $row->name, 'anchor_type' => $row->anchor_type, 'anchor_workflow_step_id' => $row->anchor_workflow_step_id, 'offset_days' => $row->offset_days, 'check_direction' => $row->check_direction]) }})">
                                         <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" /></svg>
                                     </button>
                                 @endif
@@ -127,6 +127,14 @@
                         <label class="block">
                             <span class="block text-[10px] text-gray-500" title="{{ __('Arbeitstage nach dem Bezugspunkt; ein negativer Wert liegt davor.') }}">{{ __('Abstand (AT)') }}</span>
                             <input type="number" name="offset_days" x-model.number="form.offset_days" min="-3650" max="3650" class="w-16 rounded border-gray-300 px-1.5 py-0.5 text-right text-xs" title="{{ __('Arbeitstage nach dem Bezugspunkt; ein negativer Wert liegt davor.') }}">
+                        </label>
+                        <label class="block">
+                            <span class="block text-[10px] text-gray-500" title="{{ __('Kritische Projekte meldet einen Konflikt, wenn die Prüfung nicht erfüllt ist.') }}">{{ __('Prüfung') }}</span>
+                            <select name="check_direction" x-model="form.check_direction" class="rounded border-gray-300 py-0.5 pl-1.5 pr-6 text-xs" title="{{ __('Kritische Projekte meldet einen Konflikt, wenn die Prüfung nicht erfüllt ist.') }}">
+                                <option value="">{{ __('keine') }}</option>
+                                <option value="target">{{ __('Ziel: Projekt soll bis dahin fertig sein') }}</option>
+                                <option value="prerequisite">{{ __('Voraussetzung: Projekt darf erst danach beginnen') }}</option>
+                            </select>
                         </label>
                     </div>
                     <div class="mt-2 flex items-center gap-2">

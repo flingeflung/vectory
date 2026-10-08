@@ -53,6 +53,22 @@ class WorkflowMilestoneTest extends TestCase
         $this->assertSame(0, WorkflowMilestone::query()->where('workflow_id', $this->workflow->id)->count());
     }
 
+    public function test_check_direction_is_saved_and_copied_with_the_template(): void
+    {
+        $this->post(route('admin.workflows.milestones.store', $this->workflow), ['name' => 'Messe', 'anchor_type' => 'workflow_end', 'check_direction' => 'target'])->assertRedirect();
+        $this->assertSame('target', WorkflowMilestone::query()->where('workflow_id', $this->workflow->id)->value('check_direction'));
+
+        $this->post(route('admin.workflows.milestones.store', $this->workflow), ['name' => 'Ohne', 'anchor_type' => 'workflow_end', 'check_direction' => ''])->assertRedirect();
+        $this->assertNull(WorkflowMilestone::query()->where('workflow_id', $this->workflow->id)->where('name', 'Ohne')->value('check_direction'));
+
+        $this->post(route('admin.workflows.milestones.store', $this->workflow), ['name' => 'X', 'anchor_type' => 'workflow_end', 'check_direction' => 'quatsch'])->assertSessionHasErrors('check_direction');
+
+        $this->workflow->update(['published_at' => now()]);
+        $this->post(route('admin.workflows.duplicate', $this->workflow))->assertRedirect();
+        $copy = Workflow::query()->where('tenant_id', $this->tenant->id)->where('id', '!=', $this->workflow->id)->sole();
+        $this->assertSame('target', WorkflowMilestone::query()->where('workflow_id', $copy->id)->where('name', 'Messe')->value('check_direction'));
+    }
+
     public function test_input_is_validated_and_a_published_workflow_is_frozen(): void
     {
         $this->post(route('admin.workflows.milestones.store', $this->workflow), ['name' => '', 'anchor_type' => 'workflow_end'])->assertSessionHasErrors('name');

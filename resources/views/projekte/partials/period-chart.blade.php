@@ -66,12 +66,12 @@
         projectId: @js($project->id),
         focusMs() { this.$nextTick(() => { if (this.$refs.msName) this.$refs.msName.focus(); }); },
         newMs() {
-            this.ms = { id: null, name: '', anchor_type: 'workflow_end', anchor_workflow_step_id: this.steps.length ? this.steps[this.steps.length - 1].id : null, offset_days: 0, fixed_date: '' };
+            this.ms = { id: null, name: '', anchor_type: 'workflow_end', anchor_workflow_step_id: this.steps.length ? this.steps[this.steps.length - 1].id : null, offset_days: 0, fixed_date: '', check_direction: '' };
             this.msError = '';
             this.focusMs();
         },
         editMs(m) {
-            this.ms = { id: m.id, name: m.title, anchor_type: m.anchor_type, anchor_workflow_step_id: m.anchor_step_id || (this.steps.length ? this.steps[0].id : null), offset_days: m.offset_days, fixed_date: m.fixed_date || '' };
+            this.ms = { id: m.id, name: m.title, anchor_type: m.anchor_type, anchor_workflow_step_id: m.anchor_step_id || (this.steps.length ? this.steps[0].id : null), offset_days: m.offset_days, fixed_date: m.fixed_date || '', check_direction: m.check_direction || '' };
             this.msError = '';
             this.focusMs();
         },
@@ -112,6 +112,7 @@
                 anchor_workflow_step_id: isStep ? this.ms.anchor_workflow_step_id : null,
                 offset_days: this.ms.anchor_type === 'fixed' ? 0 : (this.ms.offset_days === '' ? 0 : this.ms.offset_days),
                 fixed_date: this.ms.anchor_type === 'fixed' ? this.ms.fixed_date : null,
+                check_direction: this.ms.check_direction || null,
             };
             this.msSaving = true;
             this.msError = '';
@@ -180,6 +181,7 @@
                     anchor_workflow_step_id: m.anchor_step_id,
                     offset_days: fixed ? 0 : drag.idx - anchor,
                     fixed_date: fixed ? drag.date : null,
+                    check_direction: m.check_direction || null,
                 });
                 if (! saved && window.notifyDialog) window.notifyDialog(this.msError);
             };
@@ -884,6 +886,14 @@
                             <label class="block" x-show="ms.anchor_type === 'fixed'">
                                 <span class="block text-[10px] text-gray-500">{{ __('Datum') }}</span>
                                 <input type="date" x-model="ms.fixed_date" class="rounded border-gray-300 px-1.5 py-0.5 text-xs">
+                            </label>
+                            <label class="block">
+                                <span class="block text-[10px] text-gray-500" title="{{ __('Kritische Projekte meldet einen Konflikt, wenn die Prüfung nicht erfüllt ist.') }}">{{ __('Prüfung') }}</span>
+                                <select x-model="ms.check_direction" class="rounded border-gray-300 py-0.5 pl-1.5 pr-6 text-xs" title="{{ __('Kritische Projekte meldet einen Konflikt, wenn die Prüfung nicht erfüllt ist.') }}">
+                                    <option value="">{{ __('keine') }}</option>
+                                    <option value="target">{{ __('Ziel: Projekt soll bis dahin fertig sein') }}</option>
+                                    <option value="prerequisite">{{ __('Voraussetzung: Projekt darf erst danach beginnen') }}</option>
+                                </select>
                             </label>
                         </div>
                         <p x-show="msError" x-text="msError" class="mt-1 text-red-600"></p>

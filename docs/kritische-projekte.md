@@ -26,8 +26,10 @@ Personenbezogene Befunde zeigen nur die für die Projektsteuerung erforderliche 
 
 | Code | Regel | Standard-Schwere |
 |---|---|---|
-| `schedule.overdue` | Ein nicht abgeschlossener Termin liegt vor dem heutigen Datum. | Kritisch |
+| `schedule.overdue` | Ein nicht abgeschlossener Termin liegt vor dem heutigen Datum. Im neuen Terminmodell zählen nur benannte Phasenenden als Termin. | Kritisch |
 | `schedule.current_missing` | Bei einem noch nicht abgeschlossenen, terminführenden Workflow-Schritt fehlt das Datum. Start- und Ende-Schritte werden immer geprüft. | Aktueller Schritt: Handlungsbedarf; Start/Ende: Kritisch; andere Schritte: Beobachten |
+| `schedule.milestone_target` | Ein Meilenstein mit der Prüfung „Ziel“ liegt vor dem berechneten Projektende (nur Projekte im neuen Terminmodell). | Kritisch |
+| `schedule.milestone_prerequisite` | Ein Meilenstein mit der Prüfung „Voraussetzung“ liegt nach dem Projektstart (nur Projekte im neuen Terminmodell). | Kritisch |
 | `staffing.missing` | Eine im Workflow benötigte Funktionsgruppe hat keine Projektperson. | Beobachten; im aktuellen Schritt: Handlungsbedarf |
 | `staffing.person_absent` | Eine Projektperson ist aktuell länger abwesend. Wochenenden und aktive Feiertage ihrer Organisation zählen nicht als Arbeitstage. | 3–5 Arbeitstage: Beobachten; mehr als 5 Arbeitstage: Handlungsbedarf |
 | `staffing.person_unavailable` | Eine Projektperson ist inaktiv oder ihr Beschäftigungsende ist erreicht. | Handlungsbedarf |

@@ -23,6 +23,8 @@ class CriticalProjectEvaluator
         return collect([
             ['code' => 'schedule.overdue', 'area' => __('Termine'), 'title' => __('Termin überschritten'), 'severity' => 'critical', 'severity_label' => __('Kritisch'), 'description' => __('Ein noch nicht abgeschlossener Termin liegt in der Vergangenheit.'), 'exclusion' => __('Heute fällige und bereits abgeschlossene Termine.'), 'solution' => __('Termin und weiteren Ablauf prüfen; Termin bei Bedarf aktualisieren.')],
             ['code' => 'schedule.current_missing', 'area' => __('Termine'), 'title' => __('Termin im Workflow-Schritt fehlt'), 'severity' => 'watch', 'severity_label' => __('Beobachten'), 'description' => __('Ein noch nicht abgeschlossener Workflow-Schritt verlangt einen Termin, es ist aber keiner eingetragen. Beim aktuellen Schritt besteht Handlungsbedarf; fehlende Start- und Endtermine sind kritisch.'), 'exclusion' => __('Abgeschlossene Workflow-Schritte und Schritte ohne Terminpflicht, sofern sie nicht Projektstart oder Projektende festlegen.'), 'solution' => __('Termin im Dialog „Termine berechnen“ festlegen oder berechnen.')],
+            ['code' => 'schedule.milestone_target', 'area' => __('Termine'), 'title' => __('Projektende nach einem Ziel-Meilenstein'), 'severity' => 'critical', 'severity_label' => __('Kritisch'), 'description' => __('Ein Meilenstein mit der Prüfung „Ziel“ liegt vor dem berechneten Projektende; das Projekt wird bis dahin nicht fertig.'), 'exclusion' => __('Meilensteine ohne Prüfung sowie Projekte ohne berechnetes Projektende.'), 'solution' => __('Dauern kürzen, den Projektstart vorziehen (Zielscheibe im Ablaufplan) oder den Meilenstein verschieben.')],
+            ['code' => 'schedule.milestone_prerequisite', 'area' => __('Termine'), 'title' => __('Projektstart vor einem Voraussetzungs-Meilenstein'), 'severity' => 'critical', 'severity_label' => __('Kritisch'), 'description' => __('Ein Meilenstein mit der Prüfung „Voraussetzung“ liegt nach dem Projektstart; das Projekt beginnt vor seiner Voraussetzung.'), 'exclusion' => __('Meilensteine ohne Prüfung sowie Projekte ohne Projektstart.'), 'solution' => __('Projektstart nach hinten setzen (Zielscheibe im Ablaufplan) oder den Meilenstein verschieben.')],
             ['code' => 'staffing.missing', 'area' => __('Projektbeteiligte'), 'title' => __('Projektperson fehlt'), 'severity' => 'watch', 'severity_label' => __('Beobachten'), 'description' => __('Mindestens eine im Workflow benötigte Funktionsgruppe ist nicht besetzt.'), 'exclusion' => __('Funktionsgruppen außerhalb des zugewiesenen Workflows.'), 'solution' => __('Eine geeignete Projektperson für die Funktionsgruppe zuweisen.')],
             ['code' => 'staffing.person_absent', 'area' => __('Projektbeteiligte'), 'title' => __('Projektperson länger abwesend'), 'severity' => 'watch', 'severity_label' => __('Beobachten'), 'description' => __('Eine Projektperson ist mindestens drei Arbeitstage abwesend. Ab mehr als fünf Arbeitstagen besteht Handlungsbedarf.'), 'exclusion' => __('Abwesenheiten von höchstens zwei Arbeitstagen; Wochenenden und aktive Feiertage der Organisation der Person zählen nicht als Arbeitstage.'), 'solution' => __('Vertretung organisieren oder Projektbesetzung anpassen.')],
             ['code' => 'staffing.person_unavailable', 'area' => __('Projektbeteiligte'), 'title' => __('Projektperson nicht verfügbar'), 'severity' => 'blocked', 'severity_label' => __('Handlungsbedarf'), 'description' => __('Eine zugewiesene Projektperson ist inaktiv oder ihr Beschäftigungsende ist erreicht.'), 'exclusion' => __('Aktive Personen ohne erreichtes Beschäftigungsende.'), 'solution' => __('Vertretung organisieren oder Projektbesetzung anpassen.')],
@@ -48,6 +50,23 @@ class CriticalProjectEvaluator
                 __(':step war am :date fällig.', ['step' => $step->workflowStep->title, 'date' => $step->due_date->format('d.m.Y')]),
                 null,
                 'workflow-step:'.$step->id));
+        }
+
+        // Meilensteine mit Prüfung (neues Terminmodell): Ziel = Projekt soll bis dahin fertig sein, Voraussetzung = Projekt darf erst danach beginnen
+        if ($isNewModel) {
+            foreach ($project->projectMilestones->filter(fn ($milestone) => $milestone->date && $milestone->check_direction) as $milestone) {
+                $date = $milestone->date;
+                if ($milestone->check_direction === 'target' && $project->end_date && $project->end_date->gt($date)) {
+                    $findings->push($this->finding($definition('schedule.milestone_target'),
+                        __('Das Projektende (:end) liegt nach dem Meilenstein „:name“ (:date).', ['end' => $project->end_date->format('d.m.Y'), 'name' => $milestone->name, 'date' => $date->format('d.m.Y')]),
+                        null, 'milestone:'.$milestone->id));
+                }
+                if ($milestone->check_direction === 'prerequisite' && $project->start_date && $project->start_date->lt($date)) {
+                    $findings->push($this->finding($definition('schedule.milestone_prerequisite'),
+                        __('Das Projekt beginnt (:start) vor dem Meilenstein „:name“ (:date).', ['start' => $project->start_date->format('d.m.Y'), 'name' => $milestone->name, 'date' => $date->format('d.m.Y')]),
+                        null, 'milestone:'.$milestone->id));
+                }
+            }
         }
 
         $current = $workflowSteps->firstWhere('is_current', true);
