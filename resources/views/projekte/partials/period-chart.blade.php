@@ -626,8 +626,8 @@
 
             <template x-for="m in milestones.filter((x) => msInside(x))" :key="'ms-' + m.key">
                 <div
-                    class="absolute z-[11] h-2.5 w-2.5 -translate-x-1/2 rotate-45 border border-white"
-                    :class="[msLate(m) ? 'bg-red-600' : 'bg-gray-600', msDraggable(m) ? 'cursor-grab touch-none' : '', msDrag && msDrag.id === m.id ? 'scale-125 cursor-grabbing' : '']"
+                    class="absolute z-[11] -translate-x-1/2 rotate-45"
+                    :class="[m.kind === 'milestone' ? 'h-3 w-3 border border-white bg-indigo-600 ring-1 ring-indigo-300' : (msLate(m) ? 'h-2.5 w-2.5 border border-white bg-red-600' : 'h-2.5 w-2.5 border-2 border-gray-600 bg-white'), msDraggable(m) ? 'cursor-grab touch-none' : '', msDrag && msDrag.id === m.id ? 'scale-125 cursor-grabbing' : '']"
                     @pointerdown.prevent="startMsDrag(m)"
                     :style="{ left: msPct(m) + '%', bottom: '3px' }"
                     :title="msTip(m)"
@@ -637,14 +637,14 @@
             {{-- Meilensteine außerhalb des Zeitraums: Randbereiche mit Pfeil nach außen und Abstand im Tooltip --}}
             <template x-for="(m, j) in outsideLeft.slice(0, 4)" :key="'out-l-' + m.key">
                 <div class="absolute z-[11] flex cursor-help items-center gap-0.5" :style="{ right: 'calc(100% + 2px)', bottom: (3 + j * 14) + 'px' }" :title="msOutsideTip(m, true)">
-                    <span class="text-[10px] leading-none text-gray-600">&#9664;</span>
-                    <span class="inline-block h-2.5 w-2.5 rotate-45 border border-white bg-gray-600"></span>
+                    <span class="text-[10px] leading-none text-indigo-700">&#9664;</span>
+                    <span class="inline-block h-3 w-3 rotate-45 border border-white bg-indigo-600 ring-1 ring-indigo-300"></span>
                 </div>
             </template>
             <template x-for="(m, j) in outsideRight.slice(0, 4)" :key="'out-r-' + m.key">
                 <div class="absolute z-[11] flex cursor-help items-center gap-0.5" :style="{ left: 'calc(100% + 2px)', bottom: (3 + j * 14) + 'px' }" :title="msOutsideTip(m, false)">
-                    <span class="inline-block h-2.5 w-2.5 rotate-45 border border-white bg-gray-600"></span>
-                    <span class="text-[10px] leading-none text-gray-600">&#9654;</span>
+                    <span class="inline-block h-3 w-3 rotate-45 border border-white bg-indigo-600 ring-1 ring-indigo-300"></span>
+                    <span class="text-[10px] leading-none text-indigo-700">&#9654;</span>
                 </div>
             </template>
             <span x-show="outsideLeft.length > 4" class="absolute text-[10px] text-gray-500" style="right: calc(100% + 2px); top: 0" :title="@js(__('Weitere Meilensteine vor dem Zeitraum: siehe Tabelle'))" x-text="'+' + (outsideLeft.length - 4)"></span>
@@ -747,7 +747,7 @@
                                 </div>
                             </template>
                             <template x-if="row.type === 'milestone'">
-                                <span class="ml-0.5 inline-block h-2.5 w-2.5 rotate-45 bg-gray-600 align-middle" :title="@js(__('Meilenstein'))"></span>
+                                <span class="ml-0.5 inline-block h-2.5 w-2.5 rotate-45 bg-indigo-600 align-middle" :title="@js(__('Meilenstein'))"></span>
                             </template>
                         </td>
                         <td class="py-0.5 pr-2">
@@ -897,8 +897,17 @@
     </div>
 
     <p x-show="milestones.length" class="mt-2 text-gray-500">
-        <span class="mr-1 inline-block h-2 w-2 rotate-45 bg-gray-600 align-middle"></span>{{ __('Meilenstein (Termin am Schritt)') }}
-        <span class="ml-3 mr-1 inline-block h-2 w-2 rotate-45 bg-red-600 align-middle"></span>{{ __('Schritt endet laut Plan nach dem Termin') }}
+        <span x-show="milestones.some((m) => m.kind !== 'milestone')">
+            <span class="mr-1 inline-block h-2 w-2 rotate-45 border-2 border-gray-600 bg-white align-middle"></span>{{ __('Phasenende mit Namen (Termin)') }}
+        </span>
+        <span x-show="milestones.some((m) => m.kind === 'milestone')" class="ml-3">
+            <span class="mr-1 inline-block h-2.5 w-2.5 rotate-45 bg-indigo-600 align-middle"></span>{{ __('Meilenstein (zum Verschieben ziehen)') }}
+        </span>
+        @if ((int) $project->schedule_model !== 2)
+            <span x-show="milestones.some((m) => m.kind !== 'milestone')" class="ml-3">
+                <span class="mr-1 inline-block h-2 w-2 rotate-45 bg-red-600 align-middle"></span>{{ __('Schritt endet laut Plan nach dem Termin') }}
+            </span>
+        @endif
     </p>
 
     <div class="mt-2 flex flex-wrap items-center gap-2 text-gray-500">

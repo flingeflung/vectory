@@ -74,7 +74,7 @@
                 <tbody>
                     @foreach ($milestones as $row)
                         <tr class="border-t border-gray-100">
-                            <td class="py-1 pr-2 text-gray-700"><span class="mr-1 inline-block h-2 w-2 rotate-45 bg-gray-600 align-middle"></span>{{ $row->name }}</td>
+                            <td class="py-1 pr-2 text-gray-700"><span class="mr-1 inline-block h-2 w-2 rotate-45 bg-indigo-600 align-middle"></span>{{ $row->name }}</td>
                             <td class="py-1 pr-2 text-gray-600">{{ $rule($row) }}</td>
                             <td class="py-1 text-right">
                                 @if ($editable)

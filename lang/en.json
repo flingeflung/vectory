@@ -2311,5 +2311,7 @@
     "– noch keine Einträge –": "– no entries yet –",
     "– ohne Rechte-Set –": "– without permission set –",
     "– zuerst Funktionsgruppe wählen –": "",
-    "„:name\" teilen mit:": "Share “:name\" with:"
+    "„:name\" teilen mit:": "Share “:name\" with:",
+    "Phasenende mit Namen (Termin)": "Named phase end (date)",
+    "Meilenstein (zum Verschieben ziehen)": "Milestone (drag to move)"
 }
