@@ -647,7 +647,6 @@
     "Eigenschaften": "",
     "Eigenschaften der Seite ein- oder ausklappen. Der Zustand wird für jede Hilfeseite gemerkt.": "",
     "Ein Glossar-Link führt vom Begriff zur Seite, auf der man ihn ändert. In Hilfetexten schreiben Sie ((Begriff)) oder ((Begriff|Anzeigetext)); im Editor fügt das Symbol hinter ((Glossar-Link)) ihn aus einer Liste ein.": "",
-    "Ein Meilenstein ist ein Zeitpunkt ohne eigene Phase, z. B. die Markteinführung. Er richtet sich nach Start oder Ende des Workflows oder einer Phase und wandert mit, wenn sich der Plan verschiebt.": "A milestone is a point in time without a phase of its own, e.g. the market launch. It is based on the start or end of the workflow or of a phase and moves along when the plan shifts.",
     "Ein Organisations-Admin muss zu einer anderen Organisation als der Heimat-Organisation gehören.": "An organization admin must belong to an organization other than the home organization.",
     "Ein Projekt kann nicht mit sich selbst verknüpft werden.": "A project cannot be linked to itself.",
     "Ein Schritt für Projektstart oder Projektende muss einen Termin haben. Checkbox „Hat Termin“ markieren!": "",
@@ -2288,5 +2287,6 @@
     "– noch keine Einträge –": "– no entries yet –",
     "– ohne Rechte-Set –": "– without permission set –",
     "– zuerst Funktionsgruppe wählen –": "",
-    "„:name\" teilen mit:": "Share “:name\" with:"
+    "„:name\" teilen mit:": "Share “:name\" with:",
+    "Ein Meilenstein ist ein Zeitpunkt ohne eigene Phase, z. B. ein Messetermin. Er richtet sich nach Start oder Ende des Workflows oder einer Phase und wandert mit, wenn sich der Plan verschiebt.": "A milestone is a point in time without a phase of its own, e.g. a trade fair date. It is based on the start or end of the workflow or of a phase and moves along when the plan shifts."
 }

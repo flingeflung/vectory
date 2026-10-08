@@ -52,7 +52,7 @@
             {{ __('Meilensteine') }}
             <span class="font-normal text-gray-400">({{ $milestones->count() }})</span>
         </button>
-        <span class="cursor-help font-normal text-gray-400" title="{{ __('Ein Meilenstein ist ein Zeitpunkt ohne eigene Phase, z. B. die Markteinführung. Er richtet sich nach Start oder Ende des Workflows oder einer Phase und wandert mit, wenn sich der Plan verschiebt.') }}">ⓘ</span>
+        <span class="cursor-help font-normal text-gray-400" title="{{ __('Ein Meilenstein ist ein Zeitpunkt ohne eigene Phase, z. B. ein Messetermin. Er richtet sich nach Start oder Ende des Workflows oder einer Phase und wandert mit, wenn sich der Plan verschiebt.') }}">ⓘ</span>
     </div>
 
     <div x-show="open" x-cloak class="px-3 pb-3">
