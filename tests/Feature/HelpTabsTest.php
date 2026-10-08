@@ -90,6 +90,25 @@ class HelpTabsTest extends TestCase
             ->assertSessionMissing('help_error');
     }
 
+    public function test_a_help_page_is_found_by_its_code(): void
+    {
+        $this->actingAs(User::factory()->create(['tenant_id' => Tenant::query()->firstOrFail()->id, 'role' => 'super_admin']));
+        $dialog = $this->article('dialog', ['D-ABCD'], 'Dialogseite');
+        $tab = $this->article('reiter', ['D-ABCD#planung.ablaufplan', 'projekte.beispiel'], 'Reiterseite');
+
+        // genau, ohne Beachtung der Schreibweise
+        $this->get(route('admin.hilfeseiten', ['code' => 'd-abcd']))->assertRedirect(route('admin.hilfeseiten', ['article' => $dialog->id]));
+        $this->get(route('admin.hilfeseiten', ['code' => 'D-ABCD#PLANUNG.ABLAUFPLAN']))->assertRedirect(route('admin.hilfeseiten', ['article' => $tab->id]));
+        // Seitenname und Teilstück
+        $this->get(route('admin.hilfeseiten', ['code' => 'projekte.beispiel']))->assertRedirect(route('admin.hilfeseiten', ['article' => $tab->id]));
+        $this->get(route('admin.hilfeseiten', ['code' => 'ablaufplan']))->assertRedirect(route('admin.hilfeseiten', ['article' => $tab->id]));
+
+        // ohne Treffer: Meldung, bei einem bekannten Dialog mit dessen Namen
+        $this->get(route('admin.hilfeseiten', ['code' => 'D-ZZZZ']))->assertRedirect(route('admin.hilfeseiten'))->assertSessionHas('help_error');
+        $known = array_key_first(config('dialog-ids'));
+        $this->get(route('admin.hilfeseiten', ['code' => config('dialog-ids')[$known]]))->assertSessionHas('help_error', fn ($message) => str_contains($message, $known));
+    }
+
     public function test_tab_keys_without_a_matching_tab_are_reported(): void
     {
         $dialogId = DialogId::for('project-overlay');

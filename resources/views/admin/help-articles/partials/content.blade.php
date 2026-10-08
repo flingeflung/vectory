@@ -17,6 +17,23 @@
                     + {{ __('Neu') }}
                 </button>
             </div>
+            {{-- Seite zu einem Code finden: Dialog-ID (D-MFQU), Reiter-Schlüssel (D-MFQU#planung.ablaufplan) oder Seitenname --}}
+            <form
+                class="shrink-0 border-b border-gray-100 p-2"
+                x-data="{
+                    code: '',
+                    async go() {
+                        const value = this.code.trim();
+                        if (value === '') return;
+                        if (window.adminPageIsDirty && window.adminPageIsDirty() && ! (await window.confirmDialog({{ \Illuminate\Support\Js::from(__('Ungespeicherte Änderungen')) }}))) return;
+                        window.__helpArticlesDirtyForms.clear();
+                        window.location.href = navUrl({ code: value });
+                    },
+                }"
+                @submit.prevent="go()"
+            >
+                <input type="text" x-model="code" autocomplete="off" spellcheck="false" placeholder="{{ __('Code suchen, z. B. D-MFQU') }}" title="{{ __('Gibt man den Code eines Dialogs, eines Reiters (z. B. D-MFQU#planung.ablaufplan) oder den Namen einer Seite ein und drückt die Eingabetaste, öffnet sich die zugehörige Hilfeseite im Baum.') }}" class="w-full rounded-md border-gray-300 px-2 py-1 text-xs">
+            </form>
             <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => window.keepListScroll($el, 'list-scroll:help-articles'))">
                 <form x-show="newArticle" x-cloak method="POST" action="{{ route('admin.hilfeseiten.store') }}" class="mb-2 flex gap-1.5 rounded border border-gray-200 p-2">
                     <input type="text" name="title" x-ref="newArticleTitle" placeholder="{{ __('Titel (:locale)', ['locale' => \App\Models\HelpArticle::AVAILABLE_LOCALES[\App\Models\HelpArticle::PRIMARY_LOCALE]]) }}" class="w-full min-w-0 flex-1 rounded-md border-gray-300 text-xs" required>

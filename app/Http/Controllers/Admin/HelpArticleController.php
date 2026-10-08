@@ -22,10 +22,15 @@ use Illuminate\View\View;
  */
 class HelpArticleController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): View|RedirectResponse
     {
         $tree = HelpArticle::tree();
         $flat = HelpArticle::flattenTree($tree);
+
+        // Seite zu einem Code suchen (Dialog-ID, Reiter-Schlüssel oder Seitenname): öffnet die Hilfeseite im Baum (Ralf, 2026-10-09)
+        if ($request->filled('code')) {
+            return $this->openByCode($request, $flat, trim((string) $request->query('code')));
+        }
 
         $selected = $request->filled('article')
             ? $flat->firstWhere('id', (int) $request->query('article'))
@@ -58,6 +63,40 @@ class HelpArticleController extends Controller
             'selected' => $selected,
             'locales' => HelpArticle::AVAILABLE_LOCALES,
         ]);
+    }
+
+    /**
+     * Findet die Hilfeseite zu einem Code: erst genau passend (ohne Beachtung der Schreibweise), dann alle Reiter-Seiten eines Dialogs
+     * (CODE#...) und zuletzt Seiten, die den Text enthalten. Ohne Treffer sagt die Meldung, zu welchem Dialog der Code gehört.
+     */
+    private function openByCode(Request $request, \Illuminate\Support\Collection $flat, string $code): RedirectResponse
+    {
+        $needle = mb_strtolower($code);
+        $keysOf = fn (HelpArticle $article) => array_map(fn ($key) => mb_strtolower(trim((string) $key)), (array) ($article->route_names ?? []));
+
+        $matches = $flat->filter(fn (HelpArticle $article) => in_array($needle, $keysOf($article), true));
+        if ($matches->isEmpty()) {
+            $matches = $flat->filter(fn (HelpArticle $article) => collect($keysOf($article))->contains(fn ($key) => str_starts_with($key, $needle.'#')));
+        }
+        if ($matches->isEmpty() && mb_strlen($needle) >= 3) {
+            $matches = $flat->filter(fn (HelpArticle $article) => collect($keysOf($article))->contains(fn ($key) => str_contains($key, $needle)));
+        }
+
+        if ($matches->isNotEmpty()) {
+            $redirect = redirect()->route('admin.hilfeseiten', ['article' => $matches->first()->id]);
+
+            return $matches->count() > 1
+                ? $redirect->with('help_notice', __(':n Hilfeseiten gehören zu diesem Code; die erste ist geöffnet.', ['n' => $matches->count()]))
+                : $redirect;
+        }
+
+        $base = trim(explode('#', $code)[0]);
+        $dialog = array_search(mb_strtoupper($base), array_map('mb_strtoupper', (array) config('dialog-ids')), true);
+        $message = $dialog !== false
+            ? __('Zu dem Code „:code“ (Dialog „:dialog“) gibt es noch keine Hilfeseite.', ['code' => $code, 'dialog' => $dialog])
+            : __('Zu dem Code „:code“ gibt es keine Hilfeseite.', ['code' => $code]);
+
+        return redirect()->route('admin.hilfeseiten')->with('help_error', $message);
     }
 
     /**
