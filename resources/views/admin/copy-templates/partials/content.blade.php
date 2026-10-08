@@ -139,7 +139,7 @@
                                     </label>
                                 @endforeach
                             </div>
-                            <p class="mt-1 text-xs text-gray-400">{{ __('Dauern, Sperren und Termine werden nur kopiert, wenn auch der Workflow kopiert wird und dieselbe Workflow-Version gilt. Der Workflow und die Projektbeteiligten stehen bei den Feldern („Ablaufdaten“).') }}</p>
+                            <p class="mt-1 text-xs text-gray-400">{{ __('Dauern, Sperren und Termine werden nur kopiert, wenn auch der Workflow kopiert wird und dieselbe Workflow-Version gilt. Workflow, Projektbeteiligte und Aufwandsprofil (mit eigenen Planstunden) stehen bei den Feldern („Ablaufdaten“).') }}</p>
                         </div>
                         @foreach ($sectionLabels as $section => $sectionLabel)
                             @if ($attributesBySection->get($section, collect())->isNotEmpty())

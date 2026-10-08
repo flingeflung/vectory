@@ -23,8 +23,8 @@ class CopyTemplate extends Model
     }
 
     /**
-     * Planungs-Bereiche, die mitkopiert werden (Schlüssel aus PlanningTransfer: durations, planned_hours, milestones).
-     * Der Workflow und die Projektbeteiligten laufen über die Felder der Vorlage.
+     * Planungs-Bereiche, die mitkopiert werden (Schlüssel aus PlanningTransfer: durations, milestones).
+     * Workflow, Projektbeteiligte und Aufwandsprofil (samt eigenen Planstunden) laufen über die Felder der Vorlage.
      *
      * @return list<string>
      */
@@ -33,7 +33,7 @@ class CopyTemplate extends Model
         return array_values(array_intersect($this->planning_parts ?? [], self::COPYABLE_PLANNING_PARTS));
     }
 
-    public const COPYABLE_PLANNING_PARTS = ['durations', 'planned_hours', 'milestones'];
+    public const COPYABLE_PLANNING_PARTS = ['durations', 'milestones'];
 
     /**
      * Bewusst nicht "attributes()" genannt - kollidiert mit Eloquents

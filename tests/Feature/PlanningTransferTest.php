@@ -155,6 +155,14 @@ class PlanningTransferTest extends TestCase
         $this->stepRow($source, $this->steps[0], ['duration_days' => 7, 'duration_locked' => true, 'due_date' => '2027-03-12']);
         $template = \App\Models\CopyTemplate::query()->create(['tenant_id' => $this->tenant->id, 'name' => 'Mit Planung', 'sort' => 1]);
         $template->fields()->attach([$workflowAttribute->id, $titleAttribute->id]);
+        // Feld "Aufwandsprofil" nimmt Profil samt eigenen Planstunden mit
+        $profileAttribute = \App\Models\Attribute::query()->where('tenant_id', $this->tenant->id)->where('key', 'project_template')->first();
+        $profile = ProjectTemplate::query()->create(['tenant_id' => $this->tenant->id, 'name' => 'Profil', 'active' => true, 'duration_value' => 1, 'duration_unit' => 'week']);
+        $source->update(['project_template_id' => $profile->id]);
+        $source->functionGroupHours()->sync([$this->group->id => ['tenant_id' => $this->tenant->id, 'planned_hours' => 6]]);
+        if ($profileAttribute) {
+            $template->fields()->attach($profileAttribute->id);
+        }
 
         // Planungs-Bereiche in der Vorlage ein-/ausschalten
         $this->actingAs($this->admin)->post(route('admin.projektkopie-vorlagen.planung.toggle', $template), ['part' => 'durations']);
@@ -171,6 +179,10 @@ class PlanningTransferTest extends TestCase
         $this->assertSame(7, (int) $row->duration_days);
         $this->assertTrue((bool) $row->duration_locked);
         $this->assertNull($row->due_date);   // Termine nur, wenn die Vorlage sie vorsieht
+        if ($profileAttribute) {
+            $this->assertSame($profile->id, (int) $copy->project_template_id);
+            $this->assertSame(6.0, (float) $copy->functionGroupHours()->first()->pivot->planned_hours);
+        }
     }
 
     public function test_empty_source_areas_never_wipe_the_target(): void

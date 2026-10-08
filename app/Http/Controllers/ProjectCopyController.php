@@ -142,7 +142,11 @@ class ProjectCopyController extends Controller
 
         $template = CopyTemplate::query()->with('fields')->findOrFail($validated['template_id']);
         $checkedKeys = $template->fields->pluck('key')->all();
+        // Das Feld "Aufwandsprofil" nimmt das Aufwandsprofil samt eigenen Planstunden mit (Ralf, 2026-10-08), die Haken im Block "Planung" Dauern/Sperren und Termine
         $planningParts = $template->planningParts();
+        if (in_array('project_template', $checkedKeys, true)) {
+            array_unshift($planningParts, \App\Services\PlanningTransfer::PLANNED_HOURS);
+        }
         // label_editable-System-Felder liegen NICHT im attributes-JSON wie
         // normale Zusatzfelder (Ausnahme aktuell: "Modell/System" - das ist
         // eine echte n:m-Verknüpfung, eigener switch-case unten, siehe
