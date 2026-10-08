@@ -74,13 +74,13 @@ class MigrateScheduleModelTest extends TestCase
         $this->assertTrue($this->steps['plan']->fresh()->is_start);
         $this->assertTrue($this->steps['end']->fresh()->is_end);
 
-        // Projekt: neues Modell, vorhandenes Marktdatum bleibt als festes Datum
+        // Projekt: neues Modell, der Meilenstein folgt dem Workflow-Ende (+1 AT) statt dem alten Datum
         $project = $this->project->fresh();
         $this->assertSame(2, (int) $project->schedule_model);
         $this->assertSame('2027-03-01', $project->start_date->toDateString());
         $milestone = ProjectMilestone::query()->withoutGlobalScopes()->where('project_id', $project->id)->sole();
-        $this->assertSame('fixed', $milestone->anchor_type);
-        $this->assertSame('2027-06-01', $milestone->date->toDateString());
+        $this->assertSame('workflow_end', $milestone->anchor_type);
+        $this->assertSame('2027-03-08', $milestone->date->toDateString());
 
         // Phasenenden berechnet: Anleitung 3 AT Mo-Mi, Druck 2 AT Do-Fr
         $due = fn (string $key) => ProjectWorkflowStep::query()->where('project_id', $project->id)->where('workflow_step_id', $this->steps[$key]->id)->value('due_date');

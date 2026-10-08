@@ -103,7 +103,7 @@ class MigrateScheduleModel extends Command
         });
     }
 
-    /** Aus „Markteinführung“-Schritten werden Meilensteine am Workflow-Ende; ein vorhandenes Projektdatum bleibt als festes Datum. */
+    /** Aus „Markteinführung“-Schritten werden Meilensteine am Workflow-Ende (+1 AT); das alte Datum entfällt. */
     private function migrateMarketLaunchSteps(Workflow $workflow): void
     {
         $launchSteps = WorkflowStep::query()->withoutGlobalScopes()->where('workflow_id', $workflow->id)->where('is_market_launch', true)->get();
@@ -125,22 +125,20 @@ class MigrateScheduleModel extends Command
                 $this->counts['milestone_templates']++;
             }
 
-            // Projekte dieses Workflows: vorhandenes Datum als festes Datum retten, bevor der Schritt verschwindet
-            $dates = DB::table('project_workflow_steps')->where('workflow_step_id', $step->id)->whereNotNull('due_date')->pluck('due_date', 'project_id');
-            Project::query()->withoutGlobalScopes()->where('workflow_id', $workflow->id)->each(function (Project $project) use ($template, $dates) {
+            // Projekte dieses Workflows bekommen den Meilenstein aus der Vorlage, bevor der Schritt verschwindet
+            Project::query()->withoutGlobalScopes()->where('workflow_id', $workflow->id)->each(function (Project $project) use ($template) {
                 if (ProjectMilestone::query()->withoutGlobalScopes()->where('project_id', $project->id)->where('workflow_milestone_id', $template->id)->exists()) {
                     return;
                 }
-                $fixed = $dates[$project->id] ?? null;
                 ProjectMilestone::query()->withoutGlobalScopes()->create([
                     'tenant_id' => $project->tenant_id,
                     'project_id' => $project->id,
                     'workflow_milestone_id' => $template->id,
                     'name' => $template->name,
                     'sort' => $template->sort,
-                    'anchor_type' => $fixed ? WorkflowMilestone::ANCHOR_FIXED : $template->anchor_type,
+                    // Bezug aus der Vorlage (Workflow-Ende +1 AT): ein altes Datum passt nach der Neuberechnung meist nicht mehr
+                    'anchor_type' => $template->anchor_type,
                     'offset_days' => $template->offset_days,
-                    'fixed_date' => $fixed,
                     'is_market_launch' => true,
                     'check_direction' => $template->check_direction,
                 ]);
