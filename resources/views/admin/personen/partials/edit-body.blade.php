@@ -159,14 +159,14 @@
                 <div class="flex items-end gap-4">
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('ID') }}</label>
-                        <input type="text" value="{{ $person->id }}" disabled class="mt-0.5 w-20 rounded-md border-gray-300 bg-gray-50 py-1.5 text-sm text-gray-500">
+                        <input type="text" value="{{ $person->id }}" disabled class="mt-0.5 h-9 w-20 rounded-md border-gray-300 bg-gray-50 py-0 text-sm text-gray-500">
                     </div>
-                    <label class="mb-1.5 flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-sm font-medium text-gray-700">
+                    <label class="flex h-9 items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-2.5 text-sm font-medium text-gray-700">
                         <input type="checkbox" name="active" value="1" @checked($person->active) class="rounded border-gray-300">
                         {{ __('Aktiv') }}
                     </label>
                     @if ($person->user && $person->user->mayLogIn())
-                        <button type="submit" form="force-logout-form" class="mb-1.5 rounded-md border border-btn-secondary-border bg-btn-secondary px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover" title="{{ __('Beendet alle laufenden Sitzungen der Person sofort. Sie muss sich neu anmelden. Soll die Person auch danach nicht wieder hinein, entfernen Sie zusätzlich das Häkchen bei „Aktiv“ und speichern.') }}">{{ __('Sofort abmelden') }}</button>
+                        <button type="submit" form="force-logout-form" class="h-9 rounded-md border border-btn-secondary-border bg-btn-secondary px-2.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover" title="{{ __('Beendet alle laufenden Sitzungen der Person sofort. Sie muss sich neu anmelden. Soll die Person auch danach nicht wieder hinein, entfernen Sie zusätzlich das Häkchen bei „Aktiv“ und speichern.') }}">{{ __('Sofort abmelden') }}</button>
                     @endif
                 </div>
                 <div class="grid grid-cols-2 gap-3">
