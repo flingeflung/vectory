@@ -35,6 +35,7 @@ return [
     'person-vacation-days' => 'D-8766',
     'person-weekly-hours' => 'D-IW2D',
     'personen-zugriffsmatrix' => 'D-8HIV',
+    'planning-transfer' => 'D-00FY',
     'produkte-verknuepfen' => 'D-3CO2',
     'project-connection-add' => 'D-2N2T',
     'project-copy' => 'D-GTV9',
