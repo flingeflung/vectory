@@ -188,4 +188,16 @@ class AccountActivationTest extends TestCase
         $this->post(route('activation.complete', $token), ['username' => 'ÜS-DL'] + $password)->assertRedirect(route('login'));
         $this->assertSame('ÜS-DL', $user->fresh()->username);
     }
+
+    public function test_the_activation_mail_contains_the_link_and_the_embedded_logo(): void
+    {
+        $html = (new AccountActivationMail('Nora', 'abc123', 72))->render();
+
+        $this->assertStringContainsString(route('activation.form', 'abc123'), $html);
+        $this->assertStringContainsString('72 Stunden', $html);
+        $this->assertStringContainsString('Benutzernamen und Passwort', $html);
+        if (is_file(public_path('images/vectory_logo_mail.png'))) {
+            $this->assertStringContainsString('cid:', $html);   // Logo als eingebettetes Bild
+        }
+    }
 }
