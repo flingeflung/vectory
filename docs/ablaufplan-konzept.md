@@ -121,3 +121,99 @@ Folgen:
 1. Meilensteine vor Projektstart und nach Projektende (Vorschlag in Abschnitt 3) und, damit verbunden, die **Prüfrichtung** eines Meilensteins: ob er eine *Voraussetzung* ist (z. B. „Prototypenbau“: das Projekt darf nicht vorher beginnen) oder ein *Ziel* (z. B. „Markteinführung“: der Druck muss vorher fertig sein). Daraus ergeben sich die Befundregeln in Kritische Projekte (welche Konflikte, welche Dringlichkeitsstufe).
 2. Darstellung der Meilensteine in der Workflow-Ansicht.
 3. Verhalten der Verbundprojekte (Hauptprojekt und Unterprojekte) mit Fixpunkt und Meilensteinen.
+
+---
+
+## Anhang A: Technischer Bauplan Stufe 2 (Datenmodell, Rechnung, Migration)
+
+Zielgruppe: Umsetzung. Stufe 2 ändert die Oberfläche nur dort, wo sonst Widersprüche entstünden (A.7). Alles andere bleibt für die Stufen 3–6.
+
+### A.1 Grundidee: ein Schreiber, berechnete Felder als Zwischenspeicher
+
+- Für Projekte im neuen Modell gibt es genau **einen** Schreiber aller Termine: den neuen Dienst `ProjectScheduler`.
+- Eingaben der Rechnung sind nur: `projects.start_date`, die Dauern (Projektwert sonst Vorlage, mindestens 1), die Feiertage der Organisation und die Meilenstein-Definitionen.
+- Ergebnisse werden in die **vorhandenen** Spalten geschrieben, damit alle heutigen Verbraucher (Kritische Projekte, Kalender, Projektfamilie, Terminübersicht, Listen, Filter) ohne Änderung weiterlaufen:
+  - `project_workflow_steps.due_date` = berechnetes **Phasenende** (Arbeitsschritte, `lifecycle_status` 2),
+  - Status-Schritt „Geplant“ (`lifecycle_status` 1): `due_date` = Projektstart; „Beendet“ (`lifecycle_status` 3): `due_date` = Projektende,
+  - `projects.end_date` = Ende der letzten Phase,
+  - `project_milestones.date` = berechnetes Meilenstein-Datum.
+- Fehlende Projektschritt-Zeilen (Projekte haben nicht für jeden Schritt eine Zeile) legt der Dienst bei Bedarf an.
+- Der Dienst schreibt über den Query-Builder (keine Model-Events), damit keine Schleifen mit Beobachtern entstehen.
+
+### A.2 Unterscheidung alt/neu
+
+- Neue Spalte `projects.schedule_model` (tinyint, **Standard 1** = alt).
+- Projekte im neuen Modell haben `2`. Gesetzt durch: Neuanlage (`ProjectController` Zeile ~428), Projektkopie (`ProjectCopyController` Zeile ~251) und die Migration (A.6).
+- Standard 1 schützt Sanitär und alle bestehenden Tests, die Termine von Hand setzen. Für `schedule_model = 1` ändert sich nichts.
+
+### A.3 Neue Tabellen
+
+`workflow_milestones` (Vorlage, je Workflow):
+- `id`, `tenant_id` (cascade), `workflow_id` (cascade), `name`, `sort`,
+- `anchor_type` (string): `workflow_start` | `workflow_end` | `step_start` | `step_end`,
+- `anchor_workflow_step_id` (nullable, cascade; Pflicht bei `step_*`, nur Schritte mit `lifecycle_status` 2 desselben Workflows),
+- `offset_days` (int, vorzeichenbehaftet, Arbeitstage; negativ = davor),
+- `is_market_launch` (bool), `check_direction` (nullable string: `prerequisite` | `target`; erst in Stufe 6 ausgewertet), Zeitstempel.
+- Keine festen Daten in der Vorlage.
+- Wandert mit bei Neue Version, Kopieren und Konfiguration übernehmen des Workflows (wie `workflow_group_windows`) sowie bei `PresetCopy/WorkflowsArea`.
+
+`project_milestones` (je Projekt):
+- `id`, `tenant_id` (cascade), `project_id` (cascade), `workflow_milestone_id` (nullable, nullOnDelete), `name`, `sort`,
+- `anchor_type`: wie oben, zusätzlich `fixed`,
+- `anchor_workflow_step_id` (nullable), `offset_days` (int), `fixed_date` (date, nullable; Pflicht bei `fixed`),
+- `is_market_launch`, `check_direction`,
+- `date` (date, berechnet), `reached_at` (datetime, nullable, Ist), Zeitstempel.
+- Modelle mit `BelongsToTenant` (Wächter `OrganizationGuardTest` beachten).
+
+### A.4 Rechenregeln (`ProjectScheduler`)
+
+- Arbeitstag: Mo–Fr und kein aktiver Feiertag der Organisation des Projekts. Die vorhandene Logik aus `WorkflowScheduleCalculator::addWorkingDays/subWorkingDays` in eine eigene Klasse `WorkdayCalendar` ziehen und dort wiederverwenden.
+- Phasen = Schritte des **aktuellen** Workflows mit `lifecycle_status` 2, sortiert nach `sort`. Achtung: Projekte tragen nach einem Workflow-Wechsel auch Schritte alter Workflows; immer nach `workflow_id` filtern.
+- Dauer = Projektwert, sonst Vorlage, mindestens 1 (wie `ProjectStepTimeline::MIN_STEP_DAYS`).
+- Phase 1 beginnt am Projektstart (fällt der auf einen Nicht-Arbeitstag: nächster Arbeitstag). Ende = Beginn + (Dauer − 1) Arbeitstage. Die nächste Phase beginnt am nächsten Arbeitstag nach dem Ende der vorigen.
+- Meilenstein-Datum: Bezugspunkt bestimmen (Workflow-Start/-Ende, Start/Ende der Phase), dann `offset_days` Arbeitstage vor bzw. zurück; bei `fixed` gilt `fixed_date`. Fehlt der Bezugsschritt (z. B. nach Workflow-Wechsel), bleibt `date` leer.
+- Ohne Projektstart oder ohne Workflow: nichts berechnen, nichts löschen.
+- Öffentliche Methoden:
+  - `recalculate(Project)`: schreibt alles aus A.1.
+  - `timeline(Project)`: liefert die Phasen mit Start/Ende/Dauer und die Meilensteine (für Diagramm und Tabelle in Stufe 3), ohne zu schreiben.
+  - `startDateFor(Project, string $point, CarbonInterface $date)`: Fixpunkt. `$point` = `workflow_start` | `workflow_end` | `step_start:{id}` | `step_end:{id}` | `milestone:{id}` (nur relative Meilensteine). Liefert den Projektstart, bei dem der Punkt auf `$date` fällt (Abstand in Arbeitstagen vom Start zurückrechnen).
+
+### A.5 Auslöser für `recalculate`
+
+- `Project` gespeichert und `start_date` oder `workflow_id` geändert (Model-Hook, nur `schedule_model = 2`).
+- `ProjectWorkflowStep` gespeichert und `duration_days` geändert.
+- `Holiday` angelegt, geändert oder gelöscht: alle Projekte der Organisation mit `schedule_model = 2`, die nicht beendet oder verworfen sind.
+- `ProjectMilestone` gespeichert: nur sein `date` neu.
+- Workflow-Zuweisung (die `firstOrCreate`-Stellen in `ProjectController` ~929, `MultichangeController::applyWorkflow`, `ProjectCopyController` ~326 und `PlanningTransfer`): in einen gemeinsamen Helfer ziehen, der zusätzlich die Vorlagen-Meilensteine in `project_milestones` kopiert (vorhandene mit gleicher `workflow_milestone_id` nicht doppeln) und danach rechnet.
+- `ProjectWorkflowStepObserver::syncProjectStartEndDate` überspringt Projekte mit `schedule_model = 2` (sonst Gegenrichtung).
+
+### A.6 Migration (Artisan-Befehl, keine Schema-Migration)
+
+`php artisan schedule:migrate-v2 {--tenant=*} {--dry-run}`, wiederholbar ohne Doppelung. Aufruf für Heimat (17), Standard (10), Maschinen (7). Ablauf je Organisation, ohne globale Scopes (Standard ist deaktiviert):
+
+1. Workflow-Schritte mit `is_market_launch = 1`: je Workflow einen `workflow_milestone` anlegen (Name = `milestone_title`, sonst Titel; `anchor_type` = `workflow_end`; `offset_days` = 1; `is_market_launch` = 1; `check_direction` = `target`). Für jedes Projekt dieses Workflows einen `project_milestone` anlegen: mit vorhandenem `due_date` als `fixed` mit diesem Datum, sonst aus der Vorlage. Danach den Schritt löschen (die Projektschritte hängen per cascade daran).
+2. Übrige Schritte mit `is_active = 0` (Druck): `is_active = 1`.
+3. Für alle Schritte: `has_due_date` = (`milestone_title` nicht leer) oder `lifecycle_status` in (1, 3); `is_start` = erster Schritt mit `lifecycle_status` 1; `is_end` = erster Schritt mit `lifecycle_status` 3. Projekt-Übersteuerungen von `is_start`/`is_end` auf null.
+4. Projekte: `schedule_model = 2`; fehlender `start_date` = `due_date` des Startschritts, sonst frühestes `due_date`, sonst Anlagedatum. Vorlagen-Meilensteine kopieren (A.5), dann `recalculate`.
+5. Ausgabe: Anzahl Workflows, Schritte, Meilensteine, Projekte; Projekte ohne Start.
+
+Für die Liefer-DB: Die Schema-Migrationen gehören dazu, der Befehl nicht (keine Altdaten).
+
+### A.7 Notwendige kleine Oberflächen-Schutzmaßnahmen in Stufe 2
+
+Für `schedule_model = 2`:
+- Datumsfelder an WFS (Projektdetails, Ablaufplan) sind nur Anzeige, mit Tooltip „Wird aus Projektstart und Dauern berechnet.“; eine direkte Änderung würde beim nächsten Rechnen überschrieben.
+- „Termine berechnen“ (Knopf und Symbole) ausblenden.
+- `ProjectScheduleController::setPeriod`: `side=start` setzt `start_date`; `side=end` setzt `start_date = startDateFor(project, 'workflow_end', date)`. `saveDurations` und `setDurationLock` lösen `recalculate` aus.
+- Alles Weitere (Tabelle, Meilensteine bearbeiten, Zielscheibe) folgt in den Stufen 3–5.
+
+### A.8 Tests
+
+- Kette: Start an einem Freitag mit 1-AT-Phase endet freitags, die nächste beginnt montags; Feiertag wird übersprungen; Start am Wochenende rückt auf Montag; Dauer 0 zählt als 1.
+- `recalculate` schreibt `due_date` aller Phasen, des Start- und Ende-Schritts und `projects.end_date`; Schritte alter Workflows bleiben unberührt.
+- Meilensteine: alle fünf Bezugsarten, negative Abstände, Datum vor Projektstart und nach Projektende, fehlender Bezugsschritt.
+- Fixpunkt: Workflow-Ende, Ende einer mittleren Phase und relativer Meilenstein liefern den richtigen Projektstart; Rundweg `startDateFor` → `recalculate` trifft das Datum.
+- Auslöser: Dauer ändern, Start ändern, Feiertag anlegen rechnen neu; keine Endlosschleife mit dem Beobachter.
+- Altmodell: Ein Projekt mit `schedule_model = 1` behält seine Termine bei Dauer- und Startänderung.
+- Migrationsbefehl auf Testdaten: Markteinführung wird Meilenstein (mit und ohne Projektdatum), Druck aktiv, `has_due_date`/`is_start`/`is_end` abgeleitet, ein zweiter Lauf ändert nichts, `--dry-run` schreibt nichts.
+- Vorhandene Tests bleiben grün (wegen Standard 1).
