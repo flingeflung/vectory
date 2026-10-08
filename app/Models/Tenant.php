@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-#[Fillable(['name', 'short_name', 'icon_filename', 'project_path', 'arbeitsverzeichnis_path', 'notification_email', 'max_project_copies', 'gantt_max_projects', 'jobload_time_grid', 'default_weekly_hours', 'default_vacation_days', 'is_home_tenant', 'is_active'])]
+#[Fillable(['name', 'short_name', 'icon_filename', 'project_path', 'arbeitsverzeichnis_path', 'notification_email', 'max_project_copies', 'gantt_max_projects', 'jobload_time_grid', 'default_weekly_hours', 'default_vacation_days', 'is_home_tenant', 'is_active', 'show_unopenable_projects'])]
 class Tenant extends Model
 {
     /** @var array<int, int>|null */
@@ -17,7 +17,7 @@ class Tenant extends Model
 
     protected function casts(): array
     {
-        return ['is_home_tenant' => 'boolean', 'is_active' => 'boolean'];
+        return ['is_home_tenant' => 'boolean', 'is_active' => 'boolean', 'show_unopenable_projects' => 'boolean'];
     }
 
     protected static function booted(): void

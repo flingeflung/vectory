@@ -173,7 +173,7 @@ class ProjectController extends Controller
             'filterFields' => ProjectFilterCatalog::available(CurrentTenant::id()),
             'activeFilterFields' => $activeFilterFields,
             'filterChips' => ProjectFilterCatalog::describeFilters($filters, CurrentTenant::id()),
-            'totalCount' => Project::query()->count(),
+            'totalCount' => $this->listableProjects()->count(),
             'totalFiltered' => $totalFiltered,
             'pageSize' => self::PAGE_SIZE,
             'hasMore' => $totalFiltered > $projects->count(),
@@ -2047,11 +2047,26 @@ class ProjectController extends Controller
         return $query->pluck('id');
     }
 
+    /**
+     * Projekte, die in der Liste erscheinen (Ralf, 2026-10-08): Wer die Details nicht öffnen darf (Recht project.view), sieht
+     * die Projekte nicht - außer die Organisation erlaubt das ausdrücklich (Stammdaten, Standard: nein).
+     */
+    private function listableProjects(): Builder
+    {
+        $query = Project::query();
+        $showAll = (bool) Tenant::query()->whereKey(CurrentTenant::id())->value('show_unopenable_projects');
+        if (! $showAll && ! auth()->user()?->can('project.view')) {
+            $query->whereRaw('1 = 0');
+        }
+
+        return $query;
+    }
+
     private function orderedQuery(?string $sort, string $direction, array $filters = []): Builder
     {
         [$column, $dir] = $this->effectiveOrder($sort, $direction);
 
-        $query = Project::query();
+        $query = $this->listableProjects();
         [$sortColumn, $idColumn] = $this->resolveSortColumns($query, $column);
         $groupedSortColumn = $this->verbundGroupedSortColumn($column);
         $query->orderByRaw("{$groupedSortColumn} {$dir}")

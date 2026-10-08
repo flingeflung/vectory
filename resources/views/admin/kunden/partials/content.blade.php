@@ -181,6 +181,13 @@
                     <x-input-error :messages="$errors->get('default_vacation_days')" />
                     <div class="rounded-md border border-gray-200 bg-gray-50 p-2">
                         <label class="flex items-center gap-2 text-sm text-gray-700">
+                            <input type="checkbox" name="show_unopenable_projects" value="1" @checked($selectedTenant->show_unopenable_projects) class="rounded border-gray-300">
+                            {{ __('Projekte auch ohne Berechtigung in der Projektliste anzeigen') }}
+                        </label>
+                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Wenn nicht angehakt, sehen Personen ohne das Recht „Projekt: Details aufrufen“ keine Projekte in der Liste. Wenn angehakt, sehen sie die Projekte, können die Details aber nicht öffnen.') }}</p>
+                    </div>
+                    <div class="rounded-md border border-gray-200 bg-gray-50 p-2">
+                        <label class="flex items-center gap-2 text-sm text-gray-700">
                             <input type="checkbox" name="is_home_tenant" value="1" @checked($selectedTenant->is_home_tenant) class="rounded border-gray-300">
                             {{ __('Heimat-Organisation') }}
                         </label>

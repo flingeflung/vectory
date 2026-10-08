@@ -122,6 +122,7 @@ class TenantController extends Controller
             'arbeitsverzeichnis_path' => $this->normalizedPath($request, 'arbeitsverzeichnis_path'),
             'notification_email' => $this->normalizedNotificationEmail($request),
             'is_home_tenant' => $isHomeTenant,
+            'show_unopenable_projects' => $request->boolean('show_unopenable_projects'),
             'icon_filename' => $newIcon,
             ...$settings,
         ]);

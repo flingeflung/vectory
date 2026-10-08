@@ -800,6 +800,7 @@
     "Für diese Organisation sind noch keine Funktionsgruppen mit Personen angelegt. Bitte zuerst unter Admin > Personen & Rechte > Funktionsgruppen entsprechende Gruppen anlegen und Personen zuordnen.": "No function groups with people have been created for this organization yet. First create the relevant groups and assign people under Admin > People & permissions > Functional groups.",
     "Für diese Person sind noch keine individuellen :baseload-Datensätze vorhanden.": "",
     "Für diese Person sind noch keine individuellen Grundlast-Datensätze vorhanden.": "",
+    "Für diese Projektdetails fehlt Ihnen die Berechtigung. Wenden Sie sich an Ihren Vectory-Administrator.": "You do not have permission for these project details. Please contact your Vectory administrator.",
     "Für diese Seite gibt's noch keine Hilfeseite - oben suchen findet vielleicht trotzdem etwas Passendes.": "There is no help page for this page yet - searching above may still find something suitable.",
     "Für diesen Freigabe-Schritt ist kein Folge-Schritt festgelegt - die Freigabe-Mail kann nicht verschickt werden. Bitte im Workflow ergänzen.": "",
     "Für diesen Job gibt es an diesem Tag bereits eine Buchung - Speichern ersetzt sie, statt die Stunden zu addieren.": "",
@@ -1503,6 +1504,7 @@
     "Projektbez.": "Project name",
     "Projektbezeichnung": "Project name",
     "Projekte": "Projects",
+    "Projekte auch ohne Berechtigung in der Projektliste anzeigen": "",
     "Projekte dieser Gruppe anzeigen": "Show projects in this group",
     "Projekte gesamt": "Total projects",
     "Projekte gruppieren": "Group projects",
@@ -1875,6 +1877,7 @@
     "Wenn eine Jobgruppe (gleicher Name) oder ein Jobtyp (gleiches Kürzel) hier schon existiert, wird sie übersprungen, nichts wird überschrieben. Zuordnungen zu Personen und gebuchte Stunden werden nicht übernommen.": "",
     "Wenn eine Kategorie inaktiv ist, bleibt sie bei bestehenden Projekten sichtbar, ist aber für neue nicht mehr wählbar.": "If a category is inactive, it remains visible in existing projects but can no longer be selected for new ones.",
     "Wenn jemand am Hauptprojekt :pn Stunden bucht, werden sie sofort nach diesen Prozenten auf die Unterprojekte verteilt - dort entstehen dann die eigentlichen Buchungen. Eine spätere Änderung der Prozente wirkt nur auf künftige Buchungen.": "",
+    "Wenn nicht angehakt, sehen Personen ohne das Recht „Projekt: Details aufrufen“ keine Projekte in der Liste. Wenn angehakt, sehen sie die Projekte, können die Details aber nicht öffnen.": "",
     "Wert": "",
     "Werte": "Values",
     "Wieder einblenden": "Show again",
@@ -2234,6 +2237,5 @@
     "– noch keine Einträge –": "– no entries yet –",
     "– ohne Rechte-Set –": "– without permission set –",
     "– zuerst Funktionsgruppe wählen –": "",
-    "„:name\" teilen mit:": "Share “:name\" with:",
-    "Für diese Projektdetails fehlt Ihnen die Berechtigung. Wenden Sie sich an Ihren Vectory-Administrator.": "You do not have permission for these project details. Please contact your Vectory administrator."
+    "„:name\" teilen mit:": "Share “:name\" with:"
 }
