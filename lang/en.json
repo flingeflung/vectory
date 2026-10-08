@@ -652,6 +652,7 @@
     "Es fehlen :days AT": ":days WD missing",
     "Es gab kein Zielprojekt, auf das die Planung übertragen werden konnte.": "There was no target project to transfer the planning to.",
     "Es gibt einen frühen Hinweis oder eine künftig benötigte Angabe fehlt. Noch besteht kein akutes Hindernis, eine Prüfung ist jedoch sinnvoll.": "",
+    "Es gibt noch keine Gruppe. Wählen Sie „Einzelprojekt“ oder legen Sie über „Gruppieren“ in der Projektübersicht oder den Projektdetails eine Gruppe an.": "There is no group yet. Choose \"Single project\" or create a group via \"Group\" in the project overview or the project details.",
     "Es gibt ungespeicherte Änderungen. Trotzdem verwerfen?": "There are unsaved changes. Discard anyway?",
     "Es ist keine Organisation ausgewählt. Wenn keine Organisation gewählt ist, dann zählen keine Projektstunden.": "No organization is selected. If no organization is selected, no project hours are counted.",
     "Es sind noch keine Jobs verfügbar.": "",

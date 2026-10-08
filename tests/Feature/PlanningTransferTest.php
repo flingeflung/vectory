@@ -139,7 +139,7 @@ class PlanningTransferTest extends TestCase
 
         $plain = User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'user']);
         $this->actingAs($plain)->get(route('projekte.planung-uebertragen.form', $mine))->assertForbidden();
-        $this->actingAs($this->admin)->get(route('projekte.planung-uebertragen.form', $mine))->assertOk()->assertSee('Planung dieses Projekts an andere senden');
+        $this->actingAs($this->admin)->get(route('projekte.planung-uebertragen.form', $mine))->assertOk()->assertSee('Planung dieses Projekts an andere senden')->assertSee('Es gibt noch keine Gruppe');
     }
 
     public function test_copy_template_planning_parts_are_applied_when_copying_a_project(): void

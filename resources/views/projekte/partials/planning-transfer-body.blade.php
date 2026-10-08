@@ -78,12 +78,18 @@
         </div>
 
         <div class="mt-2" x-show="usesGroup">
-            <select name="group_id" x-model="groupId" x-ref="groupSelect" class="w-full rounded-md border-gray-300 text-sm">
-                <option value="">{{ __('– Gruppe wählen –') }}</option>
-                @foreach ($groups as $group)
-                    <option value="{{ $group->id }}">{{ $group->name }}{{ $group->is_verbund ? ' ('.__('Verbund').')' : '' }} · {{ $group->projects_count }}</option>
-                @endforeach
-            </select>
+            @if ($groups->isEmpty())
+                <p class="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                    {{ __('Es gibt noch keine Gruppe. Wählen Sie „Einzelprojekt“ oder legen Sie über „Gruppieren“ in der Projektübersicht oder den Projektdetails eine Gruppe an.') }}
+                </p>
+            @else
+                <select name="group_id" x-model="groupId" x-ref="groupSelect" class="w-full rounded-md border-gray-300 text-sm">
+                    <option value="">{{ __('– Gruppe wählen –') }}</option>
+                    @foreach ($groups as $group)
+                        <option value="{{ $group->id }}">{{ $group->name }}{{ $group->is_verbund ? ' ('.__('Verbund').')' : '' }} · {{ $group->projects_count }}</option>
+                    @endforeach
+                </select>
+            @endif
             <label class="mt-2 inline-flex items-center gap-1.5" x-show="isVerbund">
                 <input type="checkbox" name="include_main" value="1" class="rounded border-gray-300">
                 {{ __('Hauptprojekt einbeziehen') }}
