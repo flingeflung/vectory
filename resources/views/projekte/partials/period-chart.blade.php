@@ -746,7 +746,8 @@
             <template x-if="canEditPeriod">
                 <div class="mt-1">
                     <button type="button" x-show="ms === null" @click="newMs()" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 font-medium text-gray-700 hover:bg-btn-secondary-hover" title="{{ __('Fügt einen Meilenstein hinzu: einen Zeitpunkt, der sich an Start oder Ende des Workflows oder einer Phase orientiert.') }}">+ {{ __('Meilenstein') }}</button>
-                    <form x-show="ms !== null" x-cloak @submit.prevent="saveMs()" class="rounded-md border border-gray-200 bg-gray-50 p-2">
+                    {{-- bewusst kein <form>: die Overlay-Behandlung des Projekts schickt jedes Formular im Overlay selbst ab (Ralf-Bug 2026-10-09: Enter/Speichern löste ein Projekt-Anlegen aus) --}}
+                    <div x-show="ms !== null" x-cloak @keydown.enter.prevent="saveMs()" class="rounded-md border border-gray-200 bg-gray-50 p-2">
                         <div class="flex flex-wrap items-end gap-2">
                             <label class="block">
                                 <span class="block text-[10px] text-gray-500">{{ __('Name') }}</span>
@@ -784,9 +785,9 @@
                             <button type="button" x-show="ms && ms.id" @click="deleteMs()" :disabled="msSaving" class="rounded-md border border-red-200 bg-white px-2 py-0.5 font-medium text-red-700 hover:bg-red-50 disabled:opacity-50">{{ __('Löschen') }}</button>
                             <span class="flex-1"></span>
                             <button type="button" @click="ms = null" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Abbrechen') }}</button>
-                            <button type="submit" :disabled="msSaving" class="rounded-md border border-transparent bg-btn-primary px-2.5 py-0.5 font-medium text-white hover:bg-btn-primary-hover disabled:cursor-wait disabled:opacity-60">{{ __('Speichern') }}</button>
+                            <button type="button" @click="saveMs()" :disabled="msSaving" class="rounded-md border border-transparent bg-btn-primary px-2.5 py-0.5 font-medium text-white hover:bg-btn-primary-hover disabled:cursor-wait disabled:opacity-60">{{ __('Speichern') }}</button>
                         </div>
-                    </form>
+                    </div>
                 </div>
             </template>
         @endif
