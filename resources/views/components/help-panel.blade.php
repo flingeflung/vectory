@@ -123,5 +123,22 @@
             link.classList.toggle('text-gray-700', ! active);
             active ? link.setAttribute('aria-current', 'page') : link.removeAttribute('aria-current');
         });
+        window.helpCenterNav();
+    };
+    // Scrollt die Navigation so, dass die gewählte Hilfeseite vertikal mittig steht (Ralf, 2026-10-09). Zweimal im nächsten Frame,
+    // weil das Panel beim Öffnen noch einblendet und erst dann Maße hat.
+    window.helpCenterNav = function () {
+        const center = () => {
+            const link = document.querySelector('a[data-help-key][aria-current="page"]');
+            const box = link?.closest('.overflow-y-auto');
+            if (! link || ! box || box.clientHeight === 0) return false;
+            const linkRect = link.getBoundingClientRect();
+            const boxRect = box.getBoundingClientRect();
+            box.scrollTop += (linkRect.top + linkRect.height / 2) - (boxRect.top + boxRect.height / 2);
+            return true;
+        };
+        if (! center()) {
+            requestAnimationFrame(() => requestAnimationFrame(center));
+        }
     };
 </script>
