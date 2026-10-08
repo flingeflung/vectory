@@ -39,6 +39,9 @@ class PasswordController extends Controller
             'password' => Hash::make($validator->validated()['password']),
         ]);
 
+        // Alle anderen Geräte werden abgemeldet, das aktuelle bleibt (Ralf, 2026-10-08)
+        \App\Support\SessionRevoker::revoke((int) $request->user()->id, $request->session()->getId());
+
         return back()->with('status', 'password-updated');
     }
 }

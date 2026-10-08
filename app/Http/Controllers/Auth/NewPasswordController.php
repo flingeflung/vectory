@@ -53,6 +53,8 @@ class NewPasswordController extends Controller
                     'remember_token' => Str::random(60),
                 ])->save();
 
+                \App\Support\SessionRevoker::revoke((int) $user->id);
+
                 event(new PasswordReset($user));
             }
         );

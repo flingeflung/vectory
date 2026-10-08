@@ -44,4 +44,27 @@ class ForceLogoutTest extends TestCase
         $this->assertSame(1, DB::table('sessions')->where('user_id', $user->id)->count());
         $this->assertTrue((bool) $person->fresh()->active);
     }
+
+    public function test_password_change_ends_other_sessions_but_keeps_the_current_one(): void
+    {
+        [, , $user] = $this->setUpPerson();
+        $user->update(['password' => bcrypt('AltesPasswort')]);
+
+        $this->actingAs($user)->put(route('password.update'), [
+            'current_password' => 'AltesPasswort',
+            'password' => 'NeuesPasswort1',
+            'password_confirmation' => 'NeuesPasswort1',
+        ]);
+
+        $this->assertSame(0, DB::table('sessions')->where('user_id', $user->id)->where('id', 'sess-kick')->count());
+    }
+
+    public function test_admin_password_reset_ends_all_sessions(): void
+    {
+        [$admin, $person, $user] = $this->setUpPerson();
+
+        $this->actingAs($admin)->post(route('admin.personen.password.reset', $person), ['password' => 'NeuesPasswort1', 'password_confirmation' => 'NeuesPasswort1']);
+
+        $this->assertSame(0, DB::table('sessions')->where('user_id', $user->id)->count());
+    }
 }

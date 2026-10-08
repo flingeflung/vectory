@@ -644,8 +644,7 @@ class PersonController extends Controller
         abort_unless($person->user, 404);
 
         $user = $person->user;
-        \Illuminate\Support\Facades\DB::table('sessions')->where('user_id', $user->id)->delete();
-        $user->forceFill(['remember_token' => \Illuminate\Support\Str::random(60)])->save();
+        \App\Support\SessionRevoker::revoke((int) $user->id);
 
         return $this->accountResponse($request, $person, null, 'logged-out');
     }
@@ -689,6 +688,7 @@ class PersonController extends Controller
         }
 
         $person->user->update(['password' => $validator->validated()['password']]);
+        \App\Support\SessionRevoker::revoke((int) $person->user->id);
 
         if ($isOverlay) {
             $request->session()->flash('status', 'password-reset');
