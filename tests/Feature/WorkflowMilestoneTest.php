@@ -36,20 +36,18 @@ class WorkflowMilestoneTest extends TestCase
     public function test_milestones_can_be_created_changed_and_deleted(): void
     {
         $this->post(route('admin.workflows.milestones.store', $this->workflow), [
-            'name' => 'Markteinführung', 'anchor_type' => 'workflow_end', 'offset_days' => 1, 'is_market_launch' => 1,
+            'name' => 'Messetermin', 'anchor_type' => 'workflow_end', 'offset_days' => 1,
         ])->assertRedirect();
         $milestone = WorkflowMilestone::query()->where('workflow_id', $this->workflow->id)->sole();
         $this->assertSame(1, $milestone->offset_days);
-        $this->assertTrue($milestone->is_market_launch);
 
         $this->patch(route('admin.workflows.milestones.update', [$this->workflow, $milestone]), [
-            'name' => 'Abnahme', 'anchor_type' => 'step_end', 'anchor_workflow_step_id' => $this->steps[1]->id, 'offset_days' => -2, 'is_market_launch' => 0,
+            'name' => 'Abnahme', 'anchor_type' => 'step_end', 'anchor_workflow_step_id' => $this->steps[1]->id, 'offset_days' => -2, 
         ])->assertRedirect();
         $milestone->refresh();
         $this->assertSame('Abnahme', $milestone->name);
         $this->assertSame($this->steps[1]->id, $milestone->anchor_workflow_step_id);
         $this->assertSame(-2, $milestone->offset_days);
-        $this->assertFalse($milestone->is_market_launch);
 
         $this->delete(route('admin.workflows.milestones.destroy', [$this->workflow, $milestone]))->assertRedirect();
         $this->assertSame(0, WorkflowMilestone::query()->where('workflow_id', $this->workflow->id)->count());
