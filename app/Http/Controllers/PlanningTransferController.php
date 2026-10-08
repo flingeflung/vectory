@@ -27,13 +27,31 @@ class PlanningTransferController extends Controller
             ->orderByDesc('source_pn')->limit(5000)->get(['id', 'source_pn', 'title'])
             ->map(fn (Project $other) => ['id' => $other->id, 'label' => $other->source_pn.' – '.$other->title])->values();
 
+        // je Gruppe die Mitglieder (ohne dieses Projekt) mit ihrem Workflow - das Formular prüft damit, ob Dauern/Sperren/Termine passen
+        $groupMembers = $groups->mapWithKeys(fn (ProjectGroup $group) => [
+            (string) $group->id => $group->projects()->whereKeyNot($project->id)->get(['projects.id', 'projects.workflow_id', 'projects.verbund_rolle'])
+                ->map(fn (Project $member) => ['wf' => $member->workflow_id ? (int) $member->workflow_id : null, 'main' => (int) $member->verbund_rolle === 1])->values(),
+        ]);
+
         return view('projekte.partials.planning-transfer-body', [
+            'ownInfo' => PlanningTransfer::available($project),
+            'groupMembers' => $groupMembers,
             'project' => $project,
             'groups' => $groups,
             'defaultGroupId' => $defaultGroup?->id,
             'projectOptions' => $projects,
             'parts' => $this->allowedParts($request),
         ]);
+    }
+
+    /** Verfügbare Bereiche und Workflow eines anderen Projekts (für "holen" und die Prüfung beim Einzelprojekt). */
+    public function info(Request $request, Project $project): \Illuminate\Http\JsonResponse
+    {
+        abort_unless($request->user()->can('project.edit'), 403);
+        $other = Project::query()->find($request->integer('other'));
+        abort_if($other === null, 404);
+
+        return response()->json(PlanningTransfer::available($other));
     }
 
     public function run(Request $request, Project $project): View

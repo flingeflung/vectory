@@ -194,4 +194,17 @@ class PlanningTransferTest extends TestCase
         $this->assertSame(5, (int) $row->duration_days);
         $this->assertSame('2027-03-20', $row->due_date->toDateString());
     }
+
+    public function test_info_reports_which_areas_a_project_has(): void
+    {
+        $with = $this->project('270050', $this->workflow->id);
+        $this->stepRow($with, $this->steps[0], ['duration_days' => 3, 'due_date' => '2027-03-02']);
+        $without = $this->project('270051');
+        $me = $this->project('270052');
+
+        $this->actingAs($this->admin)->getJson(route('projekte.planung-uebertragen.info', ['project' => $me, 'other' => $with->id]))
+            ->assertOk()->assertJson(['workflow' => true, 'durations' => true, 'milestones' => true, 'planned_hours' => false, 'people' => false, 'workflow_id' => $this->workflow->id]);
+        $this->actingAs($this->admin)->getJson(route('projekte.planung-uebertragen.info', ['project' => $me, 'other' => $without->id]))
+            ->assertOk()->assertJson(['workflow' => false, 'durations' => false, 'workflow_id' => null]);
+    }
 }

@@ -1,6 +1,7 @@
 {{--
     Planung übertragen (Ralf, 2026-10-08): Richtung (senden / holen), Gruppe oder Einzelprojekt, Bereiche, Umgang mit Vorhandenem.
-    Erwartet $project, $groups, $defaultGroupId, $projectOptions, $parts (Bereich => Bezeichnung, nur die erlaubten).
+    Erwartet $project, $ownInfo (Bereiche dieses Projekts), $groups, $groupMembers, $defaultGroupId, $projectOptions, $parts (Bereich => Bezeichnung, nur die erlaubten).
+    Das Formular prüft vorab: Bereiche, die die Quelle nicht hat, und Dauern/Sperren/Termine ohne passenden Workflow im Ziel sind gesperrt, mit Hinweis.
 --}}
 <form
     id="planning-transfer-form"
@@ -8,18 +9,74 @@
         direction: 'send',
         scope: '{{ $defaultGroupId ? 'group' : 'single' }}',
         groupId: @js($defaultGroupId ? (string) $defaultGroupId : ''),
-        groups: @js($groups->mapWithKeys(fn ($group) => [(string) $group->id => ['verbund' => (bool) $group->is_verbund, 'count' => (int) $group->projects_count]])),
+        includeMain: false,
+        groups: @js($groups->mapWithKeys(fn ($group) => [(string) $group->id => ['verbund' => (bool) $group->is_verbund]])),
+        members: @js($groupMembers),
+        ownInfo: @js($ownInfo),
         projects: @js($projectOptions),
         otherText: '',
         otherId: '',
+        otherInfo: null,
+        parts: { workflow: true, durations: true, planned_hours: true, people: true, milestones: false },
         busy: false,
         get isVerbund() { const group = this.groups[this.groupId]; return !! (group && group.verbund); },
         get usesGroup() { return this.direction === 'send' && this.scope === 'group'; },
-        get targetCount() { return this.usesGroup ? ((this.groups[this.groupId] || {}).count || 0) : 1; },
-        matchProject() { const found = this.projects.find((item) => item.label === this.otherText.trim()); this.otherId = found ? String(found.id) : ''; },
+        get groupTargets() { return (this.members[this.groupId] || []).filter((member) => this.includeMain || ! member.main); },
+        get targetCount() { return this.usesGroup ? this.groupTargets.length : 1; },
+        // Quelle: beim Senden dieses Projekt, beim Holen das gewählte Projekt (unbekannt, bis eines gewählt ist)
+        get sourceInfo() { return this.direction === 'send' ? this.ownInfo : this.otherInfo; },
+        // Workflow der Ziele als Liste der Workflow-Nummern (leer = noch unbekannt)
+        get targetWorkflows() {
+            if (this.direction === 'fetch') return [this.ownInfo.workflow_id];
+            if (this.usesGroup) return this.groupTargets.map((member) => member.wf);
+            return this.otherInfo ? [this.otherInfo.workflow_id] : [];
+        },
+        get mismatchCount() {
+            const source = this.sourceInfo;
+            if (! source) return 0;
+            return this.targetWorkflows.filter((wf) => ! wf || wf !== source.workflow_id).length;
+        },
+        get workflowMatch() {
+            const total = this.targetWorkflows.length;
+            if (! this.sourceInfo || total === 0) return null;
+            return this.mismatchCount === 0 ? 'all' : (this.mismatchCount === total ? 'none' : 'some');
+        },
+        missing: {
+            workflow: @js(__('Die Quelle hat keinen Workflow.')),
+            durations: @js(__('Die Quelle hat keine eigenen Dauern oder Sperren.')),
+            planned_hours: @js(__('Die Quelle hat weder ein Aufwandsprofil noch eigene Planstunden.')),
+            people: @js(__('Die Quelle hat keine Projektbeteiligten.')),
+            milestones: @js(__('Die Quelle hat keine Termine an den Schritten.')),
+        },
+        // Grund, warum ein Bereich nicht übertragbar ist (leer = übertragbar)
+        reason(key) {
+            const source = this.sourceInfo;
+            if (! source) return '';
+            if (! source[key]) return this.missing[key];
+            if ((key === 'durations' || key === 'milestones') && this.workflowMatch === 'none' && ! (this.parts.workflow && source.workflow)) return @js(__('Setzt denselben Workflow im Ziel voraus. Haken Sie zuerst „Workflow“ an.'));
+            return '';
+        },
+        hint(key) {
+            if ((key === 'durations' || key === 'milestones') && this.workflowMatch === 'some' && ! this.parts.workflow) {
+                return @js(__('Bei :n von :m Zielen ist der Workflow ein anderer; dort wird übersprungen.')).replace(':n', this.mismatchCount).replace(':m', this.targetWorkflows.length);
+            }
+            return '';
+        },
+        partOn(key) { return !! this.parts[key] && this.reason(key) === ''; },
+        async matchProject() {
+            const found = this.projects.find((item) => item.label === this.otherText.trim());
+            this.otherId = found ? String(found.id) : '';
+            this.otherInfo = null;
+            if (! this.otherId) return;
+            const id = this.otherId;
+            const response = await fetch(@js(route('projekte.planung-uebertragen.info', $project)) + '?other=' + id, { headers: { 'Accept': 'application/json' } });
+            if (response.ok && this.otherId === id) this.otherInfo = await response.json();
+        },
         setDirection(value) {
             this.direction = value;
             if (value === 'fetch') this.scope = 'single';
+            this.otherInfo = null;
+            if (this.otherId) this.matchProject();
             this.$nextTick(() => this.focusFirst());
         },
         focusFirst() { const field = this.$refs[this.usesGroup ? 'groupSelect' : 'projectInput']; if (field) field.focus(); },
@@ -27,8 +84,8 @@
             if (this.busy) return;
             if (! this.usesGroup && ! this.otherId) { await window.notifyDialog(@js(__('Bitte ein Projekt aus der Liste auswählen. Tippen Sie dazu die PN oder einen Teil des Titels.'))); return; }
             if (this.usesGroup && ! this.groupId) { await window.notifyDialog(@js(__('Bitte eine Gruppe auswählen.'))); return; }
+            if (! Object.keys(this.parts).some((key) => this.partOn(key))) { await window.notifyDialog(@js(__('Bitte mindestens einen Bereich auswählen.'))); return; }
             const form = this.$refs.form;
-            if (! form.querySelector('input[name=\'parts[]\']:checked')) { await window.notifyDialog(@js(__('Bitte mindestens einen Bereich auswählen.'))); return; }
             const message = this.direction === 'fetch'
                 ? @js(__('Die gewählten Bereiche dieses Projekts werden durch die Werte des anderen Projekts ersetzt.'))
                 : @js(__('Die gewählten Bereiche werden in bis zu :n Projekten durch die Werte dieses Projekts ersetzt.')).replace(':n', this.targetCount);
@@ -89,11 +146,11 @@
                         <option value="{{ $group->id }}">{{ $group->name }}{{ $group->is_verbund ? ' ('.__('Verbund').')' : '' }} · {{ $group->projects_count }}</option>
                     @endforeach
                 </select>
+                <label class="mt-2 inline-flex items-center gap-1.5" x-show="isVerbund">
+                    <input type="checkbox" name="include_main" value="1" x-model="includeMain" class="rounded border-gray-300">
+                    {{ __('Hauptprojekt einbeziehen') }}
+                </label>
             @endif
-            <label class="mt-2 inline-flex items-center gap-1.5" x-show="isVerbund">
-                <input type="checkbox" name="include_main" value="1" class="rounded border-gray-300">
-                {{ __('Hauptprojekt einbeziehen') }}
-            </label>
         </div>
 
         <div class="mt-2" x-show="! usesGroup">
@@ -119,13 +176,24 @@
         <legend class="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('Bereiche') }}</legend>
         <div class="space-y-1">
             @foreach ($parts as $key => $label)
-                <label class="flex items-center gap-1.5">
-                    <input type="checkbox" name="parts[]" value="{{ $key }}" @checked($key !== \App\Services\PlanningTransfer::MILESTONES) class="rounded border-gray-300">
-                    {{ $label }}
-                    @if ($key === \App\Services\PlanningTransfer::MILESTONES)
-                        <span class="text-xs text-gray-400" title="{{ __('Ohne diesen Haken bleiben die Termine im Ziel unverändert; mit „Termine berechnen“ lassen sie sich dort aus den Dauern ab dem eigenen Projektstart bestimmen.') }}">ⓘ</span>
-                    @endif
-                </label>
+                <div>
+                    <label class="flex items-center gap-1.5" :class="reason('{{ $key }}') !== '' ? 'text-gray-400' : ''">
+                        <input
+                            type="checkbox"
+                            name="parts[]"
+                            value="{{ $key }}"
+                            :checked="partOn('{{ $key }}')"
+                            :disabled="reason('{{ $key }}') !== ''"
+                            @change="parts['{{ $key }}'] = $event.target.checked"
+                            class="rounded border-gray-300"
+                        >
+                        {{ $label }}
+                        @if ($key === \App\Services\PlanningTransfer::MILESTONES)
+                            <span class="text-xs text-gray-400" title="{{ __('Ohne diesen Haken bleiben die Termine im Ziel unverändert; mit „Termine berechnen“ lassen sie sich dort aus den Dauern ab dem eigenen Projektstart bestimmen.') }}">ⓘ</span>
+                        @endif
+                    </label>
+                    <p class="ml-6 text-xs text-amber-700" x-show="reason('{{ $key }}') !== '' || hint('{{ $key }}') !== ''" x-text="reason('{{ $key }}') || hint('{{ $key }}')"></p>
+                </div>
             @endforeach
         </div>
     </fieldset>

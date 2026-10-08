@@ -39,6 +39,25 @@ final class PlanningTransfer
     }
 
     /**
+     * Welche Bereiche das Projekt überhaupt besitzt (für das Formular und die Prüfung vor dem Übertragen).
+     *
+     * @return array{workflow: bool, durations: bool, planned_hours: bool, people: bool, milestones: bool, workflow_id: int|null}
+     */
+    public static function available(Project $project): array
+    {
+        $rows = fn () => ProjectWorkflowStep::query()->where('project_id', $project->id);
+
+        return [
+            self::WORKFLOW => (bool) $project->workflow_id,
+            self::DURATIONS => $rows()->where(fn ($query) => $query->whereNotNull('duration_days')->orWhereNotNull('duration_locked'))->exists(),
+            self::PLANNED_HOURS => (bool) $project->project_template_id || $project->functionGroupHours()->exists(),
+            self::PEOPLE => $project->projectPeople()->exists(),
+            self::MILESTONES => $rows()->whereNotNull('due_date')->exists(),
+            'workflow_id' => $project->workflow_id ? (int) $project->workflow_id : null,
+        ];
+    }
+
+    /**
      * @param  list<string>  $parts
      * @return list<array{part: string, status: string, note: string}> status: done | unchanged | skipped
      */
