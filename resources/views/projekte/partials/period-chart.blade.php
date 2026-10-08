@@ -825,19 +825,22 @@
         @if ((int) $project->schedule_model === 2)
             <template x-if="canEditPeriod">
                 <div x-show="fix !== null" x-cloak @keydown.enter.prevent="applyFix()" class="mt-1 rounded-md border border-gray-200 bg-gray-50 p-2">
-                    <div class="flex flex-wrap items-end gap-2">
+                    <div class="mb-1.5 text-xs font-semibold text-gray-700">{{ __('Termine neu berechnen') }}</div>
+                    <div class="flex flex-wrap items-end gap-x-4 gap-y-1">
                         <div>
                             <span class="block text-[10px] text-gray-500">{{ __('Fixpunkt') }}</span>
-                            <span class="block font-medium text-gray-700" x-text="fix ? fix.label : ''"></span>
+                            <span class="flex min-h-7 max-w-[24rem] items-center font-medium text-gray-700" x-text="fix ? fix.label : ''"></span>
                         </div>
                         <label class="block">
                             <span class="block text-[10px] text-gray-500">{{ __('auf Datum') }}</span>
-                            <input type="date" x-ref="fixDate" :value="fix ? fix.date : ''" @input="fix.date = $event.target.value" @change="fixPreview()" class="rounded border-gray-300 px-1.5 py-0.5 text-xs">
+                            <input type="date" x-ref="fixDate" :value="fix ? fix.date : ''" @input="fix.date = $event.target.value" @change="fixPreview()" class="h-7 rounded border-gray-300 px-1.5 py-0 text-xs">
                         </label>
-                        <p class="min-w-[12rem] flex-1 text-gray-600" x-show="fix && fix.preview">
-                            {{ __('Projektstart') }}: <span class="font-medium" x-text="fix && fix.preview ? dateDe(fix.preview.start) : ''"></span>
-                            · {{ __('Projektende') }}: <span class="font-medium" x-text="fix && fix.preview ? dateDe(fix.preview.end) : ''"></span>
-                        </p>
+                        <div class="min-w-[24rem] flex-1">
+                            <span class="block text-[10px] text-gray-500">{{ __('Ergebnis') }}</span>
+                            <span class="flex min-h-7 items-center text-gray-700" :class="fix && fix.preview ? '' : 'invisible'">
+                                <span x-text="@js(__('Neu berechnet')) + ': ' + @js(__('Projektstart')) + ' ' + (fix && fix.preview ? dateDe(fix.preview.start) : '00.00.0000') + ', ' + @js(__('Projektende')) + ' ' + (fix && fix.preview ? dateDe(fix.preview.end) : '00.00.0000') + ' (' + @js(__('noch nicht gespeichert')) + ')'"></span>
+                            </span>
+                        </div>
                     </div>
                     <p x-show="fix && fix.error" x-text="fix ? fix.error : ''" class="mt-1 text-red-600"></p>
                     <div class="mt-2 flex items-center justify-end gap-2">

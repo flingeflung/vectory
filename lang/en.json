@@ -705,6 +705,7 @@
     "Entwurf - frei bearbeitbar und beliebig oft zum Testen einem Projekt zuweisbar. Bleibt so, bis Sie ihn veröffentlichen.": "Draft - freely editable and can be assigned to a project any number of times for testing. Remains a draft until you publish it.",
     "Entwurf - kann jederzeit gelöscht werden (auch eventuelle Test-Zuweisungen gehen dabei verloren).": "Draft - can be deleted at any time (any test assignments will also be lost).",
     "Entwurf verwerfen?": "Discard draft?",
+    "Ergebnis": "Result",
     "Ergänzen": "Add",
     "Erhält eine neue Stamm-ID und beginnt eine eigene Versionskette.": "",
     "Erklärung (Info-Symbol in den Projektdetails)": "",
@@ -1235,6 +1236,7 @@
     "Mehrzeiliger Text": "",
     "Meilenstein": "Milestone",
     "Meilenstein (Termin am Schritt)": "Milestone (date on the step)",
+    "Meilenstein (zum Verschieben ziehen)": "Milestone (drag to move)",
     "Meilenstein löschen?": "Delete milestone?",
     "Meilenstein ändern": "Edit milestone",
     "Meilenstein-Titel": "Milestone title",
@@ -1481,6 +1483,7 @@
     "Pflichtfeld. Empfänger für automatische Mitteilungen an diese Organisation, z. B. Projektanfragen und Rückmeldungen zu Freigaben. Wenn noch keine Sammel-Adresse existiert, tragen Sie zunächst irgendeine gültige Adresse ein - sie lässt sich jederzeit ändern.": "Required. Recipient for automatic notifications to this organization, e.g. project requests and feedback on approvals. If no group address exists yet, enter any valid address for now - it can be changed at any time.",
     "Phase": "Phase",
     "Phasenende": "Phase end",
+    "Phasenende mit Namen (Termin)": "Named phase end (date)",
     "Plan": "",
     "Plan :plan h, gebucht :booked h, Überschreitung :difference h.": "",
     "Plan: :hours h": "",
@@ -1789,6 +1792,7 @@
     "Termine berechnen": "Calculate dates",
     "Termine berechnen …": "Calculate dates …",
     "Termine der Schritte (Meilensteine)": "Dates of the steps (milestones)",
+    "Termine neu berechnen": "Recalculate dates",
     "Termine und Meilensteine": "Dates and milestones",
     "Termine, die für das Projekt als Start- bzw. Enddatum gelten sollen.": "Dates to be used as the project start and end dates.",
     "Terminplan": "",
@@ -2180,6 +2184,7 @@
     "nicht zugewiesen": "not assigned",
     "nicht zutreffend": "",
     "noch nicht erteilt": "not yet granted",
+    "noch nicht gespeichert": "not saved yet",
     "noch nicht hinterlegt": "",
     "noch offene vorhanden": "open ones still exist",
     "nur Einzelprojekte": "single projects only",
@@ -2311,7 +2316,5 @@
     "– noch keine Einträge –": "– no entries yet –",
     "– ohne Rechte-Set –": "– without permission set –",
     "– zuerst Funktionsgruppe wählen –": "",
-    "„:name\" teilen mit:": "Share “:name\" with:",
-    "Phasenende mit Namen (Termin)": "Named phase end (date)",
-    "Meilenstein (zum Verschieben ziehen)": "Milestone (drag to move)"
+    "„:name\" teilen mit:": "Share “:name\" with:"
 }
