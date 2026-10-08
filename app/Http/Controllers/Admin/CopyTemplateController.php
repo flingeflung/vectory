@@ -104,6 +104,7 @@ class CopyTemplateController extends Controller
         return redirect()->route('admin.projektkopie-vorlagen', ['vorlage' => $template->id])->with('status', 'copy-templates-updated');
     }
 
+    /** Name, Felder und Planungs-Bereiche der Vorlage gemeinsam speichern (Ralf, 2026-10-08: wie die übrigen Dialoge mit "Speichern"). */
     public function update(Request $request, CopyTemplate $template): RedirectResponse
     {
         abort_unless($template->tenant_id === CurrentTenant::id(), 404);
@@ -111,7 +112,18 @@ class CopyTemplateController extends Controller
         $name = trim((string) $request->string('name'));
         abort_if($name === '', 422);
 
-        $template->update(['name' => $name]);
+        // Nur die sichtbaren Felder werden aus dem Formular übernommen; Felder ohne Kopier-Wirkung (NO_EFFECT_KEYS) bleiben, wie sie sind.
+        $submitted = Attribute::query()->where('tenant_id', $template->tenant_id)
+            ->whereNotIn('key', ProjectCopyController::NO_EFFECT_KEYS)
+            ->whereIn('id', array_map('intval', (array) $request->input('fields', [])))
+            ->pluck('id')->all();
+        $kept = $template->fields()->whereIn('key', ProjectCopyController::NO_EFFECT_KEYS)->pluck('attributes.id')->all();
+
+        $template->update([
+            'name' => $name,
+            'planning_parts' => array_values(array_intersect((array) $request->input('planning_parts', []), CopyTemplate::COPYABLE_PLANNING_PARTS)),
+        ]);
+        $template->fields()->sync([...$submitted, ...$kept]);
 
         return redirect()->route('admin.projektkopie-vorlagen', ['vorlage' => $template->id])->with('status', 'copy-templates-updated');
     }
@@ -123,56 +135,6 @@ class CopyTemplateController extends Controller
         $template->delete();
 
         return redirect()->route('admin.projektkopie-vorlagen')->with('status', 'copy-templates-updated');
-    }
-
-    /**
-     * Kästchen-Raster-Toggle, analog AttributeController::toggleProjectType().
-     */
-    public function toggleField(Request $request, CopyTemplate $template): RedirectResponse
-    {
-        abort_unless($template->tenant_id === CurrentTenant::id(), 404);
-
-        $attribute = Attribute::query()->where('tenant_id', $template->tenant_id)->findOrFail($request->integer('attribute_id'));
-
-        if ($template->fields()->where('attributes.id', $attribute->id)->exists()) {
-            $template->fields()->detach($attribute->id);
-        } else {
-            $template->fields()->attach($attribute->id);
-        }
-
-        return redirect()->route('admin.projektkopie-vorlagen', ['vorlage' => $template->id]);
-    }
-
-    /** Planungs-Bereich der Vorlage ein-/ausschalten (Ralf, 2026-10-08). */
-    public function togglePlanningPart(Request $request, CopyTemplate $template): RedirectResponse
-    {
-        abort_unless($template->tenant_id === CurrentTenant::id(), 404);
-        $part = (string) $request->input('part');
-        abort_unless(in_array($part, CopyTemplate::COPYABLE_PLANNING_PARTS, true), 422);
-
-        $parts = $template->planningParts();
-        $template->update(['planning_parts' => in_array($part, $parts, true) ? array_values(array_diff($parts, [$part])) : [...$parts, $part]]);
-
-        return redirect()->route('admin.projektkopie-vorlagen', ['vorlage' => $template->id]);
-    }
-
-    public function markAll(CopyTemplate $template): RedirectResponse
-    {
-        abort_unless($template->tenant_id === CurrentTenant::id(), 404);
-
-        $allIds = Attribute::query()->where('tenant_id', $template->tenant_id)->pluck('id');
-        $template->fields()->sync($allIds);
-
-        return redirect()->route('admin.projektkopie-vorlagen', ['vorlage' => $template->id]);
-    }
-
-    public function markNone(CopyTemplate $template): RedirectResponse
-    {
-        abort_unless($template->tenant_id === CurrentTenant::id(), 404);
-
-        $template->fields()->detach();
-
-        return redirect()->route('admin.projektkopie-vorlagen', ['vorlage' => $template->id]);
     }
 
     public function updateMaxCopies(Request $request): RedirectResponse

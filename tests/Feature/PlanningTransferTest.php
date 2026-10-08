@@ -165,10 +165,11 @@ class PlanningTransferTest extends TestCase
         }
 
         // Planungs-Bereiche in der Vorlage ein-/ausschalten
-        $this->actingAs($this->admin)->post(route('admin.projektkopie-vorlagen.planung.toggle', $template), ['part' => 'durations']);
+        $this->actingAs($this->admin)->post(route('admin.projektkopie-vorlagen.update', $template), [
+            'name' => 'Mit Planung', 'fields' => $template->fields()->pluck('attributes.id')->all(), 'planning_parts' => ['durations', 'bogus'],
+        ])->assertRedirect();
         $this->assertSame(['durations'], $template->fresh()->planningParts());
         $this->actingAs($this->admin)->get(route('admin.projektkopie-vorlagen', ['vorlage' => $template->id]))->assertOk()->assertSee('Dauern und Sperren der Schritte')->assertSee('Termine der Schritte (Meilensteine)');
-        $this->actingAs($this->admin)->post(route('admin.projektkopie-vorlagen.planung.toggle', $template), ['part' => 'bogus'])->assertStatus(422);
 
         $this->actingAs($this->admin)->post(route('projekte.kopieren.store', $source), [
             'template_id' => $template->id, 'count' => 1, 'title' => 'Kopie', 'copy_mode' => 'new',
@@ -182,6 +183,32 @@ class PlanningTransferTest extends TestCase
         if ($profileAttribute) {
             $this->assertSame($profile->id, (int) $copy->project_template_id);
             $this->assertSame(6.0, (float) $copy->functionGroupHours()->first()->pivot->planned_hours);
+        }
+    }
+
+    public function test_template_form_saves_name_fields_and_planning_parts_together(): void
+    {
+        $titleAttribute = \App\Models\Attribute::query()->where('tenant_id', $this->tenant->id)->where('key', 'title')->first();
+        $workflowAttribute = \App\Models\Attribute::query()->where('tenant_id', $this->tenant->id)->where('key', 'workflow_id')->first();
+        $noEffect = \App\Models\Attribute::query()->where('tenant_id', $this->tenant->id)->whereIn('key', \App\Http\Controllers\ProjectCopyController::NO_EFFECT_KEYS)->first();
+        if ($titleAttribute === null || $workflowAttribute === null) {
+            $this->markTestSkipped('System-Attribute fehlen in der Testdatenbank.');
+        }
+        $template = \App\Models\CopyTemplate::query()->create(['tenant_id' => $this->tenant->id, 'name' => 'Alt', 'sort' => 1]);
+        $template->fields()->attach(array_filter([$titleAttribute->id, $noEffect?->id]));
+
+        $this->actingAs($this->admin)->post(route('admin.projektkopie-vorlagen.update', $template), [
+            'name' => 'Neu', 'fields' => [$workflowAttribute->id], 'planning_parts' => ['milestones'],
+        ])->assertRedirect();
+
+        $template = $template->fresh();
+        $this->assertSame('Neu', $template->name);
+        $this->assertSame(['milestones'], $template->planningParts());
+        $ids = $template->fields()->pluck('attributes.id')->all();
+        $this->assertContains($workflowAttribute->id, $ids);
+        $this->assertNotContains($titleAttribute->id, $ids);   // abgehakt = entfernt
+        if ($noEffect) {
+            $this->assertContains($noEffect->id, $ids);        // Felder ohne Kopier-Wirkung bleiben unberührt
         }
     }
 

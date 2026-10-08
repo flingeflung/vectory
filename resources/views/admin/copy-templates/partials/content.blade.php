@@ -84,103 +84,77 @@
     {{-- Rechts: gewählte Vorlage - Name, Feld-Auswahl je Bereich. --}}
     <div class="flex flex-1 min-h-0 flex-col rounded-lg border border-gray-200 bg-white">
         @if ($selectedTemplate)
-            <div class="flex min-h-0 flex-1 flex-col">
-                {{-- Name wird wie die Feld-Haken automatisch gespeichert
-                     (Ralf: sonst unlogisch, wenn die Haken sofort wirken,
-                     aber der Name einen extra Speichern-Klick braucht) -
-                     normaler Formular-Submit statt Fetch, damit die Liste
-                     links den neuen Namen sofort mit anzeigt. --}}
+            {{-- Name, Planungs-Bereiche und Felder werden gemeinsam über "Speichern" gespeichert (Ralf, 2026-10-08, vorher wirkte jeder Haken sofort);
+                 Änderungsprüfung wie bei den übrigen Verwaltungsformularen (window.__copyTemplatesDirtyForms). --}}
+            <div class="flex min-h-0 flex-1 flex-col" x-data="{ dirty: false }">
                 <form
+                    id="copy-template-form"
                     method="POST"
                     action="{{ route('admin.projektkopie-vorlagen.update', $selectedTemplate) }}"
-                    class="shrink-0 border-b border-gray-100 p-3"
+                    class="flex min-h-0 flex-1 flex-col"
+                    @input="dirty = window.formIsDirty($el, window.__copyTemplatesDirtyForms)"
+                    @submit="dirty = false; window.__copyTemplatesDirtyForms.delete($el)"
                 >
                     @csrf
-                    <label class="block text-xs text-gray-500">{{ __('Name der Vorlage') }}</label>
-                    <input type="text" name="name" value="{{ $selectedTemplate->name }}" required onchange="this.form.submit()" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
-                </form>
-
-                <div class="min-h-0 flex-1 overflow-y-auto p-3">
-                    <div class="mb-3 flex items-center justify-between">
-                        <p class="text-xs text-gray-400">{{ __('Markierte Attribute werden beim Kopieren von Projekten vom Quell- in das Zielprojekt übernommen. Änderungen in der Vorlage werden automatisch gespeichert.') }}</p>
-                        <div class="flex shrink-0 gap-3">
-                            <form method="POST" action="{{ route('admin.projektkopie-vorlagen.alle-markieren', $selectedTemplate) }}">
-                                @csrf
-                                <button type="submit" class="text-xs font-medium text-indigo-600 hover:text-indigo-800">{{ __('Alle markieren') }}</button>
-                            </form>
-                            <form method="POST" action="{{ route('admin.projektkopie-vorlagen.keinen-markieren', $selectedTemplate) }}">
-                                @csrf
-                                <button type="submit" class="text-xs font-medium text-indigo-600 hover:text-indigo-800">{{ __('Keinen markieren') }}</button>
-                            </form>
-                        </div>
+                    <div class="shrink-0 border-b border-gray-100 p-3">
+                        <label class="block text-xs text-gray-500">{{ __('Name der Vorlage') }}</label>
+                        <input type="text" name="name" value="{{ $selectedTemplate->name }}" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                     </div>
 
-                    <div class="space-y-4">
-                        {{-- Planungs-Bereiche (Ralf, 2026-10-08): zusätzlich zu den Feldern --}}
-                        <div>
-                            <div class="mb-1.5 text-xs font-semibold text-gray-500">{{ __('Planung') }}</div>
-                            <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                                @foreach (\App\Services\PlanningTransfer::parts() as $partKey => $partLabel)
-                                    @continue(! in_array($partKey, \App\Models\CopyTemplate::COPYABLE_PLANNING_PARTS, true))
-                                    <label class="flex items-center gap-1.5 text-gray-700">
-                                        <input
-                                            type="checkbox"
-                                            class="rounded border-gray-300"
-                                            @checked(in_array($partKey, $selectedTemplate->planningParts(), true))
-                                            @click="
-                                                fetch({{ \Illuminate\Support\Js::from(route('admin.projektkopie-vorlagen.planung.toggle', $selectedTemplate)) }}, {
-                                                    method: 'POST',
-                                                    headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Content-Type': 'application/x-www-form-urlencoded' },
-                                                    body: 'part={{ $partKey }}',
-                                                });
-                                            "
-                                        >
-                                        {{ $partLabel }}
-                                    </label>
-                                @endforeach
+                    <div class="min-h-0 flex-1 overflow-y-auto p-3" x-ref="grid">
+                        <div class="mb-3 flex items-center justify-between">
+                            <p class="text-xs text-gray-400">{{ __('Markierte Attribute werden beim Kopieren von Projekten vom Quell- in das Zielprojekt übernommen. Änderungen gelten erst nach „Speichern“.') }}</p>
+                            <div class="flex shrink-0 gap-3">
+                                <button type="button" @click="$refs.grid.querySelectorAll('input[type=checkbox]').forEach((box) => box.checked = true); $el.closest('form').dispatchEvent(new Event('input', { bubbles: true }))" class="text-xs font-medium text-indigo-600 hover:text-indigo-800">{{ __('Alle markieren') }}</button>
+                                <button type="button" @click="$refs.grid.querySelectorAll('input[type=checkbox]').forEach((box) => box.checked = false); $el.closest('form').dispatchEvent(new Event('input', { bubbles: true }))" class="text-xs font-medium text-indigo-600 hover:text-indigo-800">{{ __('Keinen markieren') }}</button>
                             </div>
-                            <p class="mt-1 text-xs text-gray-400">{{ __('Dauern, Sperren und Termine werden nur kopiert, wenn auch der Workflow kopiert wird und dieselbe Workflow-Version gilt. Workflow, Projektbeteiligte und Aufwandsprofil (mit eigenen Planstunden) stehen bei den Feldern („Ablaufdaten“).') }}</p>
                         </div>
-                        @foreach ($sectionLabels as $section => $sectionLabel)
-                            @if ($attributesBySection->get($section, collect())->isNotEmpty())
-                                <div>
-                                    <div class="mb-1.5 text-xs font-semibold text-gray-500">{{ $sectionLabel }}</div>
-                                    <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                                        @foreach ($attributesBySection->get($section) as $attribute)
-                                            <label class="flex items-center gap-1.5 text-gray-700">
-                                                <input
-                                                    type="checkbox"
-                                                    class="rounded border-gray-300"
-                                                    @checked(in_array($attribute->id, $selectedFieldIds, true))
-                                                    @click="
-                                                        fetch({{ \Illuminate\Support\Js::from(route('admin.projektkopie-vorlagen.feld.toggle', $selectedTemplate)) }}, {
-                                                            method: 'POST',
-                                                            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Content-Type': 'application/x-www-form-urlencoded' },
-                                                            body: 'attribute_id={{ $attribute->id }}',
-                                                        });
-                                                    "
-                                                >
-                                                {{ $attribute->label }}
-                                                @if ($attribute->system)
-                                                    <span class="text-gray-300" title="{{ __('Festes Feld') }}">🔒</span>
-                                                @endif
-                                                @if (isset($fieldHints[$attribute->key]))
-                                                    <span class="cursor-help text-gray-300" title="{{ $fieldHints[$attribute->key] }}">ⓘ</span>
-                                                @endif
-                                            </label>
-                                        @endforeach
-                                    </div>
+
+                        <div class="space-y-4">
+                            {{-- Planungs-Bereiche (Ralf, 2026-10-08): zusätzlich zu den Feldern --}}
+                            <div>
+                                <div class="mb-1.5 text-xs font-semibold text-gray-500">{{ __('Planung') }}</div>
+                                <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                                    @foreach (\App\Services\PlanningTransfer::parts() as $partKey => $partLabel)
+                                        @continue(! in_array($partKey, \App\Models\CopyTemplate::COPYABLE_PLANNING_PARTS, true))
+                                        <label class="flex items-center gap-1.5 text-gray-700">
+                                            <input type="checkbox" name="planning_parts[]" value="{{ $partKey }}" class="rounded border-gray-300" @checked(in_array($partKey, $selectedTemplate->planningParts(), true))>
+                                            {{ $partLabel }}
+                                        </label>
+                                    @endforeach
                                 </div>
-                            @endif
-                        @endforeach
+                                <p class="mt-1 text-xs text-gray-400">{{ __('Dauern, Sperren und Termine werden nur kopiert, wenn auch der Workflow kopiert wird und dieselbe Workflow-Version gilt. Workflow, Projektbeteiligte und Aufwandsprofil (mit eigenen Planstunden) stehen bei den Feldern („Ablaufdaten“).') }}</p>
+                            </div>
+                            @foreach ($sectionLabels as $section => $sectionLabel)
+                                @if ($attributesBySection->get($section, collect())->isNotEmpty())
+                                    <div>
+                                        <div class="mb-1.5 text-xs font-semibold text-gray-500">{{ $sectionLabel }}</div>
+                                        <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                                            @foreach ($attributesBySection->get($section) as $attribute)
+                                                <label class="flex items-center gap-1.5 text-gray-700">
+                                                    <input type="checkbox" name="fields[]" value="{{ $attribute->id }}" class="rounded border-gray-300" @checked(in_array($attribute->id, $selectedFieldIds, true))>
+                                                    {{ $attribute->label }}
+                                                    @if ($attribute->system)
+                                                        <span class="text-gray-300" title="{{ __('Festes Feld') }}">🔒</span>
+                                                    @endif
+                                                    @if (isset($fieldHints[$attribute->key]))
+                                                        <span class="cursor-help text-gray-300" title="{{ $fieldHints[$attribute->key] }}">ⓘ</span>
+                                                    @endif
+                                                </label>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endif
+                            @endforeach
+                        </div>
                     </div>
-                </div>
+                </form>
 
                 <form x-ref="deleteForm" method="POST" action="{{ route('admin.projektkopie-vorlagen.destroy', $selectedTemplate) }}" class="hidden">
                     @csrf
                     @method('DELETE')
                 </form>
-                <div class="shrink-0 flex items-center justify-end border-t border-gray-100 p-3">
+                <div class="shrink-0 flex items-center justify-between border-t border-gray-100 p-3">
                     <button
                         type="button"
                         @click="window.deleteWithConfirm($refs.deleteForm, {
@@ -189,6 +163,9 @@
                         class="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
                     >
                         {{ __('Löschen') }}
+                    </button>
+                    <button type="submit" form="copy-template-form" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">
+                        {{ __('Speichern') }}
                     </button>
                 </div>
             </div>
