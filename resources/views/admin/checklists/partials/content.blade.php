@@ -216,7 +216,7 @@
         @else
             <div class="shrink-0 border-b border-gray-100 p-3">
                 <div class="text-sm font-medium text-gray-900">{{ __('Checklisten-Katalog') }}</div>
-                <p class="text-xs text-gray-400">{{ __('Wähle links eine Checkliste aus, um sie zu bearbeiten.') }}</p>
+                <p class="text-xs text-gray-400">{{ __('Wählen Sie links eine Checkliste aus, um sie zu bearbeiten.') }}</p>
             </div>
             <div class="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
                 @forelse ($checklists as $checklist)

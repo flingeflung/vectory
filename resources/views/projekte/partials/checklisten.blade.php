@@ -88,7 +88,8 @@
     </div>
 </x-modal>
 
-<x-modal name="checklisten-auswaehlen-{{ $project->id }}" max-width="sm">
+<x-modal name="checklisten-auswaehlen-{{ $project->id }}" max-width="sm" :dirty-check="'checklistPickIsDirty'">
+    <script>window.checklistPickIsDirty = () => [...document.querySelectorAll('form[data-checklist-pick]')].some((form) => window.formIsDirty(form));</script>
     <div class="flex max-h-[70vh] flex-col">
         <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
             <h3 class="text-sm font-semibold text-gray-900">{{ __('Checkliste aktivieren') }}</h3>
@@ -102,6 +103,7 @@
             </button>
         </div>
         <form
+            data-checklist-pick
             method="POST"
             action="{{ route('projekte.checklisten.update', $project) }}"
             x-data="{
@@ -147,7 +149,7 @@
                 <div x-ref="list" class="space-y-1.5 text-sm">
                     @foreach ($allChecklists as $checklist)
                         <label class="flex items-center gap-2 {{ $checklist->active ? 'text-gray-700' : 'text-gray-400' }}">
-                            <input type="checkbox" value="{{ $checklist->id }}" class="rounded border-gray-300" @checked($project->projectChecklists->contains('checklist_id', $checklist->id))>
+                            <input type="checkbox" name="checklist_ids[]" value="{{ $checklist->id }}" class="rounded border-gray-300" @checked($project->projectChecklists->contains('checklist_id', $checklist->id))>
                             {{ $checklist->name }}{{ ! $checklist->active ? ' [i]' : '' }}
                         </label>
                     @endforeach

@@ -77,7 +77,8 @@
         };
     </script>
 
-    <x-modal name="kacheln-verwalten" max-width="md">
+    <x-modal name="kacheln-verwalten" max-width="md" :dirty-check="'kachelnIsDirty'">
+        <script>window.kachelnIsDirty = () => window.dirtyOfForm('kacheln-form');</script>
         <div class="p-4">
             <div class="mb-3 flex items-center justify-between">
                 <h2 class="text-lg font-medium text-gray-900">{{ __('Kacheln verwalten') }}</h2>
@@ -95,7 +96,7 @@
 
             <p class="mb-3 text-xs text-gray-500">{{ __('Die Reihenfolge können Sie direkt auf der Startseite per Ziehen ändern.') }}</p>
 
-            <form method="POST" action="{{ route('dashboard.layout') }}" x-data="{ dirty: false }" @input="dirty = window.formIsDirty($el)" @change="dirty = window.formIsDirty($el)" class="space-y-2 text-sm">
+            <form id="kacheln-form" method="POST" action="{{ route('dashboard.layout') }}" x-data="{ dirty: false }" @input="dirty = window.formIsDirty($el)" @change="dirty = window.formIsDirty($el)" class="space-y-2 text-sm">
                 @php
                     // Aktive Kacheln zuerst, in ihrer aktuellen (per Drag&Drop
                     // sortierten) Reihenfolge - sonst würde ein simples Ab-/Anhaken

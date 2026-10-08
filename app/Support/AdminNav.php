@@ -43,9 +43,9 @@ class AdminNav
                 ['route' => 'admin.begriffe', 'match' => 'admin.begriffe*', 'label' => __('Glossar-Links'), 'gate' => 'access-superadmin'],
                 ['route' => 'admin.dialog-ids', 'match' => 'admin.dialog-ids', 'label' => __('Dialog-IDs'), 'gate' => 'access-superadmin'],
             ],
-            __('Mandant') => [
+            __('Organisation') => [
                 ['route' => 'admin.config', 'match' => 'admin.config', 'label' => __('Stammdaten')],
-                ['route' => 'admin.kunden', 'match' => 'admin.kunden*', 'label' => __('Organisationen'), 'if' => SystemSetting::multiTenantEnabled()],
+                ['route' => 'admin.kunden', 'match' => 'admin.kunden*', 'label' => __('Alle Organisationen'), 'if' => SystemSetting::multiTenantEnabled()],
                 ['route' => 'admin.voreinstellungen', 'match' => 'admin.voreinstellungen*', 'label' => __('Konfiguration übernehmen'), 'if' => SystemSetting::multiTenantEnabled(), 'gate' => 'access-central-admin'],
             ],
             __('Planung') => [
@@ -80,7 +80,7 @@ class AdminNav
     }
 
     /**
-     * Brotkrumen für den Kopf jeder Admin-Seite (Ralf, 2026-10-03): "Admin › Mandant › Organisationen".
+     * Brotkrumen für den Kopf jeder Admin-Seite (Ralf, 2026-10-03): "Admin › Organisation › Alle Organisationen".
      * Gruppe und Seite kommen aus derselben Definition wie die Navigation selbst.
      *
      * @return array<int, string>

@@ -472,6 +472,12 @@
                 }
             }, true);
 
+            // Prüft ein Formular per ID auf ungespeicherte Änderungen (für die Rückfrage beim Schließen von Dialogen mit Speichern-Knopf)
+            window.dirtyOfForm = function (id) {
+                const form = document.getElementById(id);
+                return !! form && window.formIsDirty(form);
+            };
+
             window.formIsDirty = function (el, dirtySet = null) {
                 // Fallback, falls kein vorheriges focusin gefeuert hat (z.B.
                 // eine Checkbox/ein Select per Tastatur-Enter statt Klick/Fokus

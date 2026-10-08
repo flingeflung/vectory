@@ -14,7 +14,7 @@
                 type="checkbox"
                 class="rounded border-gray-300"
                 @checked($viewerIds->contains($shareUser->id))
-                {{ $shareUser->id === auth()->id() ? 'disabled title="'.__('Du selbst - kann nicht entfernt werden, solange du die Gruppe siehst').'"' : '' }}
+                {{ $shareUser->id === auth()->id() ? 'disabled title="'.__('Sie selbst - kann nicht entfernt werden, solange Sie die Gruppe sehen').'"' : '' }}
                 @change="toggleShare({{ $shareUser->id }}, $event.target.checked)"
             >
             {{ $shareUser->name }}

@@ -299,7 +299,8 @@
     </div>
 
     @if ($matrixTenants->isNotEmpty())
-        <x-modal name="function-group-availability" max-width="5xl" :draggable="true">
+        <x-modal name="function-group-availability" max-width="5xl" :draggable="true" :dirty-check="'functionGroupAvailabilityIsDirty'">
+            <script>window.functionGroupAvailabilityIsDirty = () => window.dirtyOfForm('function-group-availability-form');</script>
             <div class="flex max-h-[80vh] min-h-0 flex-col">
                 <div class="flex shrink-0 cursor-move items-center justify-between border-b border-gray-200 bg-gray-100 px-4 py-2" data-drag-handle>
                     <div>
@@ -308,7 +309,7 @@
                     </div>
                     <button type="button" onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'function-group-availability' }))" class="text-gray-400 hover:text-gray-600" aria-label="{{ __('Schließen') }}">&times;</button>
                 </div>
-                <form method="POST" action="{{ route('admin.function-groups.availability.update') }}" x-data="{ dirty: false }" @input="dirty = window.formIsDirty($el)" @change="dirty = window.formIsDirty($el)" class="flex min-h-0 flex-1 flex-col">
+                <form id="function-group-availability-form" method="POST" action="{{ route('admin.function-groups.availability.update') }}" x-data="{ dirty: false }" @input="dirty = window.formIsDirty($el)" @change="dirty = window.formIsDirty($el)" class="flex min-h-0 flex-1 flex-col">
                     @csrf
                     <div class="min-h-0 flex-1 overflow-auto p-3">
                         <table class="w-full border-collapse text-xs">

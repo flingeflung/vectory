@@ -211,7 +211,7 @@
                         <button type="submit" x-show="dirty" x-cloak class="shrink-0 rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
                     </div>
                     <textarea name="description" rows="2" placeholder="{{ __('Beschreibung') }}" class="w-full rounded-md border-gray-300 text-sm">{{ $selectedWorkflow->description }}</textarea>
-                    <p class="text-xs text-gray-400">{{ __('Entwurf - frei bearbeitbar und beliebig oft zum Testen einem Projekt zuweisbar. Bleibt so, bis du ihn veröffentlichst.') }}</p>
+                    <p class="text-xs text-gray-400">{{ __('Entwurf - frei bearbeitbar und beliebig oft zum Testen einem Projekt zuweisbar. Bleibt so, bis Sie ihn veröffentlichen.') }}</p>
                 </form>
 
                 @if ($isResubmit)
@@ -551,7 +551,7 @@
         @else
             <div class="shrink-0 border-b border-gray-100 p-3">
                 <div class="text-sm font-medium text-gray-900">{{ __('Workflow-Katalog') }}</div>
-                <p class="text-xs text-gray-400">{{ __('Wähle links einen Workflow aus, um seine Schritte zu bearbeiten.') }}</p>
+                <p class="text-xs text-gray-400">{{ __('Wählen Sie links einen Workflow aus, um seine Schritte zu bearbeiten.') }}</p>
             </div>
             <div class="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
                 @forelse ($workflows as $workflow)

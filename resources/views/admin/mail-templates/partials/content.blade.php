@@ -131,7 +131,7 @@
             </div>
         @else
             <div class="flex flex-1 items-center justify-center p-4 text-sm text-gray-400">
-                {{ __('Wähle links eine Vorlage aus, um sie zu bearbeiten.') }}
+                {{ __('Wählen Sie links eine Vorlage aus, um sie zu bearbeiten.') }}
             </div>
         @endif
     </div>

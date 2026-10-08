@@ -20,7 +20,7 @@
     </div>
 
     @if ($templates->isEmpty())
-        <p class="text-sm text-gray-500">{{ __('Noch keine Vorlage angelegt - lege zuerst unter Admin > Projektkopie-Vorlagen eine an.') }}</p>
+        <p class="text-sm text-gray-500">{{ __('Noch keine Vorlage angelegt - legen Sie zuerst unter Admin > Projektkopie-Vorlagen eine an.') }}</p>
         <div class="flex justify-end border-t border-gray-200 pt-3">
             <button type="button" onclick="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-copy' }))" class="rounded border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
                 {{ __('Schließen') }}
