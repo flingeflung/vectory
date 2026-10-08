@@ -2057,7 +2057,6 @@
     "fett": "",
     "freigeschaltet": "",
     "fällig": "due",
-    "für Sie wurde ein Zugang zu Vectory vorbereitet. Mit dem folgenden Link wählen Sie Ihren Benutzernamen und Ihr Passwort und aktivieren Ihr Konto.": "an access to Vectory has been prepared for you. Use the following link to choose your username and password and activate your account.",
     "für einen Button/UI-Element wie im Tool": "",
     "gefiltert": "filtered",
     "geplant": "planned",
@@ -2232,5 +2231,6 @@
     "– noch keine Einträge –": "– no entries yet –",
     "– ohne Rechte-Set –": "– without permission set –",
     "– zuerst Funktionsgruppe wählen –": "",
-    "„:name\" teilen mit:": "Share “:name\" with:"
+    "„:name\" teilen mit:": "Share “:name\" with:",
+    "für Sie wurde ein Zugang zu Vectory vorbereitet. Mit dem folgenden Link wählen Sie Benutzernamen und Passwort und aktivieren Ihr Konto.": "an access to Vectory has been prepared for you. Use the following link to choose your username and password and activate your account."
 }
