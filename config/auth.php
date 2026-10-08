@@ -114,4 +114,14 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    | Passwort-Regeln (siehe App\Support\PasswordPolicy): "strict" (Standard, für den Betrieb im Internet) oder "relaxed" (mindestens 4 Zeichen,
+    | nur für den eigenen Rechner). Die Prüfung gegen bekannte Datenlecks lässt sich ausschalten (z. B. in Tests ohne Netz).
+    */
+    'password_policy' => env('AUTH_PASSWORD_POLICY', 'strict'),
+    'password_leak_check' => (bool) env('PASSWORD_LEAK_CHECK', true),
+
+    /* Gültigkeit eines Aktivierungslinks in Stunden (Ralf, 2026-10-08: 72). */
+    'activation_lifetime_hours' => (int) env('ACTIVATION_LIFETIME_HOURS', 72),
+
 ];

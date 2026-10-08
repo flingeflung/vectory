@@ -15,6 +15,7 @@ use App\Models\PersonWeeklyHours;
 use App\Models\SystemSetting;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\ActivationLinkSender;
 use App\Support\AccessLevel;
 use App\Support\CurrentTenant;
 use App\Support\PersonTableColumnCatalog;
@@ -351,14 +352,16 @@ class PersonController extends Controller
         abort_unless($this->personFullyEditableByCurrentUser($request, $person), 403);
         $this->abortIfProtectedFromEditing($request, $person);
         abort_if($person->user, 422);
+        // Ohne E-Mail ein Passwort selbst festlegen ist die bewusste Ausnahme (Ralf, 2026-10-08): nur für den Super-Admin.
+        abort_unless($request->user()->can('access-superadmin'), 403);
 
         $isOverlay = $this->isOverlayRequest($request);
 
         $validator = Validator::make($request->all(), [
             'username' => ['required', 'string', 'max:255', Rule::unique('users', 'username')],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
-            'password' => ['required', 'string', 'min:4'],
-        ]);
+            'password' => \App\Support\PasswordPolicy::rules(false),
+        ], \App\Support\PasswordPolicy::messages());
 
         if ($validator->fails()) {
             if ($isOverlay) {
@@ -381,33 +384,7 @@ class PersonController extends Controller
             'password' => $validated['password'],
         ]);
 
-        // Ralf, 2026-09-28: Wochenstunden werden nur für Personen mit Login
-        // gebraucht (nur die erfassen Zeiten) - beim Anlegen des Logins den
-        // Standardwert des Mandanten der Person als ersten Historien-Datensatz
-        // anlegen (kein Start, kein Ende - "schon immer so, gilt bis heute").
-        if (! $person->weeklyHours()->exists()) {
-            $defaultHours = Tenant::query()->whereKey($person->tenant_id)->value('default_weekly_hours');
-            if ($defaultHours !== null) {
-                PersonWeeklyHours::query()->create([
-                    'tenant_id' => $person->tenant_id,
-                    'person_id' => $person->id,
-                    'hours' => $defaultHours,
-                ]);
-            }
-        }
-
-        // Ralf, 2026-09-28: Urlaubstage nach gleicher Systematik - Standardwert
-        // des Mandanten als ersten Historien-Datensatz beim Anlegen des Logins.
-        if (! $person->vacationDays()->exists()) {
-            $defaultVacationDays = Tenant::query()->whereKey($person->tenant_id)->value('default_vacation_days');
-            if ($defaultVacationDays !== null) {
-                PersonVacationDays::query()->create([
-                    'tenant_id' => $person->tenant_id,
-                    'person_id' => $person->id,
-                    'days' => $defaultVacationDays,
-                ]);
-            }
-        }
+        $this->createDefaultHistory($person);
 
         if ($isOverlay) {
             $request->session()->flash('status', 'login-created');
@@ -563,6 +540,115 @@ class PersonController extends Controller
         ]);
     }
 
+    /** Wochenstunden und Urlaubstage mit den Standardwerten der Organisation als erster Historien-Eintrag (beim Anlegen eines Zugangs). */
+    private function createDefaultHistory(Person $person): void
+    {
+        // Ralf, 2026-09-28: Wochenstunden werden nur für Personen mit Login
+        // gebraucht (nur die erfassen Zeiten) - beim Anlegen des Logins den
+        // Standardwert des Mandanten der Person als ersten Historien-Datensatz
+        // anlegen (kein Start, kein Ende - "schon immer so, gilt bis heute").
+        if (! $person->weeklyHours()->exists()) {
+            $defaultHours = Tenant::query()->whereKey($person->tenant_id)->value('default_weekly_hours');
+            if ($defaultHours !== null) {
+                PersonWeeklyHours::query()->create([
+                    'tenant_id' => $person->tenant_id,
+                    'person_id' => $person->id,
+                    'hours' => $defaultHours,
+                ]);
+            }
+        }
+
+        // Ralf, 2026-09-28: Urlaubstage nach gleicher Systematik - Standardwert
+        // des Mandanten als ersten Historien-Datensatz beim Anlegen des Logins.
+        if (! $person->vacationDays()->exists()) {
+            $defaultVacationDays = Tenant::query()->whereKey($person->tenant_id)->value('default_vacation_days');
+            if ($defaultVacationDays !== null) {
+                PersonVacationDays::query()->create([
+                    'tenant_id' => $person->tenant_id,
+                    'person_id' => $person->id,
+                    'days' => $defaultVacationDays,
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Zugang vorbereiten (Ralf, 2026-10-08): legt ein Konto ohne Benutzername und Passwort an und verschickt den Aktivierungslink.
+     * Die Person wählt Benutzername und Passwort selbst.
+     */
+    public function prepareAccount(Request $request, Person $person, ActivationLinkSender $links): RedirectResponse|Response
+    {
+        abort_unless($this->personVisibleInCurrentTenant($request, $person), 404);
+        abort_unless($this->personFullyEditableByCurrentUser($request, $person), 403);
+        $this->abortIfProtectedFromEditing($request, $person);
+        abort_if($person->user, 422);
+
+        $validator = Validator::make($request->all(), [
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
+        ], ['email.unique' => __('Diese E-Mail-Adresse wird bereits von einem anderen Zugang verwendet.')]);
+        if ($validator->fails() || ! $person->active) {
+            return $this->accountResponse($request, $person, $validator->fails() ? $validator->errors() : new \Illuminate\Support\MessageBag(['email' => [__('Für eine inaktive Person lässt sich kein Zugang vorbereiten.')]]));
+        }
+
+        $user = User::query()->create([
+            'tenant_id' => $person->tenant_id,
+            'person_id' => $person->id,
+            'name' => $person->fullName(),
+            'username' => null,
+            'email' => mb_strtolower(trim($validator->validated()['email'])),
+            'password' => null,
+            'status' => User::STATUS_PENDING,
+        ]);
+        $this->createDefaultHistory($person);
+        $links->send($user->load('person'));
+
+        return $this->accountResponse($request, $person, null, 'activation-sent');
+    }
+
+    /** Aktivierungslink erneut senden (ersetzt den vorigen Link). */
+    public function sendActivation(Request $request, Person $person, ActivationLinkSender $links): RedirectResponse|Response
+    {
+        abort_unless($this->personVisibleInCurrentTenant($request, $person), 404);
+        abort_unless($this->personFullyEditableByCurrentUser($request, $person), 403);
+        $this->abortIfProtectedFromEditing($request, $person);
+        $user = $person->user;
+        abort_unless($user && ActivationLinkSender::eligible($user->load('person')), 422);
+
+        $links->send($user);
+
+        return $this->accountResponse($request, $person, null, 'activation-sent');
+    }
+
+    /** Link zum Zurücksetzen des Passworts an die Adresse eines aktiven Kontos senden. */
+    public function sendPasswordLink(Request $request, Person $person): RedirectResponse|Response
+    {
+        abort_unless($this->personVisibleInCurrentTenant($request, $person), 404);
+        abort_unless($this->personFullyEditableByCurrentUser($request, $person), 403);
+        $this->abortIfProtectedFromEditing($request, $person);
+        abort_unless($person->user && $person->user->mayLogIn(), 422);
+
+        \Illuminate\Support\Facades\Password::sendResetLink(['email' => $person->user->email]);
+
+        return $this->accountResponse($request, $person, null, 'password-link-sent');
+    }
+
+    private function accountResponse(Request $request, Person $person, ?\Illuminate\Support\MessageBag $errors, string $status = 'saved'): RedirectResponse|Response
+    {
+        $person->unsetRelation('user');
+        if ($this->isOverlayRequest($request)) {
+            if ($errors) {
+                return response()->view('admin.personen.partials.edit-body', [...$this->editData($request, $person), 'overlay' => true, 'errors' => $this->viewErrors($errors)])->setStatusCode(422);
+            }
+            $request->session()->flash('status', $status);
+
+            return response()->view('admin.personen.partials.edit-body', [...$this->editData($request, $person), 'overlay' => true]);
+        }
+
+        return $errors
+            ? back()->withErrors($errors)->withInput()
+            : redirect()->route('admin.personen.edit', $person)->with('status', $status);
+    }
+
     public function resetPassword(Request $request, Person $person): RedirectResponse|Response
     {
         abort_unless($this->personVisibleInCurrentTenant($request, $person), 404);
@@ -572,7 +658,7 @@ class PersonController extends Controller
 
         $isOverlay = $this->isOverlayRequest($request);
 
-        $validator = Validator::make($request->all(), ['password' => ['required', 'string', 'min:4']]);
+        $validator = Validator::make($request->all(), ['password' => \App\Support\PasswordPolicy::rules(false)], \App\Support\PasswordPolicy::messages());
 
         if ($validator->fails()) {
             if ($isOverlay) {

@@ -59,6 +59,15 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        // Ralf, 2026-10-08: deaktivierte Personen und noch nicht aktivierte Konten können sich nicht anmelden.
+        if (! Auth::user()->mayLogIn()) {
+            Auth::logout();
+
+            throw ValidationException::withMessages([
+                'username' => __('Dieses Konto ist deaktiviert. Eine Anmeldung ist nicht möglich. Bitte wenden Sie sich an Ihre zuständige Administration.'),
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 

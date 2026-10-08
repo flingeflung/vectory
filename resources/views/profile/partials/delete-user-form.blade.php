@@ -5,7 +5,7 @@
         </h2>
 
         <p class="mt-1 text-sm text-gray-600">
-            {{ __('Sobald dein Konto gelöscht ist, werden alle zugehörigen Ressourcen und Daten unwiderruflich gelöscht.') }}
+            {{ __('Sobald Ihr Konto gelöscht ist, werden alle zugehörigen Ressourcen und Daten unwiderruflich gelöscht.') }}
         </p>
     </header>
 
@@ -21,7 +21,7 @@
 
             <div class="flex items-start justify-between">
                 <h2 class="text-lg font-medium text-gray-900">
-                    {{ __('Möchtest du dein Konto wirklich löschen?') }}
+                    {{ __('Möchten Sie Ihr Konto wirklich löschen?') }}
                 </h2>
                 <button
                     type="button"
@@ -36,7 +36,7 @@
             </div>
 
             <p class="mt-1 text-sm text-gray-600">
-                {{ __('Sobald dein Konto gelöscht ist, werden alle zugehörigen Ressourcen und Daten unwiderruflich gelöscht. Bitte gib dein Passwort ein, um die Löschung zu bestätigen.') }}
+                {{ __('Sobald Ihr Konto gelöscht ist, werden alle zugehörigen Ressourcen und Daten unwiderruflich gelöscht. Bitte geben Sie Ihr Passwort ein, um die Löschung zu bestätigen.') }}
             </p>
 
             <div class="mt-6">

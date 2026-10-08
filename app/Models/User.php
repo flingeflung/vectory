@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'username', 'email', 'password', 'tenant_id', 'last_active_tenant_id', 'person_id', 'role', 'hide_discarded_projects_on_reset', 'project_connection_sort_desc'])]
+#[Fillable(['status', 'activated_at', 'name', 'username', 'email', 'password', 'tenant_id', 'last_active_tenant_id', 'person_id', 'role', 'hide_discarded_projects_on_reset', 'project_connection_sort_desc'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -114,9 +114,26 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'activated_at' => 'datetime',
             'password' => 'hashed',
             'hide_discarded_projects_on_reset' => 'boolean',
             'project_connection_sort_desc' => 'boolean',
         ];
+    }
+
+    /** Konto-Status: ein vorbereitetes Konto hat weder Benutzername noch Passwort, bis die Person den Aktivierungslink nutzt. */
+    public const STATUS_PENDING = 'pending';
+
+    public const STATUS_ACTIVE = 'active';
+
+    public function isPending(): bool
+    {
+        return ($this->attributes['status'] ?? self::STATUS_ACTIVE) === self::STATUS_PENDING;
+    }
+
+    /** Darf sich anmelden: aktives Konto und aktive Person (Ralf, 2026-10-08: deaktivierte Personen sind gesperrt). */
+    public function mayLogIn(): bool
+    {
+        return ! $this->isPending() && ($this->person === null || (bool) $this->person->active);
     }
 }

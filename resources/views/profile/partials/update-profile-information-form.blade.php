@@ -5,7 +5,7 @@
         </h2>
 
         <p class="mt-1 text-sm text-gray-600">
-            {{ __('Aktualisiere die Profilinformationen und E-Mail-Adresse deines Kontos.') }}
+            {{ __('Aktualisieren Sie die Profilinformationen und E-Mail-Adresse Ihres Kontos.') }}
         </p>
     </header>
 
@@ -40,7 +40,7 @@
             @if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail())
                 <div>
                     <p class="text-sm mt-2 text-gray-800">
-                        {{ __('Deine E-Mail-Adresse ist nicht bestätigt.') }}
+                        {{ __('Ihre E-Mail-Adresse ist nicht bestätigt.') }}
 
                         <button form="send-verification" class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                             {{ __('Hier klicken, um die Bestätigungs-E-Mail erneut zu senden.') }}
@@ -49,7 +49,7 @@
 
                     @if (session('status') === 'verification-link-sent')
                         <p class="mt-2 font-medium text-sm text-green-600">
-                            {{ __('Ein neuer Bestätigungslink wurde an deine E-Mail-Adresse gesendet.') }}
+                            {{ __('Ein neuer Bestätigungslink wurde an Ihre E-Mail-Adresse gesendet.') }}
                         </p>
                     @endif
                 </div>

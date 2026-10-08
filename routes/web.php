@@ -407,6 +407,9 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     Route::get('/personen/{person}/feldpruefung', [AdminPersonController::class, 'checkField'])->name('personen.feldpruefung');
     Route::post('/personen/{person}', [AdminPersonController::class, 'update'])->name('personen.update');
     Route::post('/personen/{person}/login', [AdminPersonController::class, 'createLogin'])->name('personen.login.store');
+    Route::post('/personen/{person}/konto', [AdminPersonController::class, 'prepareAccount'])->name('personen.account.prepare');
+    Route::post('/personen/{person}/aktivierungslink', [AdminPersonController::class, 'sendActivation'])->name('personen.activation.send');
+    Route::post('/personen/{person}/passwortlink', [AdminPersonController::class, 'sendPasswordLink'])->name('personen.password.link');
     // Wochenstunden-Historie (Ralf, 2026-09-28) - eigenes kleines Overlay,
     // siehe PersonController::weeklyHours()/storeWeeklyHours().
     Route::get('/personen/{person}/wochenstunden', [AdminPersonController::class, 'weeklyHours'])->name('personen.wochenstunden');

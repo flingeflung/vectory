@@ -30,6 +30,15 @@ class EnsureOrganizationIsActive
             return redirect()->route('login', ['hinweis' => 'organisation-inaktiv']);
         }
 
+        // Wird die Person während einer Sitzung deaktiviert, endet die Sitzung bei der nächsten Aktion (Ralf, 2026-10-08)
+        if ($user && ! $user->mayLogIn()) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login', ['hinweis' => 'konto-inaktiv']);
+        }
+
         return $next($request);
     }
 }

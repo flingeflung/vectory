@@ -78,6 +78,12 @@
                     @case('password-reset')
                         {{ __('Passwort gesetzt.') }}
                         @break
+                    @case('activation-sent')
+                        {{ __('Aktivierungslink gesendet.') }}
+                        @break
+                    @case('password-link-sent')
+                        {{ __('Link zum Zurücksetzen des Passworts gesendet.') }}
+                        @break
                     @case('role-updated')
                         {{ __('Rolle geändert.') }}
                         @break
@@ -395,40 +401,94 @@
             <div class="rounded-lg border border-gray-200 bg-white p-4">
                 <div class="mb-2 text-xs font-semibold text-gray-500">{{ __('Login-Zugang') }}</div>
 
-                @if ($person->user)
-                    <div class="mb-3 text-sm text-gray-700">
-                        {{ __('Benutzername') }}: <span class="font-medium">{{ $person->user->username }}</span>
+                @php
+                    $accountUser = $person->user;
+                    $accountPending = $accountUser?->isPending();
+                    $canSetPassword = auth()->user()->can('access-superadmin');
+                    $activationToken = $accountPending ? \App\Models\AccountActivationToken::query()->where('user_id', $accountUser->id)->first() : null;
+                @endphp
+
+                @if ($accountUser && $accountPending)
+                    {{-- Vorbereitetes Konto: wartet auf die Aktivierung durch die Person (Ralf, 2026-10-08) --}}
+                    <div class="mb-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                        {{ __('Zugang vorbereitet für :email – wartet auf die Aktivierung durch die Person.', ['email' => $accountUser->email]) }}
+                        @if ($activationToken)
+                            <span class="block text-xs">
+                                {{ __('Link gesendet am :date, gültig bis :until.', ['date' => $activationToken->updated_at->format('d.m.Y H:i'), 'until' => $activationToken->expires_at->format('d.m.Y H:i')]) }}
+                                @if ($activationToken->expires_at->isPast()) <b>{{ __('Abgelaufen.') }}</b> @endif
+                            </span>
+                        @endif
                     </div>
-                    <form method="POST" action="{{ route('admin.personen.password.reset', $person) }}" x-data="{ dirty: false }" @input="dirty = window.formIsDirty($el)" class="flex items-end gap-2">
+                    @if (\App\Services\ActivationLinkSender::eligible($accountUser->load('person')))
+                        <form method="POST" action="{{ route('admin.personen.activation.send', $person) }}">
+                            @csrf
+                            <button type="submit" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Aktivierungslink erneut senden') }}</button>
+                        </form>
+                    @endif
+                @elseif ($accountUser)
+                    <div class="mb-3 text-sm text-gray-700">
+                        {{ __('Benutzername') }}: <span class="font-medium">{{ $accountUser->username }}</span>
+                        <span class="block text-xs text-gray-400">{{ $accountUser->email }}@if ($accountUser->activated_at) · {{ __('aktiv seit :date', ['date' => $accountUser->activated_at->format('d.m.Y')]) }}@endif</span>
+                    </div>
+                    <form method="POST" action="{{ route('admin.personen.password.link', $person) }}" class="mb-2">
                         @csrf
-                        <div>
-                            <label class="block text-xs text-gray-500">{{ __('Neues Passwort') }}</label>
-                            <input type="text" name="password" required minlength="4" class="mt-0.5 rounded-md border-gray-300 text-sm">
-                        </div>
-                        <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">
-                            {{ __('Speichern') }}
-                        </button>
+                        <button type="submit" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover" title="{{ __('Sendet der Person einen Link, über den sie selbst ein neues Passwort wählt.') }}">{{ __('Link zum Zurücksetzen des Passworts senden') }}</button>
                     </form>
+                    @if ($canSetPassword)
+                        <details class="mt-2">
+                            <summary class="cursor-pointer text-xs text-gray-500">{{ __('Ohne E-Mail: Passwort selbst festlegen (nur Super-Admin)') }}</summary>
+                            <form method="POST" action="{{ route('admin.personen.password.reset', $person) }}" x-data="{ dirty: false }" @input="dirty = window.formIsDirty($el)" class="mt-2 flex items-end gap-2">
+                                @csrf
+                                <div>
+                                    <label class="block text-xs text-gray-500">{{ __('Neues Passwort') }}</label>
+                                    <input type="text" name="password" required class="mt-0.5 rounded-md border-gray-300 text-sm">
+                                    <p class="mt-0.5 text-xs text-gray-400">{{ \App\Support\PasswordPolicy::hint() }}</p>
+                                </div>
+                                <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">
+                                    {{ __('Speichern') }}
+                                </button>
+                            </form>
+                        </details>
+                    @endif
                 @else
-                    <div class="mb-2 text-xs text-gray-400">{{ __('Diese Person hat noch keinen Login-Zugang (reine Kontaktperson).') }}</div>
-                    <form method="POST" action="{{ route('admin.personen.login.store', $person) }}" x-data="{ dirty: false }" @input="dirty = window.formIsDirty($el)" class="flex flex-wrap items-end gap-2">
-                        @csrf
-                        <div>
-                            <label class="block text-xs text-gray-500">{{ __('Benutzername') }}</label>
-                            <input type="text" name="username" required class="mt-0.5 rounded-md border-gray-300 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-xs text-gray-500">{{ __('E-Mail') }}</label>
-                            <input type="email" name="email" value="{{ $person->email }}" required class="mt-0.5 rounded-md border-gray-300 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-xs text-gray-500">{{ __('Passwort') }}</label>
-                            <input type="text" name="password" required minlength="4" class="mt-0.5 rounded-md border-gray-300 text-sm">
-                        </div>
-                        <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">
-                            {{ __('Login-Zugang anlegen') }}
-                        </button>
-                    </form>
+                    <div class="mb-2 text-xs text-gray-400">{{ __('Diese Person hat noch keinen Login-Zugang (reine Kontaktperson). Die Person wählt Benutzername und Passwort selbst, nachdem sie den Aktivierungslink erhalten hat.') }}</div>
+                    @if ($person->active)
+                        <form method="POST" action="{{ route('admin.personen.account.prepare', $person) }}" class="flex flex-wrap items-end gap-2">
+                            @csrf
+                            <div>
+                                <label class="block text-xs text-gray-500">{{ __('E-Mail für den Aktivierungslink') }}</label>
+                                <input type="email" name="email" value="{{ old('email', $person->email) }}" required class="mt-0.5 w-72 rounded-md border-gray-300 text-sm">
+                            </div>
+                            <button type="submit" class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">
+                                {{ __('Zugang vorbereiten und Link senden') }}
+                            </button>
+                        </form>
+                    @else
+                        <div class="text-xs text-amber-700">{{ __('Für eine inaktive Person lässt sich kein Zugang vorbereiten.') }}</div>
+                    @endif
+                    @if ($canSetPassword)
+                        <details class="mt-3">
+                            <summary class="cursor-pointer text-xs text-gray-500">{{ __('Ohne E-Mail: Benutzername und Passwort selbst festlegen (nur Super-Admin)') }}</summary>
+                            <form method="POST" action="{{ route('admin.personen.login.store', $person) }}" x-data="{ dirty: false }" @input="dirty = window.formIsDirty($el)" class="mt-2 flex flex-wrap items-end gap-2">
+                                @csrf
+                                <div>
+                                    <label class="block text-xs text-gray-500">{{ __('Benutzername') }}</label>
+                                    <input type="text" name="username" required class="mt-0.5 rounded-md border-gray-300 text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500">{{ __('E-Mail') }}</label>
+                                    <input type="email" name="email" value="{{ $person->email }}" required class="mt-0.5 rounded-md border-gray-300 text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500">{{ __('Passwort') }}</label>
+                                    <input type="text" name="password" required class="mt-0.5 rounded-md border-gray-300 text-sm">
+                                </div>
+                                <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-btn-primary-hover">
+                                    {{ __('Login-Zugang anlegen') }}
+                                </button>
+                            </form>
+                        </details>
+                    @endif
                 @endif
             </div>
 

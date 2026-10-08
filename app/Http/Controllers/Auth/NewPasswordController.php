@@ -33,9 +33,14 @@ class NewPasswordController extends Controller
         $request->validate([
             'token' => ['required'],
             'email' => ['required', 'email'],
-            // Ralf, 2026-09-13: einheitlich min:4 überall, siehe PasswordController.
-            'password' => ['required', 'string', 'min:4', 'confirmed'],
-        ]);
+            'password' => \App\Support\PasswordPolicy::rules(),
+        ], \App\Support\PasswordPolicy::messages());
+
+        // Ein noch nicht aktiviertes Konto bekommt sein Passwort nur über den Aktivierungslink, nie über das Zurücksetzen
+        $pending = User::query()->where('email', $request->string('email')->toString())->get()->first(fn (User $user) => $user->isPending());
+        if ($pending) {
+            return back()->withInput($request->only('email'))->withErrors(['email' => __('Dieser Link ist ungültig oder abgelaufen.')]);
+        }
 
         // Here we will attempt to reset the user's password. If it is successful we
         // will update the password on an actual user model and persist it to the

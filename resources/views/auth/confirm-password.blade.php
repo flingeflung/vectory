@@ -1,6 +1,6 @@
 <x-guest-layout>
     <div class="mb-4 text-sm text-gray-600">
-        {{ __('Dies ist ein geschützter Bereich der Anwendung. Bitte bestätige dein Passwort, um fortzufahren.') }}
+        {{ __('Dies ist ein geschützter Bereich der Anwendung. Bitte bestätigen Sie Ihr Passwort, um fortzufahren.') }}
     </div>
 
     <form method="POST" action="{{ route('password.confirm') }}">

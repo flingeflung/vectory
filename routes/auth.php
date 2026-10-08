@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\AccountActivationController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
@@ -9,6 +10,13 @@ use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
+
+// Konto aktivieren (Ralf, 2026-10-08): öffentlich erreichbar, auch wenn gerade jemand anderes angemeldet ist
+Route::get('aktivierung', [AccountActivationController::class, 'requestForm'])->name('activation.request');
+Route::post('aktivierung', [AccountActivationController::class, 'requestLink'])->name('activation.request.send');
+Route::get('aktivierung/ungueltig', [AccountActivationController::class, 'invalid'])->name('activation.invalid');
+Route::get('aktivierung/{token}', [AccountActivationController::class, 'form'])->name('activation.form');
+Route::post('aktivierung/{token}', [AccountActivationController::class, 'complete'])->name('activation.complete');
 
 Route::middleware('guest')->group(function () {
     // Keine Selbst-Registrierung (Ralf, 2026-10-08): Konten entstehen nur über den Admin und den Aktivierungslink.

@@ -15,15 +15,12 @@ class PasswordController extends Controller
      */
     public function update(Request $request): RedirectResponse
     {
-        // Ralf, 2026-09-13: "min 4 reicht überall, das müssen die Leute
-        // selbst wissen, wie stark sie ihr PW machen, ich möchte da nicht
-        // bevormunden." - bewusst kein Laravel-Standard Password::defaults()
-        // (min. 8 + Optionen), einheitlich mit dem Admin-Reset für andere
-        // Personen (PersonController::resetPassword, ebenfalls min:4).
+        // Regeln zentral in PasswordPolicy: für den Betrieb im Internet streng, lokal per AUTH_PASSWORD_POLICY=relaxed lockerer
+        // (Ralf, 2026-09-13: "nicht bevormunden" gilt nur noch für den eigenen Rechner; 2026-10-08: im Internet der hohe Standard).
         $validator = Validator::make($request->all(), [
             'current_password' => ['required', 'current_password'],
-            'password' => ['required', 'string', 'min:4', 'confirmed'],
-        ]);
+            'password' => \App\Support\PasswordPolicy::rules(),
+        ], \App\Support\PasswordPolicy::messages());
 
         if ($validator->fails()) {
             // Ralf-Bug-Report, 2026-09-13: bei einem Validierungsfehler

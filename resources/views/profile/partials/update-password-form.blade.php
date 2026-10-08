@@ -5,7 +5,7 @@
         </h2>
 
         <p class="mt-1 text-sm text-gray-600">
-            {{ __('Verwende ein langes, zufälliges Passwort, um dein Konto sicher zu halten.') }}
+            {{ __('Verwenden Sie ein langes, zufälliges Passwort, um Ihr Konto sicher zu halten.') }}
         </p>
     </header>
 
@@ -19,6 +19,7 @@
         <div>
             <x-input-label for="update_password_password" :value="__('Neues Passwort')" />
             <x-password-input id="update_password_password" name="password" class="mt-1" autocomplete="new-password" />
+            <p class="mt-1 text-xs text-gray-500">{{ \App\Support\PasswordPolicy::hint() }}</p>
             <x-input-error :messages="$errors->updatePassword->get('password')" class="mt-2" />
         </div>
 

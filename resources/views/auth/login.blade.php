@@ -6,6 +6,11 @@
         @csrf
 
         <!-- Benutzername -->
+        @if (request('hinweis') === 'konto-inaktiv')
+            <div class="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800" role="alert">
+                {{ __('Ihr Konto ist deaktiviert. Sie wurden daher abgemeldet. Bitte wenden Sie sich bei Fragen an Ihre zuständige Administration.') }}
+            </div>
+        @endif
         @if (request('hinweis') === 'organisation-inaktiv')
             <div class="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800" role="alert">
                 {{ __('Ihre Organisation ist in dieser Vectory-Installation nicht mehr aktiv. Sie wurden daher abgemeldet. Bitte wenden Sie sich bei Fragen an Ihre zuständige Administration.') }}
@@ -36,6 +41,10 @@
                 <input id="remember_me" type="checkbox" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" name="remember">
                 <span class="ms-2 text-sm text-gray-600">{{ __('Angemeldet bleiben') }}</span>
             </label>
+        </div>
+
+        <div class="mt-4 text-right">
+            <a class="underline text-sm text-gray-600 hover:text-gray-900" href="{{ route('activation.request') }}">{{ __('Aktivierungslink verloren?') }}</a>
         </div>
 
         <div class="flex items-center justify-end mt-4">
