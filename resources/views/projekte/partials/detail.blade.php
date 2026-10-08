@@ -720,12 +720,10 @@
                                         class="mt-2 flex items-center gap-2 border-t border-black/10 pt-2 text-xs"
                                         @click.stop
                                     >
-                                        {{-- Milestone-Titel als eigenständiges Label statt in den Satz
-                                             eingebaut - milestone_title ist Freitext, dessen Genus wir
-                                             nicht kennen ("Redaktionsschluss" bräuchte "kein", nicht
-                                             "keine") - grammatisch nur sicher als reines Label, nicht als
-                                             Satzobjekt von "erteilen/zurücknehmen". --}}
-                                        <span class="font-medium text-gray-700">{{ $step->milestone_title ?: __('Freigabe') }}:</span>
+                                        {{-- Das Label heißt immer "Freigabe" (Ralf, 2026-10-09): der Name des Phasenendes (z. B. "Redaktionsschluss") ist ein Termin und
+                                             gehört nicht zur Freigabe - "Redaktionsschluss: Freigabe erteilen" las sich, als würde der Termin freigegeben. --}}
+                                        <span class="font-medium text-gray-700">{{ __('Freigabe') }}:</span>
+                                        <span :class="granted ? 'text-green-800' : 'text-gray-500'" x-text="granted ? {{ \Illuminate\Support\Js::from(__('erteilt')) }} : {{ \Illuminate\Support\Js::from(__('noch nicht erteilt')) }}"></span>
                                         @if ($pws->is_current && auth()->user()->can('workflow_step.activate'))
                                             <button
                                                 type="button"
@@ -734,8 +732,6 @@
                                                 class="rounded border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
                                                 x-text="granted ? {{ \Illuminate\Support\Js::from(__('Freigabe zurücknehmen')) }} : {{ \Illuminate\Support\Js::from(__('Freigabe erteilen')) }}"
                                             ></button>
-                                        @else
-                                            <span :class="granted ? 'text-green-800' : 'text-gray-500'" x-text="granted ? {{ \Illuminate\Support\Js::from(__('erteilt')) }} : {{ \Illuminate\Support\Js::from(__('noch nicht erteilt')) }}"></span>
                                         @endif
                                     </div>
                                 @endif

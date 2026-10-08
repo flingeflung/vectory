@@ -35,6 +35,7 @@ enum ActivityType: string
     case AttributeChanged = 'attribute_changed';
     case PlannedHoursChanged = 'planned_hours_changed';
     case PlanningTransferred = 'planning_transferred';
+    case MailTimerSent = 'mail_timer_sent';
 
     public function label(): string
     {
@@ -54,6 +55,7 @@ enum ActivityType: string
             self::AttributeChanged => __('Feld geändert'),
             self::PlannedHoursChanged => __('Planstunden geändert'),
             self::PlanningTransferred => __('Planung übernommen'),
+            self::MailTimerSent => __('Erinnerung gesendet'),
         };
     }
 
@@ -64,7 +66,7 @@ enum ActivityType: string
             self::GraphicOrderStatusChanged => ActivityCategory::Illustration,
             self::ProjectCreated, self::ProjectCopied, self::PublicationDateChanged, self::ProjectMultichanged,
             self::VerbundRoleChanged, self::VerbundDissolved, self::StammIdDetached, self::StatusChanged, self::AttributeChanged,
-            self::PlannedHoursChanged, self::PlanningTransferred => ActivityCategory::General,
+            self::PlannedHoursChanged, self::PlanningTransferred, self::MailTimerSent => ActivityCategory::General,
         };
     }
 }

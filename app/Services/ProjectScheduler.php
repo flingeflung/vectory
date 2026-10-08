@@ -75,6 +75,9 @@ class ProjectScheduler
             ProjectMilestone::query()->withoutGlobalScopes()->whereKey($milestone['id'])
                 ->update(['date' => $milestone['date']?->toDateString()]);
         }
+
+        // Erinnerungsmails folgen den Terminen: Vorlagen des Workflows übernehmen, Sendedaten neu berechnen
+        app(MailTimerService::class)->syncFromWorkflow($project);
     }
 
     /**
