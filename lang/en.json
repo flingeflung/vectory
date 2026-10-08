@@ -803,7 +803,6 @@
     "Für diese Seite gibt's noch keine Hilfeseite - oben suchen findet vielleicht trotzdem etwas Passendes.": "There is no help page for this page yet - searching above may still find something suitable.",
     "Für diesen Freigabe-Schritt ist kein Folge-Schritt festgelegt - die Freigabe-Mail kann nicht verschickt werden. Bitte im Workflow ergänzen.": "",
     "Für diesen Job gibt es an diesem Tag bereits eine Buchung - Speichern ersetzt sie, statt die Stunden zu addieren.": "",
-    "Für dieses Projekt fehlt Ihnen die Berechtigung, die Details zu öffnen.": "You do not have permission to open the details of this project.",
     "Für dieses Projekt ist kein Workflow festgelegt.": "",
     "Für dieses Projekt ist kein Workflow zugewiesen.": "No workflow is assigned to this project.",
     "Für dieses Projekt ist noch kein Startdatum eingetragen": "",
@@ -2235,5 +2234,6 @@
     "– noch keine Einträge –": "– no entries yet –",
     "– ohne Rechte-Set –": "– without permission set –",
     "– zuerst Funktionsgruppe wählen –": "",
-    "„:name\" teilen mit:": "Share “:name\" with:"
+    "„:name\" teilen mit:": "Share “:name\" with:",
+    "Für diese Projektdetails fehlt Ihnen die Berechtigung. Wenden Sie sich an Ihren Vectory-Administrator.": "You do not have permission for these project details. Please contact your Vectory administrator."
 }

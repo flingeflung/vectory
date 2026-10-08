@@ -2725,7 +2725,7 @@
                             window.dispatchEvent(new CustomEvent('close-modal', { detail: 'project-overlay' }));
                         }
                         await window.notifyDialog(response.status === 403
-                            ? {{ \Illuminate\Support\Js::from(__('Für dieses Projekt fehlt Ihnen die Berechtigung, die Details zu öffnen.')) }}
+                            ? {{ \Illuminate\Support\Js::from(__('Für diese Projektdetails fehlt Ihnen die Berechtigung. Wenden Sie sich an Ihren Vectory-Administrator.')) }}
                             : (response.status === 404
                                 ? {{ \Illuminate\Support\Js::from(__('Dieses Projekt wurde nicht gefunden.')) }}
                                 : {{ \Illuminate\Support\Js::from(__('Das Projekt konnte nicht geöffnet werden. Bitte versuchen Sie es erneut.')) }}));
