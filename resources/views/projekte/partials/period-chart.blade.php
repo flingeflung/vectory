@@ -533,9 +533,11 @@
     </p>
 
     <div class="mt-2 flex flex-wrap items-center gap-2 text-gray-500">
+        @if ((int) $project->schedule_model !== 2)
         <template x-if="canEditPeriod">
             <button type="button" onclick="window.openProjectSchedule({{ $project->id }})" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 font-medium text-gray-700 hover:bg-btn-secondary-hover" title="{{ __('Berechnet die Termine der Schritte aus einem Fixpunkt und den Dauern und trägt sie auf Wunsch ein.') }}">{{ __('Termine berechnen …') }}</button>
         </template>
+        @endif
         <span x-show="changed" x-cloak class="text-amber-700">{{ __('Nicht gespeicherte Änderungen: Dauern (und ein späterer Projektstart) werden erst mit „Speichern“ am Projekt übernommen, die Termine der Schritte bleiben unverändert.') }}</span>
         <span x-show="! canEditPeriod && changed" x-cloak class="text-gray-400">{{ __('Ihnen fehlt die Berechtigung, Termine und Dauern zu ändern.') }}</span>
         <span class="flex-1"></span>

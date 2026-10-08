@@ -212,6 +212,8 @@ class ProjectCopyController extends Controller
                 // Ralf, 2026-09-20: eine neue Version desselben Dokuments ist per Definition eine
                 // Änderung, ein neues Dokument eine Neuerstellung - unabhängig von der Kopiervorlage.
                 $attrs['creation_type'] = $asNewVersion ? 2 : 1;
+                // Neues Terminmodell (docs/ablaufplan-konzept.md)
+                $attrs['schedule_model'] = 2;
 
                 // Zusatzfelder (system=false) leben im attributes-JSON,
                 // Wert 1:1 übernehmen, wenn im Ausgangsprojekt gesetzt.

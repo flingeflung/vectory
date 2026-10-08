@@ -433,6 +433,8 @@ class ProjectController extends Controller
                 'project_type_main_id' => $typeSub->project_type_main_id,
                 // Ralf, 2026-09-20: ein neu angelegtes Projekt ist eine Neuerstellung.
                 'creation_type' => 1,
+                // Neues Terminmodell (docs/ablaufplan-konzept.md)
+                'schedule_model' => 2,
             ]);
 
             // Vorbelegung (Ralf, 2026-09-21, "Weitere Optionen" am Zusatzfeld): die Projektart steht beim Anlegen fest,

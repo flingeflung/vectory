@@ -46,6 +46,11 @@ class OrganizationGuardTest extends TestCase
      * die aktive Organisation oder bereits gefilterte Projekt-IDs eingegrenzt sein.
      */
     private const REVIEWED_RAW_QUERIES = [
+        // Schreibt berechnete Termine nur für die übergebene Projekt-ID (Update über Projekt-/Schritt-ID, keine Auswertung)
+        'app/Services/ProjectScheduler.php::projects' => 1,
+        'app/Services/ProjectScheduler.php::project_workflow_steps' => 1,
+        // Setzt das Anmelde-Merkmal genau eines Benutzers (übergebene ID) neu
+        'app/Support/SessionRevoker.php::users' => 1,
         'app/Http/Controllers/Admin/AttributeController.php::projects' => 5,
         'app/Http/Controllers/Admin/FunctionGroupController.php::function_group_tenant' => 1,
         'app/Http/Controllers/Admin/FunctionGroupController.php::project_function_group_hours' => 1,

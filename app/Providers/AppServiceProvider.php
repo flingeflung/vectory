@@ -25,6 +25,8 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->scoped(CurrentAbsenceLookup::class);
+        // Einmalig, weil der Dienst gegen verschachtelte Aufrufe aus Beobachtern gesperrt ist (ProjectScheduler::recalculate)
+        $this->app->singleton(\App\Services\ProjectScheduler::class);
 
         // Siehe App\Support\Translation\Translator - behebt einen
         // trans_choice()-Locale-Bug (Ralf-Bug-Report 2026-09-18). Per

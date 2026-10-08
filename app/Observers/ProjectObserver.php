@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Models\CriticalProjectFinding;
 use App\Models\Project;
 use App\Models\Task;
+use App\Services\ProjectScheduler;
 use App\Support\StammId;
 use Illuminate\Support\Facades\Auth;
 
@@ -51,6 +52,18 @@ class ProjectObserver
 
         if ($project->wasChanged('workflow_id')) {
             Task::syncWorkflowTasksForProject($project);
+        }
+
+        // Neues Terminmodell (Ralf, 2026-10-09): Start oder Workflow geändert -> Termine neu rechnen
+        if ((int) $project->schedule_model === 2 && $project->wasChanged(['start_date', 'workflow_id', 'schedule_model'])) {
+            app(ProjectScheduler::class)->recalculate($project);
+        }
+    }
+
+    public function created(Project $project): void
+    {
+        if ((int) $project->schedule_model === 2) {
+            app(ProjectScheduler::class)->recalculate($project);
         }
     }
 }

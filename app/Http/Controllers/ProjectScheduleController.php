@@ -225,6 +225,16 @@ class ProjectScheduleController extends Controller
         $validated = $request->validate(['side' => ['required', 'in:start,end'], 'date' => ['required', 'date']]);
         $isStart = $validated['side'] === 'start';
         $date = \Carbon\CarbonImmutable::parse($validated['date']);
+
+        // Neues Terminmodell: Start ist Eingabe, das Ende folgt aus den Dauern - ein gewünschtes Ende legt den Start fest
+        if ((int) $project->schedule_model === 2) {
+            $start = $isStart ? $date : app(\App\Services\ProjectScheduler::class)->startDateFor($project, 'workflow_end', $date);
+            $project->update(['start_date' => $start->toDateString()]);
+            $project->refresh();
+
+            return response()->json(['date' => ($isStart ? $project->start_date : $project->end_date)?->toDateString(), 'start' => $project->start_date?->toDateString(), 'end' => $project->end_date?->toDateString()]);
+        }
+
         $other = $isStart ? $project->end_date : $project->start_date;
         abort_if($other !== null && ($isStart ? $date->gt($other) : $date->lt($other)), 422, __('Das Datum passt nicht zum anderen Rand des Projektzeitraums.'));
 
@@ -251,6 +261,10 @@ class ProjectScheduleController extends Controller
             'due_date' => ['nullable', 'date'],
         ]);
 
+        // Neues Terminmodell: der Termin wird berechnet, nicht eingegeben
+        if ((int) $project->schedule_model === 2) {
+            unset($validated['due_date']);
+        }
         $projectWorkflowStep->update($validated);
 
         return response()->json([

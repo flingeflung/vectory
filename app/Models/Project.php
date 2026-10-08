@@ -19,7 +19,7 @@ use Illuminate\Support\Collection;
     'status', 'creation_type', 'archived', 'localization', 'publication_date', 'start_date', 'end_date', 'remarks',
     'attributes', 'workflow_id', 'verbund_rolle', 'hauptprojekt_id',
     'paper_format_combination_id', 'input_format_free_text', 'output_format_free_text',
-    'stamm_id', 'stamm_position',
+    'stamm_id', 'stamm_position', 'schedule_model',
 ])]
 #[ObservedBy(ProjectObserver::class)]
 class Project extends Model
@@ -35,6 +35,7 @@ class Project extends Model
             'start_date' => 'date',
             'end_date' => 'date',
             'attributes' => 'array',
+            'schedule_model' => 'integer',
         ];
     }
 

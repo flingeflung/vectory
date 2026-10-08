@@ -555,7 +555,8 @@
                                                     <input
                                                         type="date"
                                                         x-model="value"
-                                                        :disabled="saving || {{ auth()->user()->can('workflow_step.due_date') ? 'false' : 'true' }}"
+                                                        :disabled="saving || {{ auth()->user()->can('workflow_step.due_date') && (int) $project->schedule_model !== 2 ? 'false' : 'true' }}"
+                                                        @if ((int) $project->schedule_model === 2) title="{{ __('Wird aus Projektstart und Dauern berechnet.') }}" @endif
                                                         @change="
                                                             saving = true;
                                                             fetch({{ \Illuminate\Support\Js::from(route('projekte.workflow-steps.due-date', [$project, $pws])) }}, {
@@ -571,6 +572,7 @@
                                                         "
                                                         class="rounded border-gray-300 py-0.5 text-xs"
                                                     >
+                                                    @if ((int) $project->schedule_model !== 2)
                                                     @can('workflow_step.due_date')
                                                         <button
                                                             type="button"
@@ -584,6 +586,7 @@
                                                             </svg>
                                                         </button>
                                                     @endcan
+                                                    @endif
                                                 </div>
                                             </div>
                                         @endif

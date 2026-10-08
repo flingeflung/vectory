@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Models\ProjectWorkflowStep;
 use App\Models\Task;
+use App\Services\ProjectScheduler;
 
 /**
  * Greift, sobald es eine "nächster Schritt"-Aktion gibt (aktuell noch nicht
@@ -17,6 +18,16 @@ class ProjectWorkflowStepObserver
     {
         if ($projectWorkflowStep->wasChanged('is_current') && $projectWorkflowStep->project) {
             Task::syncWorkflowTasksForProject($projectWorkflowStep->project);
+        }
+
+        $project = $projectWorkflowStep->project;
+        if ($project && (int) $project->schedule_model === 2) {
+            // Neues Terminmodell: die Termine werden berechnet, nicht aus Schritten ins Projekt übernommen
+            if ($projectWorkflowStep->wasChanged('duration_days')) {
+                app(ProjectScheduler::class)->recalculate($project);
+            }
+
+            return;
         }
 
         $this->syncProjectStartEndDate($projectWorkflowStep);
