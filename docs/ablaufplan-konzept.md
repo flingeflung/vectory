@@ -82,14 +82,14 @@ Folgen:
 ## 6. Bestand
 
 - Die Vectory-Projekte der Organisationen **Heimat, Standard und Maschinen** werden in das neue Modell **migriert**. Die Vietto-Testdaten der Organisation Sanitär werden nicht migriert; der neue Code darf sie nicht beschädigen und zeigt sie nach der neuen Rechnung.
-- Die Migration überführt die heutigen Termine in Meilensteine und die Arbeitsschritte in Tasks. Wo ein vorhandener Termin nicht zur Kette der Dauern passt, bleibt er als Meilenstein mit festem Datum erhalten, und die Kette rechnet aus den Dauern. Ein Bericht listet die Projekte, bei denen dadurch ein Konflikt sichtbar wird.
+- Die Migration überführt die heutigen Termine in Meilensteine und die Arbeitsschritte in Tasks. Es sind erfundene Testprojekte, deshalb muss das Ergebnis grundsätzlich passen, aber nicht auf den Tag genau. Wo ein Termin nicht zur Kette der Dauern passt, bleibt er als Meilenstein mit festem Datum erhalten, und die Kette rechnet aus den Dauern. Ein Konfliktbericht ist nicht nötig.
 - Die Workflow-Vorlagen dieser Organisationen werden ebenfalls umgestellt: aus inaktiven „nur Termin“-Schritten werden Meilensteine, aus Terminen an Arbeitsschritten Meilensteine am Ende des Tasks.
 - Neue Projekte entstehen ausschließlich im neuen Modell. Eine ausgelieferte Neuinstallation enthält keine Altdaten.
 
 ## 7. Umbau in Stufen
 
 1. Konzept abstimmen und festhalten (dieses Dokument).
-2. Datenmodell und Rechnung: Tasks, Meilensteine, Kette, Fixpunkt, mit Tests; Migration der Projekte und Vorlagen von Heimat, Standard und Maschinen mit Konfliktbericht.
+2. Datenmodell und Rechnung: Tasks, Meilensteine, Kette, Fixpunkt, mit Tests; Migration der Projekte und Vorlagen von Heimat, Standard und Maschinen (ohne Anspruch auf Tagesgenauigkeit).
 3. Ablaufplan als Tabelle und Diagramm mit Meilensteinen.
 4. Workflow-Verwaltung und Workflow-Ansicht für Meilensteine, Synchronität.
 5. Zielscheibe, Wegfall von „Termine berechnen“.
