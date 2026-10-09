@@ -1637,7 +1637,6 @@
     "Projekte mit einem ANDEREN Workflow werden übersprungen - außer Sie aktivieren unten \"Andere Workflows überschreiben\": dann wird dort ebenfalls neu zugewiesen und der bisherige Fortschritt geht verloren.": "Projects with a DIFFERENT workflow will be skipped - unless you enable \"Overwrite other workflows\" below: then the workflow will also be reassigned there and the previous progress will be lost.",
     "Projekte ohne Planstunden und Projekte innerhalb des Budgets.": "",
     "Projekte ohne Startdatum oder mit anderem Status.": "",
-    "Projekte ohne Workflow bekommen ihn neu zugewiesen (1. Schritt \"In Planung\" wird automatisch aktiviert).": "Projects without a workflow are assigned this workflow (the first step \"Planning\" is activated automatically).",
     "Projekte ohne diesen Workflow werden übersprungen - der Workflow muss dafür zuerst per Multichange-Feld \"Workflow\" angepasst werden.": "Projects without this workflow will be skipped - the workflow must first be changed using the Multichange field \"Workflow\".",
     "Projekte – Personen": "",
     "Projekte, bei denen eine Person als Projektbeteiligte eingetragen ist, sieht sie immer. Wenn angehakt, sieht sie auch alle anderen Projekte in der Liste, kann deren Details aber nur mit dem Recht „Projekt: Details aufrufen“ öffnen. Wenn nicht angehakt, sieht sie ohne dieses Recht nur ihre eigenen Projekte.": "A person always sees projects where they are entered as a project participant. If checked, they also see all other projects in the list, but can only open their details with the right \"Project: open details\". If not checked, without this right they only see their own projects.",
@@ -2427,5 +2426,6 @@
     "Ab": "From",
     "Gerechnet wird nur ab diesem Tag. Standard ist heute; so lässt sich auch ab einem späteren Datum vorausplanen.": "Only this day onward is counted. Default is today; a later date lets you plan ahead.",
     "Sie dürfen die Grundlast ansehen, aber nicht ändern.": "You may view the base load but not change it.",
-    "Zurück zur vorherigen Hilfeseite": "Back to the previous help page"
+    "Zurück zur vorherigen Hilfeseite": "Back to the previous help page",
+    "Projekte ohne Workflow bekommen ihn neu zugewiesen (der Schritt mit dem Status „Geplant“ wird automatisch aktiviert).": "Projects without a workflow are assigned this workflow (the step with the status \"Planned\" is activated automatically)."
 }

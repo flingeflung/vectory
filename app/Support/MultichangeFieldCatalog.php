@@ -168,7 +168,7 @@ class MultichangeFieldCatalog
                 // eine Liste von Zeilen statt eines einzelnen Strings sein
                 // (siehe generische Darstellung in multichange-body.blade.php).
                 'hint' => [
-                    __('Projekte ohne Workflow bekommen ihn neu zugewiesen (1. Schritt "In Planung" wird automatisch aktiviert).'),
+                    __('Projekte ohne Workflow bekommen ihn neu zugewiesen (der Schritt mit dem Status „Geplant“ wird automatisch aktiviert).'),
                     __('Projekte, die diesen Workflow bereits haben, bleiben unverändert.'),
                     __('Projekte mit einem ANDEREN Workflow werden übersprungen - außer Sie aktivieren unten "Andere Workflows überschreiben": dann wird dort ebenfalls neu zugewiesen und der bisherige Fortschritt geht verloren.'),
                 ],

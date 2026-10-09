@@ -25,7 +25,7 @@ Folgen:
 - **Phase:** die Zeitspanne eines WFS im Plan, mit Start, Ende und Dauer. Sie hat den Namen des WFS (z. B. „Anleitung erstellen“, „Lektorat“, „Externe Übersetzung“).
 - **Phasenende:** der letzte Tag einer Phase. Es kann einen eigenen Namen tragen, der das Zielbild der Phase beschreibt (z. B. „Korrekturexemplar erstellt“, „Lektorat durchgeführt“, „Übersetzung fertig“). Den Namen legt, wer den Workflow gestaltet.
 - **Meilenstein (Vy-Meilenstein):** ein frei gesetzter Zeitpunkt ohne eigene Phase (z. B. „Markteinführung“, „Prototypenbau“).
-- **Status-Schritte:** „In Planung“, „Projektende“, „Projekt verworfen“ setzen den Projektstatus. Sie sind keine Phasen und haben keine Dauer im Plan.
+- **Status-Schritte:** Die Schritte mit den Status „Geplant“ (im Beispiel „In Planung“), „Beendet“ („Projektende“) und „Verworfen“ („Projekt verworfen“) setzen den Projektstatus. Sie sind keine Phasen und haben keine Dauer im Plan.
 
 ## 3. Zielmodell
 
