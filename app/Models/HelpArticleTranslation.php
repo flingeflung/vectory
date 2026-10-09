@@ -82,7 +82,7 @@ class HelpArticleTranslation extends Model
         $body = preg_replace(
             self::IMAGE_PLACEHOLDER_PATTERN,
             "\n\n![]({$this->imageBaseUrl()}/$1)\n\n",
-            (string) $this->body
+            self::applyAudience((string) $this->body, auth()->user())
         );
 
         $html = (string) Str::markdown($body, ['html_input' => 'strip']);
@@ -161,6 +161,78 @@ class HelpArticleTranslation extends Model
         }, $html);
 
         return (string) preg_replace_callback('/@@CODE(\d+)@@/', fn (array $match): string => $codeBlocks[(int) $match[1]], $html);
+    }
+
+    /**
+     * Passagen nur für bestimmte Stufen (Ralf, 2026-10-09): [[Admin3|Text]] zeigt den Text allen drei Admin-Stufen, [[Admin2|Text]] nur
+     * Zentral-Admin und Super-Admin, [[Admin1|Text]] nur dem Super-Admin. Für alle anderen verschwindet die ganze Passage samt Markierung, auch
+     * die leere Zeile, die dabei entstünde. Im Text dürfen Hilfe-Verweise wie [[82|Titel]] stehen (geschachtelt).
+     */
+    public static function applyAudience(string $text, ?User $user): string
+    {
+        $levels = [
+            1 => fn () => $user?->isSuperAdmin() ?? false,
+            2 => fn () => $user?->canAccessAllOrganizations() ?? false,
+            3 => fn () => $user?->isAdmin() ?? false,
+        ];
+
+        // Codebeispiele in Backticks (z. B. die Beschreibung der Markierung selbst) bleiben unverändert
+        $codeSpans = [];
+        $text = (string) preg_replace_callback('/`[^`\n]*`/', function (array $match) use (&$codeSpans): string {
+            $codeSpans[] = $match[0];
+
+            return "\u{E000}".(count($codeSpans) - 1)."\u{E001}";
+        }, $text);
+
+        $offset = 0;
+        while (preg_match('/\[\[Admin([123])\|/i', $text, $match, PREG_OFFSET_CAPTURE, $offset)) {
+            $start = $match[0][1];
+            $innerStart = $start + strlen($match[0][0]);
+
+            // passendes Ende suchen; innere "[[ ... ]]" zählen mit
+            $depth = 1;
+            $position = $innerStart;
+            $length = strlen($text);
+            while ($position < $length && $depth > 0) {
+                if (substr($text, $position, 2) === '[[') {
+                    $depth++;
+                    $position += 2;
+                } elseif (substr($text, $position, 2) === ']]') {
+                    $depth--;
+                    $position += 2;
+                } else {
+                    $position++;
+                }
+            }
+            if ($depth !== 0) {
+                break; // Markierung nicht geschlossen: Text unverändert lassen
+            }
+
+            $inner = substr($text, $innerStart, $position - 2 - $innerStart);
+            if ($levels[(int) $match[1][0]]()) {
+                $text = substr($text, 0, $start).$inner.substr($text, $position);
+                $offset = $start;
+
+                continue;
+            }
+
+            // Nicht sichtbar: Passage entfernen; steht sie allein in der Zeile, auch die Zeile
+            $lineStart = strrpos(substr($text, 0, $start), "\n");
+            $lineStart = $lineStart === false ? 0 : $lineStart + 1;
+            $lineEnd = strpos($text, "\n", $position);
+            $lineEnd = $lineEnd === false ? $length : $lineEnd;
+            $before = substr($text, $lineStart, $start - $lineStart);
+            $after = substr($text, $position, $lineEnd - $position);
+            if (trim($before) === '' && trim($after) === '') {
+                $text = substr($text, 0, $lineStart).substr($text, min($lineEnd + 1, $length));
+                $offset = $lineStart;
+            } else {
+                $text = substr($text, 0, $start).substr($text, $position);
+                $offset = $start;
+            }
+        }
+
+        return (string) preg_replace_callback("/\u{E000}(\d+)\u{E001}/u", fn (array $match): string => $codeSpans[(int) $match[1]], $text);
     }
 
     /** Kürzel, deren Leerzeichen zu geschützten Leerzeichen werden. */
