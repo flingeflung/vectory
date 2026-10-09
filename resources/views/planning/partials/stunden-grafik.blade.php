@@ -44,7 +44,7 @@
                     {{-- Hilfslinien --}}
                     <div class="pointer-events-none absolute inset-x-0 top-0 h-[22rem]">
                         @foreach ($chart['ticks'] as $tick)
-                            <div class="absolute inset-x-0 border-t {{ $tick == 0 ? 'border-gray-400' : 'border-gray-100' }}" style="bottom: {{ $pct($tick) }}%"></div>
+                            <div class="absolute inset-x-0 border-t-2 border-gray-500/70" style="bottom: calc({{ $pct($tick) }}% - 1px)"></div>
                         @endforeach
                     </div>
 
