@@ -9,102 +9,89 @@ use App\Models\WorkflowStep;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
+/**
+ * "Hat Termin", "Projektstart", "Projektende" und "Aktiv" sind keine Eingaben mehr (Ralf, 2026-10-09; docs/ablaufplan-konzept.md): Ein
+ * benanntes Phasenende gilt als Termin, Projektstart und -ende kommen aus den Schritten "Geplant" und "Beendet", jeder Schritt ist aktiv.
+ */
 class WorkflowScheduleValidationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_start_or_end_step_requires_a_due_date(): void
+    private Tenant $tenant;
+
+    private User $user;
+
+    private Workflow $workflow;
+
+    protected function setUp(): void
     {
-        [$user, $workflow, $step] = $this->workflowStep();
+        parent::setUp();
+        $this->tenant = Tenant::query()->firstOrFail();
+        $this->user = User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'super_admin']);
+        $this->workflow = Workflow::query()->create(['tenant_id' => $this->tenant->id, 'short_name' => 'PL', 'name' => 'Ableitung', 'active' => true]);
+    }
 
-        $this->actingAs($user)->post(route('admin.workflows.schritte.bulk-update'), [
-            'workflow_id' => $workflow->id,
-            'steps' => [
-                $step->id => [
-                    'title' => $step->title,
-                    'duration_days' => 0,
-                    'is_end' => 1,
-                ],
-            ],
-        ])->assertStatus(422)
-            ->assertSee('Ein Schritt für Projektstart oder Projektende muss einen Termin haben. Checkbox „Hat Termin“ markieren!');
+    private function step(string $title, int $sort, int $lifecycle, array $extra = []): WorkflowStep
+    {
+        return WorkflowStep::query()->create([...[
+            'tenant_id' => $this->tenant->id, 'workflow_id' => $this->workflow->id, 'title' => $title, 'sort' => $sort,
+            'lifecycle_status' => $lifecycle, 'is_active' => true,
+        ], ...$extra]);
+    }
 
-        $this->assertFalse($step->fresh()->is_end);
+    private function save(WorkflowStep $step, array $fields): void
+    {
+        $this->actingAs($this->user)->post(route('admin.workflows.schritte.bulk-update'), [
+            'workflow_id' => $this->workflow->id,
+            'steps' => [$step->id => ['title' => $step->title, 'duration_days' => 1, 'lifecycle_status' => $step->lifecycle_status, ...$fields]],
+        ])->assertRedirect();
+    }
+
+    public function test_a_named_phase_end_is_a_date_automatically(): void
+    {
+        $step = $this->step('Lektorat', 2, 2);
+
+        $this->save($step, ['milestone_title' => 'Lektorat durchgeführt']);
+        $this->assertTrue($step->fresh()->has_due_date);
+
+        $this->save($step, ['milestone_title' => '']);
         $this->assertFalse($step->fresh()->has_due_date);
     }
 
-    public function test_end_step_with_due_date_is_valid(): void
+    public function test_start_and_end_follow_the_status_steps(): void
     {
-        [$user, $workflow, $step] = $this->workflowStep();
+        $planned = $this->step('In Planung', 1, 1);
+        $work = $this->step('Arbeit', 2, 2, ['is_start' => true, 'is_end' => true]);   // alte, falsche Kennzeichen
+        $finished = $this->step('Projektende', 3, 3);
 
-        $this->actingAs($user)->post(route('admin.workflows.schritte.bulk-update'), [
-            'workflow_id' => $workflow->id,
-            'steps' => [
-                $step->id => [
-                    'title' => $step->title,
-                    'duration_days' => 0,
-                    'is_end' => 1,
-                    'has_due_date' => 1,
-                ],
-            ],
-        ])->assertRedirect();
+        $this->save($work, ['milestone_title' => '']);
 
-        $this->assertTrue($step->fresh()->is_end);
-        $this->assertTrue($step->fresh()->has_due_date);
+        $this->assertTrue($planned->fresh()->is_start);
+        $this->assertFalse($planned->fresh()->is_end);
+        $this->assertFalse($work->fresh()->is_start);
+        $this->assertFalse($work->fresh()->is_end);
+        $this->assertTrue($finished->fresh()->is_end);
+        // Status-Schritte tragen Start und Ende und gelten damit als Termin
+        $this->assertTrue($planned->fresh()->has_due_date);
+        $this->assertTrue($finished->fresh()->has_due_date);
     }
 
-    public function test_only_one_start_and_one_end_step_are_allowed(): void
+    public function test_saving_never_changes_the_active_switch(): void
     {
-        [$user, $workflow, $firstStep] = $this->workflowStep();
-        $firstStep->update(['is_start' => true, 'is_end' => true, 'has_due_date' => true]);
-        $secondStep = WorkflowStep::query()->create([
-            'tenant_id' => $firstStep->tenant_id,
-            'workflow_id' => $workflow->id,
-            'title' => 'Zweiter Termin',
-            'sort' => 2,
-            'is_active' => true,
-            'has_due_date' => false,
-        ]);
+        $inactive = $this->step('Altlast', 2, 2, ['is_active' => false]);
 
-        $this->actingAs($user)->post(route('admin.workflows.schritte.bulk-update'), [
-            'workflow_id' => $workflow->id,
-            'steps' => [
-                $secondStep->id => [
-                    'title' => $secondStep->title,
-                    'duration_days' => 0,
-                    'is_start' => 1,
-                    'is_end' => 1,
-                    'has_due_date' => 1,
-                ],
-            ],
-        ])->assertStatus(422)
-            ->assertSee('Nur ein Workflow-Schritt darf als Projektstart markiert sein.')
-            ->assertSee('Nur ein Workflow-Schritt darf als Projektende markiert sein.');
+        $this->save($inactive, ['milestone_title' => 'x']);
 
-        $this->assertFalse($secondStep->fresh()->is_start);
-        $this->assertFalse($secondStep->fresh()->is_end);
+        $this->assertFalse($inactive->fresh()->is_active);
     }
 
-    private function workflowStep(): array
+    public function test_the_step_form_no_longer_offers_the_removed_switches(): void
     {
-        $tenant = Tenant::query()->firstOrFail();
-        $user = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'super_admin']);
-        $workflow = Workflow::query()->create([
-            'tenant_id' => $tenant->id,
-            'short_name' => 'PL',
-            'name' => 'Plausibilitätsprüfung',
-            'active' => true,
-        ]);
-        $step = WorkflowStep::query()->create([
-            'tenant_id' => $tenant->id,
-            'workflow_id' => $workflow->id,
-            'title' => 'Projektende',
-            'sort' => 1,
-            'is_active' => true,
-            'is_end' => false,
-            'has_due_date' => false,
-        ]);
+        $this->step('In Planung', 1, 1);
+        $html = $this->actingAs($this->user)->get(route('admin.workflows', ['workflow' => $this->workflow->id]))->assertOk()->getContent();
 
-        return [$user, $workflow, $step];
+        foreach (['[is_start]', '[is_end]', '[has_due_date]', '[is_active]', '[is_market_launch]'] as $name) {
+            $this->assertStringNotContainsString($name, $html);
+        }
     }
 }

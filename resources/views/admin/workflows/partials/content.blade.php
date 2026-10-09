@@ -336,10 +336,6 @@
                                                     <p class="mt-0.5 text-xs text-red-600">{{ $message }}</p>
                                                 @enderror
                                             </div>
-                                            <label class="flex shrink-0 items-center gap-1 text-xs text-gray-600">
-                                                <input type="checkbox" name="steps[{{ $step->id }}][is_active]" value="1" @checked($isResubmit ? old("steps.{$step->id}.is_active") !== null : $step->is_active) class="rounded border-gray-300">
-                                                {{ __('Aktiv') }}
-                                            </label>
                                             <button type="button" @click="expanded = !expanded" class="shrink-0 text-xs text-indigo-600 hover:text-indigo-800" x-text="expanded ? {{ \Illuminate\Support\Js::from(__('weniger')) }} : {{ \Illuminate\Support\Js::from(__('Details')) }}"></button>
                                         </div>
 
@@ -374,19 +370,8 @@
                                                     @enderror
                                                 </div>
 
-                                                <div class="col-span-2 flex flex-wrap gap-x-4 gap-y-1">
-                                                    <label class="inline-flex items-center gap-1"><input type="checkbox" name="steps[{{ $step->id }}][is_start]" value="1" @checked($isResubmit && old("steps.{$step->id}.duration_days") !== null ? old("steps.{$step->id}.is_start") !== null : $step->is_start) class="rounded border-gray-300"> {{ __('Start des Projekts') }}</label>
-                                                    <label class="inline-flex items-center gap-1"><input type="checkbox" name="steps[{{ $step->id }}][is_end]" value="1" @checked($isResubmit && old("steps.{$step->id}.duration_days") !== null ? old("steps.{$step->id}.is_end") !== null : $step->is_end) class="rounded border-gray-300"> {{ __('Ende des Projekts') }}</label>
-                                                    @error("steps.{$step->id}.is_start")
-                                                        <span class="basis-full text-red-600">{{ $message }}</span>
-                                                    @enderror
-                                                    @error("steps.{$step->id}.is_end")
-                                                        <span class="basis-full text-red-600">{{ $message }}</span>
-                                                    @enderror
-                                                </div>
 
                                                 <div class="col-span-2 flex flex-wrap items-center gap-x-4 gap-y-1">
-                                                    <label class="inline-flex items-center gap-1"><input type="checkbox" name="steps[{{ $step->id }}][has_due_date]" value="1" @checked($isResubmit && old("steps.{$step->id}.duration_days") !== null ? old("steps.{$step->id}.has_due_date") !== null : $step->has_due_date) class="rounded border-gray-300"> {{ __('Hat Termin') }}</label>
                                                     <label class="inline-flex items-center gap-1">
                                                         {{ __('Dauer (Tage)') }}
                                                         <input type="number" name="steps[{{ $step->id }}][duration_days]" min="0" value="{{ old("steps.{$step->id}.duration_days", $step->duration_days) }}" class="w-16 rounded-md border-gray-300 text-xs">
@@ -399,14 +384,12 @@
                                                     @error("steps.{$step->id}.duration_days")
                                                         <span class="text-red-600">{{ $message }}</span>
                                                     @enderror
-                                                    @error("steps.{$step->id}.has_due_date")
-                                                        <span class="basis-full text-red-600">{{ $message }}</span>
-                                                    @enderror
                                                 </div>
 
                                                 <div class="col-span-2 flex flex-wrap gap-x-4 gap-y-1">
                                                     <label class="inline-flex items-center gap-1"><input type="checkbox" name="steps[{{ $step->id }}][send_email]" value="1" x-model="sendEmail" class="rounded border-gray-300"> {{ __('E-Mail beim Aktivieren senden') }}</label>
-                                                    <label class="inline-flex items-center gap-1"><input type="checkbox" name="steps[{{ $step->id }}][show_in_translation]" value="1" @checked($isResubmit ? old("steps.{$step->id}.show_in_translation") !== null : $step->show_in_translation) class="rounded border-gray-300"> {{ __('In Übersetzungsansicht zeigen') }}</label>
+                                                    {{-- "In Übersetzungsansicht" (Ralf, 2026-10-09): noch nicht gebaut und nicht konzipiert - ob das ohne Schnittstelle zu einem TWMS sinnvoll ist, ist offen. Der Wert bleibt in der Datenbank erhalten.
+                                                    <label class="inline-flex items-center gap-1"><input type="checkbox" name="steps[{{ $step->id }}][show_in_translation]" value="1" @checked($isResubmit ? old("steps.{$step->id}.show_in_translation") !== null : $step->show_in_translation) class="rounded border-gray-300"> {{ __('In Übersetzungsansicht zeigen') }}</label> --}}
                                                 </div>
 
                                                 <div>

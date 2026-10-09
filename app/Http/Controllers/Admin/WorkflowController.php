@@ -284,6 +284,25 @@ class WorkflowController extends Controller
         ];
     }
 
+    /**
+     * Projektstart und -ende werden aus den Statusschritten abgeleitet (Ralf, 2026-10-09; docs/ablaufplan-konzept.md): der erste Schritt
+     * "Geplant" liefert den Start, der erste Schritt "Beendet" das Ende. Die Kennzeichen bleiben für das alte Terminmodell wirksam.
+     */
+    private function deriveProjectMarkers(Workflow $workflow): void
+    {
+        $steps = WorkflowStep::query()->where('workflow_id', $workflow->id)->orderBy('sort')->get();
+        $startId = $steps->firstWhere('lifecycle_status', 1)?->id;
+        $endId = $steps->firstWhere('lifecycle_status', 3)?->id;
+        foreach ($steps as $step) {
+            $isStart = $step->id === $startId;
+            $isEnd = $step->id === $endId;
+            $hasDate = $isStart || $isEnd ? true : $step->has_due_date;
+            if ($step->is_start !== $isStart || $step->is_end !== $isEnd || $step->has_due_date !== $hasDate) {
+                $step->forceFill(['is_start' => $isStart, 'is_end' => $isEnd, 'has_due_date' => $hasDate])->save();
+            }
+        }
+    }
+
     private function abortUnlessEditableMilestones(Workflow $workflow): void
     {
         abort_unless($workflow->tenant_id === CurrentTenant::id(), 404);
@@ -665,48 +684,7 @@ class WorkflowController extends Controller
 
         $validated = $validator->validated();
 
-        // Ein Schritt, der das Start- oder Enddatum des Projekts liefert,
-        // braucht zwingend selbst einen Termin. Sonst wäre er als Quelle
-        // markiert, könnte aber kein Datum liefern (konkreter Altbestand:
-        // "Projektende" im Workflow "Print-Dokument (2026)"). Nur geöffnete
-        // Detailzeilen prüfen; eingeklappte Schritte fehlen bewusst im Request.
         $stepErrors = [];
-        foreach ($validated['steps'] as $stepId => $data) {
-            if (! $request->has("steps.$stepId.duration_days")) {
-                continue;
-            }
-
-            $isStartOrEnd = $request->boolean("steps.$stepId.is_start") || $request->boolean("steps.$stepId.is_end");
-            if ($isStartOrEnd && ! $request->boolean("steps.$stepId.has_due_date")) {
-                $stepErrors["steps.$stepId.has_due_date"] = [__('Ein Schritt für Projektstart oder Projektende muss einen Termin haben. Checkbox „Hat Termin“ markieren!')];
-            }
-        }
-
-        // Pro Workflow darf es genau höchstens eine Quelle für den
-        // Projektstart und eine für das Projektende geben. Für geöffnete
-        // Zeilen gilt der eingereichte Stand, für eingeklappte Zeilen der
-        // gespeicherte Stand, weil deren Detailfelder nicht im Request liegen.
-        $markerState = WorkflowStep::query()->where('workflow_id', $workflow->id)
-            ->get(['id', 'is_start', 'is_end'])
-            ->mapWithKeys(function (WorkflowStep $step) use ($request) {
-                $isSubmitted = $request->has("steps.$step->id.duration_days");
-
-                return [$step->id => [
-                    'is_start' => $isSubmitted ? $request->boolean("steps.$step->id.is_start") : $step->is_start,
-                    'is_end' => $isSubmitted ? $request->boolean("steps.$step->id.is_end") : $step->is_end,
-                ]];
-            });
-
-        foreach (['is_start' => __('Projektstart'), 'is_end' => __('Projektende')] as $field => $label) {
-            $markedIds = $markerState->filter(fn (array $state) => $state[$field])->keys();
-            if ($markedIds->count() <= 1) {
-                continue;
-            }
-
-            foreach ($markedIds as $stepId) {
-                $stepErrors["steps.$stepId.$field"] = [__('Nur ein Workflow-Schritt darf als :label markiert sein. Markierung bei den anderen Schritten entfernen!', ['label' => $label])];
-            }
-        }
 
         // Freigabe-Sonderfunktion (js_function=wfs_freigabe) braucht einen
         // Folge-WFS, der wirklich SPÄTER in der Reihenfolge liegt - sonst
@@ -741,9 +719,9 @@ class WorkflowController extends Controller
             foreach ($validated['steps'] as $stepId => $data) {
                 $step = WorkflowStep::query()->where('tenant_id', $tenantId)->findOrFail((int) $stepId);
 
+                // "Aktiv" gibt es nicht mehr als Bedienung (jeder Schritt ist eine Phase); bestehende Werte bleiben unberührt
                 $update = [
                     'title' => $data['title'],
-                    'is_active' => $request->boolean("steps.$stepId.is_active"),
                 ];
 
                 // Die restlichen Felder stecken im einklappbaren
@@ -770,11 +748,9 @@ class WorkflowController extends Controller
                         'after_freigabe_workflow_step_id' => ($data['js_function'] ?? '') === 'wfs_freigabe' ? ($data['after_freigabe_workflow_step_id'] ?? null) : null,
                         'description' => $data['description'] ?? null,
                         'email_text' => $data['email_text'] ?? null,
-                        'is_start' => $request->boolean("steps.$stepId.is_start"),
-                        'is_end' => $request->boolean("steps.$stepId.is_end"),
-                        'has_due_date' => $request->boolean("steps.$stepId.has_due_date"),
+                        // Ein benanntes Phasenende gilt automatisch als Termin; Schritte "Geplant" und "Beendet" tragen Projektstart und -ende
+                        'has_due_date' => trim((string) ($data['milestone_title'] ?? '')) !== '' || in_array((int) ($data['lifecycle_status'] ?? $step->lifecycle_status), [1, 3], true),
                         'send_email' => $request->boolean("steps.$stepId.send_email"),
-                        'show_in_translation' => $request->boolean("steps.$stepId.show_in_translation"),
                     ];
                 }
 
@@ -792,6 +768,8 @@ class WorkflowController extends Controller
                 $step->functionGroups()->sync($validIds->mapWithKeys(fn ($id) => [$id => ['tenant_id' => $tenantId]]));
             }
         });
+
+        $this->deriveProjectMarkers($workflow);
 
         return redirect()->route('admin.workflows', ['workflow' => $workflow->id])->with('status', 'workflows-updated');
     }
