@@ -64,7 +64,7 @@
         msUrl: @js(route('projekte.meilensteine.store', $project)),
         msCsrf: @js(csrf_token()),
         projectId: @js($project->id),
-        focusMs() { this.$nextTick(() => { if (this.$refs.msName) this.$refs.msName.focus(); }); },
+        focusMs() { setTimeout(() => { if (this.$refs.msName) this.$refs.msName.focus(); }, 30); },
         newMs() {
             this.ms = { id: null, name: '', anchor_type: 'workflow_end', anchor_workflow_step_id: this.steps.length ? this.steps[this.steps.length - 1].id : null, offset_days: 0, fixed_date: '', check_direction: '' };
             this.msError = '';
@@ -767,7 +767,7 @@
                         <td class="whitespace-nowrap py-0 align-middle pr-2 text-gray-500">
                             <div class="flex h-6 items-center gap-1">
                             <span class="inline-flex items-center gap-1">
-                                <span x-show="row.type === 'phase'" x-text="dateDe(startIso(row.i))" :title="@js(__('Beginn der Phase (berechnet)'))"></span>
+                                <template x-if="row.type === 'phase'"><span x-text="dateDe(startIso(row.i))" :title="@js(__('Beginn der Phase (berechnet)'))"></span></template>
                                 @if ((int) $project->schedule_model === 2)
                                     <template x-if="row.type === 'phase' && canEditPeriod">
                                         <button type="button" @click="openFix('step_start:' + steps[row.i].id, @js(__('Start von')) + ' ' + steps[row.i].title, startIso(row.i))" class="inline-flex h-6 w-6 items-center justify-center rounded text-gray-300 hover:bg-gray-100 hover:text-gray-700" title="{{ __('Fixpunkt hier setzen, um die Termine neu zu berechnen') }}"><x-icon name="target" class="h-3.5 w-3.5" /></button>
@@ -788,7 +788,7 @@
                                     title="{{ __('Berechnetes Ende der Phase') }}"
                                 >
                             </template>
-                            <span x-show="row.type === 'milestone'" class="text-gray-700" x-text="dateDe(row.m.date)"></span>
+                            <template x-if="row.type === 'milestone'"><span class="text-gray-700" x-text="dateDe(row.m.date)"></span></template>
                             @if ((int) $project->schedule_model === 2)
                                 <template x-if="row.type === 'phase' && canEditPeriod">
                                     <button type="button" @click="openFix('step_end:' + steps[row.i].id, @js(__('Ende von')) + ' ' + steps[row.i].title, endIso(row.i))" class="inline-flex h-6 w-6 items-center justify-center rounded text-gray-300 hover:bg-gray-100 hover:text-gray-700" title="{{ __('Fixpunkt hier setzen, um die Termine neu zu berechnen') }}"><x-icon name="target" class="h-3.5 w-3.5" /></button>
@@ -801,8 +801,8 @@
                         </td>
                         <td class="whitespace-nowrap py-0 align-middle pr-2 text-gray-500">
                             <div class="flex h-6 items-center gap-1">
-                            <span x-show="row.type === 'phase'" x-text="steps[row.i].end_name" :title="steps[row.i].end_name"></span>
-                            <span x-show="row.type === 'milestone'" x-text="row.m.rule"></span>
+                            <template x-if="row.type === 'phase'"><span x-text="steps[row.i].end_name" :title="steps[row.i].end_name"></span></template>
+                            <template x-if="row.type === 'milestone'"><span x-text="row.m.rule"></span></template>
                         </div>
                         </td>
                         <td class="whitespace-nowrap py-0 align-middle pr-2 text-gray-500" x-text="weekNo(row.date)"></td>
@@ -869,6 +869,7 @@
                 <div class="mt-1">
                     <button type="button" x-show="ms === null" @click="newMs()" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 font-medium text-gray-700 hover:bg-btn-secondary-hover" title="{{ __('Fügt einen Meilenstein hinzu: einen Zeitpunkt, der sich an Start oder Ende des Workflows oder einer Phase orientiert.') }}">+ {{ __('Meilenstein') }}</button>
                     {{-- bewusst kein <form>: die Overlay-Behandlung des Projekts schickt jedes Formular im Overlay selbst ab (Ralf-Bug 2026-10-09: Enter/Speichern löste ein Projekt-Anlegen aus) --}}
+                    <template x-if="ms !== null">
                     <div x-show="ms !== null" x-cloak @keydown.enter.prevent="saveMs()" class="rounded-md border border-gray-200 bg-gray-50 p-2">
                         <div class="flex flex-wrap items-end gap-2">
                             <label class="block">
@@ -918,6 +919,7 @@
                             <button type="button" @click="saveMs()" :disabled="msSaving" class="rounded-md border border-transparent bg-btn-primary px-2.5 py-0.5 font-medium text-white hover:bg-btn-primary-hover disabled:cursor-wait disabled:opacity-60">{{ __('Speichern') }}</button>
                         </div>
                     </div>
+                    </template>
                 </div>
             </template>
         @endif
