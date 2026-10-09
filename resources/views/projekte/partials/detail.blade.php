@@ -498,7 +498,7 @@
                             @endif
                             <div
                                 x-data="{ expanded: false }"
-                                class="w-full {{ $milestonesAbove->isNotEmpty() ? 'rounded-t-none rounded-b-md' : ($milestonesBelow->isNotEmpty() ? 'rounded-t-md rounded-b-none' : 'rounded-md') }} px-3 py-2 {{ $pws->is_current ? 'border-2 border-blue-500' : 'border border-gray-300' }} {{ $step->lifecycle_status === 3 ? '[&_.text-gray-400]:!text-white [&_.text-gray-500]:!text-white [&_.text-gray-600]:!text-white' : ($step->lifecycle_status === 4 ? '[&_.text-gray-400]:!text-gray-500 [&_.text-gray-500]:!text-gray-600 [&_.text-gray-600]:!text-gray-700' : '') }}"
+                                class="w-full {{ $milestonesAbove->isNotEmpty() ? 'rounded-t-none rounded-b-md' : ($milestonesBelow->isNotEmpty() ? 'rounded-t-md rounded-b-none' : 'rounded-md') }} px-3 py-2 {{ $pws->is_current ? 'border-2 border-blue-500' : 'border border-gray-300' }} {{ $step->lifecycle_status === 3 ? '[&_.text-gray-400]:!text-gray-600 [&_.text-gray-500]:!text-gray-700 [&_.text-gray-600]:!text-gray-700' : ($step->lifecycle_status === 4 ? '[&_.text-gray-400]:!text-gray-500 [&_.text-gray-500]:!text-gray-600 [&_.text-gray-600]:!text-gray-700' : '') }}"
                                 style="background-color: {{ $step->lifecycleColor() }}"
                             >
                                 <div class="flex items-start justify-between gap-4">
