@@ -2427,5 +2427,8 @@
     "Gerechnet wird nur ab diesem Tag. Standard ist heute; so lässt sich auch ab einem späteren Datum vorausplanen.": "Only this day onward is counted. Default is today; a later date lets you plan ahead.",
     "Sie dürfen die Grundlast ansehen, aber nicht ändern.": "You may view the base load but not change it.",
     "Zurück zur vorherigen Hilfeseite": "Back to the previous help page",
-    "Projekte ohne Workflow bekommen ihn neu zugewiesen (der Schritt mit dem Status „Geplant“ wird automatisch aktiviert).": "Projects without a workflow are assigned this workflow (the step with the status \"Planned\" is activated automatically)."
+    "Projekte ohne Workflow bekommen ihn neu zugewiesen (der Schritt mit dem Status „Geplant“ wird automatisch aktiviert).": "Projects without a workflow are assigned this workflow (the step with the status \"Planned\" is activated automatically).",
+    "In allen Hilfetexten suchen…": "Search all help texts…",
+    "Durchsucht Titel, Stichwörter und Text aller Hilfeseiten. Ein Klick auf einen Treffer öffnet die Seite.": "Searches title, keywords and text of all help pages. Click a result to open the page.",
+    "Stichwörter": "Keywords"
 }

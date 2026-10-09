@@ -465,6 +465,7 @@ Route::middleware(['auth', 'verified', 'can:access-superadmin', RememberLastAdmi
     Route::post('/begriffe/{glossaryTerm}', [\App\Http\Controllers\Admin\GlossaryTermController::class, 'update'])->name('begriffe.update');
     Route::delete('/begriffe/{glossaryTerm}', [\App\Http\Controllers\Admin\GlossaryTermController::class, 'destroy'])->name('begriffe.destroy');
     Route::get('/hilfeseiten', [HelpArticleController::class, 'index'])->name('hilfeseiten');
+    Route::get('/hilfeseiten/suche', [HelpArticleController::class, 'search'])->name('hilfeseiten.suche');
     Route::post('/hilfeseiten', [HelpArticleController::class, 'store'])->name('hilfeseiten.store');
     Route::post('/hilfeseiten/metazustand', [HelpArticleController::class, 'saveMetaState'])->name('hilfeseiten.metazustand');
     Route::post('/hilfeseiten/baumzustand', [HelpArticleController::class, 'saveTreeState'])->name('hilfeseiten.baumzustand');

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\HelpArticle;
 use App\Models\HelpArticleTranslation;
 use App\Models\UserPreference;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -63,6 +64,60 @@ class HelpArticleController extends Controller
             'selected' => $selected,
             'locales' => HelpArticle::AVAILABLE_LOCALES,
         ]);
+    }
+
+    /**
+     * Volltextsuche im Editor (Ralf, 2026-10-09: "ich such mir nen Wolf"): durchsucht Titel, Stichwörter und Text aller Sprachen
+     * und liefert je Treffer Seite, Pfad im Baum, Fundort und einen Textausschnitt.
+     */
+    public function search(Request $request): JsonResponse
+    {
+        $needle = trim((string) $request->query('q'));
+        if (mb_strlen($needle) < 2) {
+            return response()->json(['results' => []]);
+        }
+
+        $like = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $needle).'%';
+        $matches = HelpArticleTranslation::query()
+            ->where(fn ($query) => $query->where('title', 'like', $like)->orWhere('keywords', 'like', $like)->orWhere('body', 'like', $like))
+            ->get();
+
+        $titles = HelpArticleTranslation::query()->where('locale', HelpArticle::PRIMARY_LOCALE)->pluck('title', 'help_article_id');
+        $parents = HelpArticle::query()->pluck('parent_id', 'id');
+        $pathOf = function (int $id) use ($titles, $parents): string {
+            $path = [];
+            for ($parent = $parents[$id] ?? null; $parent !== null; $parent = $parents[$parent] ?? null) {
+                array_unshift($path, $titles[$parent] ?? '?');
+            }
+
+            return implode(' › ', $path);
+        };
+
+        $results = $matches->map(function (HelpArticleTranslation $translation) use ($needle, $titles, $pathOf) {
+            $inTitle = mb_stripos((string) $translation->title, $needle) !== false;
+            $inKeywords = mb_stripos((string) $translation->keywords, $needle) !== false;
+            $position = mb_stripos((string) $translation->body, $needle);
+
+            $snippet = '';
+            if ($position !== false) {
+                $from = max(0, $position - 50);
+                $snippet = ($from > 0 ? '…' : '').trim(preg_replace('/\s+/u', ' ', mb_substr((string) $translation->body, $from, mb_strlen($needle) + 110)) ?? '').'…';
+            }
+
+            return [
+                'id' => $translation->help_article_id,
+                'title' => $titles[$translation->help_article_id] ?? $translation->title,
+                'path' => $pathOf($translation->help_article_id),
+                'locale' => $translation->locale,
+                'where' => implode(', ', array_filter([$inTitle ? __('Titel') : null, $inKeywords ? __('Stichwörter') : null, $position !== false ? __('Text') : null])),
+                'snippet' => $snippet,
+                'needle' => $needle,
+                // Treffer im Titel zuerst
+                'rank' => $inTitle ? 0 : ($inKeywords ? 1 : 2),
+            ];
+        })->sortBy('rank')->unique(fn (array $row) => $row['id'].'|'.$row['locale'])->take(40)->values()->all();
+
+        return response()->json(['results' => $results]);
     }
 
     /**

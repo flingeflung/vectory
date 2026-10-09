@@ -10,7 +10,42 @@
         }"
         class="flex w-96 shrink-0 flex-col"
     >
-        <div class="flex flex-1 min-h-0 flex-col rounded-lg border border-gray-200 bg-white" x-data="{ newArticle: false }">
+        <div class="flex flex-1 min-h-0 flex-col rounded-lg border border-gray-200 bg-white" x-data="{
+            newArticle: false,
+            q: '',
+            results: [],
+            timer: null,
+            searchUrl: {{ \Illuminate\Support\Js::from(route('admin.hilfeseiten.suche')) }},
+            find() {
+                clearTimeout(this.timer);
+                if (this.q.trim().length < 2) { this.results = []; return; }
+                this.timer = setTimeout(async () => {
+                    const query = this.q.trim();
+                    const response = await fetch(this.searchUrl + '?q=' + encodeURIComponent(query), { headers: { Accept: 'application/json' } });
+                    if (! response.ok || query !== this.q.trim()) return;
+                    this.results = (await response.json()).results;
+                }, 300);
+            },
+            // Textausschnitt in Teile zerlegen, damit der Suchbegriff ohne x-html hervorgehoben werden kann
+            parts(text, needle) {
+                const out = [];
+                const lower = text.toLowerCase();
+                const n = needle.toLowerCase();
+                let from = 0;
+                for (let i = lower.indexOf(n); i !== -1 && n !== ''; i = lower.indexOf(n, from)) {
+                    if (i > from) out.push({ t: text.slice(from, i), hit: false });
+                    out.push({ t: text.slice(i, i + n.length), hit: true });
+                    from = i + n.length;
+                }
+                if (from < text.length) out.push({ t: text.slice(from), hit: false });
+                return out;
+            },
+            async openResult(id) {
+                if (window.adminPageIsDirty && window.adminPageIsDirty() && ! (await window.confirmDialog({{ \Illuminate\Support\Js::from(__('Ungespeicherte Änderungen')) }}))) return;
+                window.__helpArticlesDirtyForms.clear();
+                window.location.href = navUrl({ article: id });
+            },
+        }">
             <div class="shrink-0 flex items-center justify-between border-b border-gray-100 p-2">
                 <span class="text-xs font-semibold text-gray-500">{{ __('Hilfeseiten') }}</span>
                 <button type="button" @click="newArticle = !newArticle; if (newArticle) $nextTick(() => $refs.newArticleTitle.focus())" class="inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">
@@ -34,7 +69,25 @@
             >
                 <input type="text" x-model="code" autocomplete="off" spellcheck="false" placeholder="{{ __('Code suchen, z. B. D-MFQU') }}" title="{{ __('Gibt man den Code eines Dialogs, eines Reiters (z. B. D-MFQU#planung.ablaufplan) oder den Namen einer Seite ein und drückt die Eingabetaste, öffnet sich die zugehörige Hilfeseite im Baum.') }}" class="w-full rounded-md border-gray-300 px-2 py-1 text-xs">
             </form>
-            <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => window.keepListScroll($el, 'list-scroll:help-articles'))">
+            {{-- Volltextsuche (Ralf, 2026-10-09): Titel, Stichwörter und Text aller Seiten --}}
+            <div class="shrink-0 border-b border-gray-100 p-2">
+                <input type="search" x-model="q" @input="find()" @keydown.escape="q = ''; results = []" autocomplete="off" spellcheck="false" placeholder="{{ __('In allen Hilfetexten suchen…') }}" title="{{ __('Durchsucht Titel, Stichwörter und Text aller Hilfeseiten. Ein Klick auf einen Treffer öffnet die Seite.') }}" class="w-full rounded-md border-gray-300 py-1 text-xs">
+            </div>
+            <div x-show="q.trim().length >= 2" x-cloak class="flex-1 min-h-0 overflow-y-auto p-2 text-sm">
+                <div x-show="results.length === 0" class="px-2 py-1 text-gray-400">{{ __('Keine Treffer.') }}</div>
+                <template x-for="row in results" :key="row.id + row.locale">
+                    <button type="button" @click="openResult(row.id)" class="mb-1 block w-full rounded border border-gray-100 px-2 py-1.5 text-left hover:bg-gray-50">
+                        <span class="block font-medium text-gray-800" x-text="row.title"></span>
+                        <span class="block text-xs text-gray-400" x-text="(row.path ? row.path + ' · ' : '') + row.where + (row.locale ? ' (' + row.locale + ')' : '')"></span>
+                        <span x-show="row.snippet" class="mt-0.5 block text-xs text-gray-600">
+                            <template x-for="(piece, index) in parts(row.snippet, row.needle)" :key="index">
+                                <span :class="piece.hit ? 'bg-yellow-200' : ''" x-text="piece.t"></span>
+                            </template>
+                        </span>
+                    </button>
+                </template>
+            </div>
+            <div x-show="q.trim().length < 2" class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => window.keepListScroll($el, 'list-scroll:help-articles'))">
                 <form x-show="newArticle" x-cloak method="POST" action="{{ route('admin.hilfeseiten.store') }}" class="mb-2 flex gap-1.5 rounded border border-gray-200 p-2">
                     <input type="text" name="title" x-ref="newArticleTitle" placeholder="{{ __('Titel (:locale)', ['locale' => \App\Models\HelpArticle::AVAILABLE_LOCALES[\App\Models\HelpArticle::PRIMARY_LOCALE]]) }}" class="w-full min-w-0 flex-1 rounded-md border-gray-300 text-xs" required>
                     @csrf
