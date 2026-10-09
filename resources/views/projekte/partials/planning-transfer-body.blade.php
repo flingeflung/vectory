@@ -189,7 +189,7 @@
                         >
                         {{ $label }}
                         @if ($key === \App\Services\PlanningTransfer::MILESTONES)
-                            <span class="text-xs text-gray-400" title="{{ __('Ohne diesen Haken bleiben die Termine im Ziel unverändert; mit „Termine berechnen“ lassen sie sich dort aus den Dauern ab dem eigenen Projektstart bestimmen.') }}">ⓘ</span>
+                            <span class="text-xs text-gray-400" title="{{ __('Ohne diesen Haken bleiben Termine und Meilensteine im Ziel unverändert. Bei Projekten mit berechneten Terminen rechnet das Ziel die Termine aus seinem eigenen Projektstart und den Dauern selbst; übertragen werden nur die Meilenstein-Definitionen.') }}">ⓘ</span>
                         @endif
                     </label>
                     <p class="ml-6 text-xs text-amber-700" x-show="reason('{{ $key }}') !== '' || hint('{{ $key }}') !== ''" x-text="reason('{{ $key }}') || hint('{{ $key }}')"></p>

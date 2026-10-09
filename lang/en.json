@@ -1466,7 +1466,6 @@
     "Ohne Umhängen wird die Kategorie dort auf „– nicht zugewiesen –“ gesetzt.": "Without reassignment, the category there will be set to “– not assigned –”.",
     "Ohne Umhängen wird die Rollenzuweisung auf „– nicht zugewiesen –“ gesetzt.": "Without reassignment, the role assignment will be set to “– not assigned –”.",
     "Ohne Umhängen wird die Zuweisung auf „– nicht zugewiesen –“ gesetzt.": "Without reassignment, the assignment will be set to “– not assigned –”.",
-    "Ohne diesen Haken bleiben die Termine im Ziel unverändert; mit „Termine berechnen“ lassen sie sich dort aus den Dauern ab dem eigenen Projektstart bestimmen.": "Without this checkmark the dates in the target stay unchanged; with \"Calculate dates\" they can be determined there from the durations starting at its own project start.",
     "Online": "",
     "Online und Print": "",
     "Option entfernen": "Remove option",
@@ -2395,5 +2394,6 @@
     "– noch keine Einträge –": "– no entries yet –",
     "– ohne Rechte-Set –": "– without permission set –",
     "– zuerst Funktionsgruppe wählen –": "",
-    "„:name\" teilen mit:": "Share “:name\" with:"
+    "„:name\" teilen mit:": "Share “:name\" with:",
+    "Ohne diesen Haken bleiben Termine und Meilensteine im Ziel unverändert. Bei Projekten mit berechneten Terminen rechnet das Ziel die Termine aus seinem eigenen Projektstart und den Dauern selbst; übertragen werden nur die Meilenstein-Definitionen.": "Without this tick, dates and milestones in the target remain unchanged. For projects with calculated dates the target calculates the dates itself from its own project start and the durations; only the milestone definitions are transferred."
 }
