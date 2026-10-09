@@ -37,6 +37,8 @@
             },
         }"
         x-on:open-modal.window="if ($event.detail === 'help-panel') {
+            window.__helpHistory = [];
+            window.helpUpdateBack();
             $refs.searchInput.value = '';
             refresh();
             $nextTick(() => $refs.searchInput.focus());
@@ -59,7 +61,21 @@
                 </svg>
             </button>
         </div>
-        <div class="shrink-0 border-b border-gray-200 p-3">
+        <div class="flex shrink-0 items-center gap-2 border-b border-gray-200 p-3">
+            {{-- Zurück-Knopf (Ralf, 2026-10-09: "Lost in Hyperspace"): kehrt nach einem Link oder Klick in der Navigation zur vorherigen Ansicht zurück,
+                 samt Scrollstand und Suchtext. Sichtbar erst, wenn es eine vorherige Ansicht gibt. --}}
+            <button
+                type="button"
+                id="help-back"
+                hidden
+                onclick="window.helpBack()"
+                title="{{ __('Zurück zur vorherigen Hilfeseite') }}"
+                aria-label="{{ __('Zurück zur vorherigen Hilfeseite') }}"
+                class="inline-flex shrink-0 items-center gap-1 rounded-md border border-gray-300 bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
+            >
+                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+                {{ __('Zurück') }}
+            </button>
             <input
                 type="text"
                 x-ref="searchInput"
@@ -103,14 +119,40 @@
 </x-modal>
 
 <script>
+    window.__helpHistory = [];
+    window.helpUpdateBack = function () {
+        const button = document.getElementById('help-back');
+        if (button) button.hidden = window.__helpHistory.length === 0;
+    };
     window.helpOpenArticle = async function (key) {
         const html = await fetch({{ \Illuminate\Support\Js::from(url('/hilfe/artikel')) }} + '/' + encodeURIComponent(key)).then((r) => r.text());
         const fresh = new DOMParser().parseFromString(html, 'text/html').getElementById('help-results');
         const current = document.getElementById('help-results');
         if (fresh && current) {
+            // Bisherige Ansicht merken, solange es nicht dieselbe Seite ist
+            if (document.querySelector('#help-results [data-help-current-key]')?.dataset.helpCurrentKey !== key) {
+                window.__helpHistory.push({
+                    html: current.innerHTML,
+                    top: current.parentElement.scrollTop,
+                    query: document.querySelector('[x-ref=searchInput]')?.value ?? '',
+                });
+            }
             current.innerHTML = fresh.innerHTML;
+            current.parentElement.scrollTop = 0;
             window.helpMarkNav();
+            window.helpUpdateBack();
         }
+    };
+    window.helpBack = function () {
+        const previous = window.__helpHistory.pop();
+        const current = document.getElementById('help-results');
+        if (! previous || ! current) return;
+        current.innerHTML = previous.html;
+        current.parentElement.scrollTop = previous.top;
+        const search = document.querySelector('[x-ref=searchInput]');
+        if (search) search.value = previous.query;
+        window.helpMarkNav();
+        window.helpUpdateBack();
     };
     // Markiert in der Navigation links die gerade angezeigte Hilfeseite.
     window.helpMarkNav = function () {
