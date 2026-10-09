@@ -772,7 +772,6 @@ class WorkflowController extends Controller
                         'email_text' => $data['email_text'] ?? null,
                         'is_start' => $request->boolean("steps.$stepId.is_start"),
                         'is_end' => $request->boolean("steps.$stepId.is_end"),
-                        'is_market_launch' => $request->boolean("steps.$stepId.is_market_launch"),
                         'has_due_date' => $request->boolean("steps.$stepId.has_due_date"),
                         'send_email' => $request->boolean("steps.$stepId.send_email"),
                         'show_in_translation' => $request->boolean("steps.$stepId.show_in_translation"),
