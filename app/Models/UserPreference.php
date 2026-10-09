@@ -30,6 +30,8 @@ class UserPreference extends Model
 
     public const PROJECT_UTILIZATION = 'project_utilization';
 
+    public const PROJECT_ACTIVITIES = 'project_activities';
+
     protected function casts(): array
     {
         return ['config' => 'array'];

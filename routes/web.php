@@ -164,6 +164,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/projekte/{project}/planung/gruppen', [ProjectController::class, 'planningGroups'])->name('projekte.planung.gruppen');
     Route::get('/projekte/{project}/planung/zeitraum', [ProjectController::class, 'planningPeriod'])->name('projekte.planung.zeitraum');
     Route::get('/projekte/{project}/planung/auslastung', [ProjectController::class, 'planningUtilization'])->name('projekte.planung.auslastung');
+    // Vorgänge von Hand erfassen, ändern, löschen, hervorheben (Ralf, 2026-10-09)
+    Route::get('/projekte/{project}/vorgaenge', [\App\Http\Controllers\ProjectActivityController::class, 'index'])->name('projekte.vorgaenge');
+    Route::post('/projekte/{project}/vorgaenge', [\App\Http\Controllers\ProjectActivityController::class, 'store'])->name('projekte.vorgaenge.store');
+    Route::post('/projekte/{project}/vorgaenge/reihenfolge', [\App\Http\Controllers\ProjectActivityController::class, 'order'])->name('projekte.vorgaenge.order');
+    Route::put('/projekte/{project}/vorgaenge/{activity}', [\App\Http\Controllers\ProjectActivityController::class, 'update'])->name('projekte.vorgaenge.update');
+    Route::delete('/projekte/{project}/vorgaenge/{activity}', [\App\Http\Controllers\ProjectActivityController::class, 'destroy'])->name('projekte.vorgaenge.destroy');
+    Route::post('/projekte/{project}/vorgaenge/{activity}/hervorheben', [\App\Http\Controllers\ProjectActivityController::class, 'highlight'])->name('projekte.vorgaenge.highlight');
     Route::patch('/projekte/{project}', [ProjectController::class, 'update'])->name('projekte.update');
     Route::post('/projekte/{project}/planstunden/loesen', [ProjectController::class, 'breakPlannedHoursLink'])->name('projekte.planstunden.loesen');
     Route::post('/projekte/{project}/planstunden/verknuepfen', [ProjectController::class, 'relinkPlannedHours'])->name('projekte.planstunden.relink');

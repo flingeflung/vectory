@@ -12,6 +12,7 @@ enum ActivityCategory: string
     case Workflow = 'workflow';
     case Illustration = 'illustration';
     case General = 'general';
+    case Note = 'note';
 
     public function label(): string
     {
@@ -19,6 +20,7 @@ enum ActivityCategory: string
             self::Workflow => __('Workflow'),
             self::Illustration => __('Illustration'),
             self::General => __('Allgemein'),
+            self::Note => __('Notiz'),
         };
     }
 
@@ -34,6 +36,7 @@ enum ActivityCategory: string
             self::Workflow => 'bg-blue-500',
             self::Illustration => 'bg-purple-500',
             self::General => 'bg-gray-500',
+            self::Note => 'bg-amber-500',
         };
     }
 }

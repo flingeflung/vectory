@@ -43,6 +43,7 @@ return [
     'D-XNXQ' => 'Alle, die das Projekt öffnen können. Speichern nur mit den Rechten „Projekt-Stammdaten bearbeiten“ (project.edit) und, wenn sich Personen ändern, „Projektbeteiligte hinzufügen/entfernen“ (project.people.manage); Administratoren immer.',
 
     // Projektdetails (D-MFQU), Reiter Planung und Zeiten
+    'D-MFQU#vorgaenge' => 'Alle, die das Projekt sehen. Erfassen, hervorheben, ändern und löschen mit dem Recht „Projekt: Stammdaten bearbeiten“ (project.edit); Ändern und Löschen nur bei eigenen, von Hand erfassten Vorgängen, Administratoren bei allen von Hand erfassten.',
     'D-MFQU#planung.planstunden' => 'Alle, die das Projekt sehen. Ändern nur mit dem Planungsrecht (planning.view); Administratoren immer.',
     'D-MFQU#planung.auslastung' => 'Mit den Rechten „Projekte ansehen“ und „Planung: erweiterte Planung und personenbezogene Auswertungen“ (planning.view); Administratoren immer.',
     'D-MFQU#planung.terminuebersicht' => 'Alle, die das Projekt sehen.',

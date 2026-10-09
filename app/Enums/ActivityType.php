@@ -36,6 +36,8 @@ enum ActivityType: string
     case PlannedHoursChanged = 'planned_hours_changed';
     case PlanningTransferred = 'planning_transferred';
     case MailTimerSent = 'mail_timer_sent';
+    /** Von Hand erfasster Vorgang (Ralf, 2026-10-09) */
+    case Note = 'note';
 
     public function label(): string
     {
@@ -56,6 +58,7 @@ enum ActivityType: string
             self::PlannedHoursChanged => __('Planstunden geändert'),
             self::PlanningTransferred => __('Planung übernommen'),
             self::MailTimerSent => __('Erinnerung gesendet'),
+            self::Note => __('Notiz'),
         };
     }
 
@@ -64,6 +67,7 @@ enum ActivityType: string
         return match ($this) {
             self::WorkflowAssigned, self::WorkflowUnassigned, self::WorkflowStepActivated => ActivityCategory::Workflow,
             self::GraphicOrderStatusChanged => ActivityCategory::Illustration,
+            self::Note => ActivityCategory::Note,
             self::ProjectCreated, self::ProjectCopied, self::PublicationDateChanged, self::ProjectMultichanged,
             self::VerbundRoleChanged, self::VerbundDissolved, self::StammIdDetached, self::StatusChanged, self::AttributeChanged,
             self::PlannedHoursChanged, self::PlanningTransferred, self::MailTimerSent => ActivityCategory::General,

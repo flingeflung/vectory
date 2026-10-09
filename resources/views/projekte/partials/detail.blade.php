@@ -444,41 +444,9 @@
         </form>
         </div>
 
-        @php
-            $activityCategories = $project->activities->map(fn ($activity) => $activity->type->category())->unique('value')->sortBy('value')->values();
-        @endphp
-        <div
-            x-show="activeTab === 'vorgaenge'"
-            data-help-tab="vorgaenge"
-            x-cloak
-            x-data="{ activeCategories: {{ \Illuminate\Support\Js::from($activityCategories->pluck('value')->all()) }} }"
-            class="text-xs text-gray-600"
-        >
-            @if ($activityCategories->count() > 1)
-                <div class="mb-2 flex flex-wrap gap-x-5 gap-y-1">
-                    @foreach ($activityCategories as $category)
-                        <label class="flex items-center gap-1.5">
-                            <input type="checkbox" value="{{ $category->value }}" x-model="activeCategories" class="rounded border-gray-300">
-                            <span class="inline-block h-2 w-2 rounded-full {{ $category->dotClass() }}"></span>
-                            {{ $category->label() }}
-                        </label>
-                    @endforeach
-                </div>
-            @endif
-
-            <div class="space-y-1">
-                @forelse ($project->activities as $activity)
-                    <div x-show="activeCategories.includes('{{ $activity->type->category()->value }}')">
-                        <span class="inline-block h-2 w-2 rounded-full {{ $activity->type->category()->dotClass() }}" title="{{ $activity->type->category()->label() }}"></span>
-                        <span class="text-gray-400">{{ $activity->created_at->local()->format('d.m.Y H:i') }}</span>
-                        {{ $activity->message }}
-                        @if ($activity->user)
-                            <span class="text-gray-400">({{ $activity->user->name }})</span>
-                        @endif
-                    </div>
-                @empty
-                    <div class="text-gray-400">&ndash; {{ __('Keine Vorgänge') }} &ndash;</div>
-                @endforelse
+        <div x-show="activeTab === 'vorgaenge'" data-help-tab="vorgaenge" x-cloak>
+            <div id="project-activities-{{ $project->id }}">
+                @include('projekte.partials.activities', \App\Support\ProjectActivityBlock::data($project, auth()->user()))
             </div>
         </div>
 
