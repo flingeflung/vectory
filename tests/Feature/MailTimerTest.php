@@ -339,4 +339,63 @@ class MailTimerTest extends TestCase
         $rendered = app(MailTemplateRenderer::class)->render($this->template->fresh(), $project->fresh());
         $this->assertStringNotContainsString('Redaktion', $rendered['subject'].$rendered['body']);
     }
+
+    public function test_step_placeholders_exist_only_in_a_step_context(): void
+    {
+        $project = $this->project();
+        $project->refresh();
+        ProjectWorkflowStep::query()->withoutGlobalScopes()->where('project_id', $project->id)->where('workflow_step_id', $this->steps['b']->id)->update(['started_at' => '2027-03-02 08:00:00']);
+        $template = MailTemplate::query()->create(['tenant_id' => $this->tenant->id, 'name' => 'Schritt', 'subject' => 'Schritt {wfs}', 'body' => 'seit {wfs_seit}, Ende {wfs_ende}']);
+        $renderer = app(MailTemplateRenderer::class);
+
+        $rendered = $renderer->render($template, $project->fresh(), $this->steps['b']->id);
+        $this->assertSame('Schritt B', $rendered['subject']);
+        $this->assertSame('seit 02.03.2027, Ende 05.03.2027', $rendered['body']);
+
+        // ohne Schritt-Zusammenhang sind die Felder nicht verfügbar; bekannte Projektfelder dagegen schon
+        $this->assertSame(['{wfs}', '{wfs_seit}', '{wfs_ende}'], $renderer->unavailable($template, $this->tenant->id, false));
+        $this->assertSame([], $renderer->unavailable($template, $this->tenant->id, true));
+        $this->assertSame([], $renderer->unavailable($this->template, $this->tenant->id, false));
+    }
+
+    public function test_unknown_fields_block_saving_a_timer_and_sending_the_mail(): void
+    {
+        $project = $this->project();
+        $this->staff($project);
+        $admin = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'organization_admin']);
+        $broken = MailTemplate::query()->create(['tenant_id' => $this->tenant->id, 'name' => 'Kaputt', 'subject' => 'Hallo {pn}', 'body' => 'Text mit {tippfehler}']);
+
+        // Anlegen im Projekt wird abgelehnt
+        $this->actingAs($admin)->postJson(route('projekte.mailtimer.store', $project), [
+            'workflow_step_id' => $this->steps['b']->id, 'mail_template_id' => $broken->id, 'reference' => 'fixed', 'fixed_date' => '2027-05-01', 'function_group_ids' => [$this->group->id],
+        ])->assertStatus(422)->assertJsonFragment(['message' => 'Diese Vorlage enthält Felder, die hier nicht zur Verfügung stehen: {tippfehler}.']);
+
+        // Nachträglich kaputt gemachte Vorlage: nicht senden, Fehler zeigen, Erinnerung bleibt offen
+        $timer = $this->timer($project);
+        $this->setCurrent($project, $this->steps['b']);
+        $service = app(MailTimerService::class);
+        $service->refreshSendDates($project);
+        $this->template->update(['body' => 'Text mit {tippfehler}']);
+
+        $result = $service->sendDue(CarbonImmutable::parse('2027-03-03'));
+
+        $this->assertSame(1, $result['failed']);
+        $this->assertTrue($timer->fresh()->isPending());
+        $this->assertStringContainsString('{tippfehler}', (string) $timer->fresh()->last_error);
+        $this->assertNull($timer->fresh()->sent_at);
+
+        // Vorlage repariert -> beim nächsten Lauf geht die Mail raus
+        $this->template->update(['body' => 'Text {wfs}']);
+        $this->assertSame(1, $service->sendDue(CarbonImmutable::parse('2027-03-04'))['sent']);
+    }
+
+    public function test_template_page_offers_step_fields_and_warns_about_unknown_ones(): void
+    {
+        $admin = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'organization_admin']);
+        $this->actingAs($admin);
+        $this->template->update(['body' => 'Hallo {pn} {tippfehler}']);
+
+        $this->get(route('admin.mail-vorlagen', ['template' => $this->template->id]))->assertOk()
+            ->assertSee('Nur bei Mails zu einem Workflow-Schritt')->assertSee('Schritt aktiv seit')->assertSee('Unbekannte Felder in dieser Vorlage: {tippfehler}');
+    }
 }

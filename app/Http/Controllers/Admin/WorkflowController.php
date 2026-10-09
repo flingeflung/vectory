@@ -258,7 +258,10 @@ class WorkflowController extends Controller
         ], ['function_group_ids.required' => __('Bitte wählen Sie mindestens eine Funktionsgruppe als Empfänger.'), 'function_group_ids.min' => __('Bitte wählen Sie mindestens eine Funktionsgruppe als Empfänger.')]);
 
         abort_unless(WorkflowStep::query()->where('workflow_id', $workflow->id)->whereKey($validated['workflow_step_id'])->exists(), 422, __('Bitte wählen Sie einen Schritt dieses Workflows.'));
-        abort_unless(\App\Models\MailTemplate::query()->where('tenant_id', $workflow->tenant_id)->whereKey($validated['mail_template_id'])->exists(), 422, __('Bitte wählen Sie eine Mail-Vorlage.'));
+        $template = \App\Models\MailTemplate::query()->where('tenant_id', $workflow->tenant_id)->find($validated['mail_template_id']);
+        abort_unless($template, 422, __('Bitte wählen Sie eine Mail-Vorlage.'));
+        $missing = app(\App\Services\MailTemplateRenderer::class)->unavailable($template, (int) $workflow->tenant_id, true);
+        abort_if($missing !== [], 422, __('Diese Vorlage enthält Felder, die hier nicht zur Verfügung stehen: :fields.', ['fields' => implode(', ', $missing)]));
 
         [$type, $referenceId] = explode(':', $validated['reference'], 2);
         if ($type === 'milestone') {

@@ -22,7 +22,7 @@ class MailTemplateController extends Controller
      * Feste Basisfelder, die immer als Platzhalter zur Verfügung stehen -
      * unabhängig von der (noch dünnen) Attribut-Konfiguration je Mandant.
      */
-    private const BASE_PLACEHOLDERS = [
+    public const BASE_PLACEHOLDERS = [
         'pn' => 'PN',
         'title' => 'Bezeichnung',
         'start_date' => 'Start',
@@ -34,6 +34,12 @@ class MailTemplateController extends Controller
         // kein einzelner Eintrag.
         'change_log' => 'Änderungsprotokoll',
     ];
+
+    /** @return array<string, string> */
+    public static function basePlaceholders(): array
+    {
+        return self::BASE_PLACEHOLDERS;
+    }
 
     public function index(Request $request): View
     {
@@ -60,6 +66,8 @@ class MailTemplateController extends Controller
             'templates' => $templates,
             'selectedTemplate' => $selectedTemplate,
             'placeholders' => $placeholders,
+            'stepPlaceholders' => collect(\App\Services\MailTemplateRenderer::STEP_PLACEHOLDERS)->map(fn ($label, $key) => ['key' => $key, 'label' => __($label)])->values(),
+            'unknownPlaceholders' => $selectedTemplate ? app(\App\Services\MailTemplateRenderer::class)->unavailable($selectedTemplate, $tenantId, true) : [],
         ]);
     }
 

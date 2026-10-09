@@ -73,8 +73,10 @@ class ProjectMailTimerController extends Controller
 
         $stepOk = WorkflowStep::query()->withoutGlobalScopes()->where('workflow_id', $project->workflow_id)->whereKey($validated['workflow_step_id'])->exists();
         abort_unless($stepOk, 422, __('Bitte wählen Sie einen Schritt dieses Workflows.'));
-        $templateOk = MailTemplate::query()->withoutGlobalScopes()->where('tenant_id', $project->tenant_id)->whereKey($validated['mail_template_id'])->exists();
-        abort_unless($templateOk, 422, __('Bitte wählen Sie eine Mail-Vorlage.'));
+        $template = MailTemplate::query()->withoutGlobalScopes()->where('tenant_id', $project->tenant_id)->find($validated['mail_template_id']);
+        abort_unless($template, 422, __('Bitte wählen Sie eine Mail-Vorlage.'));
+        $missing = app(\App\Services\MailTemplateRenderer::class)->unavailable($template, (int) $project->tenant_id, true);
+        abort_if($missing !== [], 422, __('Diese Vorlage enthält Felder, die hier nicht zur Verfügung stehen: :fields.', ['fields' => implode(', ', $missing)]));
 
         [$type, $referenceId] = array_pad(explode(':', $validated['reference'], 2), 2, null);
         $attributes = ['reference_type' => $type, 'reference_milestone_id' => null, 'reference_step_id' => null, 'fixed_date' => null, 'offset_days' => (int) ($validated['offset_days'] ?? 0)];

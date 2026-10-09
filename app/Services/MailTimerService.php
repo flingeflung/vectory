@@ -197,7 +197,13 @@ class MailTimerService
             return __('Keine Empfänger: In den gewählten Funktionsgruppen ist niemand mit E-Mail-Adresse eingetragen.');
         }
 
-        $rendered = app(MailTemplateRenderer::class)->render($template, $project);
+        // Fehlt der Vorlage inzwischen etwas (nachträglich geändert), geht lieber keine Mail raus als eine kaputte
+        $missing = app(MailTemplateRenderer::class)->unavailable($template, (int) $project->tenant_id, true);
+        if ($missing !== []) {
+            return __('Die Mail-Vorlage enthält Felder, die nicht zur Verfügung stehen: :fields. Die Mail wurde nicht gesendet.', ['fields' => implode(', ', $missing)]);
+        }
+
+        $rendered = app(MailTemplateRenderer::class)->render($template, $project, $timer->workflow_step_id ? (int) $timer->workflow_step_id : null);
         try {
             Mail::raw($rendered['body'], fn ($message) => $message->to($recipients)->subject($rendered['subject']));
         } catch (\Throwable $e) {

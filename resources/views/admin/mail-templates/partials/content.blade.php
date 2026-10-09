@@ -92,6 +92,18 @@
                                 @endforeach
                             </div>
                         @endif
+                        <div class="mt-1 flex flex-wrap items-center gap-1">
+                            <span class="text-xs text-gray-400" title="{{ __('Diese Felder gibt es nur, wenn die Mail zu einem Workflow-Schritt gehört (z. B. bei einer Erinnerung). In anderen Zusammenhängen ist die Vorlage mit diesen Feldern nicht verwendbar.') }}">{{ __('Nur bei Mails zu einem Workflow-Schritt:') }}</span>
+                            @foreach ($stepPlaceholders as $placeholder)
+                                <button
+                                    type="button"
+                                    @click="window.insertMailPlaceholder($refs.subject, {{ \Illuminate\Support\Js::from('{'.$placeholder['key'].'}') }})"
+                                    class="rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-xs text-gray-700 hover:bg-amber-100"
+                                >
+                                    {{ $placeholder['label'] }}
+                                </button>
+                            @endforeach
+                        </div>
                     </div>
                     <div>
                         <label class="block text-xs text-gray-500">{{ __('Text') }}</label>
@@ -110,7 +122,22 @@
                                 @endforeach
                             </div>
                         @endif
+                        <div class="mt-1 flex flex-wrap items-center gap-1">
+                            <span class="text-xs text-gray-400" title="{{ __('Diese Felder gibt es nur, wenn die Mail zu einem Workflow-Schritt gehört (z. B. bei einer Erinnerung). In anderen Zusammenhängen ist die Vorlage mit diesen Feldern nicht verwendbar.') }}">{{ __('Nur bei Mails zu einem Workflow-Schritt:') }}</span>
+                            @foreach ($stepPlaceholders as $placeholder)
+                                <button
+                                    type="button"
+                                    @click="window.insertMailPlaceholder($refs.body, {{ \Illuminate\Support\Js::from('{'.$placeholder['key'].'}') }})"
+                                    class="rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-xs text-gray-700 hover:bg-amber-100"
+                                >
+                                    {{ $placeholder['label'] }}
+                                </button>
+                            @endforeach
+                        </div>
                     </div>
+                    @if (! empty($unknownPlaceholders))
+                        <p class="rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-800">{{ __('Unbekannte Felder in dieser Vorlage: :fields. Sie werden nicht ersetzt, Mails mit dieser Vorlage werden nicht gesendet. Bitte Schreibweise prüfen.', ['fields' => implode(', ', $unknownPlaceholders)]) }}</p>
+                    @endif
                 </div>
                 </form>
 
