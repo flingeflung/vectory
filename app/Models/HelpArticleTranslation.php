@@ -95,6 +95,10 @@ class HelpArticleTranslation extends Model
             return '@@CODE'.(count($codeBlocks) - 1).'@@';
         }, $html);
 
+        // "z. B." darf nicht zwischen "z." und "B." umbrechen (Ralf, 2026-10-09): beim Ausliefern ein geschütztes Leerzeichen einsetzen
+        // (gespeicherter Text bleibt unverändert; Code-Beispiele sind oben bereits herausgenommen).
+        $html = (string) preg_replace('/\b([zZ])\.[ \x{00A0}]B\./u', "$1.\u{00A0}B.", $html);
+
         $html = (string) preg_replace(
             self::BUTTON_QUOTE_PATTERN,
             '<span class="'.self::BUTTON_QUOTE_CLASSES.'">$1</span>',
