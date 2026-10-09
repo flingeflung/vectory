@@ -17,7 +17,7 @@ function ensureBubble() {
     bubble = document.createElement('div');
     bubble.setAttribute('role', 'tooltip');
     bubble.style.cssText = 'position:fixed;z-index:2147483000;pointer-events:none;display:none;max-width:22rem;padding:4px 8px;border-radius:6px;'
-        + 'background:#1f2937;color:#fff;font-size:12px;line-height:1.35;white-space:pre-line;box-shadow:0 2px 8px rgba(0,0,0,.25);';
+        + 'background:#fff;color:#1f2937;border:1px solid #d1d5db;font-size:12px;line-height:1.35;white-space:pre-line;box-shadow:0 2px 6px rgba(0,0,0,.12);';
     document.body.appendChild(bubble);
 
     return bubble;
