@@ -41,7 +41,7 @@
     @elseif ($view === 'soll-ist')
         @include('planning.partials.stunden-sollist')
     @else
-    <div id="planning-stunden-content" class="min-h-0 flex-1 overflow-auto rounded-lg border border-gray-200 bg-white">
+    <div id="planning-stunden-content" class="min-h-0 flex-1 overflow-auto rounded-lg border border-gray-200 bg-white" x-data="columnResize('stunden', {{ \Illuminate\Support\Js::from($columnWidths) }}, {{ \Illuminate\Support\Js::from(route('tabellenbreiten.update', 'stunden')) }})">
         <table class="min-w-full text-sm">
             <thead class="sticky top-0 bg-gray-50 text-xs text-gray-500">
                 <tr class="border-b border-gray-200">

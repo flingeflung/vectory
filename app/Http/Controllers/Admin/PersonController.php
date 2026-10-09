@@ -139,6 +139,7 @@ class PersonController extends Controller
 
         return view('admin.personen.index', [
             'people' => $people,
+            'columnWidths' => \App\Models\UserTablePreference::widthsFor((int) $request->user()->id, 'personen'),
             'companies' => Company::query()->withoutGlobalScope('tenant')->whereIn('tenant_id', $catalogTenantIds)->orderBy('name')->get(),
             'departments' => Department::query()->withoutGlobalScope('tenant')->whereIn('tenant_id', $catalogTenantIds)->where('active', true)->orderBy('name')->get(),
             'businessUnits' => BusinessUnit::query()->withoutGlobalScope('tenant')->whereIn('tenant_id', $catalogTenantIds)->where('active', true)->orderBy('name')->get(),

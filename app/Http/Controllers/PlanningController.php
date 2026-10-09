@@ -627,7 +627,7 @@ class PlanningController extends Controller
         $targetActual = $view === 'soll-ist' && ! $cutoffPast ? app(\App\Services\PlanningTargetActual::class)->forYear($people, $yearStart, $yearEnd, $tenantId, $cutoff) : null;
         $chart = $this->hoursChartScale((float) ($rows->max('jahresstd') ?? 0));
 
-        return view('planning.stunden', compact('years', 'year', 'totalWorkdays', 'rows', 'total', 'baseLoadTotal', 'projectHoursTotal', 'sort', 'direction', 'view', 'chart', 'targetActual', 'cutoff', 'cutoffPast'));
+        return view('planning.stunden', compact('years', 'year', 'totalWorkdays', 'rows', 'total', 'baseLoadTotal', 'projectHoursTotal', 'sort', 'direction', 'view', 'chart', 'targetActual', 'cutoff', 'cutoffPast') + ['columnWidths' => \App\Models\UserTablePreference::widthsFor((int) $request->user()->id, 'stunden')]);
     }
 
     /**

@@ -186,6 +186,8 @@
                 @endif
                 {{ trans_choice(':count Person gefunden|:count Personen gefunden', $people->count(), ['count' => $people->count()]) }}
             </div>
+            {{-- Persönliche Spaltenbreiten (Ralf, 2026-10-09), siehe resources/js/column-resize.js --}}
+            <div x-data="columnResize('personen', {{ \Illuminate\Support\Js::from($columnWidths) }}, {{ \Illuminate\Support\Js::from(route('tabellenbreiten.update', 'personen')) }})">
             <table class="min-w-full divide-y divide-gray-100 text-sm">
                 <thead class="sticky top-0 bg-white text-xs text-gray-500">
                     <tr
@@ -217,7 +219,7 @@
                         x-sort="saveColumnOrder()"
                     >
                         @foreach ($personColumns as $column)
-                            <th x-sort:item="{{ $column['key'] }}" class="whitespace-nowrap px-3 py-2 text-left font-medium">
+                            <th x-sort:item="{{ $column['key'] }}" data-col="{{ $column['key'] }}" class="whitespace-nowrap px-3 py-2 text-left font-medium">
                                 <span class="inline-flex items-center gap-1.5">
                                     <span x-sort:handle class="cursor-move text-gray-300 hover:text-gray-500" title="{{ __('Verschieben') }}">⠿</span>
                                     {{ $column['label'] }}
@@ -287,6 +289,7 @@
                     @endforelse
                 </tbody>
             </table>
+            </div>
         </div>
     </div>
 

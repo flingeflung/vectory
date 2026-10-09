@@ -17,7 +17,7 @@ class UserTablePreference extends Model
      * Tabellenansicht anschließen = hier ergänzen + x-data="columnResize(...)"
      * (siehe resources/js/column-resize.js).
      */
-    public const TABLE_KEYS = ['projekte'];
+    public const TABLE_KEYS = ['projekte', 'personen', 'stunden'];
 
     protected function casts(): array
     {
