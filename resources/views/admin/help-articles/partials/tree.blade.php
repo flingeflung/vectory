@@ -48,14 +48,15 @@
                         @if ($selected?->id === $node->id) data-selected @endif
                         class="flex min-w-0 flex-1 flex-col py-1 pr-2 {{ $selected?->id === $node->id ? 'font-medium text-indigo-700' : 'text-gray-700' }}"
                     >
-                        <span class="truncate">
-                            {{ $nodeTitle }}
+                        {{-- Symbole stehen vor dem Titel (Ralf, 2026-10-09), damit sie bei langen Titeln nicht abgeschnitten werden --}}
+                        <span class="flex min-w-0 items-center gap-1">
                             @if ($node->visible_role)
-                                <span title="{{ __('Sichtbar für: :level', ['level' => \App\Models\HelpArticle::VISIBILITY_LEVELS[$node->visible_role]]) }}"><x-icons.admin-shield /></span>
+                                <span class="shrink-0" title="{{ __('Sichtbar für: :level', ['level' => \App\Models\HelpArticle::VISIBILITY_LEVELS[$node->visible_role]]) }}"><x-icons.admin-shield /></span>
                             @endif
                             @if ($node->approved)
-                                <span class="text-gray-400" title="{{ __('Freigegeben') }}">🔒</span>
+                                <span class="shrink-0 text-gray-400" title="{{ __('Freigegeben') }}">🔒</span>
                             @endif
+                            <span class="truncate" title="{{ $nodeTitle }}">{{ $nodeTitle }}</span>
                         </span>
                         @if ($node->orphanedTabKeys())
                             <span class="text-xs font-normal text-red-600" title="{{ __('Dieser Reiter oder Dialog existiert nicht mehr. Die Hilfeseite wird deshalb nicht angezeigt. Bitte den Schlüssel bei „Seiten (Routennamen)“ anpassen.') }}">⚠ {{ __('Schlüssel passt zu keinem Reiter:') }} {{ implode(', ', $node->orphanedTabKeys()) }}</span>

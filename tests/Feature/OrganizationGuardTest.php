@@ -49,6 +49,8 @@ class OrganizationGuardTest extends TestCase
         // Schreibt berechnete Termine nur für die übergebene Projekt-ID (Update über Projekt-/Schritt-ID, keine Auswertung)
         'app/Services/ProjectScheduler.php::projects' => 1,
         'app/Services/ProjectScheduler.php::project_workflow_steps' => 1,
+        // Liefert nur die IDs der Schritte anderer Workflows, um EIN Projekt (übergebene ID) nach einem Workflow-Wechsel aufzuräumen; gelöscht wird nur über project_id
+        'app/Models/ProjectWorkflowStep.php::workflow_steps' => 1,
         // Setzt das Anmelde-Merkmal genau eines Benutzers (übergebene ID) neu
         'app/Support/SessionRevoker.php::users' => 1,
         'app/Http/Controllers/Admin/AttributeController.php::projects' => 5,
