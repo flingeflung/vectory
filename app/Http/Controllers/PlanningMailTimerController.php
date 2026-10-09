@@ -4,16 +4,21 @@ namespace App\Http\Controllers;
 
 use App\Models\MailTimer;
 use App\Models\ProjectMilestone;
+use App\Models\SystemSetting;
+use App\Models\Tenant;
+use App\Models\UserPreference;
 use App\Models\WorkflowStep;
 use App\Services\MailTimerService;
+use App\Support\CurrentTenant;
 use App\Support\PlanningAccess;
 use App\Support\PlanningNav;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
- * Planung › Erinnerungen (Ralf, 2026-10-09): alle Erinnerungsmails (Mail-Timer) der Organisation auf einen Blick, mit Projekt, Sendedatum,
- * Vorlage, Bezug, Empfängern und Status. Standardmäßig nur offene (geplante oder fehlgeschlagene); auf Wunsch auch gesendete und übersprungene.
+ * Planung › Erinnerungen (Ralf, 2026-10-09): alle Erinnerungsmails (Mail-Timer) auf einen Blick, mit Projekt, Sendedatum, Vorlage, Bezug,
+ * Empfängern und Status. Standardmäßig nur offene (geplante oder fehlgeschlagene); auf Wunsch auch gesendete und übersprungene.
+ * Wer mehrere Organisationen erreicht (z. B. die Ressourcenleitung eines Dienstleisters), wählt alle auf einmal oder eine einzelne.
  * Nur lesend; angelegt und gelöscht werden Erinnerungen im Projekt.
  */
 class PlanningMailTimerController extends Controller
@@ -25,7 +30,20 @@ class PlanningMailTimerController extends Controller
 
         $showDone = $request->boolean('erledigte');
 
-        $timers = MailTimer::query()
+        // Die Wahl wird je Person gemerkt; ohne Wahl gilt "alle". Wer nur eine Organisation erreicht, sieht kein Auswahlfeld.
+        $organizations = SystemSetting::multiTenantEnabled() ? CurrentTenant::availableTenants() : collect();
+        if ($organizations->isEmpty()) {
+            $organizations = Tenant::query()->whereKey(CurrentTenant::id())->get();
+        }
+        $saved = (string) (UserPreference::configFor((int) $request->user()->id, UserPreference::PLANNING_REMINDERS)['organization'] ?? 'all');
+        $choice = (string) $request->query('organisation', $saved);
+        $selectedId = ctype_digit($choice) && $organizations->contains('id', (int) $choice) ? (int) $choice : null;
+        if ($request->has('organisation') && ($selectedId ?? 'all') != $saved) {
+            UserPreference::persist((int) $request->user()->id, UserPreference::PLANNING_REMINDERS, ['organization' => $selectedId ?? 'all']);
+        }
+        $organizationIds = $selectedId !== null ? [$selectedId] : $organizations->pluck('id')->all();
+
+        $timers = MailTimer::query()->withoutGlobalScope('tenant')->whereIn('tenant_id', $organizationIds)
             ->when(! $showDone, fn ($query) => $query->whereNull('sent_at')->whereNull('skipped_at'))
             ->with(['project', 'mailTemplate', 'step'])
             ->get()
@@ -48,6 +66,10 @@ class PlanningMailTimerController extends Controller
                 'recipients' => count($service->recipients($timer)),
             ]),
             'showDone' => $showDone,
+            'organizations' => $organizations,
+            'selectedOrganizationId' => $selectedId,
+            'currentTenantId' => CurrentTenant::id(),
+            'showOrganizationColumn' => $selectedId === null && $organizations->count() > 1,
         ]);
     }
 }

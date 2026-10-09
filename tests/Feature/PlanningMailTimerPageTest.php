@@ -107,6 +107,41 @@ class PlanningMailTimerPageTest extends TestCase
         $this->actingAs($this->userWith(['planning.view']))->get(route('planung.erinnerungen'))->assertOk()->assertSee('Erinnerungen');
     }
 
+    public function test_with_several_organizations_the_list_can_be_filtered_by_organization_and_the_choice_is_remembered(): void
+    {
+        \App\Models\SystemSetting::set(\App\Models\SystemSetting::MULTI_TENANT_ENABLED, '1');
+        $other = Tenant::query()->create(['name' => 'Zweite Orga GmbH', 'short_name' => 'ZWO']);
+        $otherGroup = FunctionGroup::query()->withoutGlobalScope('tenant')->create(['tenant_id' => $other->id, 'name' => 'Zweite Redaktion', 'short_name' => 'ZR', 'sort' => 1, 'active' => true]);
+        $otherTemplate = MailTemplate::query()->create(['tenant_id' => $other->id, 'name' => 'Vorlage der zweiten Orga', 'subject' => 'x', 'body' => 'y']);
+
+        $own = $this->project('260941');
+        $this->timer($own);
+        $foreign = Project::query()->create(['tenant_id' => $other->id, 'source_pn' => '260942', 'title' => 'Fremdprojekt', 'status' => 1, 'schedule_model' => 2]);
+        MailTimer::query()->create([
+            'tenant_id' => $other->id, 'project_id' => $foreign->id, 'mail_template_id' => $otherTemplate->id, 'reference_type' => 'fixed',
+            'fixed_date' => '2026-11-20', 'send_date' => '2026-11-20', 'offset_days' => 0, 'only_if_in_step' => false, 'function_group_ids' => [$otherGroup->id],
+        ]);
+
+        $admin = User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'central_admin']);
+
+        // Ohne Wahl: alle Organisationen, mit Organisationsspalte und Auswahlfeld
+        $this->actingAs($admin)->get(route('planung.erinnerungen'))->assertOk()
+            ->assertSee('Alle Organisationen')->assertSee('260941')->assertSee('260942')->assertSee('Vorlage der zweiten Orga')->assertSee('ZWO');
+
+        // Nur die zweite Organisation
+        $this->actingAs($admin)->get(route('planung.erinnerungen', ['organisation' => $other->id]))->assertOk()
+            ->assertDontSee('260941')->assertSee('260942')->assertSee('Fremdprojekt');
+        // Die Wahl bleibt beim nächsten Besuch erhalten
+        $this->actingAs($admin)->get(route('planung.erinnerungen'))->assertOk()->assertDontSee('260941')->assertSee('260942');
+
+        // Zurück auf alle
+        $this->actingAs($admin)->get(route('planung.erinnerungen', ['organisation' => 'all']))->assertOk()->assertSee('260941')->assertSee('260942');
+
+        // Wer nur eine Organisation erreicht, sieht kein Auswahlfeld und nur eigene Erinnerungen
+        $single = $this->userWith(['planning.view', 'project.view']);
+        $this->actingAs($single)->get(route('planung.erinnerungen'))->assertOk()->assertDontSee('Alle Organisationen')->assertDontSee('260942');
+    }
+
     public function test_an_error_and_an_overdue_send_date_are_marked(): void
     {
         $this->timer($this->project('260931'), ['send_date' => '2020-01-01', 'last_error' => 'SMTP nicht erreichbar']);

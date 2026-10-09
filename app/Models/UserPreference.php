@@ -32,6 +32,8 @@ class UserPreference extends Model
 
     public const PROJECT_ACTIVITIES = 'project_activities';
 
+    public const PLANNING_REMINDERS = 'planning_reminders';
+
     protected function casts(): array
     {
         return ['config' => 'array'];

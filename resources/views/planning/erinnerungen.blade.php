@@ -3,6 +3,16 @@
 --}}
 <x-planning-layout>
     <form method="GET" action="{{ route('planung.erinnerungen') }}" class="mb-3 flex shrink-0 flex-wrap items-center gap-4 text-sm">
+        @if ($organizations->count() > 1)
+            <label class="flex items-center gap-2 text-gray-700">{{ __('Organisation') }}
+                <select name="organisation" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 text-sm" title="{{ __('Zeigt die Erinnerungen aller Organisationen, auf die Sie zugreifen dürfen, oder die einer einzelnen. Die Auswahl wird für Sie gemerkt.') }}">
+                    <option value="all" @selected($selectedOrganizationId === null)>{{ __('Alle Organisationen') }}</option>
+                    @foreach ($organizations as $organization)
+                        <option value="{{ $organization->id }}" @selected($selectedOrganizationId === $organization->id)>{{ $organization->name }}</option>
+                    @endforeach
+                </select>
+            </label>
+        @endif
         <label class="flex items-center gap-2 text-gray-700">
             <input type="checkbox" name="erledigte" value="1" @checked($showDone) onchange="this.form.submit()" class="rounded border-gray-300">
             {{ __('Auch gesendete und übersprungene zeigen') }}
@@ -15,6 +25,7 @@
             <thead class="sticky top-0 bg-gray-50 text-xs text-gray-500">
                 <tr class="border-b border-gray-200 text-left">
                     <th class="whitespace-nowrap px-3 py-2 font-medium" title="{{ __('Der Tag, an dem die Mail versendet wird (täglich um 06:30 Uhr).') }}">{{ __('Sendedatum') }}</th>
+                    @if ($showOrganizationColumn)<th class="whitespace-nowrap px-3 py-2 font-medium">{{ __('Organisation') }}</th>@endif
                     <th class="whitespace-nowrap px-3 py-2 font-medium">{{ __('PN') }}</th>
                     <th class="px-3 py-2 font-medium">{{ __('Projekt') }}</th>
                     <th class="px-3 py-2 font-medium">{{ __('Schritt') }}</th>
@@ -33,7 +44,16 @@
                     @endphp
                     <tr class="align-top hover:bg-gray-50">
                         <td class="whitespace-nowrap px-3 py-2 font-medium {{ $overdue ? 'text-red-700' : 'text-gray-800' }}" @if ($overdue) title="{{ __('Das Sendedatum liegt in der Vergangenheit, die Mail wurde noch nicht versendet.') }}" @endif>{{ $timer->send_date ? $timer->send_date->format('d.m.Y') : __('wartet auf Termin') }}</td>
-                        <td class="whitespace-nowrap px-3 py-2"><x-pn-link :project="$project" /></td>
+                        @if ($showOrganizationColumn)
+                            <td class="whitespace-nowrap px-3 py-2 text-gray-600">{{ $organizations->firstWhere('id', $timer->tenant_id)?->short_name ?? $organizations->firstWhere('id', $timer->tenant_id)?->name ?? '–' }}</td>
+                        @endif
+                        <td class="whitespace-nowrap px-3 py-2">
+                            @if ($project->tenant_id === $currentTenantId)
+                                <x-pn-link :project="$project" />
+                            @else
+                                <span class="text-gray-700" title="{{ __('Das Projekt gehört zu einer anderen Organisation. Wechseln Sie die Organisation in der Kopfzeile, um es zu öffnen.') }}">{{ $project->source_pn }}</span>
+                            @endif
+                        </td>
                         <td class="px-3 py-2 text-gray-700">{{ $project->title }}</td>
                         <td class="px-3 py-2 text-gray-600">
                             {{ $timer->step?->title ?? '–' }}
@@ -57,7 +77,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="8" class="px-4 py-8 text-center text-gray-400">{{ $showDone ? __('Es gibt noch keine Erinnerungen.') : __('Es sind keine Erinnerungen offen. Angelegt werden sie im Projekt über das Uhr-Symbol im Workflow-Schritt.') }}</td></tr>
+                    <tr><td colspan="{{ $showOrganizationColumn ? 9 : 8 }}" class="px-4 py-8 text-center text-gray-400">{{ $showDone ? __('Es gibt noch keine Erinnerungen.') : __('Es sind keine Erinnerungen offen. Angelegt werden sie im Projekt über das Uhr-Symbol im Workflow-Schritt.') }}</td></tr>
                 @endforelse
             </tbody>
         </table>
