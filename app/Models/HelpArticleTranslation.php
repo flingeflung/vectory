@@ -95,9 +95,9 @@ class HelpArticleTranslation extends Model
             return '@@CODE'.(count($codeBlocks) - 1).'@@';
         }, $html);
 
-        // "z. B." darf nicht zwischen "z." und "B." umbrechen (Ralf, 2026-10-09): beim Ausliefern ein geschütztes Leerzeichen einsetzen
-        // (gespeicherter Text bleibt unverändert; Code-Beispiele sind oben bereits herausgenommen).
-        $html = (string) preg_replace('/\b([zZ])\.[ \x{00A0}]B\./u', "$1.\u{00A0}B.", $html);
+        // Kürzel wie "z. B." und Zahl-Einheit-Paare wie "10 Std." dürfen nicht mitten im Ausdruck umbrechen (Ralf, 2026-10-09):
+        // beim Ausliefern geschützte Leerzeichen einsetzen. Der gespeicherte Text bleibt unverändert, Code-Beispiele sind oben bereits herausgenommen.
+        $html = self::protectSpaces($html);
 
         $html = (string) preg_replace(
             self::BUTTON_QUOTE_PATTERN,
@@ -161,6 +161,32 @@ class HelpArticleTranslation extends Model
         }, $html);
 
         return (string) preg_replace_callback('/@@CODE(\d+)@@/', fn (array $match): string => $codeBlocks[(int) $match[1]], $html);
+    }
+
+    /** Kürzel, deren Leerzeichen zu geschützten Leerzeichen werden. */
+    private const PROTECTED_ABBREVIATIONS = ['z. B.', 'd. h.', 'u. a.', 'u. U.', 'u. Ä.', 'u. v. m.', 'i. d. R.', 'i. A.', 'i. V.', 's. o.', 's. u.', 'o. ä.', 'v. a.', 'z. T.', 'z. Z.'];
+
+    /** Einheiten, die nach einer Zahl an dieser hängen bleiben. */
+    private const PROTECTED_UNITS = 'Std\.|h|min|Min\.|Uhr|Tage?n?|Wochen?|Monate?n?|Jahre?n?|%|€|EUR|mm|cm|kg|MB|GB|px';
+
+    /** Setzt in Kürzeln und zwischen Zahl und Einheit geschützte Leerzeichen, nur in Textteilen (nie in HTML-Tags). */
+    private static function protectSpaces(string $html): string
+    {
+        $nbsp = "\u{00A0}";
+        $abbreviations = implode('|', array_map(fn (string $abbr) => str_replace(' ', '[ \x{00A0}]', preg_quote($abbr, '/')), self::PROTECTED_ABBREVIATIONS));
+
+        $parts = preg_split('/(<[^>]*>)/', $html, -1, PREG_SPLIT_DELIM_CAPTURE) ?: [$html];
+        foreach ($parts as $index => $part) {
+            if ($part === '' || $part[0] === '<') {
+                continue;
+            }
+            $part = (string) preg_replace_callback('/(?<![\p{L}])(?:'.$abbreviations.')/iu', fn (array $match): string => (string) preg_replace('/[ \x{00A0}]/u', $nbsp, $match[0]), $part);
+            $part = (string) preg_replace('/(\d)[ ](?=(?:'.self::PROTECTED_UNITS.')(?![\p{L}]))/u', '$1'.$nbsp, $part);
+            $part = (string) preg_replace('/\b(Nr\.|Abs\.|Kap\.|Abb\.)[ ](?=\d)/u', '$1'.$nbsp, $part);
+            $parts[$index] = $part;
+        }
+
+        return implode('', $parts);
     }
 
     private function imageBaseUrl(): string
