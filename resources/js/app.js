@@ -3,6 +3,7 @@ import Alpine from 'alpinejs';
 import sort from '@alpinejs/sort';
 import columnResize from './column-resize';
 import './submit-lock';
+import './instant-tooltips';
 import { drawUtilizationChart } from './utilization-chart';
 
 Alpine.plugin(sort);
