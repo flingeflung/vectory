@@ -9,6 +9,8 @@
             'month' => $month,
         ], $personQuery, $organizationQuery, $overrides));
         $showTenantGroups = $personGroups->count() > 1;
+        // aktuelle Woche in der Jahresansicht (Ralf, 2026-10-09): auch Spaltenkopf und Tabelle hinterlegen, nicht nur das Diagramm
+        $isCurrentWeek = fn ($week) => \Carbon\CarbonImmutable::today()->between($week['start'], $week['start']->addDays(6));
     @endphp
 
     <div x-data="{ switchingView: null }" class="mb-3 flex shrink-0 flex-wrap items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm">
@@ -153,7 +155,7 @@
                     <tr>
                         <th class="sticky left-0 z-20 min-w-52 border-b border-r border-gray-200 bg-gray-50 px-2 py-1 text-left font-medium">{{ __('Person') }}</th>
                         @foreach ($weeks as $week)
-                            <th class="min-w-12 border-b border-r border-gray-200 bg-gray-50 px-1 py-1 text-center font-medium" title="{{ $week['start']->format('d.m.Y') }}">{{ __('KW') }} {{ $week['number'] }}</th>
+                            <th class="min-w-12 border-b border-r border-gray-200 px-1 py-1 text-center font-medium {{ $isCurrentWeek($week) ? 'border-b-2 border-b-blue-600 bg-[#eff6ff] text-blue-800' : 'bg-gray-50' }}" title="{{ $week['start']->format('d.m.Y') }}">{{ __('KW') }} {{ $week['number'] }}</th>
                         @endforeach
                     </tr>
                 @endif
@@ -259,7 +261,7 @@
                                                 $cellMilestones = $projectRow['milestones']->filter(fn ($milestone) => \Carbon\CarbonImmutable::parse($milestone['date'])->between($week['start'], $weekEnd));
                                                 $milestoneTooltip = $cellMilestones->map(fn ($milestone) => __('Meilenstein: :name (:date)', ['name' => $milestone['label'], 'date' => \Carbon\CarbonImmutable::parse($milestone['date'])->format('d.m.Y')]))->join(' · ');
                                             @endphp
-                                            <td class="relative h-6 border-r border-gray-100 p-0" title="{{ $milestoneTooltip ?: ($inside ? $tooltip : '') }}">
+                                            <td class="relative h-6 border-r border-gray-100 p-0 {{ $isCurrentWeek($week) ? 'bg-[#eff6ff]' : '' }}" title="{{ $milestoneTooltip ?: ($inside ? $tooltip : '') }}">
                                                 @if ($inside)
                                                     <div class="relative flex h-3 items-center rounded-sm border border-black/10" style="background-color: {{ $projectRow['color'] }}">
                                                         @if ($continuesBefore)<span class="absolute left-0 text-[11px] font-bold leading-none text-gray-700" title="{{ __('Projekt beginnt vor dem angezeigten Zeitraum') }}">&lsaquo;</span>@endif
@@ -302,7 +304,7 @@
                                                 : (float) ($values[$metric] ?? 0);
                                             $overloaded = in_array($metric, ['remaining', 'utilization'], true) && (float) ($values['remaining'] ?? 0) < -0.005;
                                         @endphp
-                                        <td class="h-6 border-r border-gray-100 px-1 text-right tabular-nums {{ $overloaded ? 'bg-red-50 text-red-700' : '' }}">{{ $metric === 'utilization' ? number_format($value, 0, ',', '.').' %' : number_format($value, 2, ',', '.') }}</td>
+                                        <td class="h-6 border-r border-gray-100 px-1 text-right tabular-nums {{ $overloaded ? 'bg-red-50 text-red-700' : ($displayMode === 'year' && $isCurrentWeek($column) ? 'bg-[#eff6ff]' : '') }}">{{ $metric === 'utilization' ? number_format($value, 0, ',', '.').' %' : number_format($value, 2, ',', '.') }}</td>
                                     @endforeach
                                 </tr>
                             @endforeach

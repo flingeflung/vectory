@@ -18,13 +18,24 @@ export function drawUtilizationChart(Chart, canvas, names, weekly) {
                 ctx.save();
                 ctx.fillStyle = index === d.today ? '#eff6ff' : bandColors[flag];
                 ctx.fillRect(left, chartArea.top, width, chartArea.bottom - chartArea.top);
-                if (index === d.today) {
-                    ctx.strokeStyle = '#93c5fd';
-                    ctx.lineWidth = 1;
-                    ctx.strokeRect(left + 0.5, chartArea.top, width - 1, chartArea.bottom - chartArea.top);
-                }
                 ctx.restore();
             });
+        },
+    };
+
+    // Rahmen um heute bzw. die aktuelle Woche: vor den Säulen, damit er auch bei hohen Säulen durchgehend sichtbar bleibt
+    const todayFrame = {
+        id: 'todayFrame',
+        afterDatasetsDraw(chart) {
+            if (d.today === false || d.today === null || d.today === undefined) return;
+            const { ctx, chartArea, scales: { x } } = chart;
+            const width = x.getPixelForValue(1) - x.getPixelForValue(0);
+            const left = x.getPixelForValue(d.today) - width / 2;
+            ctx.save();
+            ctx.strokeStyle = '#60a5fa';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(left + 0.75, chartArea.top + 0.75, width - 1.5, chartArea.bottom - chartArea.top - 1.5);
+            ctx.restore();
         },
     };
 
@@ -77,6 +88,6 @@ export function drawUtilizationChart(Chart, canvas, names, weekly) {
                 tooltip: { filter: (item) => Math.abs(item.raw[1] - item.raw[0]) > 0.0001, callbacks: { label: (item) => item.dataset.label + ': ' + (item.raw[1] - item.raw[0]).toFixed(2), footer: (items) => names.capacity + ': ' + d.capacity[items[0].dataIndex], title: (items) => weekly ? names.week + ' ' + items[0].label + ' (' + d.subs[items[0].dataIndex] + ')' : d.subs[items[0].dataIndex] + ' ' + items[0].label } },
             },
         },
-        plugins: [bands, capacityLine],
+        plugins: [bands, capacityLine, todayFrame],
     });
 }
