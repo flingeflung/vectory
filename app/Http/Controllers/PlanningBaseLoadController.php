@@ -122,7 +122,7 @@ class PlanningBaseLoadController extends Controller
 
     private function authorizePlanning(Request $request): void
     {
-        abort_unless($request->user()->can('planning.view'), 403);
+        abort_unless($request->user()->can('planning.view') && $request->user()->can('planning.base_load.edit'), 403);
     }
 
     private function ensureCurrentTenant(PlanningBaseLoad $baseLoad): void

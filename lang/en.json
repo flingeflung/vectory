@@ -2425,5 +2425,6 @@
     "Liegt vor dem Stichtag": "Before the cutoff date",
     "Summe ab Stichtag": "Total from cutoff date",
     "Ab": "From",
-    "Gerechnet wird nur ab diesem Tag. Standard ist heute; so lässt sich auch ab einem späteren Datum vorausplanen.": "Only this day onward is counted. Default is today; a later date lets you plan ahead."
+    "Gerechnet wird nur ab diesem Tag. Standard ist heute; so lässt sich auch ab einem späteren Datum vorausplanen.": "Only this day onward is counted. Default is today; a later date lets you plan ahead.",
+    "Sie dürfen die Grundlast ansehen, aber nicht ändern.": "You may view the base load but not change it."
 }

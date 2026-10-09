@@ -1,4 +1,7 @@
 <x-planning-layout>
+    @php
+        $canEdit = auth()->user()->can('planning.base_load.edit');
+    @endphp
     <script>
         window.__personBaseLoadDirtyForms = new Set();
         window.adminPageIsDirty = () => window.__personBaseLoadDirtyForms.size > 0;
@@ -39,7 +42,7 @@
                 </label>
             </form>
 
-            @if ($person && $missingBaseLoadCount > 0)
+            @if ($canEdit && $person && $missingBaseLoadCount > 0)
                 <form method="POST" action="{{ route('planung.grundlast-person.inherit') }}">
                     @csrf
                     <input type="hidden" name="year" value="{{ $year }}">
@@ -89,6 +92,7 @@
                 @method('PUT')
                 <input type="hidden" name="year" value="{{ $year }}">
                 <input type="hidden" name="person" value="{{ $person->id }}">
+                <fieldset class="contents" @disabled(! $canEdit)>
                 <label class="text-xs text-gray-500">{{ __('Bezeichnung') }}
                     <input type="text" name="name" value="{{ $personBaseLoad->name }}" required maxlength="255" class="mt-0.5 w-full rounded-md border-gray-300 py-1 text-sm">
                     @if ($personBaseLoad->planning_base_load_id === null)
@@ -126,13 +130,16 @@
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
                     </button>
                 </div>
+                </fieldset>
             </form>
+            @if ($canEdit)
             <form method="POST" action="{{ route('planung.grundlast-person.destroy', $personBaseLoad) }}" id="delete-person-base-load-{{ $personBaseLoad->id }}" class="hidden">
                 @csrf
                 @method('DELETE')
                 <input type="hidden" name="year" value="{{ $year }}">
                 <input type="hidden" name="person" value="{{ $person->id }}">
             </form>
+            @endif
         @empty
             <div class="p-4 text-center text-sm text-gray-400">
                 @if ($person)

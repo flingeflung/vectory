@@ -1,4 +1,7 @@
 <x-planning-layout>
+    @php
+        $canEdit = auth()->user()->can('planning.base_load.edit');
+    @endphp
     <script>
         window.__baseLoadDirtyForms = new Set();
         window.adminPageIsDirty = () => window.__baseLoadDirtyForms.size > 0;
@@ -38,11 +41,13 @@
                     </label>
                 </form>
 
+                @if ($canEdit)
                 <button type="button" x-show="!creating" @click="creating = true; $nextTick(() => $refs.newName.focus())" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover">
                     + {{ __('Grundlast anlegen') }}
                 </button>
+                @endif
 
-                @if ($previousYearCount > 0)
+                @if ($canEdit && $previousYearCount > 0)
                     <form method="POST" action="{{ route('planung.grundlast.copy-previous') }}">
                         @csrf
                         <input type="hidden" name="year" value="{{ $year }}">
@@ -74,6 +79,7 @@
             </p>
         </div>
 
+        @if ($canEdit)
         <form
             x-show="creating"
             x-cloak
@@ -108,6 +114,9 @@
             <button type="button" @click="window.__baseLoadDirtyForms.delete($el.closest('form')); $el.closest('form').reset(); createDirty = false; creating = false" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-btn-secondary-hover md:mt-[1.125rem]">{{ __('Abbrechen') }}</button>
             <button type="submit" x-show="createDirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 md:mt-[1.125rem] text-sm font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
         </form>
+        @else
+            <p class="text-xs text-gray-500">{{ __('Sie dürfen die Grundlast ansehen, aber nicht ändern.') }}</p>
+        @endif
     </div>
 
     <div class="min-h-0 flex-1 space-y-2 overflow-y-auto rounded-lg border border-gray-200 bg-white p-3">
@@ -126,6 +135,7 @@
                     @method('PUT')
                     <input type="hidden" name="_form" value="update">
                     <input type="hidden" name="year" value="{{ $year }}">
+                    <fieldset class="contents" @disabled(! $canEdit)>
                     <label class="text-xs text-gray-500">{{ __('Bezeichnung') }}
                         <input type="text" name="name" value="{{ $baseLoad->name }}" required maxlength="255" class="mt-0.5 w-full rounded-md border-gray-300 py-1 text-sm">
                     </label>
@@ -145,8 +155,10 @@
                         <input type="date" name="valid_to" value="{{ $baseLoad->valid_to->format('Y-m-d') }}" min="{{ $year }}-01-01" max="{{ $year }}-12-31" required class="mt-0.5 w-full rounded-md border-gray-300 py-1 text-sm">
                     </label>
                     <button type="submit" x-show="dirty" x-cloak class="rounded-md bg-btn-primary px-3 py-1.5 md:mt-[1.125rem] text-sm font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
+                    </fieldset>
                 </form>
 
+                @if ($canEdit)
                 <form method="POST" action="{{ route('planung.grundlast.destroy', $baseLoad) }}" x-ref="deleteForm{{ $baseLoad->id }}" class="hidden">
                     @csrf
                     @method('DELETE')
@@ -156,6 +168,7 @@
                     @click="if (await window.confirmDialog({ title: {{ \Illuminate\Support\Js::from(__('Grundlast löschen')) }}, message: {{ \Illuminate\Support\Js::from(__('Diesen Grundlast-Datensatz wirklich endgültig löschen?')) }}, confirmLabel: {{ \Illuminate\Support\Js::from(__('Löschen')) }} })) $refs.deleteForm{{ $baseLoad->id }}.submit()"
                     class="rounded-md border border-red-300 px-2 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 md:mt-[1.125rem]"
                 >{{ __('Löschen') }}</button>
+                @endif
             </div>
         @empty
             <div class="p-4 text-center text-sm text-gray-400">{{ __('Für :year ist noch keine Grundlast angelegt.', ['year' => $year]) }}</div>
