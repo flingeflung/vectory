@@ -15,7 +15,7 @@ return [
     'illustrationen' => 'Alle angemeldeten Benutzer. Die Personenlisten zeigen nur Personen, die für die Rolle des Benutzers sichtbar sind.',
     'produkte' => 'Alle angemeldeten Benutzer.',
     'jobload' => 'Alle angemeldeten Benutzer; gebucht werden die Stunden der eigenen Person.',
-    'jobload.overview' => 'Benutzer, denen eine Person zugeordnet ist. Die eigenen Stunden immer, andere Personen nur mit dem Recht „Zeiterfassung: andere einzelne Personen einsehen“ (jobload.overview.view_others), die kundenweite Auswertung nur mit „Zeiterfassung: kundenweite Auswertung nach Jobgruppen sehen“ (jobload.overview.customer_summary); Administratoren immer.',
+    'jobload.overview' => 'Alle, die sich anmelden können (jeder Zugang gehört zu einer Person). Die eigenen Stunden immer, andere Personen nur mit dem Recht „Zeiterfassung: andere einzelne Personen einsehen“ (jobload.overview.view_others), die kundenweite Auswertung nur mit „Zeiterfassung: kundenweite Auswertung nach Jobgruppen sehen“ (jobload.overview.customer_summary); Administratoren immer.',
     'kalender' => 'Super-Admin sowie Personen, bei denen der Kalender aktiviert ist (in den Personendetails). Einträge anderer Personen nur mit dem Recht „Kalender: Einträge anderer Personen anlegen, bearbeiten und löschen“ (calendar.entries.manage_others); Administratoren immer.',
     'planung.index' => 'Benutzer mit dem Recht „Planung: erweiterte Planung und personenbezogene Auswertungen“ (planning.view) sowie Personen, die Mitglied in mindestens einer Funktionsgruppe sind; Administratoren immer.',
     'planung.projektplanung' => 'Benutzer mit dem Recht „Planung: erweiterte Planung und personenbezogene Auswertungen“ (planning.view) sowie Personen, die Mitglied in mindestens einer Funktionsgruppe sind; Administratoren immer. Die Organisationsauswahl hat nur, wer alle Organisationen sehen darf.',
@@ -35,8 +35,8 @@ return [
     'D-MFQU' => 'Mit dem Recht „Projekt: Details aufrufen“ (project.view); Administratoren immer.',
 
     // Dialog "Zeiterfassung" am Projekt (D-78FH)
-    'D-78FH' => 'Alle, die das Projekt öffnen können. Gebucht wird nur, wenn dem Benutzer eine Person zugeordnet ist.',
-    'D-78FH#buchungen' => 'Alle, die das Projekt öffnen können und denen eine Person zugeordnet ist. Jede Person sieht und löscht nur ihre eigenen Buchungen, auch Administratoren.',
+    'D-78FH' => 'Alle, die das Projekt öffnen können. Gebucht wird immer für die eigene Person (jeder Zugang gehört zu einer Person).',
+    'D-78FH#buchungen' => 'Alle, die das Projekt öffnen können (jeder Zugang gehört zu einer Person). Jede Person sieht und löscht nur ihre eigenen Buchungen, auch Administratoren.',
     'D-78FH#jobs' => 'Mit dem Recht „Jobs am Projekt verwalten“ (project.jobload.manage); Administratoren immer.',
     'D-78FH#aufteilung' => 'Mit dem Recht „Jobs am Projekt verwalten“ (project.jobload.manage); Administratoren immer. Nur bei einem Hauptprojekt mit Unterprojekten.',
 
