@@ -5,6 +5,8 @@
         'plannedValues' => $plannedValues,
         'personValues' => $personValues,
     ] = \App\Support\ProjectPlanningGroups::for($project, $allFunctionGroups);
+    // Zuletzt gewählte Person der Auslastung, persönlich gespeichert (Ralf, 2026-10-09)
+    $savedUtilPerson = \App\Models\UserPreference::configFor((int) auth()->id(), \App\Models\UserPreference::PROJECT_UTILIZATION)['person_id'] ?? '';
 @endphp
 
 <div
@@ -14,7 +16,7 @@
         values: {{ \Illuminate\Support\Js::from($personValues) }},
         distributing: false,
         utilBounds: { minYear: {{ min(2026, (int) ($project->start_date?->year ?? 2026)) }}, maxYear: {{ (int) now()->year + 5 }}, startYear: {{ $project->start_date?->year ?? 'null' }}, startMonth: {{ $project->start_date?->month ?? 'null' }} },
-        util: { view: 'month', year: {{ now()->year }}, month: {{ now()->month }}, person: window.projectUtilPerson || '', loading: false, loaded: false, people: [] },
+        util: { view: 'month', year: {{ now()->year }}, month: {{ now()->month }}, person: window.projectUtilPerson !== undefined ? window.projectUtilPerson : {{ \Illuminate\Support\Js::from((string) $savedUtilPerson) }}, loading: false, loaded: false, people: [] },
         subTab: ['terminuebersicht', 'ablaufplan', 'planstunden', 'auslastung'].includes(window.projectPlanungSubTab) ? window.projectPlanungSubTab : 'terminuebersicht',
         // Dauern der Schritte an den Projektzeitraum anpassen (Ralf, 2026-10-06)
         adjusting: false,
@@ -117,12 +119,13 @@
             this.util.month = this.utilBounds.startMonth;
             this.loadUtilization();
         },
-        async loadUtilization() {
+        async loadUtilization(remember = false) {
             const container = this.$refs.utilBody;
             if (! container) return;
             this.util.loading = true;
             const query = new URLSearchParams({ view: this.util.view, year: this.util.year, month: this.util.month });
-            if (this.util.person) query.set('person', this.util.person);
+            query.set('person', this.util.person || '');
+            if (remember) query.set('remember', '1');
             try {
                 const response = await fetch({{ \Illuminate\Support\Js::from(route('projekte.planung.auslastung', $project)) }} + '?' + query.toString(), { headers: { 'Accept': 'application/json' } });
                 if (! response.ok) {
@@ -306,7 +309,7 @@
             </button>
             <button type="button" @click="utilToday()" class="rounded-md border border-gray-300 bg-btn-secondary px-2 py-1 font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Heute') }}</button>
             <button type="button" @click="utilProjectStart()" :disabled="utilBounds.startYear === null" title="{{ $project->start_date ? __('Springt zum Monat bzw. Jahr des Projektstarts') : __('Für dieses Projekt ist noch kein Startdatum eingetragen') }}" class="rounded-md border border-gray-300 bg-btn-secondary px-2 py-1 font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:cursor-not-allowed disabled:opacity-50">{{ __('Projektanfang') }}</button>
-            <select x-ref="utilPersonSelect" x-model="util.person" @change="window.projectUtilPerson = util.person; loadUtilization()" class="rounded-md border-gray-300 py-1 text-xs">
+            <select x-ref="utilPersonSelect" x-model="util.person" @change="window.projectUtilPerson = util.person; loadUtilization(true)" class="rounded-md border-gray-300 py-1 text-xs">
                 <option value="">{{ __('Alle Personen') }}</option>
                 <template x-for="person in util.people" :key="person.id"><option :value="person.id" x-text="person.name"></option></template>
             </select>

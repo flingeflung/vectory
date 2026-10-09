@@ -640,6 +640,11 @@ class ProjectController extends Controller
     {
         abort_unless($project->mayBeOpenedBy($request->user()) && $request->user()->can('planning.view'), 403);
 
+        // Von Hand gewählte Person (auch "Alle") persönlich merken; ein automatischer Rückfall beim Blättern speichert nichts
+        if ($request->boolean('remember')) {
+            UserPreference::persist((int) $request->user()->id, UserPreference::PROJECT_UTILIZATION, ['person_id' => $request->filled('person') ? $request->integer('person') : null]);
+        }
+
         $data = ProjectUtilization::for(
             $project,
             $calculator,

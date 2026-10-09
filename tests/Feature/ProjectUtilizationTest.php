@@ -134,4 +134,24 @@ class ProjectUtilizationTest extends TestCase
         $this->actingAs(User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'user']));
         $this->getJson(route('projekte.planung.auslastung', ['project' => $project]))->assertForbidden();
     }
+
+    public function test_the_chosen_person_is_remembered_personally_and_preset_next_time(): void
+    {
+        $user = User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'super_admin']);
+        $person = $this->person('Gemerkt');
+        $project = $this->project('260801');
+        $preference = fn () => \App\Models\UserPreference::configFor($user->id, \App\Models\UserPreference::PROJECT_UTILIZATION);
+
+        // Ohne Merken-Signal (automatischer Rückfall beim Blättern) wird nichts gespeichert
+        $this->actingAs($user)->getJson(route('projekte.planung.auslastung', $project).'?person='.$person->id)->assertOk();
+        $this->assertSame([], $preference());
+
+        // Von Hand gewählt: gespeichert
+        $this->actingAs($user)->getJson(route('projekte.planung.auslastung', $project).'?person='.$person->id.'&remember=1')->assertOk();
+        $this->assertSame($person->id, $preference()['person_id']);
+
+        // "Alle Personen" ist ebenfalls eine bewusste Wahl
+        $this->actingAs($user)->getJson(route('projekte.planung.auslastung', $project).'?person=&remember=1')->assertOk();
+        $this->assertNull($preference()['person_id']);
+    }
 }
