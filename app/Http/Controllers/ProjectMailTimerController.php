@@ -36,7 +36,7 @@ class ProjectMailTimerController extends Controller
                 'template' => $timer->mailTemplate?->name ?? '–',
                 'step' => $timer->step?->title,
                 'send_date' => $timer->send_date,
-                'rule' => $this->ruleText($timer, $steps->pluck('title', 'id')->all(), $milestones->pluck('name', 'id')->all()),
+                'rule' => $service->ruleText($timer, $steps->pluck('title', 'id')->all(), $milestones->pluck('name', 'id')->all()),
                 'groups' => $service->groupNames($timer),
                 'recipients' => count($service->recipients($timer)),
                 'only_if_in_step' => $timer->only_if_in_step,
@@ -119,25 +119,5 @@ class ProjectMailTimerController extends Controller
         $mailTimer->delete();
 
         return response()->json(['deleted' => true]);
-    }
-
-    /** @param  array<int, string>  $stepTitles @param  array<int, string>  $milestoneNames */
-    private function ruleText(MailTimer $timer, array $stepTitles, array $milestoneNames): string
-    {
-        if ($timer->reference_type === MailTimer::REFERENCE_FIXED) {
-            return __('festes Datum');
-        }
-        $reference = $timer->reference_type === MailTimer::REFERENCE_MILESTONE
-            ? __('Meilenstein „:name“', ['name' => $milestoneNames[$timer->reference_milestone_id] ?? '?'])
-            : __('Ende von „:name“', ['name' => $stepTitles[$timer->reference_step_id] ?? '?']);
-        $days = abs((int) $timer->offset_days);
-        if ($days === 0) {
-            return __('am Tag von :reference', ['reference' => $reference]);
-        }
-        $amount = $days % 7 === 0 ? ($days / 7).' '.($days === 7 ? __('Woche') : __('Wochen')) : $days.' '.($days === 1 ? __('Tag') : __('Tage'));
-
-        return $timer->offset_days < 0
-            ? __(':amount vor :reference', ['amount' => $amount, 'reference' => $reference])
-            : __(':amount nach :reference', ['amount' => $amount, 'reference' => $reference]);
     }
 }

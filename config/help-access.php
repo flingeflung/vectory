@@ -21,6 +21,7 @@ return [
     'planung.projektplanung' => 'Benutzer mit dem Recht „Planung: erweiterte Planung und personenbezogene Auswertungen“ (planning.view) sowie Personen, die Mitglied in mindestens einer Funktionsgruppe sind; Administratoren immer. Die Organisationsauswahl hat nur, wer alle Organisationen sehen darf.',
     'planung.stunden' => 'Mit dem Recht „Planung: erweiterte Planung und personenbezogene Auswertungen“ (planning.view); Administratoren immer.',
     'planung.arbeitszeit' => 'Mit dem Recht „Planung: erweiterte Planung und personenbezogene Auswertungen“ (planning.view); Administratoren immer.',
+    'planung.erinnerungen' => 'Mit dem Recht „Planung: erweiterte Planung und personenbezogene Auswertungen“ (planning.view); Administratoren immer. Es erscheinen nur Erinnerungen zu Projekten, die die Person öffnen darf.',
     'planung.grundlast' => 'Ansehen mit dem Recht „Planung: erweiterte Planung und personenbezogene Auswertungen“ (planning.view); Anlegen, Ändern, Löschen und Kopieren zusätzlich mit dem Recht „Planung: Grundlast anlegen, ändern und löschen“ (planning.base_load.edit); Administratoren immer.',
     'planung.grundlast-person' => 'Ansehen mit dem Recht „Planung: erweiterte Planung und personenbezogene Auswertungen“ (planning.view); Anlegen, Ändern, Löschen und Kopieren zusätzlich mit dem Recht „Planung: Grundlast anlegen, ändern und löschen“ (planning.base_load.edit); Administratoren immer.',
     'admin.kunden' => 'Administratoren, und nur wenn mehrere Organisationen aktiviert sind.',

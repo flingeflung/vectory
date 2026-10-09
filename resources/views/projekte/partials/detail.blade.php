@@ -482,11 +482,23 @@
                             @php
                                 $step = $pws->workflowStep;
                                 $isDone = $pws->completed_at !== null;
+                                // Meilensteine stehen in einem eigenen weißen Rahmen direkt am Kasten des Schritts, in dessen Zeitspanne ihr Datum fällt
+                                // (Ralf, 2026-10-09): oberhalb, solange das Datum nicht nach dem berechneten Ende des Schritts liegt, sonst unterhalb.
+                                $milestonesByStep ??= app(\App\Services\ProjectScheduler::class)->milestonesByStep($project);
+                                $calculatedEnds ??= app(\App\Services\ProjectPlanningCalculator::class)->stepEndDates($project);
+                                $stepEnd = $calculatedEnds[$step->id] ?? null;
+                                $stepMilestones = collect($milestonesByStep[$step->id] ?? []);
+                                $milestonesBelow = $stepMilestones->filter(fn ($m) => $stepEnd && $m['date']->toDateString() > $stepEnd->toDateString())->values();
+                                $milestonesAbove = $stepMilestones->reject(fn ($m) => $stepEnd && $m['date']->toDateString() > $stepEnd->toDateString())->values();
                             @endphp
                             <div class="flex w-full items-start gap-3">
+                            <div class="w-full max-w-2xl">
+                            @if ($milestonesAbove->isNotEmpty())
+                                @include('projekte.partials.workflow-milestones-box', ['milestones' => $milestonesAbove, 'position' => 'above', 'current' => $pws->is_current])
+                            @endif
                             <div
                                 x-data="{ expanded: false }"
-                                class="w-full max-w-2xl rounded-md px-3 py-2 {{ $pws->is_current ? 'border-2 border-blue-500' : 'border border-gray-300' }}"
+                                class="w-full {{ $milestonesAbove->isNotEmpty() ? 'rounded-t-none rounded-b-md' : ($milestonesBelow->isNotEmpty() ? 'rounded-t-md rounded-b-none' : 'rounded-md') }} px-3 py-2 {{ $pws->is_current ? 'border-2 border-blue-500' : 'border border-gray-300' }}"
                                 style="background-color: {{ $step->lifecycleColor() }}"
                             >
                                 <div class="flex items-start justify-between gap-4">
@@ -584,17 +596,6 @@
                                                 </button>
                                             </div>
                                         @endcan
-                                        @php
-                                            // Meilensteine im Kasten des Schritts, in dessen Zeitspanne ihr Datum fällt (neues Terminmodell)
-                                            $milestonesByStep ??= app(\App\Services\ProjectScheduler::class)->milestonesByStep($project);
-                                        @endphp
-                                        @foreach ($milestonesByStep[$step->id] ?? [] as $milestone)
-                                            <div class="mt-1 flex items-center gap-1.5 text-xs text-gray-700" title="{{ $milestone['rule'] }}">
-                                                <span class="inline-block h-2 w-2 shrink-0 rotate-45 bg-indigo-600"></span>
-                                                <span class="font-medium">{{ $milestone['name'] }}:</span>
-                                                <span>{{ $milestone['date']->format('d.m.Y') }}</span>
-                                            </div>
-                                        @endforeach
 
                                         <div class="mt-0.5 text-xs text-gray-600">
                                             @if ($isDone)
@@ -728,6 +729,10 @@
                                         @endif
                                     </div>
                                 @endif
+                            </div>
+                            @if ($milestonesBelow->isNotEmpty())
+                                @include('projekte.partials.workflow-milestones-box', ['milestones' => $milestonesBelow, 'position' => 'below', 'current' => $pws->is_current])
+                            @endif
                             </div>
                             </div>
                             @unless ($loop->last)

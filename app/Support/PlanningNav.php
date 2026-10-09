@@ -25,6 +25,7 @@ class PlanningNav
             ['route' => 'planung.grundlast', 'match' => 'planung.grundlast', 'label' => __('Grundlastbasis')],
             ['route' => 'planung.grundlast-person', 'match' => 'planung.grundlast-person', 'label' => __('Grundlast/Person')],
             ['route' => 'planung.arbeitszeit', 'match' => 'planung.arbeitszeit', 'label' => __('Arbeitszeit')],
+            ['route' => 'planung.erinnerungen', 'match' => 'planung.erinnerungen', 'label' => __('Erinnerungen')],
         ];
 
         return $user !== null && ! PlanningAccess::canViewExtended($user)

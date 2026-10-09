@@ -160,6 +160,31 @@ class MailTimerService
     }
 
     /** Namen der Funktionsgruppen (für die Anzeige) */
+    /**
+     * Bezug der Erinnerung in Worten ("3 Tage vor Meilenstein „Druck“"); gemeinsam genutzt vom Projekt-Overlay und von Planung › Erinnerungen.
+     *
+     * @param  array<int, string>  $stepTitles  Schritt-ID => Titel
+     * @param  array<int, string>  $milestoneNames  Meilenstein-ID => Name
+     */
+    public function ruleText(MailTimer $timer, array $stepTitles, array $milestoneNames): string
+    {
+        if ($timer->reference_type === MailTimer::REFERENCE_FIXED) {
+            return __('festes Datum');
+        }
+        $reference = $timer->reference_type === MailTimer::REFERENCE_MILESTONE
+            ? __('Meilenstein „:name“', ['name' => $milestoneNames[$timer->reference_milestone_id] ?? '?'])
+            : __('Ende von „:name“', ['name' => $stepTitles[$timer->reference_step_id] ?? '?']);
+        $days = abs((int) $timer->offset_days);
+        if ($days === 0) {
+            return __('am Tag von :reference', ['reference' => $reference]);
+        }
+        $amount = $days % 7 === 0 ? ($days / 7).' '.($days === 7 ? __('Woche') : __('Wochen')) : $days.' '.($days === 1 ? __('Tag') : __('Tage'));
+
+        return $timer->offset_days < 0
+            ? __(':amount vor :reference', ['amount' => $amount, 'reference' => $reference])
+            : __(':amount nach :reference', ['amount' => $amount, 'reference' => $reference]);
+    }
+
     public function groupNames(MailTimer $timer): array
     {
         return FunctionGroup::query()->withoutGlobalScopes()->whereIn('id', array_map('intval', (array) $timer->function_group_ids))->orderBy('name')->pluck('name')->all();

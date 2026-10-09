@@ -107,6 +107,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/planung/grundlast-person/{planningPersonBaseLoad}', [PlanningPersonBaseLoadController::class, 'update'])->name('planung.grundlast-person.update');
     Route::delete('/planung/grundlast-person/{planningPersonBaseLoad}', [PlanningPersonBaseLoadController::class, 'destroy'])->name('planung.grundlast-person.destroy');
     Route::get('/planung/arbeitszeit', [PlanningController::class, 'arbeitszeit'])->name('planung.arbeitszeit');
+    Route::get('/planung/erinnerungen', [\App\Http\Controllers\PlanningMailTimerController::class, 'index'])->name('planung.erinnerungen');
     Route::get('/jobload', [JobloadController::class, 'index'])->name('jobload');
     Route::get('/jobload/uebersicht', [JobloadOverviewController::class, 'index'])->name('jobload.overview');
     Route::get('/jobload/uebersicht/wochenwerte', [JobloadOverviewController::class, 'weekDetail'])->name('jobload.overview.week-detail');
