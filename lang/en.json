@@ -2039,7 +2039,6 @@
     "Was ist :other aus Sicht von :this?": "What is :other from :this's perspective?",
     "Was ist :this aus Sicht von :other?": "What is :this from :other's perspective?",
     "Was ist die Stamm-ID?": "",
-    "Was ist passiert?": "What happened?",
     "Was soll die Kopie sein?": "",
     "Was soll mit dem vorhandenen Eintrag im Ziel geschehen?": "",
     "Weiter bearbeiten": "Continue editing",
@@ -2459,5 +2458,6 @@
     "– zuerst Funktionsgruppe wählen –": "",
     "„:name\" teilen mit:": "Share “:name\" with:",
     "Felder zum Projekt einfügen:": "Insert project fields:",
-    "Diese Felder gibt es nur, wenn die Mail zu einem Projekt gehört (z. B. bei einer Erinnerung). Für Mails ohne Projektbezug stehen sie nicht zur Verfügung.": "These fields only exist if the mail belongs to a project (e.g. a reminder). They are not available for mails without a project."
+    "Diese Felder gibt es nur, wenn die Mail zu einem Projekt gehört (z. B. bei einer Erinnerung). Für Mails ohne Projektbezug stehen sie nicht zur Verfügung.": "These fields only exist if the mail belongs to a project (e.g. a reminder). They are not available for mails without a project.",
+    "Notiz zum Projektablauf …": "Note on the project progress …"
 }

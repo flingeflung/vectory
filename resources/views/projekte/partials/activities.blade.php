@@ -83,7 +83,7 @@
                     {{ __('Hervorheben') }}
                 </label>
             </div>
-            <textarea x-ref="newText" x-model="text" rows="3" maxlength="5000" placeholder="{{ __('Was ist passiert?') }}" class="w-full rounded-md border-gray-300 text-xs"></textarea>
+            <textarea x-ref="newText" x-model="text" rows="3" maxlength="5000" placeholder="{{ __('Notiz zum Projektablauf …') }}" class="w-full rounded-md border-gray-300 text-xs"></textarea>
             <div class="flex justify-end gap-2">
                 <button type="button" @click="newEntry = false; text = ''; highlight = false" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Abbrechen') }}</button>
                 <button type="button" x-show="text.trim() !== ''" x-cloak @click="save()" class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover">{{ __('Speichern') }}</button>
