@@ -25,6 +25,11 @@
                 @endforeach
             </select>
         </label>
+        @if ($view === 'soll-ist')
+            <label class="flex items-center gap-2 text-gray-700" title="{{ __('Gerechnet wird nur ab diesem Tag. Standard ist heute; so lässt sich auch ab einem späteren Datum vorausplanen.') }}">{{ __('Ab') }}
+                <input type="date" name="ab" value="{{ $cutoff->toDateString() }}" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 text-sm">
+            </label>
+        @endif
     </form>
     {{-- Ralf, 2026-09-29: Abteilungsfilter ersatzlos entfernt (funktionierte
          nicht zuverlässig für alle Szenarien) - welche Personen hier

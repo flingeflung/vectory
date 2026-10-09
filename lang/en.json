@@ -2417,5 +2417,13 @@
     "– noch keine Einträge –": "– no entries yet –",
     "– ohne Rechte-Set –": "– without permission set –",
     "– zuerst Funktionsgruppe wählen –": "",
-    "„:name\" teilen mit:": "Share “:name\" with:"
+    "„:name\" teilen mit:": "Share “:name\" with:",
+    "Das Jahr :year liegt vor dem gewählten Stichtag. Die Soll-Ist-Ansicht blickt nur nach vorn; ein Rückblick auf geplante und tatsächliche Stunden folgt später.": "The year :year lies before the chosen cutoff date. The target/actual view only looks ahead; a review of planned versus actual hours will follow later.",
+    "Ab :date gibt es keine verfügbaren Projektstunden und keine verplanten Stunden.": "From :date there are no available project hours and no planned hours.",
+    "Ausblick ab :date": "Outlook from :date",
+    "Gesamtes Jahr: :hours Std. verfügbar": "Whole year: :hours hrs. available",
+    "Liegt vor dem Stichtag": "Before the cutoff date",
+    "Summe ab Stichtag": "Total from cutoff date",
+    "Ab": "From",
+    "Gerechnet wird nur ab diesem Tag. Standard ist heute; so lässt sich auch ab einem späteren Datum vorausplanen.": "Only this day onward is counted. Default is today; a later date lets you plan ahead."
 }

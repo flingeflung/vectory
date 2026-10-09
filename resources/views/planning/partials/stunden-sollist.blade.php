@@ -1,10 +1,11 @@
 {{--
-    Planung > Stunden > Soll-Ist (Ralf, 2026-10-09): Wie viel der für Projekte verfügbaren Stunden ist schon verplant, wie viel bleibt übrig -
-    als Jahressumme und je Monat. Daten: App\Services\PlanningTargetActual. Erwartet $targetActual, $year, $fmt, $projectHoursTotal.
+    Planung > Stunden > Soll-Ist (Ralf, 2026-10-09): Ausblick ab Stichtag - wie viel der noch verfügbaren Projektstunden ist schon verplant, wie viel
+    bleibt frei, als Summe und je Monat. Vergangenes zählt nicht (Rückblick Plan gegen Ist kommt später). Daten: App\Services\PlanningTargetActual. Erwartet $targetActual, $year, $fmt, $projectHoursTotal.
 --}}
 @php
+    $cutoffLabel = $cutoff->format('d.m.Y');
     $monthNames = [1 => 'Jan', 2 => 'Feb', 3 => 'Mär', 4 => 'Apr', 5 => 'Mai', 6 => 'Jun', 7 => 'Jul', 8 => 'Aug', 9 => 'Sep', 10 => 'Okt', 11 => 'Nov', 12 => 'Dez'];
-    $months = $targetActual['months'];
+    $months = $targetActual['months'] ?? [];
     $highest = max(1.0, (float) collect($months)->max(fn ($m) => max($m['available'], $m['planned'])));
     $scale = (function (float $highest) {
         $step = 10 ** floor(log10($highest / 5));
@@ -21,12 +22,15 @@
     $axisMax = (float) $scale['max'];
     $stepSize = $axisMax / max(1, count($scale['ticks']) - 1);
     $pct = fn (float $hours) => max(0, min(100, $hours / $axisMax * 100));
-    $overbooked = $targetActual['remaining'] < 0;
+    $overbooked = ($targetActual['remaining'] ?? 0) < 0;
 @endphp
 <div id="planning-stunden-content" class="min-h-0 flex-1 overflow-auto rounded-lg border border-gray-200 bg-white p-4">
-    @if ($targetActual['available'] <= 0 && $targetActual['planned'] <= 0)
-        <p class="py-8 text-center text-sm text-gray-400">{{ __('Für :year gibt es keine verfügbaren Projektstunden und keine verplanten Stunden.', ['year' => $year]) }}</p>
+    @if ($cutoffPast)
+        <p class="py-8 text-center text-sm text-gray-400">{{ __('Das Jahr :year liegt vor dem gewählten Stichtag. Die Soll-Ist-Ansicht blickt nur nach vorn; ein Rückblick auf geplante und tatsächliche Stunden folgt später.', ['year' => $year]) }}</p>
+    @elseif ($targetActual['available'] <= 0 && $targetActual['planned'] <= 0)
+        <p class="py-8 text-center text-sm text-gray-400">{{ __('Ab :date gibt es keine verfügbaren Projektstunden und keine verplanten Stunden.', ['date' => $cutoffLabel]) }}</p>
     @else
+        <p class="mb-3 text-xs text-gray-600">{{ __('Ausblick ab :date', ['date' => $cutoffLabel]) }} · {{ __('Gesamtes Jahr: :hours Std. verfügbar', ['hours' => $fmt($targetActual['yearAvailable'])]) }}</p>
         {{-- Gesamtsumme --}}
         <div class="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div class="rounded-md border border-gray-200 p-3" title="{{ __('Arbeitszeit minus Abwesenheiten aus dem Kalender minus Grundlast, tageweise über das Jahr gerechnet. Weicht von den „Projektstd.“ der Tabelle ab, weil dort der Urlaubsanspruch abgezogen wird, hier die eingetragenen Abwesenheiten.') }}">
@@ -89,19 +93,22 @@
                                     .($m['remaining'] < 0 ? __('Überplant').': '.$fmt(abs($m['remaining'])) : __('Noch übrig').': '.$fmt($m['remaining']))
                                     .($avail > 0 ? "\n".__('Auslastung').': '.round($plan / $avail * 100).' %' : '');
                             @endphp
-                            <div class="relative flex h-full flex-col justify-end" title="{{ $tip }}">
+                            <div class="relative flex h-full flex-col justify-end" title="{{ $m['past'] ? $monthNames[$m['month']].' '.$year."
+".__('Liegt vor dem Stichtag') : $tip }}">
+                                @if (! $m['past'])
                                 <div class="relative mx-auto flex w-full max-w-[3.5rem] flex-col justify-end" style="height: {{ $pct($total) }}%">
                                     <span class="absolute bottom-full left-1/2 mb-1 -translate-x-1/2 whitespace-nowrap text-[10px] tabular-nums text-gray-500">{{ number_format($m['remaining'], 0, ',', '.') }}</span>
                                     @if ($over > 0)<div class="rounded-t bg-red-400" style="height: {{ $total > 0 ? $over / $total * 100 : 0 }}%"></div>@endif
                                     @if ($left > 0)<div class="{{ $planWithin > 0 ? '' : 'rounded-b' }} rounded-t bg-gray-200" style="height: {{ $total > 0 ? $left / $total * 100 : 0 }}%"></div>@endif
                                     @if ($planWithin > 0)<div class="flex items-center justify-center rounded-b {{ $left > 0 || $over > 0 ? '' : 'rounded-t' }} bg-sky-300 text-[10px] tabular-nums text-sky-950" style="height: {{ $total > 0 ? $planWithin / $total * 100 : 0 }}%">@if ($pct($planWithin) >= 5){{ number_format($planWithin, 0, ',', '.') }}@endif</div>@endif
                                 </div>
+                                @endif
                             </div>
                         @endforeach
                     </div>
                     <div class="mt-1 grid grid-cols-12 gap-3">
                         @foreach ($months as $m)
-                            <span class="text-center text-[11px] text-gray-600">{{ $monthNames[$m['month']] }}</span>
+                            <span class="text-center text-[11px] {{ $m['past'] ? 'text-gray-300' : 'text-gray-600' }}">{{ $monthNames[$m['month']] }}</span>
                         @endforeach
                     </div>
                 </div>
@@ -123,6 +130,13 @@
                 </thead>
                 <tbody>
                     @foreach ($months as $m)
+                        @if ($m['past'])
+                        <tr class="border-b border-gray-100 text-gray-300" title="{{ __('Liegt vor dem Stichtag') }}">
+                            <td class="px-3 py-1.5">{{ $monthNames[$m['month']] }}</td>
+                            <td class="px-3 py-1.5 text-right">–</td><td class="px-3 py-1.5 text-right">–</td><td class="px-3 py-1.5 text-right">–</td><td class="px-3 py-1.5 text-right">–</td>
+                        </tr>
+                        @continue
+                        @endif
                         <tr class="border-b border-gray-100">
                             <td class="px-3 py-1.5">{{ $monthNames[$m['month']] }}</td>
                             <td class="px-3 py-1.5 text-right tabular-nums">{{ $fmt($m['available']) }}</td>
@@ -134,7 +148,7 @@
                 </tbody>
                 <tfoot class="bg-gray-50 font-semibold text-gray-800">
                     <tr class="border-t-2 border-gray-500">
-                        <td class="px-3 py-2">{{ __('Summe') }}</td>
+                        <td class="px-3 py-2">{{ __('Summe ab Stichtag') }}</td>
                         <td class="px-3 py-2 text-right tabular-nums">{{ $fmt($targetActual['available']) }}</td>
                         <td class="px-3 py-2 text-right tabular-nums">{{ $fmt($targetActual['planned']) }}</td>
                         <td class="px-3 py-2 text-right tabular-nums {{ $overbooked ? 'text-red-700' : '' }}">{{ $fmt($targetActual['remaining']) }}</td>

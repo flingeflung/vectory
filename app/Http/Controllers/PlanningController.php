@@ -617,10 +617,17 @@ class PlanningController extends Controller
 
         // Grafik (Ralf, 2026-10-09): ein Balken je Person, Gesamthöhe = Jahresstunden, unten Grundlast, darüber Projektstunden
         $view = in_array($request->query('ansicht'), ['grafik', 'soll-ist'], true) ? $request->query('ansicht') : 'tabelle';
-        $targetActual = $view === 'soll-ist' ? app(\App\Services\PlanningTargetActual::class)->forYear($people, $yearStart, $yearEnd, $tenantId) : null;
+        // Soll-Ist ist ein Ausblick: gerechnet wird ab dem Stichtag (Standard heute, per ?ab=JJJJ-MM-TT änderbar), nie rückwirkend
+        $cutoff = CarbonImmutable::now()->startOfDay();
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $request->query('ab')) && ($parsed = date_create((string) $request->query('ab')))) {
+            $cutoff = CarbonImmutable::instance($parsed)->startOfDay();
+        }
+        $cutoff = $cutoff->lessThan($yearStart) ? $yearStart : $cutoff;
+        $cutoffPast = $cutoff->greaterThan($yearEnd);
+        $targetActual = $view === 'soll-ist' && ! $cutoffPast ? app(\App\Services\PlanningTargetActual::class)->forYear($people, $yearStart, $yearEnd, $tenantId, $cutoff) : null;
         $chart = $this->hoursChartScale((float) ($rows->max('jahresstd') ?? 0));
 
-        return view('planning.stunden', compact('years', 'year', 'totalWorkdays', 'rows', 'total', 'baseLoadTotal', 'projectHoursTotal', 'sort', 'direction', 'view', 'chart', 'targetActual'));
+        return view('planning.stunden', compact('years', 'year', 'totalWorkdays', 'rows', 'total', 'baseLoadTotal', 'projectHoursTotal', 'sort', 'direction', 'view', 'chart', 'targetActual', 'cutoff', 'cutoffPast'));
     }
 
     /**

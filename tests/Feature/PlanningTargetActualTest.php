@@ -56,11 +56,11 @@ class PlanningTargetActualTest extends TestCase
         return ProjectPerson::query()->create(['tenant_id' => $this->tenant->id, 'project_id' => $project->id, 'function_group_id' => $this->group->id, 'person_id' => $person->id, 'planned_hours' => $hours]);
     }
 
-    private function compute(int $year = 2027): array
+    private function compute(int $year = 2027, ?string $from = null): array
     {
         $people = Person::query()->withoutGlobalScopes()->where('resource_planning', true)->with(['weeklyHours', 'calendarEntries'])->get();
 
-        return app(PlanningTargetActual::class)->forYear($people, CarbonImmutable::create($year, 1, 1), CarbonImmutable::create($year, 12, 31), $this->tenant->id);
+        return app(PlanningTargetActual::class)->forYear($people, CarbonImmutable::create($year, 1, 1), CarbonImmutable::create($year, 12, 31), $this->tenant->id, $from ? CarbonImmutable::parse($from) : null);
     }
 
     public function test_available_hours_are_the_work_hours_without_weekends_and_planned_hours_land_in_their_months(): void
@@ -125,9 +125,37 @@ class PlanningTargetActualTest extends TestCase
         // Planstunden der Funktionsgruppe 50 h, davon 20 h verteilt -> 30 h noch nicht verteilt
         DB::table('project_function_group_hours')->insert(['tenant_id' => $this->tenant->id, 'project_id' => $project->id, 'function_group_id' => $this->group->id, 'planned_hours' => 50, 'created_at' => now(), 'updated_at' => now()]);
 
-        $this->actingAs($this->viewer)->get(route('planung.stunden', ['year' => 2026, 'ansicht' => 'soll-ist']))->assertOk()
+        $this->actingAs($this->viewer)->get(route('planung.stunden', ['year' => 2026, 'ansicht' => 'soll-ist', 'ab' => '2026-01-01']))->assertOk()
             ->assertSee('Verfügbar für Projekte')->assertSee('Noch übrig')->assertSee('Auslastung')
             ->assertSee('Noch nicht auf Personen verteilt: 30,0 Std. in 1 Projekten')
             ->assertSee('>Soll-Ist<', false)->assertSee('>Tabelle<', false)->assertSee('>Grafik<', false);
+    }
+
+    public function test_only_the_time_after_the_cutoff_counts_and_a_running_project_is_cut(): void
+    {
+        $person = $this->person('Ernst', 40);
+        // 1.3.-31.3.2027 = 23 Arbeitstage, 230 h; ab 16.3. bleiben 12 Arbeitstage (16.-31.3.) = 120 h
+        $this->assign($this->project('2027-03-01', '2027-03-31'), $person, 230);
+
+        $full = $this->compute();
+        $cut = $this->compute(2027, '2027-03-16');
+
+        $this->assertEqualsWithDelta(230.0, $full['planned'], 0.01);
+        $this->assertEqualsWithDelta(120.0, $cut['planned'], 0.01);
+        $this->assertTrue($cut['months'][0]['past']);
+        $this->assertTrue($cut['months'][1]['past']);
+        $this->assertFalse($cut['months'][2]['past']);
+        $this->assertSame(0.0, $cut['months'][0]['available']);
+        // März ab 16.3.: 12 Arbeitstage = 96 h verfügbar; die Jahreskapazität bleibt als Orientierung erhalten
+        $this->assertEqualsWithDelta(96.0, $cut['months'][2]['available'], 0.01);
+        $this->assertEqualsWithDelta($full['available'], $cut['yearAvailable'], 0.01);
+    }
+
+    public function test_the_outlook_shows_the_cutoff_and_offers_a_date_field(): void
+    {
+        $this->person('Fischer', 40);
+
+        $this->actingAs($this->viewer)->get(route('planung.stunden', ['year' => 2026, 'ansicht' => 'soll-ist', 'ab' => '2026-12-31']))->assertOk()->assertSee('Ausblick ab 31.12.2026');
+        $this->actingAs($this->viewer)->get(route('planung.stunden', ['year' => 2026, 'ansicht' => 'soll-ist']))->assertOk()->assertSee('name="ab"', false);
     }
 }
