@@ -41,7 +41,7 @@
                     <x-sortable-th field="name" :sort="$sort" :direction="$direction" :compact="true">{{ __('Name') }}</x-sortable-th>
                     <x-sortable-th field="department" :sort="$sort" :direction="$direction" :compact="true">{{ __('Abteilung') }}</x-sortable-th>
                     <x-sortable-th field="annotation" :sort="$sort" :direction="$direction" :compact="true"><span title="{{ __('Anmerkungen') }}">{{ __('Anm.') }}</span></x-sortable-th>
-                    <x-sortable-th field="wost" :sort="$sort" :direction="$direction" align="right" :compact="true">{{ __('WoStd') }}</x-sortable-th>
+                    <x-sortable-th field="wost" :sort="$sort" :direction="$direction" align="right" :compact="true"><span title="{{ __('Die Wochenstunden werden in den Personendetails gepflegt.') }}">{{ __('WoStd') }}</span></x-sortable-th>
                     <x-sortable-th field="workdays" :sort="$sort" :direction="$direction" align="right" :compact="true">
                         <span title="{{ __('Reine Wochentage (Mo-Fr) des Jahres - ohne Feiertage oder Krankheitstage abzuziehen.') }}">{{ __('Arbeitstage') }}</span>
                     </x-sortable-th>
