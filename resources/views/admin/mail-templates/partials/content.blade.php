@@ -72,6 +72,10 @@
                         <input type="text" name="name" value="{{ $selectedTemplate->name }}" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                     </div>
                     <div>
+                        <label class="block text-xs text-gray-500">{{ __('Beschreibung (wird nicht mitgesendet)') }}</label>
+                        <textarea name="description" rows="2" placeholder="{{ __('z. B. Zweck der Mail und wann sie verwendet wird') }}" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">{{ $selectedTemplate->description }}</textarea>
+                    </div>
+                    <div>
                         <label class="block text-xs text-gray-500">{{ __('Betreff') }}</label>
                         <input type="text" name="subject" x-ref="subject" value="{{ $selectedTemplate->subject }}" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                         @if ($placeholders->isNotEmpty())

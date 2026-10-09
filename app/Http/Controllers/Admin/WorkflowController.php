@@ -129,7 +129,7 @@ class WorkflowController extends Controller
             'deploymentRows' => $deploymentRows,
             'milestones' => $milestones,
             'mailTimers' => $selectedWorkflow ? \App\Models\WorkflowMailTimer::query()->where('workflow_id', $selectedWorkflow->id)->orderBy('id')->get() : collect(),
-            'mailTemplates' => \App\Models\MailTemplate::query()->where('tenant_id', $tenantId)->orderBy('name')->get(['id', 'name']),
+            'mailTemplates' => \App\Models\MailTemplate::query()->where('tenant_id', $tenantId)->orderBy('name')->get(['id', 'name', 'description']),
             'viewState' => $viewState,
             'steps' => $steps,
             'isPublished' => $isPublished,

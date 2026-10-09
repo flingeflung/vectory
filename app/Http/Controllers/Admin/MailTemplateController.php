@@ -91,6 +91,7 @@ class MailTemplateController extends Controller
 
         $mailTemplate->update([
             'name' => $name,
+            'description' => trim((string) $request->string('description')) ?: null,
             'subject' => $subject,
             'body' => (string) $request->string('body'),
         ]);

@@ -322,4 +322,21 @@ class MailTimerTest extends TestCase
         $this->assertSame($this->template->id, $copied->mail_template_id);
         $this->assertSame([$this->group->id], $copied->function_group_ids);
     }
+
+    public function test_template_description_is_saved_shown_in_the_dialog_and_never_sent(): void
+    {
+        $admin = \App\Models\User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'organization_admin']);
+        $this->actingAs($admin);
+
+        $this->post(route('admin.mail-vorlagen.update', $this->template), [
+            'name' => 'Erinnerung', 'description' => 'Erinnert die Redaktion an die Freigabe.', 'subject' => 'Betreff {pn}', 'body' => 'Text',
+        ])->assertRedirect();
+        $this->assertSame('Erinnert die Redaktion an die Freigabe.', $this->template->fresh()->description);
+
+        $project = $this->project();
+        $this->get(route('projekte.mailtimer.index', $project))->assertOk()->assertSee('Erinnert die Redaktion an die Freigabe.');
+
+        $rendered = app(MailTemplateRenderer::class)->render($this->template->fresh(), $project->fresh());
+        $this->assertStringNotContainsString('Redaktion', $rendered['subject'].$rendered['body']);
+    }
 }

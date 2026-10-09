@@ -13,6 +13,7 @@
         error: '',
         base: {{ \Illuminate\Support\Js::from(route('projekte.mailtimer.store', $project)) }},
         csrf: {{ \Illuminate\Support\Js::from(csrf_token()) }},
+        descriptions: {{ \Illuminate\Support\Js::from($templates->filter(fn ($template) => filled($template->description))->mapWithKeys(fn ($template) => [$template->id => $template->description])) }},
         draft: { workflow_step_id: {{ \Illuminate\Support\Js::from($firstStepId) }}, mail_template_id: '', reference: 'fixed', fixed_date: '', amount: 7, unit: 7, direction: -1, function_group_ids: [], only_if_in_step: true },
         get isFixed() { return this.draft.reference === 'fixed'; },
         async send(method, url, body) {
@@ -127,6 +128,7 @@
                                 <option value="">{{ __('– bitte wählen –') }}</option>
                                 @foreach ($templates as $template)<option value="{{ $template->id }}">{{ $template->name }}</option>@endforeach
                             </select>
+                            <span x-show="descriptions[draft.mail_template_id]" x-text="descriptions[draft.mail_template_id]" class="mt-1 block whitespace-pre-line text-gray-500"></span>
                         </label>
                         <label class="block">
                             <span class="block text-[10px] text-gray-500" title="{{ __('Der Schritt, in dem das Projekt zum Sendetag stehen muss.') }}">{{ __('Schritt') }}</span>

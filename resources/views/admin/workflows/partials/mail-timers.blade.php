@@ -28,6 +28,7 @@
     x-data="{
         open: {{ ($viewState['erinnerungen'] ?? true) ? 'true' : 'false' }},
         form: null,
+        descriptions: {{ \Illuminate\Support\Js::from($mailTemplates->filter(fn ($template) => filled($template->description))->mapWithKeys(fn ($template) => [$template->id => $template->description])) }},
         base: {{ \Illuminate\Support\Js::from(route('admin.workflows.mailtimers.store', $selectedWorkflow)) }},
         toggle() {
             this.open = ! this.open;
@@ -117,6 +118,7 @@
                                     <option value="">{{ __('– bitte wählen –') }}</option>
                                     @foreach ($mailTemplates as $template)<option value="{{ $template->id }}">{{ $template->name }}</option>@endforeach
                                 </select>
+                                <span x-show="descriptions[form.mail_template_id]" x-text="descriptions[form.mail_template_id]" class="mt-1 block max-w-[16rem] whitespace-pre-line text-gray-500"></span>
                             </label>
                             <label class="block">
                                 <span class="block text-[10px] text-gray-500" title="{{ __('Der Schritt, in dem das Projekt zum Sendetag stehen muss.') }}">{{ __('Schritt') }}</span>

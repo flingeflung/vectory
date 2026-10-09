@@ -47,7 +47,7 @@ class ProjectMailTimerController extends Controller
             'canEdit' => $request->user()->can('project.edit'),
             'steps' => $steps,
             'milestones' => $milestones,
-            'templates' => MailTemplate::query()->withoutGlobalScopes()->where('tenant_id', $project->tenant_id)->orderBy('name')->get(['id', 'name']),
+            'templates' => MailTemplate::query()->withoutGlobalScopes()->where('tenant_id', $project->tenant_id)->orderBy('name')->get(['id', 'name', 'description']),
             'groups' => FunctionGroup::query()->availableForTenant((int) $project->tenant_id, false)->orderBy('name')->get(['id', 'name']),
             'preselectStep' => $request->integer('step') ?: null,
         ]);

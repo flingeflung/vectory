@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Model;
  * sind bewusst NICHT Teil dieses Modells - die werden laut Ralf erst im
  * jeweiligen Anwendungsfall festgelegt (Step 2, noch nicht gebaut).
  */
-#[Fillable(['tenant_id', 'name', 'subject', 'body'])]
+#[Fillable(['tenant_id', 'name', 'description', 'subject', 'body'])]
 class MailTemplate extends Model
 {
     use BelongsToTenant;

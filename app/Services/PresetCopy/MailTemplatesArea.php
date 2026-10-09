@@ -47,7 +47,7 @@ class MailTemplatesArea implements PresetArea
             }
             $targets = $this->templates($targetTenantId);
             $existing = $targets->firstWhere('name', $source->name);
-            $data = $source->only(['subject', 'body']);
+            $data = $source->only(['description', 'subject', 'body']);
 
             if ($existing && $choice === 'copy') {
                 $report->add($this->label(), $source->name, __('übersprungen (gibt es schon)'));
