@@ -235,7 +235,7 @@
                                     },
                                     get shown() {
                                         const needle = this.q.trim().toLowerCase();
-                                        return this.pages.filter((page) => page.id !== this.selfId && (needle === '' || (page.title + ' ' + page.path + ' ' + page.id).toLowerCase().includes(needle))).slice(0, 60);
+                                        return this.pages.filter((page) => page.id !== this.selfId && (needle === '' || (page.title + ' ' + page.path + ' ' + page.id).toLowerCase().includes(needle)));
                                     },
                                     open() {
                                         this.pickerOpen = true;
