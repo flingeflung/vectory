@@ -38,6 +38,7 @@ enum ActivityType: string
     case MailTimerSent = 'mail_timer_sent';
     /** Von Hand erfasster Vorgang (Ralf, 2026-10-09) */
     case Note = 'note';
+    case ScheduleShifted = 'schedule_shifted';
 
     public function label(): string
     {
@@ -59,6 +60,7 @@ enum ActivityType: string
             self::PlanningTransferred => __('Planung übernommen'),
             self::MailTimerSent => __('Erinnerung gesendet'),
             self::Note => __('Notiz'),
+            self::ScheduleShifted => __('Termine verschoben'),
         };
     }
 
@@ -70,7 +72,7 @@ enum ActivityType: string
             self::Note => ActivityCategory::Note,
             self::ProjectCreated, self::ProjectCopied, self::PublicationDateChanged, self::ProjectMultichanged,
             self::VerbundRoleChanged, self::VerbundDissolved, self::StammIdDetached, self::StatusChanged, self::AttributeChanged,
-            self::PlannedHoursChanged, self::PlanningTransferred, self::MailTimerSent => ActivityCategory::General,
+            self::PlannedHoursChanged, self::PlanningTransferred, self::MailTimerSent, self::ScheduleShifted => ActivityCategory::General,
         };
     }
 }

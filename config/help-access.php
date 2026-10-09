@@ -47,7 +47,7 @@ return [
     'D-MFQU#vorgaenge' => 'Alle, die das Projekt sehen. Erfassen, hervorheben, ändern und löschen mit dem Recht „Projekt: Stammdaten bearbeiten“ (project.edit); Ändern und Löschen nur bei eigenen, von Hand erfassten Vorgängen, Administratoren bei allen von Hand erfassten.',
     'D-MFQU#planung.planstunden' => 'Alle, die das Projekt sehen. Ändern nur mit dem Planungsrecht (planning.view); Administratoren immer.',
     'D-MFQU#planung.auslastung' => 'Mit den Rechten „Projekte ansehen“ und „Planung: erweiterte Planung und personenbezogene Auswertungen“ (planning.view); Administratoren immer.',
-    'D-MFQU#planung.terminuebersicht' => 'Alle, die das Projekt sehen.',
+    'D-MFQU#planung.terminuebersicht' => 'Alle, die das Projekt sehen. „Termine im Verbund verschieben“ nur am Hauptprojekt und mit dem Recht für Termine der Workflow-Schritte (workflow_step.due_date); Administratoren immer.',
     'D-MFQU#planung.ablaufplan' => 'Alle, die das Projekt sehen. Ändern nur mit dem Recht für Termine der Workflow-Schritte (workflow_step.due_date); Administratoren immer.',
     'D-MFQU#zeiten.uebersicht' => 'Alle, die das Projekt sehen (Summen ohne Personenbezug).',
     'D-MFQU#zeiten.personen' => 'Mit den Rechten „Projekte ansehen“ und „Planung: erweiterte Planung und personenbezogene Auswertungen“ (planning.view); Administratoren immer.',

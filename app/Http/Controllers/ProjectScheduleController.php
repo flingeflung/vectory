@@ -281,6 +281,42 @@ class ProjectScheduleController extends Controller
         return response()->json($result);
     }
 
+    /**
+     * Termine eines Verbunds gemeinsam verschieben (Ralf, 2026-10-09): am Hauptprojekt, um eine Anzahl Arbeitstage oder indem der Start
+     * eines Projekts auf ein neues Datum gelegt wird. Mit preview=1 nur die Vorschau je Projekt.
+     */
+    public function shiftVerbund(Request $request, Project $project): JsonResponse
+    {
+        abort_unless($project->mayBeOpenedBy($request->user()) && $request->user()->can('workflow_step.due_date'), 403);
+        abort_unless((int) $project->verbund_rolle === 1, 422, __('Das gibt es nur am Hauptprojekt eines Verbunds.'));
+
+        $validated = $request->validate([
+            'mode' => ['required', 'in:days,project'],
+            'amount' => ['required_if:mode,days', 'nullable', 'integer', 'between:0,1000'],
+            'unit' => ['required_if:mode,days', 'nullable', 'in:at,weeks'],
+            'direction' => ['required_if:mode,days', 'nullable', 'in:later,earlier'],
+            'project_id' => ['required_if:mode,project', 'nullable', 'integer'],
+            'date' => ['required_if:mode,project', 'nullable', 'date_format:Y-m-d', 'after:2000-01-01', 'before:2100-01-01'],
+        ]);
+
+        $shifter = app(\App\Services\VerbundScheduleShifter::class);
+        if ($validated['mode'] === 'days') {
+            $delta = (int) $validated['amount'] * ($validated['unit'] === 'weeks' ? 5 : 1) * ($validated['direction'] === 'earlier' ? -1 : 1);
+        } else {
+            $anchor = $shifter->members($project)->firstWhere('id', (int) $validated['project_id']);
+            abort_unless($anchor !== null, 422, __('Bitte wählen Sie ein Projekt dieses Verbunds.'));
+            $delta = $shifter->deltaForNewStart($anchor, \Carbon\CarbonImmutable::parse($validated['date']));
+        }
+
+        $preview = $shifter->preview($project, $request->user(), $delta);
+        if (! $request->boolean('preview')) {
+            abort_if($preview['movable'] === 0 || $delta === 0, 422, __('Es gibt nichts zu verschieben.'));
+            $preview['applied'] = $shifter->apply($project, $request->user(), $delta);
+        }
+
+        return response()->json($preview);
+    }
+
     /** Meilenstein am Projekt anlegen (neues Terminmodell; docs/ablaufplan-konzept.md). */
     public function storeMilestone(Request $request, Project $project): JsonResponse
     {

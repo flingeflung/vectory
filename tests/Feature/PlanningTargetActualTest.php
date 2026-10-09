@@ -26,6 +26,8 @@ class PlanningTargetActualTest extends TestCase
 
     private FunctionGroup $group;
 
+    private int $pnCounter = 0;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -48,7 +50,7 @@ class PlanningTargetActualTest extends TestCase
 
     private function project(string $start, string $end, int $status = 1, bool $archived = false): Project
     {
-        return Project::query()->create(['tenant_id' => $this->tenant->id, 'source_pn' => '29'.random_int(1000, 9999), 'title' => 'P', 'status' => $status, 'archived' => $archived, 'start_date' => $start, 'end_date' => $end]);
+        return Project::query()->create(['tenant_id' => $this->tenant->id, 'source_pn' => '29'.str_pad((string) ++$this->pnCounter, 4, '0', STR_PAD_LEFT), 'title' => 'P', 'status' => $status, 'archived' => $archived, 'start_date' => $start, 'end_date' => $end]);
     }
 
     private function assign(Project $project, Person $person, float $hours): ProjectPerson

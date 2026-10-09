@@ -209,6 +209,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/projekte/{project}/mailtimer', [\App\Http\Controllers\ProjectMailTimerController::class, 'store'])->name('projekte.mailtimer.store');
     Route::delete('/projekte/{project}/mailtimer/{mailTimer}', [\App\Http\Controllers\ProjectMailTimerController::class, 'destroy'])->name('projekte.mailtimer.destroy');
     Route::post('/projekte/{project}/fixpunkt', [ProjectScheduleController::class, 'fixPoint'])->name('projekte.termine.fixpunkt');
+    Route::post('/projekte/{project}/verbund-verschieben', [ProjectScheduleController::class, 'shiftVerbund'])->name('projekte.termine.verbund-verschieben');
     Route::post('/projekte/{project}/meilensteine', [ProjectScheduleController::class, 'storeMilestone'])->name('projekte.meilensteine.store');
     Route::patch('/projekte/{project}/meilensteine/{milestone}', [ProjectScheduleController::class, 'updateMilestone'])->name('projekte.meilensteine.update');
     Route::delete('/projekte/{project}/meilensteine/{milestone}', [ProjectScheduleController::class, 'destroyMilestone'])->name('projekte.meilensteine.destroy');

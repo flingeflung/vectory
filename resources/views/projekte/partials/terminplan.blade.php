@@ -13,6 +13,12 @@
     // Blättern nur bis ein Jahr vor bzw. nach den Terminen der angezeigten Projekte.
     $timelineMinYear = ($timelineYears->isEmpty() ? $timelineCurrentYear : $timelineYears->first()) - 1;
     $timelineMaxYear = ($timelineYears->isEmpty() ? $timelineCurrentYear : $timelineYears->last()) + 1;
+    // Termine im Verbund verschieben (Ralf, 2026-10-09): nur am Hauptprojekt und mit dem Recht für Termine der Workflow-Schritte
+    $canShiftVerbund = (int) $project->verbund_rolle === 1 && auth()->user()->can('workflow_step.due_date');
+    $shiftMembers = $canShiftVerbund
+        ? app(\App\Services\VerbundScheduleShifter::class)->members($project)->filter(fn ($member) => $member->start_date !== null)
+            ->map(fn ($member) => ['id' => $member->id, 'label' => $member->source_pn.' '.$member->title, 'start' => $member->start_date->format('Y-m-d')])->values()->all()
+        : [];
 @endphp
 
 <div
@@ -54,11 +60,106 @@
                 @endif
             </p>
             <div class="flex items-center gap-1 text-xs">
+                @if ($canShiftVerbund)
+                    <button type="button" @click="window.dispatchEvent(new CustomEvent('verbund-shift-toggle'))" class="mr-2 inline-flex items-center rounded-md border border-gray-300 bg-btn-secondary px-2 py-0.5 font-medium text-gray-700 hover:bg-btn-secondary-hover" title="{{ __('Verschiebt die Termine aller Projekte dieses Verbunds um dieselbe Anzahl Arbeitstage.') }}">{{ __('Termine im Verbund verschieben') }}</button>
+                @endif
                 <button type="button" @click="year--" :disabled="year <= minYear" class="rounded border border-gray-300 bg-btn-secondary px-1.5 py-0.5 hover:bg-btn-secondary-hover disabled:cursor-not-allowed disabled:opacity-40" aria-label="{{ __('Vorheriges Jahr') }}">&lsaquo;</button>
                 <span class="w-12 text-center font-semibold tabular-nums text-gray-800" x-text="year"></span>
                 <button type="button" @click="year++" :disabled="year >= maxYear" class="rounded border border-gray-300 bg-btn-secondary px-1.5 py-0.5 hover:bg-btn-secondary-hover disabled:cursor-not-allowed disabled:opacity-40" aria-label="{{ __('Nächstes Jahr') }}">&rsaquo;</button>
             </div>
         </div>
+
+        @if ($canShiftVerbund)
+            <div
+                x-data="{
+                    open: false, mode: 'days', amount: 1, unit: 'at', direction: 'later', projectId: '', date: '',
+                    members: {{ \Illuminate\Support\Js::from($shiftMembers) }},
+                    preview: null, error: '', busy: false, timer: null,
+                    fmt(iso) { if (! iso) return '–'; const p = iso.split('-'); return p[2] + '.' + p[1] + '.' + p[0]; },
+                    ready() { return this.mode === 'days' ? Number(this.amount) > 0 : (this.projectId !== '' && this.date !== ''); },
+                    queue() { clearTimeout(this.timer); this.preview = null; this.error = ''; if (! this.ready()) return; this.timer = setTimeout(() => this.run(true), 350); },
+                    pickProject() { const member = this.members.find((m) => String(m.id) === String(this.projectId)); this.date = member ? member.start : ''; this.queue(); },
+                    async run(preview) {
+                        if (this.busy) return;
+                        this.busy = true;
+                        try {
+                            const body = { mode: this.mode, preview: preview ? 1 : 0 };
+                            if (this.mode === 'days') { body.amount = Number(this.amount); body.unit = this.unit; body.direction = this.direction; } else { body.project_id = this.projectId; body.date = this.date; }
+                            const response = await fetch({{ \Illuminate\Support\Js::from(route('projekte.termine.verbund-verschieben', $project)) }}, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': {{ \Illuminate\Support\Js::from(csrf_token()) }} }, body: JSON.stringify(body) });
+                            const data = await response.json();
+                            if (! response.ok) { this.preview = null; this.error = (data.errors ? Object.values(data.errors)[0][0] : data.message) || {{ \Illuminate\Support\Js::from(__('Das hat nicht geklappt.')) }}; return; }
+                            if (preview) { this.preview = data; return; }
+                            @if ($isOverlay ?? false)
+                            window.dispatchEvent(new CustomEvent('open-project', { detail: { id: {{ $project->id }} } }));
+                            @else
+                            window.location.reload();
+                            @endif
+                        } finally { this.busy = false; }
+                    },
+                }"
+                @verbund-shift-toggle.window="open = ! open; if (open) $nextTick(() => setTimeout(() => $refs.amount && $refs.amount.focus(), 30))"
+                x-show="open" x-cloak
+                class="mb-3 rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700"
+            >
+                <div class="mb-2 text-xs font-semibold text-gray-700">{{ __('Termine im Verbund verschieben') }}</div>
+                <p class="mb-2 text-gray-500">{{ __('Alle Projekte des Verbunds wandern um dieselbe Anzahl Arbeitstage. Jedes Projekt rechnet danach selbst neu, Erinnerungsmails folgen den neuen Terminen.') }}</p>
+                <div class="space-y-2">
+                    <label class="flex flex-wrap items-center gap-2">
+                        <input type="radio" value="days" x-model="mode" @change="queue()">
+                        <span>{{ __('Um') }}</span>
+                        <input type="number" min="1" max="1000" x-ref="amount" x-model.number="amount" @input="queue()" @focus="mode = 'days'; queue()" class="h-7 w-16 rounded border-gray-300 px-1.5 py-0 text-right text-xs">
+                        <select x-model="unit" @change="mode = 'days'; queue()" class="h-7 rounded border-gray-300 py-0 text-xs">
+                            <option value="at">{{ __('Arbeitstage') }}</option>
+                            <option value="weeks">{{ __('Wochen (je 5 Arbeitstage)') }}</option>
+                        </select>
+                        <select x-model="direction" @change="mode = 'days'; queue()" class="h-7 rounded border-gray-300 py-0 text-xs">
+                            <option value="later">{{ __('später') }}</option>
+                            <option value="earlier">{{ __('früher') }}</option>
+                        </select>
+                    </label>
+                    <label class="flex flex-wrap items-center gap-2">
+                        <input type="radio" value="project" x-model="mode" @change="queue()">
+                        <span>{{ __('Start von') }}</span>
+                        <select x-model="projectId" @change="mode = 'project'; pickProject()" class="h-7 max-w-[18rem] rounded border-gray-300 py-0 text-xs">
+                            <option value="">{{ __('– Projekt wählen –') }}</option>
+                            <template x-for="member in members" :key="member.id"><option :value="member.id" x-text="member.label"></option></template>
+                        </select>
+                        <span>{{ __('auf') }}</span>
+                        <input type="date" x-model="date" @input="mode = 'project'; queue()" class="h-7 rounded border-gray-300 px-1.5 py-0 text-xs">
+                    </label>
+                </div>
+
+                <p x-show="error" x-text="error" class="mt-2 text-red-600"></p>
+
+                <template x-if="preview">
+                    <div class="mt-3 space-y-2">
+                        <p class="font-medium text-gray-800" x-text="preview.delta === 0 ? {{ \Illuminate\Support\Js::from(__('Keine Verschiebung.')) }} : {{ \Illuminate\Support\Js::from(__('Verschiebung')) }} + ': ' + (preview.delta > 0 ? '+' : '') + preview.delta + ' ' + {{ \Illuminate\Support\Js::from(__('Arbeitstage')) }}"></p>
+                        <table class="w-full text-left">
+                            <thead class="text-[10px] uppercase tracking-wide text-gray-400"><tr><th class="py-1 pr-2">{{ __('Projekt') }}</th><th class="py-1 pr-2">{{ __('Start') }}</th><th class="py-1 pr-2">{{ __('Ende') }}</th><th class="py-1"></th></tr></thead>
+                            <tbody>
+                                <template x-for="row in preview.projects" :key="row.id">
+                                    <tr class="border-t border-gray-200 align-top" :class="row.reason ? 'text-gray-400' : ''">
+                                        <td class="py-1 pr-2"><span class="font-semibold" x-text="row.pn"></span> <span x-show="row.isMain" class="rounded bg-slate-100 px-1 text-[10px] text-slate-600">HP</span> <span class="block max-w-[14rem] truncate" x-text="row.title"></span></td>
+                                        <td class="whitespace-nowrap py-1 pr-2"><span x-text="fmt(row.startOld)"></span><template x-if="row.startNew"><span> → <b x-text="fmt(row.startNew)"></b></span></template></td>
+                                        <td class="whitespace-nowrap py-1 pr-2"><span x-text="fmt(row.endOld)"></span><template x-if="row.endNew"><span> → <b x-text="fmt(row.endNew)"></b></span></template></td>
+                                        <td class="py-1" x-text="row.reason || ''"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                        <p x-show="preview.fixedMilestones.length > 0" class="rounded border border-amber-200 bg-amber-50 px-2 py-1 text-amber-800">
+                            {{ __('Meilensteine mit festem Datum bleiben, wo sie sind:') }}
+                            <template x-for="(milestone, index) in preview.fixedMilestones" :key="index"><span><span x-text="milestone.pn + ' ' + milestone.name + ' (' + milestone.date + ')'"></span><span x-show="index < preview.fixedMilestones.length - 1">, </span></span></template>
+                        </p>
+                    </div>
+                </template>
+
+                <div class="mt-3 flex justify-end gap-2">
+                    <button type="button" @click="open = false" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Abbrechen') }}</button>
+                    <button type="button" x-show="preview && preview.delta !== 0 && preview.movable > 0" x-cloak :disabled="busy" @click="run(false)" class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover disabled:opacity-50">{{ __('Speichern') }}</button>
+                </div>
+            </div>
+        @endif
 
         <div class="overflow-x-auto rounded-lg border border-gray-200 bg-white">
             <div class="min-w-[640px]">
