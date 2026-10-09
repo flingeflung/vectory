@@ -7,10 +7,16 @@
     Delegation sitzt in components/help-panel.blade.php).
 --}}
 @if ($nodes->isNotEmpty())
-    <ul class="{{ $topLevel ?? false ? '' : 'pl-3' }} space-y-0.5">
+    {{-- Ebenen mit senkrechter Bezugslinie und waagerechter Abzweigung je Eintrag (Ralf, 2026-10-09); beim letzten Eintrag endet die Linie an der Abzweigung --}}
+    <ul class="{{ $topLevel ?? false ? '' : 'ml-2.5' }} space-y-0.5">
         @foreach ($nodes as $node)
             @php($nodeTitle = $node->translation(app()->getLocale())?->title ?? $node->key)
-            <li>
+            <li @class([
+                'relative',
+                'pl-3 before:absolute before:left-0 before:top-0 before:w-px before:bg-gray-300 after:absolute after:left-0 after:top-3.5 after:h-px after:w-2.5 after:bg-gray-300' => ! ($topLevel ?? false),
+                'before:bottom-0' => ! ($topLevel ?? false) && ! $loop->last,
+                'before:h-3.5' => ! ($topLevel ?? false) && $loop->last,
+            ])>
                 <a
                     href="#"
                     data-help-key="{{ $node->key }}"
