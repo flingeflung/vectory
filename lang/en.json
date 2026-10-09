@@ -2457,5 +2457,7 @@
     "– noch keine Einträge –": "– no entries yet –",
     "– ohne Rechte-Set –": "– without permission set –",
     "– zuerst Funktionsgruppe wählen –": "",
-    "„:name\" teilen mit:": "Share “:name\" with:"
+    "„:name\" teilen mit:": "Share “:name\" with:",
+    "Felder zum Projekt einfügen:": "Insert project fields:",
+    "Diese Felder gibt es nur, wenn die Mail zu einem Projekt gehört (z. B. bei einer Erinnerung). Für Mails ohne Projektbezug stehen sie nicht zur Verfügung.": "These fields only exist if the mail belongs to a project (e.g. a reminder). They are not available for mails without a project."
 }

@@ -80,7 +80,7 @@
                         <input type="text" name="subject" x-ref="subject" value="{{ $selectedTemplate->subject }}" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
                         @if ($placeholders->isNotEmpty())
                             <div class="mt-1 flex flex-wrap gap-1">
-                                <span class="text-xs text-gray-400">{{ __('Feld einfügen:') }}</span>
+                                <span class="text-xs text-gray-400" title="{{ __('Diese Felder gibt es nur, wenn die Mail zu einem Projekt gehört (z. B. bei einer Erinnerung). Für Mails ohne Projektbezug stehen sie nicht zur Verfügung.') }}">{{ __('Felder zum Projekt einfügen:') }}</span>
                                 @foreach ($placeholders as $placeholder)
                                     <button
                                         type="button"
@@ -110,7 +110,7 @@
                         <textarea name="body" x-ref="body" rows="10" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">{{ $selectedTemplate->body }}</textarea>
                         @if ($placeholders->isNotEmpty())
                             <div class="mt-1 flex flex-wrap gap-1">
-                                <span class="text-xs text-gray-400">{{ __('Feld einfügen:') }}</span>
+                                <span class="text-xs text-gray-400" title="{{ __('Diese Felder gibt es nur, wenn die Mail zu einem Projekt gehört (z. B. bei einer Erinnerung). Für Mails ohne Projektbezug stehen sie nicht zur Verfügung.') }}">{{ __('Felder zum Projekt einfügen:') }}</span>
                                 @foreach ($placeholders as $placeholder)
                                     <button
                                         type="button"
