@@ -367,6 +367,13 @@
                                     <x-help-markup :label="'(('.__('Glossar-Link').'))'" action="glossary" /> ·
                                     <x-help-markup label="{+Neu}" action="wrap" a1="{" a2="}" part="+Neu" /> {{ __('für einen Button/UI-Element wie im Tool') }}
                                 </p>
+                                {{-- Passagen nur für Admin-Stufen (Ralf, 2026-10-09): markierten Text umschließen --}}
+                                <p class="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-gray-500" title="{{ __('Der markierte Text ist nur für die genannten Stufen sichtbar. Für alle anderen verschwindet er samt Markierung.') }}">
+                                    <span>{{ __('Nur für:') }}</span>
+                                    <x-help-markup label="[[Admin3|…]]" action="wrap" a1="[[Admin3|" a2="]]" :part="__('Text')" /> {{ __('alle Admin-Stufen') }} ·
+                                    <x-help-markup label="[[Admin2|…]]" action="wrap" a1="[[Admin2|" a2="]]" :part="__('Text')" /> {{ __('Zentral- und Super-Admin') }} ·
+                                    <x-help-markup label="[[Admin1|…]]" action="wrap" a1="[[Admin1|" a2="]]" :part="__('Text')" /> {{ __('nur Super-Admin') }}
+                                </p>
                                 <textarea x-ref="body" name="translations[{{ $localeCode }}][body]" rows="14" class="mt-0.5 w-full rounded-md border-gray-300 font-mono text-sm">{{ $t?->body }}</textarea>
                                 <p class="mt-1 text-xs text-gray-500">
                                     {!! __('Bild einfügen: Datei nach public/images/hilfe/ legen, dann im Text z. B. :placeholder schreiben - erscheint als eigener Block, Folgetext kommt automatisch darunter. Empfohlene Bildgröße: max. ca. 1200 px breit, unter 500 KB (wird angezeigt verkleinert, bei Klick in Originalgröße).', ['placeholder' => view('components.help-markup', ['label' => '[screenshot_dashboard1.png]', 'action' => 'insert', 'a1' => '[screenshot_dashboard1.png]', 'part' => 'screenshot_dashboard1.png'])->render()]) !!}

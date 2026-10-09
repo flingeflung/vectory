@@ -2482,5 +2482,10 @@
     "– noch keine Einträge –": "– no entries yet –",
     "– ohne Rechte-Set –": "– without permission set –",
     "– zuerst Funktionsgruppe wählen –": "",
-    "„:name\" teilen mit:": "Share “:name\" with:"
+    "„:name\" teilen mit:": "Share “:name\" with:",
+    "Nur für:": "Only for:",
+    "alle Admin-Stufen": "all admin levels",
+    "Zentral- und Super-Admin": "central and super admin",
+    "nur Super-Admin": "super admin only",
+    "Der markierte Text ist nur für die genannten Stufen sichtbar. Für alle anderen verschwindet er samt Markierung.": "The selected text is only visible to the levels named. For everyone else it disappears together with the marker."
 }
