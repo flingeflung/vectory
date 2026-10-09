@@ -13,7 +13,7 @@
     @if ($rows->isEmpty())
         <p class="py-8 text-center text-sm text-gray-400">{{ __('Für :year sind keine Personen sichtbar - entweder ist bei niemandem "Ressourcenplanung" angehakt, oder es fehlen gültige Wochenstunden-Daten für dieses Jahr.', ['year' => $year]) }}</p>
     @else
-        <div class="mb-10 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-gray-600">
+        <div class="mb-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-gray-600">
             <span class="inline-flex items-center gap-1.5"><span class="inline-block h-3 w-3 rounded-sm bg-slate-400"></span>{{ __('Grundlast') }}: <b class="tabular-nums text-gray-800">{{ $fmt($baseLoadTotal) }}</b></span>
             <span class="inline-flex items-center gap-1.5"><span class="inline-block h-3 w-3 rounded-sm bg-sky-300"></span>{{ __('Projektstunden') }}: <b class="tabular-nums text-gray-800">{{ $fmt($projectHoursTotal) }}</b></span>
             <span>{{ __('Jahresstunden gesamt') }}: <b class="tabular-nums text-gray-800">{{ $fmt($total) }}</b></span>
@@ -36,7 +36,7 @@
                 @foreach ($chart['ticks'] as $tick)
                     <span class="absolute right-0 -translate-y-1/2 tabular-nums" style="bottom: {{ $pct($tick) }}%">{{ number_format($tick, 0, ',', '.') }}</span>
                 @endforeach
-                <span class="absolute -top-8 right-0 text-[10px]">{{ __('Std.') }}</span>
+                <span class="absolute right-0 top-full mt-1 text-[11px] text-gray-400">{{ __('Std.') }}</span>
             </div>
 
             <div class="min-w-0 flex-1 overflow-x-auto pb-2">
