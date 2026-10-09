@@ -575,6 +575,7 @@ class PlanningController extends Controller
                 'firstName' => $person->first_name,
                 'lastName' => $person->last_name,
                 'sortKey' => $person->last_name.', '.$person->first_name,
+                'shortName' => $person->short_name ?: '',
                 'department' => $person->department?->name ?? '',
                 'annotation' => $annotations->implode(', '),
                 'annotationSort' => collect([! $person->active ? __('Inaktiv') : null, ...$annotations])->filter()->implode(', '),
@@ -614,7 +615,32 @@ class PlanningController extends Controller
         $baseLoadTotal = (float) $rows->sum('baseLoad');
         $projectHoursTotal = (float) $rows->sum('projectHours');
 
-        return view('planning.stunden', compact('years', 'year', 'totalWorkdays', 'rows', 'total', 'baseLoadTotal', 'projectHoursTotal', 'sort', 'direction'));
+        // Grafik (Ralf, 2026-10-09): ein Balken je Person, Gesamthöhe = Jahresstunden, unten Grundlast, darüber Projektstunden
+        $view = $request->query('ansicht') === 'grafik' ? 'grafik' : 'tabelle';
+        $chart = $this->hoursChartScale((float) ($rows->max('jahresstd') ?? 0));
+
+        return view('planning.stunden', compact('years', 'year', 'totalWorkdays', 'rows', 'total', 'baseLoadTotal', 'projectHoursTotal', 'sort', 'direction', 'view', 'chart'));
+    }
+
+    /**
+     * Achse der Stunden-Grafik: ein "schöner" Höchstwert und Teilstriche (höchstens etwa sechs).
+     *
+     * @return array{max: float, ticks: list<float>}
+     */
+    private function hoursChartScale(float $highest): array
+    {
+        $highest = max($highest, 1.0);
+        $step = 10 ** floor(log10($highest / 5));
+        foreach ([1, 2, 2.5, 5, 10] as $factor) {
+            if ($step * $factor * 5 >= $highest) {
+                $step *= $factor;
+
+                break;
+            }
+        }
+        $max = ceil($highest / $step) * $step;
+
+        return ['max' => (float) $max, 'ticks' => array_map(fn ($i) => (float) ($i * $step), range(0, (int) round($max / $step)))];
     }
 
     private function planningYears($personIds, Request $request): array

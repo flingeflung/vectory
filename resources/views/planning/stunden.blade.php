@@ -8,9 +8,16 @@
 --}}
 <x-planning-layout>
     @php($fmt = fn ($value) => number_format($value, 1, ',', '.'))
+    <nav class="mb-2 flex shrink-0 gap-1 border-b border-gray-200" aria-label="{{ __('Ansicht') }}">
+        @foreach (['tabelle' => __('Tabelle'), 'grafik' => __('Grafik')] as $key => $label)
+            <a href="{{ request()->url().'?'.http_build_query(array_merge(request()->query(), ['ansicht' => $key])) }}"
+               class="border-b-2 px-3 py-1.5 text-sm font-medium {{ $view === $key ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700' }}">{{ $label }}</a>
+        @endforeach
+    </nav>
     <form method="GET" action="{{ route('planung.stunden') }}" class="mb-3 flex shrink-0 items-center gap-2 text-sm">
         <input type="hidden" name="sort" value="{{ $sort }}">
         <input type="hidden" name="direction" value="{{ $direction }}">
+        <input type="hidden" name="ansicht" value="{{ $view }}">
         <label class="flex items-center gap-2 text-gray-700">{{ __('Jahr') }}
             <select name="year" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 text-sm">
                 @foreach ($years as $y)
@@ -24,6 +31,9 @@
          auftauchen, wird jetzt direkt je Person in den Personendetails
          gepflegt (Checkbox "Ressourcenplanung"). --}}
 
+    @if ($view === 'grafik')
+        @include('planning.partials.stunden-grafik')
+    @else
     <div id="planning-stunden-content" class="min-h-0 flex-1 overflow-auto rounded-lg border border-gray-200 bg-white">
         <table class="min-w-full text-sm">
             <thead class="sticky top-0 bg-gray-50 text-xs text-gray-500">
@@ -90,6 +100,7 @@
             @endif
         </table>
     </div>
+    @endif
 
     <script>
         // Ralf, 2026-09-29: nach dem Bearbeiten einer Person im globalen
