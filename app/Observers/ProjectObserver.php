@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Models\CriticalProjectFinding;
 use App\Models\Project;
+use App\Models\ProjectWorkflowStep;
 use App\Models\Task;
 use App\Services\ProjectScheduler;
 use App\Support\StammId;
@@ -51,6 +52,8 @@ class ProjectObserver
         }
 
         if ($project->wasChanged('workflow_id')) {
+            // Die Schritte des bisherigen Workflows gehören nicht mehr zum Projekt (Ralf, 2026-10-09)
+            ProjectWorkflowStep::purgeForeignSteps($project);
             Task::syncWorkflowTasksForProject($project);
         }
 

@@ -35,6 +35,28 @@ class ProjectWorkflowStep extends Model
     }
 
     /**
+     * Entfernt vom Projekt alles, was zu einem anderen als dem aktuellen Workflow gehört (Ralf, 2026-10-09: nach einem Workflow-Wechsel
+     * ergeben die Schritte des alten Workflows keinen Sinn mehr): die Schritt-Zeilen samt Zuständigen, Aufgaben und Freigabe-Anfragen
+     * (per Fremdschlüssel) sowie die noch offenen Erinnerungsmails zu Schritten des alten Workflows. Gesendete und übersprungene Erinnerungen
+     * bleiben als Verlauf. Ohne Workflow gelten alle Schritte als fremd.
+     *
+     * @return int Anzahl entfernter Schritt-Zeilen
+     */
+    public static function purgeForeignSteps(Project $project): int
+    {
+        $foreignStepIds = fn () => \Illuminate\Support\Facades\DB::table('workflow_steps')
+            ->when($project->workflow_id, fn ($query) => $query->where('workflow_id', '!=', $project->workflow_id))
+            ->select('id');
+
+        MailTimer::query()->withoutGlobalScopes()->where('project_id', $project->id)
+            ->whereNull('sent_at')->whereNull('skipped_at')
+            ->whereIn('workflow_step_id', $foreignStepIds())->delete();
+
+        return static::query()->withoutGlobalScopes()->where('project_id', $project->id)
+            ->whereIn('workflow_step_id', $foreignStepIds())->delete();
+    }
+
+    /**
      * Terminberechnung: milestone_title/duration_days/is_start/is_end sind
      * pro Projekt NULL = "wie Vorlage", bis jemand hier bewusst abweicht
      * (siehe Migrations-Kommentar). Diese vier Helfer liefern immer den

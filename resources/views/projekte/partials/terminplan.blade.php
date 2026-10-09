@@ -46,7 +46,10 @@
         },
         monthStarts() { return Array.from({ length: 12 }, (_, m) => { const from = (Date.UTC(this.year, m, 1) - this.yearStart()) / 86400000, to = (Date.UTC(this.year, m + 1, 1) - this.yearStart()) / 86400000; return { name: this.monthNames[m], left: from / this.daysInYear() * 100, width: (to - from) / this.daysInYear() * 100 }; }); },
         fmt(iso) { const p = iso.split('-'); return p[2] + '.' + p[1] + '.' + p[0]; },
+        shifts: {},
+        shiftBar(r) { const s = this.shifts[r.id]; return s && s.start && s.end ? this.barStyle({ start: s.start, end: s.end }) : null; },
     }"
+    @verbund-shift-preview.window="shifts = $event.detail || {}"
 >
     @if ($timelineRows->isEmpty())
         <p class="text-gray-400">{{ __('Keine Termine vorhanden.') }}</p>
@@ -75,9 +78,10 @@
                     open: false, mode: 'days', amount: 1, unit: 'at', direction: 'later', projectId: '', date: '',
                     members: {{ \Illuminate\Support\Js::from($shiftMembers) }},
                     preview: null, error: '', busy: false, timer: null,
+                    publish(rows) { const map = {}; (rows || []).forEach((row) => { if (row.startNew && row.endNew) map[row.id] = { start: row.startNew, end: row.endNew }; }); window.dispatchEvent(new CustomEvent('verbund-shift-preview', { detail: map })); },
                     fmt(iso) { if (! iso) return '–'; const p = iso.split('-'); return p[2] + '.' + p[1] + '.' + p[0]; },
                     ready() { return this.mode === 'days' ? Number(this.amount) > 0 : (this.projectId !== '' && this.date !== ''); },
-                    queue() { clearTimeout(this.timer); this.preview = null; this.error = ''; if (! this.ready()) return; this.timer = setTimeout(() => this.run(true), 350); },
+                    queue() { clearTimeout(this.timer); this.preview = null; this.publish([]); this.error = ''; if (! this.ready()) return; this.timer = setTimeout(() => this.run(true), 350); },
                     pickProject() { const member = this.members.find((m) => String(m.id) === String(this.projectId)); this.date = member ? member.start : ''; this.queue(); },
                     async run(preview) {
                         if (this.busy) return;
@@ -87,8 +91,8 @@
                             if (this.mode === 'days') { body.amount = Number(this.amount); body.unit = this.unit; body.direction = this.direction; } else { body.project_id = this.projectId; body.date = this.date; }
                             const response = await fetch({{ \Illuminate\Support\Js::from(route('projekte.termine.verbund-verschieben', $project)) }}, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': {{ \Illuminate\Support\Js::from(csrf_token()) }} }, body: JSON.stringify(body) });
                             const data = await response.json();
-                            if (! response.ok) { this.preview = null; this.error = (data.errors ? Object.values(data.errors)[0][0] : data.message) || {{ \Illuminate\Support\Js::from(__('Das hat nicht geklappt.')) }}; return; }
-                            if (preview) { this.preview = data; return; }
+                            if (! response.ok) { this.preview = null; this.publish([]); this.error = (data.errors ? Object.values(data.errors)[0][0] : data.message) || {{ \Illuminate\Support\Js::from(__('Das hat nicht geklappt.')) }}; return; }
+                            if (preview) { this.preview = data; this.publish(data.projects); return; }
                             @if ($isOverlay ?? false)
                             window.dispatchEvent(new CustomEvent('open-project', { detail: { id: {{ $project->id }} } }));
                             @else
@@ -97,7 +101,7 @@
                         } finally { this.busy = false; }
                     },
                 }"
-                @verbund-shift-toggle.window="open = ! open; if (open) $nextTick(() => setTimeout(() => $refs.amount && $refs.amount.focus(), 30))"
+                @verbund-shift-toggle.window="open = ! open; if (! open) publish([]); if (open) $nextTick(() => setTimeout(() => $refs.amount && $refs.amount.focus(), 30))"
                 x-show="open" x-cloak
                 class="mb-3 rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700"
             >
@@ -155,7 +159,7 @@
                 </template>
 
                 <div class="mt-3 flex justify-end gap-2">
-                    <button type="button" @click="open = false" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Abbrechen') }}</button>
+                    <button type="button" @click="open = false; publish([])" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Abbrechen') }}</button>
                     <button type="button" x-show="preview && preview.delta !== 0 && preview.movable > 0" x-cloak :disabled="busy" @click="run(false)" class="rounded-md bg-btn-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-btn-primary-hover disabled:opacity-50">{{ __('Speichern') }}</button>
                 </div>
             </div>
@@ -202,6 +206,14 @@
                                     <span x-show="barStyle(r).after" class="absolute right-0 text-[11px] font-bold leading-none text-gray-700">&rsaquo;</span>
                                 </div>
                             </template>
+                            {{-- Vorschau der Verschiebung im Verbund: limettengrüner Balken parallel unter dem vorhandenen --}}
+                            <template x-if="shiftBar(r)">
+                                <div
+                                    class="absolute flex h-2 items-center rounded-sm border border-lime-500/70 bg-lime-300"
+                                    :style="'top:25px;left:' + shiftBar(r).left + ';width:' + shiftBar(r).width"
+                                    :title="@js(__('Nach dem Verschieben')) + ': ' + fmt(shifts[r.id].start) + ' - ' + fmt(shifts[r.id].end)"
+                                ></div>
+                            </template>
                             {{-- Meilensteine --}}
                             <template x-for="(milestone, mIndex) in r.milestones.filter((m) => inYear(m.date))" :key="mIndex">
                                 <span
@@ -222,6 +234,7 @@
         <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-gray-500">
             <span class="flex items-center gap-1"><span class="inline-block h-2.5 w-2.5 rotate-45 border border-white bg-fuchsia-600 shadow-sm"></span>{{ __('Meilenstein') }}</span>
             <span class="flex items-center gap-1"><span class="inline-block h-px w-3 bg-red-400"></span>{{ __('Heute') }}</span>
+            <span x-show="Object.keys(shifts).length > 0" x-cloak class="flex items-center gap-1"><span class="inline-block h-2 w-4 rounded-sm border border-lime-500/70 bg-lime-300"></span>{{ __('Nach dem Verschieben') }}</span>
             <span>&lsaquo; &rsaquo; {{ __('Projekt beginnt vor bzw. läuft nach dem angezeigten Jahr') }}</span>
         </div>
     @endif
