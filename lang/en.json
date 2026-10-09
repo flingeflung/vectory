@@ -2396,5 +2396,7 @@
     "– zuerst Funktionsgruppe wählen –": "",
     "„:name\" teilen mit:": "Share “:name\" with:",
     "Ohne diesen Haken bleiben Termine und Meilensteine im Ziel unverändert. Bei Projekten mit berechneten Terminen rechnet das Ziel die Termine aus seinem eigenen Projektstart und den Dauern selbst; übertragen werden nur die Meilenstein-Definitionen.": "Without this tick, dates and milestones in the target remain unchanged. For projects with calculated dates the target calculates the dates itself from its own project start and the durations; only the milestone definitions are transferred.",
-    "Die Wochenstunden werden in den Personendetails gepflegt.": "The weekly hours are maintained in the person details."
+    "Die Wochenstunden werden in den Personendetails gepflegt.": "The weekly hours are maintained in the person details.",
+    "Arbeitszeit des Jahres nach Abzug von Feiertagen und Urlaub.": "Working time of the year after deducting public holidays and vacation.",
+    "Stunden, die für Aufgaben außerhalb von Projekten reserviert sind. Die Werte stehen unter Planung › Grundlastbasis und Grundlast pro Person.": "Hours reserved for tasks outside of projects. The values are maintained under Planning › Base load basis and Base load per person."
 }

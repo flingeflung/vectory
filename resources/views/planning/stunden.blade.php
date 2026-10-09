@@ -51,8 +51,8 @@
                     <x-sortable-th field="vacation_hours" :sort="$sort" :direction="$direction" align="right" :compact="true">
                         <span title="{{ __('Anteilig berechneter Urlaubsanspruch, umgerechnet in Stunden.') }}">{{ __('Urlaub (Std)') }}</span>
                     </x-sortable-th>
-                    <x-sortable-th field="annual_hours" :sort="$sort" :direction="$direction" align="right" :compact="true">{{ __('Jahresstd.') }}</x-sortable-th>
-                    <x-sortable-th field="base_load" :sort="$sort" :direction="$direction" align="right" :compact="true">{{ __('Grundlast') }}</x-sortable-th>
+                    <x-sortable-th field="annual_hours" :sort="$sort" :direction="$direction" align="right" :compact="true"><span title="{{ __('Arbeitszeit des Jahres nach Abzug von Feiertagen und Urlaub.') }}">{{ __('Jahresstd.') }}</span></x-sortable-th>
+                    <x-sortable-th field="base_load" :sort="$sort" :direction="$direction" align="right" :compact="true"><span title="{{ __('Stunden, die für Aufgaben außerhalb von Projekten reserviert sind. Die Werte stehen unter Planung › Grundlastbasis und Grundlast pro Person.') }}">{{ __('Grundlast') }}</span></x-sortable-th>
                     <x-sortable-th field="project_hours" :sort="$sort" :direction="$direction" align="right" :compact="true">
                         <span title="{{ __('Stunden, die für Projekte zur Verfügung stehen') }}">{{ __('Projektstd.') }}</span>
                     </x-sortable-th>
