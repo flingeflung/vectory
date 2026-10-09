@@ -9,7 +9,7 @@
 <x-planning-layout>
     @php($fmt = fn ($value) => number_format($value, 1, ',', '.'))
     <nav class="mb-2 flex shrink-0 gap-1 border-b border-gray-200" aria-label="{{ __('Ansicht') }}">
-        @foreach (['tabelle' => __('Tabelle'), 'grafik' => __('Grafik')] as $key => $label)
+        @foreach (['tabelle' => __('Tabelle'), 'grafik' => __('Grafik'), 'soll-ist' => __('Soll-Ist')] as $key => $label)
             <a href="{{ request()->url().'?'.http_build_query(array_merge(request()->query(), ['ansicht' => $key])) }}"
                class="border-b-2 px-3 py-1.5 text-sm font-medium {{ $view === $key ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700' }}">{{ $label }}</a>
         @endforeach
@@ -33,6 +33,8 @@
 
     @if ($view === 'grafik')
         @include('planning.partials.stunden-grafik')
+    @elseif ($view === 'soll-ist')
+        @include('planning.partials.stunden-sollist')
     @else
     <div id="planning-stunden-content" class="min-h-0 flex-1 overflow-auto rounded-lg border border-gray-200 bg-white">
         <table class="min-w-full text-sm">

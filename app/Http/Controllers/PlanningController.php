@@ -616,10 +616,11 @@ class PlanningController extends Controller
         $projectHoursTotal = (float) $rows->sum('projectHours');
 
         // Grafik (Ralf, 2026-10-09): ein Balken je Person, Gesamthöhe = Jahresstunden, unten Grundlast, darüber Projektstunden
-        $view = $request->query('ansicht') === 'grafik' ? 'grafik' : 'tabelle';
+        $view = in_array($request->query('ansicht'), ['grafik', 'soll-ist'], true) ? $request->query('ansicht') : 'tabelle';
+        $targetActual = $view === 'soll-ist' ? app(\App\Services\PlanningTargetActual::class)->forYear($people, $yearStart, $yearEnd, $tenantId) : null;
         $chart = $this->hoursChartScale((float) ($rows->max('jahresstd') ?? 0));
 
-        return view('planning.stunden', compact('years', 'year', 'totalWorkdays', 'rows', 'total', 'baseLoadTotal', 'projectHoursTotal', 'sort', 'direction', 'view', 'chart'));
+        return view('planning.stunden', compact('years', 'year', 'totalWorkdays', 'rows', 'total', 'baseLoadTotal', 'projectHoursTotal', 'sort', 'direction', 'view', 'chart', 'targetActual'));
     }
 
     /**
