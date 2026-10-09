@@ -20,6 +20,8 @@ class ProjectSchedulerTest extends TestCase
 {
     use RefreshDatabase;
 
+    private int $pnCounter = 0;
+
     private Tenant $tenant;
 
     private Workflow $workflow;
@@ -51,7 +53,7 @@ class ProjectSchedulerTest extends TestCase
     private function project(string $start = '2027-03-01', int $model = 2): Project
     {
         return Project::query()->create([
-            'tenant_id' => $this->tenant->id, 'source_pn' => '280'.random_int(100, 999), 'title' => 'P', 'status' => 0,
+            'tenant_id' => $this->tenant->id, 'source_pn' => '280'.str_pad((string) ++$this->pnCounter, 3, '0', STR_PAD_LEFT), 'title' => 'P', 'status' => 0,
             'workflow_id' => $this->workflow->id, 'start_date' => $start, 'schedule_model' => $model,
         ]);
     }

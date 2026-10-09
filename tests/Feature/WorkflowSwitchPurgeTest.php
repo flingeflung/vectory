@@ -17,6 +17,8 @@ class WorkflowSwitchPurgeTest extends TestCase
 {
     use RefreshDatabase;
 
+    private int $pnCounter = 0;
+
     private Tenant $tenant;
 
     private Workflow $old;
@@ -44,7 +46,7 @@ class WorkflowSwitchPurgeTest extends TestCase
 
     private function project(): Project
     {
-        $project = Project::query()->create(['tenant_id' => $this->tenant->id, 'source_pn' => '270'.random_int(100, 999), 'title' => 'Wechsel', 'status' => 1, 'workflow_id' => $this->old->id]);
+        $project = Project::query()->create(['tenant_id' => $this->tenant->id, 'source_pn' => '270'.str_pad((string) ++$this->pnCounter, 3, '0', STR_PAD_LEFT), 'title' => 'Wechsel', 'status' => 1, 'workflow_id' => $this->old->id]);
         foreach (['old1', 'old2'] as $key) {
             ProjectWorkflowStep::query()->create(['tenant_id' => $this->tenant->id, 'project_id' => $project->id, 'workflow_step_id' => $this->steps[$key]->id, 'sort' => 1]);
         }

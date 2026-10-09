@@ -27,6 +27,8 @@ class MailTimerTest extends TestCase
 {
     use RefreshDatabase;
 
+    private int $pnCounter = 0;
+
     private Tenant $tenant;
 
     private Workflow $workflow;
@@ -63,7 +65,7 @@ class MailTimerTest extends TestCase
     {
         // Mo 1.3.2027: A = Mo-Di (2 AT), B = Mi-Fr (3 AT) -> B endet Fr 5.3.
         return Project::query()->create([
-            'tenant_id' => $this->tenant->id, 'source_pn' => '290'.random_int(100, 999), 'title' => 'Titel', 'status' => 0,
+            'tenant_id' => $this->tenant->id, 'source_pn' => '290'.str_pad((string) ++$this->pnCounter, 3, '0', STR_PAD_LEFT), 'title' => 'Titel', 'status' => 0,
             'workflow_id' => $this->workflow->id, 'start_date' => '2027-03-01', 'schedule_model' => 2,
         ]);
     }
