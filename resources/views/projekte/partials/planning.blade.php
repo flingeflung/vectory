@@ -14,7 +14,7 @@
         values: {{ \Illuminate\Support\Js::from($personValues) }},
         distributing: false,
         utilBounds: { minYear: {{ min(2026, (int) ($project->start_date?->year ?? 2026)) }}, maxYear: {{ (int) now()->year + 5 }}, startYear: {{ $project->start_date?->year ?? 'null' }}, startMonth: {{ $project->start_date?->month ?? 'null' }} },
-        util: { view: 'month', year: {{ now()->year }}, month: {{ now()->month }}, person: '', loading: false, loaded: false, people: [] },
+        util: { view: 'month', year: {{ now()->year }}, month: {{ now()->month }}, person: window.projectUtilPerson || '', loading: false, loaded: false, people: [] },
         subTab: ['terminuebersicht', 'ablaufplan', 'planstunden', 'auslastung'].includes(window.projectPlanungSubTab) ? window.projectPlanungSubTab : 'terminuebersicht',
         // Dauern der Schritte an den Projektzeitraum anpassen (Ralf, 2026-10-06)
         adjusting: false,
@@ -130,9 +130,19 @@
                     return;
                 }
                 const data = await response.json();
+                // Gemerkte Person (Ralf, 2026-10-09): kommt sie in diesem Projekt nicht vor, gilt vorübergehend „Alle Personen“; das Gemerkte
+                // bleibt, damit sie beim Weiterblättern in einem Projekt mit ihr wieder ausgewählt ist.
+                if (this.util.person && ! data.people.some((person) => String(person.id) === String(this.util.person))) {
+                    this.util.person = '';
+                    this.util.people = data.people;
+                    this.util.loading = false;
+                    return this.loadUtilization();
+                }
                 this.destroyUtilCharts();
                 container.innerHTML = data.html;
                 this.util.people = data.people;
+                // Die Optionen kommen erst jetzt: die vorbelegte (gemerkte) Person im Auswahlfeld nachziehen
+                this.$nextTick(() => { if (this.$refs.utilPersonSelect) this.$refs.utilPersonSelect.value = this.util.person; });
                 this.util.loaded = true;
                 await this.drawUtilizationCharts(container);
             } catch (error) {
@@ -296,7 +306,7 @@
             </button>
             <button type="button" @click="utilToday()" class="rounded-md border border-gray-300 bg-btn-secondary px-2 py-1 font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Heute') }}</button>
             <button type="button" @click="utilProjectStart()" :disabled="utilBounds.startYear === null" title="{{ $project->start_date ? __('Springt zum Monat bzw. Jahr des Projektstarts') : __('Für dieses Projekt ist noch kein Startdatum eingetragen') }}" class="rounded-md border border-gray-300 bg-btn-secondary px-2 py-1 font-medium text-gray-700 hover:bg-btn-secondary-hover disabled:cursor-not-allowed disabled:opacity-50">{{ __('Projektanfang') }}</button>
-            <select x-model="util.person" @change="loadUtilization()" class="rounded-md border-gray-300 py-1 text-xs">
+            <select x-ref="utilPersonSelect" x-model="util.person" @change="window.projectUtilPerson = util.person; loadUtilization()" class="rounded-md border-gray-300 py-1 text-xs">
                 <option value="">{{ __('Alle Personen') }}</option>
                 <template x-for="person in util.people" :key="person.id"><option :value="person.id" x-text="person.name"></option></template>
             </select>
