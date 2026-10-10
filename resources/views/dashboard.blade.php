@@ -50,7 +50,12 @@
                     @else
                         <div title="{{ $message['hint'] }}" class="{{ $rowClass }}">
                             <span class="{{ $pillClass }}">{{ $message['count'] ?? 'i' }}</span>
-                            <span class="min-w-0 break-words">{{ $message['text'] }}</span>
+                            <span class="min-w-0 break-words">
+                                <span class="font-medium">{{ $message['text'] }}</span>
+                                @if (! empty($message['detail']))
+                                    <span class="mt-0.5 block text-xs text-gray-600">{{ $message['detail'] }}</span>
+                                @endif
+                            </span>
                         </div>
                     @endif
                 @empty

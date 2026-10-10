@@ -23,7 +23,7 @@ class DashboardMessages
     public function __construct(private readonly CriticalProjectOverview $criticalProjects) {}
 
     /**
-     * @return Collection<int, array{key: string, tone: string, count: ?int, text: string, hint: string, url: ?string}>
+     * @return Collection<int, array{key: string, tone: string, count: ?int, text: string, detail?: ?string, hint: string, url: ?string}>
      */
     public function forUser(User $user): Collection
     {
@@ -37,7 +37,8 @@ class DashboardMessages
                 'key' => 'announcement-'.$announcement->id,
                 'tone' => 'blue',
                 'count' => null,
-                'text' => $announcement->text,
+                'text' => $announcement->title,
+                'detail' => $announcement->text,
                 'hint' => __('Mitteilung Ihrer Administration'),
                 'url' => null,
             ]);

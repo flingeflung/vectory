@@ -19,7 +19,7 @@
             </div>
             <div class="flex-1 min-h-0 overflow-y-auto p-2 text-sm" x-init="$nextTick(() => window.keepListScroll($el, 'list-scroll:announcements'))">
                 <form x-show="newAnnouncement" x-cloak method="POST" action="{{ route('admin.mitteilungen.store') }}" class="mb-2 flex gap-1.5 rounded border border-gray-200 p-2">
-                    <input type="text" name="text" x-ref="newAnnouncementText" maxlength="500" placeholder="{{ __('Text der Mitteilung') }}" class="w-full min-w-0 flex-1 rounded-md border-gray-300 text-xs" required>
+                    <input type="text" name="title" x-ref="newAnnouncementText" maxlength="120" placeholder="{{ __('Titel der Mitteilung') }}" class="w-full min-w-0 flex-1 rounded-md border-gray-300 text-xs" required>
                     @csrf
                     <button type="submit" class="shrink-0 rounded-md bg-btn-primary px-2 py-1 text-xs font-medium text-white hover:bg-btn-primary-hover">
                         {{ __('Speichern') }}
@@ -36,7 +36,7 @@
                             @if ($selectedAnnouncement?->id === $announcement->id) data-selected @endif
                             class="flex flex-col rounded px-2 py-1 {{ $selectedAnnouncement?->id === $announcement->id ? 'bg-indigo-50 font-medium text-indigo-700' : 'text-gray-700 hover:bg-gray-50' }}"
                         >
-                            <span class="truncate">{{ $announcement->text }}</span>
+                            <span class="truncate">{{ $announcement->title }}</span>
                             <span class="text-xs font-normal text-gray-400">
                                 @if (! $announcement->isActive())
                                     {{ __('abgelaufen') }}
@@ -72,9 +72,13 @@
                 @csrf
                 <div class="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
                     <div>
-                        <label class="block text-xs text-gray-500">{{ __('Text der Mitteilung') }}</label>
-                        <textarea name="text" rows="3" maxlength="500" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">{{ $selectedAnnouncement->text }}</textarea>
-                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Erscheint auf der Startseite in der Kachel „Meldungen“. Bitte kurz halten.') }}</p>
+                        <label class="block text-xs text-gray-500">{{ __('Titel') }}</label>
+                        <input type="text" name="title" value="{{ $selectedAnnouncement->title }}" maxlength="120" required class="mt-0.5 w-full rounded-md border-gray-300 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500">{{ __('Text (optional)') }}</label>
+                        <textarea name="text" rows="4" maxlength="500" class="mt-0.5 w-full rounded-md border-gray-300 text-sm">{{ $selectedAnnouncement->text }}</textarea>
+                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Titel und Text erscheinen auf der Startseite in der Kachel „Meldungen“. Bitte kurz halten.') }}</p>
                     </div>
                     <div>
                         <label class="block text-xs text-gray-500" title="{{ __('Am letzten Tag wird die Mitteilung noch angezeigt, danach nicht mehr. Ohne Datum bleibt sie, bis Sie sie löschen.') }}">{{ __('Anzeigen bis (einschließlich, optional)') }}</label>

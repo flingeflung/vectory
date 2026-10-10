@@ -30,13 +30,13 @@ class AnnouncementTest extends TestCase
         $homeUser = User::factory()->create(['tenant_id' => $home->id, 'role' => AccessLevel::USER]);
         $otherUser = User::factory()->create(['tenant_id' => $other->id, 'role' => AccessLevel::USER]);
 
-        $this->actingAs($admin)->post(route('admin.mitteilungen.store'), ['text' => 'Wartung am Freitag'])->assertRedirect();
+        $this->actingAs($admin)->post(route('admin.mitteilungen.store'), ['title' => 'Wartung am Freitag'])->assertRedirect();
         $announcement = Announcement::query()->firstOrFail();
         $this->assertCount(0, $announcement->tenants, 'Ohne Auswahl erreicht eine neue Mitteilung zunächst niemanden.');
 
-        $this->post(route('admin.mitteilungen.update', $announcement), ['text' => 'Wartung am Freitag', 'tenant_ids' => [$other->id]])->assertRedirect();
+        $this->post(route('admin.mitteilungen.update', $announcement), ['title' => 'Wartung am Freitag', 'text' => 'Von 18 bis 20 Uhr nicht erreichbar.', 'tenant_ids' => [$other->id]])->assertRedirect();
 
-        $this->actingAs($otherUser)->get(route('dashboard'))->assertOk()->assertSee('Wartung am Freitag');
+        $this->actingAs($otherUser)->get(route('dashboard'))->assertOk()->assertSee('Wartung am Freitag')->assertSee('Von 18 bis 20 Uhr nicht erreichbar.');
         $this->actingAs($homeUser)->get(route('dashboard'))->assertOk()->assertDontSee('Wartung am Freitag');
     }
 
@@ -44,8 +44,8 @@ class AnnouncementTest extends TestCase
     {
         $home = Tenant::query()->firstOrFail();
         $user = User::factory()->create(['tenant_id' => $home->id, 'role' => AccessLevel::USER]);
-        $expired = Announcement::query()->create(['text' => 'Gestern abgelaufen', 'ends_on' => today()->subDay()]);
-        $lastDay = Announcement::query()->create(['text' => 'Heute letzter Tag', 'ends_on' => today()]);
+        $expired = Announcement::query()->create(['title' => 'Gestern abgelaufen', 'ends_on' => today()->subDay()]);
+        $lastDay = Announcement::query()->create(['title' => 'Heute letzter Tag', 'ends_on' => today()]);
         $expired->tenants()->sync([$home->id]);
         $lastDay->tenants()->sync([$home->id]);
 
@@ -60,17 +60,17 @@ class AnnouncementTest extends TestCase
         $home = Tenant::query()->firstOrFail();
         $other = $this->otherTenant();
         $organizationAdmin = User::factory()->create(['tenant_id' => $home->id, 'role' => AccessLevel::ORGANIZATION_ADMIN]);
-        $foreign = Announcement::query()->create(['text' => 'Nur für andere']);
+        $foreign = Announcement::query()->create(['title' => 'Nur für andere']);
         $foreign->tenants()->sync([$other->id]);
-        $shared = Announcement::query()->create(['text' => 'Für beide']);
+        $shared = Announcement::query()->create(['title' => 'Für beide']);
         $shared->tenants()->sync([$home->id, $other->id]);
 
-        $this->actingAs($organizationAdmin)->post(route('admin.mitteilungen.store'), ['text' => 'Eigene Mitteilung'])->assertRedirect();
-        $own = Announcement::query()->where('text', 'Eigene Mitteilung')->firstOrFail();
+        $this->actingAs($organizationAdmin)->post(route('admin.mitteilungen.store'), ['title' => 'Eigene Mitteilung'])->assertRedirect();
+        $own = Announcement::query()->where('title', 'Eigene Mitteilung')->firstOrFail();
         $this->assertSame([$home->id], $own->tenants()->pluck('tenants.id')->all());
 
         // Versuch, eine andere Organisation mitzugeben, wird ignoriert.
-        $this->post(route('admin.mitteilungen.update', $own), ['text' => 'Eigene Mitteilung', 'tenant_ids' => [$other->id]])->assertRedirect();
+        $this->post(route('admin.mitteilungen.update', $own), ['title' => 'Eigene Mitteilung', 'tenant_ids' => [$other->id]])->assertRedirect();
         $this->assertSame([$home->id], $own->tenants()->pluck('tenants.id')->all());
 
         $this->get(route('admin.mitteilungen'))
@@ -78,7 +78,7 @@ class AnnouncementTest extends TestCase
             ->assertSee('Eigene Mitteilung')
             ->assertDontSee('Nur für andere')
             ->assertDontSee('Für beide');
-        $this->post(route('admin.mitteilungen.update', $foreign), ['text' => 'Geändert'])->assertNotFound();
+        $this->post(route('admin.mitteilungen.update', $foreign), ['title' => 'Geändert'])->assertNotFound();
         $this->delete(route('admin.mitteilungen.destroy', $shared))->assertNotFound();
     }
 
@@ -88,7 +88,7 @@ class AnnouncementTest extends TestCase
         $user = User::factory()->create(['tenant_id' => $home->id, 'role' => AccessLevel::USER]);
 
         $this->actingAs($user)->get(route('admin.mitteilungen'))->assertRedirect();
-        $this->post(route('admin.mitteilungen.store'), ['text' => 'Hallo'])->assertRedirect();
+        $this->post(route('admin.mitteilungen.store'), ['title' => 'Hallo'])->assertRedirect();
         $this->assertDatabaseCount('announcements', 0);
     }
 
@@ -96,7 +96,7 @@ class AnnouncementTest extends TestCase
     {
         $home = Tenant::query()->firstOrFail();
         $admin = User::factory()->create(['tenant_id' => $home->id, 'role' => AccessLevel::SUPER_ADMIN]);
-        $announcement = Announcement::query()->create(['text' => 'Weg damit']);
+        $announcement = Announcement::query()->create(['title' => 'Weg damit']);
         $announcement->tenants()->sync([$home->id]);
 
         $this->actingAs($admin)->delete(route('admin.mitteilungen.destroy', $announcement))->assertRedirect(route('admin.mitteilungen'));

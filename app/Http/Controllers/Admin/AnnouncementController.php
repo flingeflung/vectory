@@ -71,9 +71,9 @@ class AnnouncementController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $user = $request->user();
-        $validated = $request->validate(['text' => ['required', 'string', 'max:500']]);
+        $validated = $request->validate(['title' => ['required', 'string', 'max:120']]);
 
-        $announcement = Announcement::query()->create(['text' => trim($validated['text']), 'created_by_user_id' => $user->id]);
+        $announcement = Announcement::query()->create(['title' => trim($validated['title']), 'created_by_user_id' => $user->id]);
         // Wer nichts auswählen kann (eine Organisation), erreicht sofort diese; sonst wählt der Admin die Empfänger im Detail.
         $organizations = $this->organizations($user);
         if ($organizations->count() === 1) {
@@ -90,13 +90,18 @@ class AnnouncementController extends Controller
 
         $allowedIds = $this->organizations($user)->pluck('id')->map(fn ($id) => (int) $id);
         $validated = $request->validate([
-            'text' => ['required', 'string', 'max:500'],
+            'title' => ['required', 'string', 'max:120'],
+            'text' => ['nullable', 'string', 'max:500'],
             'ends_on' => ['nullable', 'date'],
             'tenant_ids' => ['nullable', 'array'],
             'tenant_ids.*' => ['integer'],
         ]);
 
-        $announcement->update(['text' => trim($validated['text']), 'ends_on' => $validated['ends_on'] ?? null]);
+        $announcement->update([
+            'title' => trim($validated['title']),
+            'text' => trim((string) ($validated['text'] ?? '')) ?: null,
+            'ends_on' => $validated['ends_on'] ?? null,
+        ]);
 
         $tenantIds = $allowedIds->count() === 1
             ? $allowedIds

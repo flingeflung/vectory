@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * Mitteilung vom Admin an die Startseite einer oder mehrerer Organisationen (Ralf, 2026-10-10). Gilt bis einschließlich
  * ends_on, ohne Datum bis zum Löschen.
  */
-#[Fillable(['text', 'ends_on', 'created_by_user_id'])]
+#[Fillable(['title', 'text', 'ends_on', 'created_by_user_id'])]
 class Announcement extends Model
 {
     protected function casts(): array
