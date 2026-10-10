@@ -12,6 +12,8 @@
                 <input type="hidden" name="sort" value="{{ $sort }}">
                 <input type="hidden" name="direction" value="{{ $direction }}">
 
+                <x-organization-filter :organizations="$organizations" :selected="$selectedOrganizationIds" />
+
                 <label class="flex items-center gap-1.5">
                     <span class="text-gray-500">{{ __('Personen') }}:</span>
                     <select name="person" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 text-sm">
@@ -51,6 +53,10 @@
                 @endcan
             </form>
 
+            @php
+                $showOrganizationColumn = $selectedOrganizationIds->count() > 1;
+                $organizationNames = $organizations->pluck('name', 'id');
+            @endphp
             <div class="mb-3 shrink-0 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
                 {{ __(':count Aufgabe(n) gefunden', ['count' => $tasks->total()]) }}
             </div>
@@ -62,6 +68,9 @@
                             <tr>
                                 <th class="sticky top-0 z-10 bg-gray-50 px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('Vis.') }}</th>
                                 <th class="sticky top-0 z-10 bg-gray-50 px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('Typ') }}</th>
+                                @if ($showOrganizationColumn)
+                                    <th class="sticky top-0 z-10 bg-gray-50 px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('Organisation') }}</th>
+                                @endif
                                 <x-sortable-th field="source_pn" :sort="$sort" :direction="$direction">{{ __('PN') }}</x-sortable-th>
                                 <x-sortable-th field="title" :sort="$sort" :direction="$direction">{{ __('Projektbez.') }}</x-sortable-th>
                                 <th class="sticky top-0 z-10 bg-gray-50 px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('Workflow') }}</th>
@@ -105,9 +114,17 @@
                                             @endif
                                         </div>
                                     </td>
+                                    @if ($showOrganizationColumn)
+                                        <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ $organizationNames[$task->tenant_id] ?? '–' }}</td>
+                                    @endif
                                     <td class="px-4 py-2 whitespace-nowrap text-gray-500">
                                         @if ($project)
-                                            <x-pn-link :project="$project" />
+                                            @if ((int) $project->tenant_id === (int) $currentTenantId)
+                                                <x-pn-link :project="$project" />
+                                            @else
+                                                {{-- Projekt einer anderen Organisation: erst dorthin wechseln, dann öffnen --}}
+                                                <a href="{{ route('aufgaben', ['open_project' => $project->id]) }}" class="text-indigo-600 hover:underline">{{ $project->source_pn }}</a>
+                                            @endif
                                         @endif
                                     </td>
                                     <td class="px-4 py-2 text-gray-900 max-w-xs truncate">{{ $project?->title }}</td>
@@ -139,7 +156,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="9" class="px-4 py-6 text-center text-gray-500">{{ __('Keine Aufgaben vorhanden.') }}</td>
+                                    <td colspan="{{ $showOrganizationColumn ? 10 : 9 }}" class="px-4 py-6 text-center text-gray-500">{{ __('Keine Aufgaben vorhanden.') }}</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -152,4 +169,12 @@
             </div>
         </div>
     </div>
+
+    @if (session('open_project_id'))
+        <script>
+            window.addEventListener('load', () => {
+                window.dispatchEvent(new CustomEvent('open-project', { detail: { id: {{ (int) session('open_project_id') }} } }));
+            }, { once: true });
+        </script>
+    @endif
 </x-app-layout>

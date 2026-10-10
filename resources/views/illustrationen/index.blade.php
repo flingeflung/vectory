@@ -10,12 +10,14 @@
             <form method="GET" action="{{ route('illustrationen') }}" class="mb-3 flex shrink-0 flex-wrap items-start gap-x-6 gap-y-3 text-sm">
                 <input type="hidden" name="illustrationsfilter_submitted" value="1">
 
+                <x-organization-filter :organizations="$organizations" :selected="$selectedOrganizationIds" />
+
                 <x-filter-dropdown label="{{ __('Status') }} ({{ $selectedStatuses->count() }}/{{ $statuses->count() }})">
                     <div class="mb-2 flex items-center justify-between">
                         <span class="text-xs font-medium text-gray-500">{{ __('Status') }}</span>
                         <span class="flex gap-2 text-xs">
-                            <button type="button" onclick="this.closest('[x-data]').querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = true)" class="text-indigo-600 hover:underline">{{ __('Alle') }}</button>
-                            <button type="button" onclick="this.closest('[x-data]').querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false)" class="text-indigo-600 hover:underline">{{ __('Keiner') }}</button>
+                            <button type="button" onclick="this.closest('[x-data]').querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = true)" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Alle') }}</button>
+                            <button type="button" onclick="this.closest('[x-data]').querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false)" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Keiner') }}</button>
                         </span>
                     </div>
                     <div class="max-h-56 space-y-1 overflow-y-auto">
@@ -34,8 +36,8 @@
                         <div class="mb-2 flex items-center justify-between">
                             <span class="text-xs font-medium text-gray-500">{{ __('Illustrator') }}</span>
                             <span class="flex gap-2 text-xs">
-                                <button type="button" onclick="this.closest('[x-data]').querySelectorAll('input[type=checkbox][name^=illustrator]').forEach(cb => cb.checked = true)" class="text-indigo-600 hover:underline">{{ __('Alle') }}</button>
-                                <button type="button" onclick="this.closest('[x-data]').querySelectorAll('input[type=checkbox][name^=illustrator]').forEach(cb => cb.checked = false)" class="text-indigo-600 hover:underline">{{ __('Keiner') }}</button>
+                                <button type="button" onclick="this.closest('[x-data]').querySelectorAll('input[type=checkbox][name^=illustrator]').forEach(cb => cb.checked = true)" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Alle') }}</button>
+                                <button type="button" onclick="this.closest('[x-data]').querySelectorAll('input[type=checkbox][name^=illustrator]').forEach(cb => cb.checked = false)" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Keiner') }}</button>
                             </span>
                         </div>
                         <div class="max-h-56 space-y-1 overflow-y-auto">
@@ -116,6 +118,10 @@
             </form>
 
             <div id="illustrationen-list" class="flex flex-1 min-h-0 flex-col">
+            @php
+                $showOrganizationColumn = $selectedOrganizationIds->count() > 1;
+                $organizationNames = $organizations->pluck('name', 'id');
+            @endphp
             <div class="mb-3 shrink-0 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
                 {{ __(':count Auftrag/Aufträge gefunden', ['count' => $orders->count()]) }}
             </div>
@@ -125,6 +131,9 @@
                     <table class="min-w-full divide-y divide-gray-200 text-sm">
                         <thead class="bg-gray-50">
                             <tr>
+                                @if ($showOrganizationColumn)
+                                    <th class="sticky top-0 z-10 bg-gray-50 px-2 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('Organisation') }}</th>
+                                @endif
                                 <th class="sticky top-0 z-10 bg-gray-50 px-2 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('Auftr.-Nr.') }}</th>
                                 <th class="sticky top-0 z-10 bg-gray-50 px-2 py-3 text-left font-medium text-gray-500 whitespace-nowrap">{{ __('Projekt') }}</th>
                                 <th class="sticky top-0 z-10 bg-gray-50 px-2 py-3 text-left font-medium text-gray-500 whitespace-nowrap" title="{{ __('Anzahl Bilder') }}">{{ __('Anz.') }}</th>
@@ -141,9 +150,18 @@
                         <tbody class="divide-y divide-gray-100">
                             @forelse ($orders as $order)
                                 <tr class="hover:bg-gray-50">
+                                    @if ($showOrganizationColumn)
+                                        <td class="px-2 py-2 whitespace-nowrap text-gray-500">{{ $organizationNames[$order->tenant_id] ?? '–' }}</td>
+                                    @endif
                                     <td class="px-2 py-2 whitespace-nowrap text-gray-500">Illu-{{ $order->id }}</td>
                                     <td class="px-2 py-2 whitespace-nowrap text-gray-500">
-                                        <x-pn-link :project="$order->project" />
+                                        @php $isForeign = (int) $order->tenant_id !== (int) $currentTenantId; @endphp
+                                        @if ($isForeign)
+                                            {{-- Projekt einer anderen Organisation: erst dorthin wechseln, dann öffnen --}}
+                                            <a href="{{ route('illustrationen', ['open_project' => $order->project_id]) }}" class="text-indigo-600 hover:underline">{{ $order->project->source_pn }}</a>
+                                        @else
+                                            <x-pn-link :project="$order->project" />
+                                        @endif
                                         {{-- Ralf, 2026-09-14: hier war bisher nicht sichtbar, ob das
                                              Projekt eines offenen Illu-Auftrags schon beendet/verworfen
                                              ist - schließt offene Aufträge nicht automatisch (siehe
@@ -195,18 +213,25 @@
                                     <td class="px-2 py-2 whitespace-nowrap text-gray-500">{{ $order->illustrator?->company?->short_name ?? '–' }}</td>
                                     <td class="px-2 py-2 whitespace-nowrap text-gray-500">{{ $order->done_at?->local()->format('d.m.Y') ?? '–' }}</td>
                                     <td class="sticky right-0 whitespace-nowrap bg-white px-2 py-2">
-                                        <button
-                                            type="button"
-                                            @click="window.openIllustrationOrders({{ $order->project_id }})"
-                                            class="rounded border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
-                                        >
-                                            {{ __('Ändern') }}
-                                        </button>
+                                        @if ($isForeign)
+                                            <a
+                                                href="{{ route('illustrationen', ['open_orders' => $order->project_id]) }}"
+                                                class="inline-block rounded border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                                            >{{ __('Ändern') }}</a>
+                                        @else
+                                            <button
+                                                type="button"
+                                                @click="window.openIllustrationOrders({{ $order->project_id }})"
+                                                class="rounded border border-btn-secondary-border bg-btn-secondary px-2 py-1 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover"
+                                            >
+                                                {{ __('Ändern') }}
+                                            </button>
+                                        @endif
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="11" class="px-4 py-6 text-center text-gray-500">{{ __('– Keine Aufträge mit den gewählten Filtereinstellungen gefunden –') }}</td>
+                                    <td colspan="{{ $showOrganizationColumn ? 12 : 11 }}" class="px-4 py-6 text-center text-gray-500">{{ __('– Keine Aufträge mit den gewählten Filtereinstellungen gefunden –') }}</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -216,4 +241,16 @@
             </div>
         </div>
     </div>
+
+    @if (session('open_project_id') || session('open_orders_project_id'))
+        <script>
+            window.addEventListener('load', () => {
+                @if (session('open_project_id'))
+                    window.dispatchEvent(new CustomEvent('open-project', { detail: { id: {{ (int) session('open_project_id') }} } }));
+                @else
+                    window.openIllustrationOrders({{ (int) session('open_orders_project_id') }});
+                @endif
+            }, { once: true });
+        </script>
+    @endif
 </x-app-layout>

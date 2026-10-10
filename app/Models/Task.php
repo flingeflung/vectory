@@ -180,6 +180,7 @@ class Task extends Model
         }
 
         return ProjectPerson::query()
+            ->withoutGlobalScope('tenant')
             ->where('project_id', $step->project_id)
             ->where('function_group_id', $functionGroup->id)
             ->with('person')

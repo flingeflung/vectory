@@ -8,6 +8,7 @@ use App\Models\GraphicOrder;
 use App\Models\Person;
 use App\Models\User;
 use App\Support\CurrentTenant;
+use App\Support\OrganizationSelection;
 use App\Support\ProjectColumnCatalog;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -36,22 +37,17 @@ class IllustrationOverviewController extends Controller
     /**
      * @var list<string>
      */
-    private const FILTER_KEYS = ['status', 'illustrator', 'initiator', 'due_from', 'due_to', 'q'];
+    private const FILTER_KEYS = ['status', 'illustrator', 'initiator', 'due_from', 'due_to', 'q', 'organizations_submitted'];
 
-    public function index(Request $request): View
+    public function index(Request $request): View|\Illuminate\Http\RedirectResponse
     {
         $user = $request->user();
+
+        if ($redirect = OrganizationSelection::handleOpenRequest($request, 'illustrationen')) {
+            return $redirect;
+        }
+
         $statuses = collect(GraphicOrderStatus::cases());
-        $illustrationPersons = FunctionGroup::query()
-            ->availableForTenant(CurrentTenant::id(), false)
-            ->where('is_illustration_group', true)
-            ->with(['members' => fn ($query) => $query->withoutGlobalScope('tenant')
-                ->visibleInTenant(CurrentTenant::id())
-                ->visibleToRole($user->role)])
-            ->first()
-            ?->members
-            ->sortBy(fn (Person $person) => $person->fullName())
-            ->values() ?? collect();
 
         // Gleiches Muster wie Projekt-/Aufgaben-Filter: ein expliziter
         // Marker unterscheidet "Filterformular abgeschickt" (jetzt merken,
@@ -67,6 +63,23 @@ class IllustrationOverviewController extends Controller
             $filters = $this->filtersFromRequest($request);
         }
 
+        // Organisationsübergreifend (Ralf, 2026-10-09): Auswahl der Organisationen, deren Aufträge die Liste zeigt.
+        $organizations = OrganizationSelection::allowed($user);
+        $selectedOrganizationIds = OrganizationSelection::selected($filters['organizations'] ?? null, $organizations);
+
+        $illustrationPersons = $selectedOrganizationIds
+            ->flatMap(fn ($tenantId) => FunctionGroup::query()
+                ->availableForTenant($tenantId, false)
+                ->where('is_illustration_group', true)
+                ->with(['members' => fn ($query) => $query->withoutGlobalScope('tenant')
+                    ->visibleInTenant($tenantId)
+                    ->visibleToRole($user->role)])
+                ->first()
+                ?->members ?? collect())
+            ->unique('id')
+            ->sortBy(fn (Person $person) => $person->fullName())
+            ->values();
+
         $selectedStatuses = $filters['status'] !== null
             ? collect($filters['status'])->map(fn ($value) => (int) $value)->values()
             : $statuses->pluck('value');
@@ -78,8 +91,16 @@ class IllustrationOverviewController extends Controller
         $dueTo = $filters['due_to'];
         $search = (string) $filters['q'];
 
+        $unscoped = fn ($query) => $query->withoutGlobalScope('tenant');
         $query = GraphicOrder::query()
-            ->with(['project', 'initiatedBy', 'illustrator.company'])
+            ->withoutGlobalScope('tenant')
+            ->whereIn('graphic_orders.tenant_id', $selectedOrganizationIds)
+            ->with([
+                'project' => $unscoped,
+                'initiatedBy' => $unscoped,
+                'illustrator' => $unscoped,
+                'illustrator.company' => $unscoped,
+            ])
             ->whereIn('graphic_order_status_id', $selectedStatuses->isEmpty() ? [0] : $selectedStatuses);
 
         $query->where(function (Builder $query) use ($selectedIllustrators) {
@@ -106,7 +127,7 @@ class IllustrationOverviewController extends Controller
 
         if ($search !== '') {
             $query->where(function (Builder $query) use ($search) {
-                $query->whereHas('project', fn (Builder $q) => $q->where('source_pn', 'like', "%{$search}%"));
+                $query->whereHas('project', fn (Builder $q) => $q->withoutGlobalScope('tenant')->where('source_pn', 'like', "%{$search}%"));
                 if (ctype_digit($search)) {
                     $query->orWhere('graphic_orders.id', (int) $search);
                 }
@@ -122,8 +143,12 @@ class IllustrationOverviewController extends Controller
 
         $initiatorOptions = Person::query()
             ->withoutGlobalScope('tenant')
-            ->whereIn('id', GraphicOrder::query()->whereNotNull('initiated_by_person_id')->distinct()->pluck('initiated_by_person_id'))
-            ->visibleInTenant(CurrentTenant::id())
+            ->whereIn('id', GraphicOrder::query()->withoutGlobalScope('tenant')->whereIn('tenant_id', $selectedOrganizationIds)->whereNotNull('initiated_by_person_id')->distinct()->pluck('initiated_by_person_id'))
+            ->where(function ($query) use ($selectedOrganizationIds) {
+                foreach ($selectedOrganizationIds as $id) {
+                    $query->orWhere(fn ($inner) => $inner->visibleInTenant((int) $id));
+                }
+            })
             ->visibleToRole($user->role)
             ->orderBy('last_name')
             ->orderBy('first_name')
@@ -131,6 +156,9 @@ class IllustrationOverviewController extends Controller
 
         return view('illustrationen.index', [
             'orders' => $orders,
+            'organizations' => $organizations,
+            'selectedOrganizationIds' => $selectedOrganizationIds,
+            'currentTenantId' => CurrentTenant::id(),
             'statuses' => $statuses,
             'illustrationPersons' => $illustrationPersons,
             'initiatorOptions' => $initiatorOptions,
@@ -144,7 +172,7 @@ class IllustrationOverviewController extends Controller
     }
 
     /**
-     * @return array{status: ?list<string>, illustrator: ?list<string>, initiator: ?string, due_from: ?string, due_to: ?string, q: ?string}
+     * @return array{status: ?list<string>, illustrator: ?list<string>, initiator: ?string, due_from: ?string, due_to: ?string, q: ?string, organizations?: ?list<string>}
      */
     private function filtersFromRequest(Request $request): array
     {
@@ -159,11 +187,12 @@ class IllustrationOverviewController extends Controller
             'due_from' => $request->query('due_from') ?: null,
             'due_to' => $request->query('due_to') ?: null,
             'q' => trim((string) $request->query('q', '')) ?: null,
+            'organizations' => OrganizationSelection::fromRequest($request),
         ];
     }
 
     /**
-     * @return array{status: ?list<string>, illustrator: ?list<string>, initiator: ?string, due_from: ?string, due_to: ?string, q: ?string}
+     * @return array{status: ?list<string>, illustrator: ?list<string>, initiator: ?string, due_from: ?string, due_to: ?string, q: ?string, organizations?: ?list<string>}
      */
     private function persistedFiltersFor(User $user): array
     {
@@ -175,7 +204,7 @@ class IllustrationOverviewController extends Controller
     }
 
     /**
-     * @param  array{status: ?list<string>, illustrator: ?list<string>, initiator: ?string, due_from: ?string, due_to: ?string, q: ?string}  $filters
+     * @param  array{status: ?list<string>, illustrator: ?list<string>, initiator: ?string, due_from: ?string, due_to: ?string, q: ?string, organizations?: ?list<string>}  $filters
      */
     private function persistFilters(User $user, array $filters): void
     {

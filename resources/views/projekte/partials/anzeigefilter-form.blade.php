@@ -89,8 +89,8 @@
         </div>
 
         <div class="flex gap-2">
-            <button type="button" @click="markAll(true)" class="text-sm text-indigo-600 hover:text-indigo-800">{{ __('Alle markieren') }}</button>
-            <button type="button" @click="markAll(false)" class="text-sm text-indigo-600 hover:text-indigo-800">{{ __('Keinen markieren') }}</button>
+            <button type="button" @click="markAll(true)" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Alle markieren') }}</button>
+            <button type="button" @click="markAll(false)" class="rounded-md border border-btn-secondary-border bg-btn-secondary px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-btn-secondary-hover">{{ __('Keinen markieren') }}</button>
         </div>
 
         <form method="POST" action="{{ route('projekte.anzeigefilter.update') }}" id="anzeigefilter-form">
