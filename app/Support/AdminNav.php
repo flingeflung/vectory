@@ -38,8 +38,8 @@ class AdminNav
                 ['route' => 'admin.papierformate', 'match' => 'admin.papierformate*', 'label' => __('Papierformate')],
             ],
             __('Kommunikation') => [
-                ['route' => 'admin.mail-vorlagen', 'match' => 'admin.mail-vorlagen*', 'label' => __('Mail-Vorlagen')],
                 ['route' => 'admin.mitteilungen', 'match' => 'admin.mitteilungen*', 'label' => __('Mitteilungen')],
+                ['route' => 'admin.mail-vorlagen', 'match' => 'admin.mail-vorlagen*', 'label' => __('Mail-Vorlagen')],
                 ['route' => 'admin.hilfeseiten', 'match' => 'admin.hilfeseiten*', 'label' => __('Hilfeseiten'), 'gate' => 'access-superadmin'],
                 ['route' => 'admin.begriffe', 'match' => 'admin.begriffe*', 'label' => __('Glossar-Links'), 'gate' => 'access-superadmin'],
                 ['route' => 'admin.dialog-ids', 'match' => 'admin.dialog-ids', 'label' => __('Dialog-IDs'), 'gate' => 'access-superadmin'],
