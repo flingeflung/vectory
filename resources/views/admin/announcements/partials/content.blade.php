@@ -58,7 +58,7 @@
     {{-- Rechts: die gewählte Mitteilung zum Bearbeiten, oder ein Hinweis, wenn keine ausgewählt ist. --}}
     <div class="flex flex-1 min-h-0 flex-col rounded-lg border border-gray-200 bg-white">
         @if ($selectedAnnouncement)
-            <div class="flex min-h-0 flex-1 flex-col" x-data="{ dirty: false }">
+            <div class="flex min-h-0 flex-1 flex-col" x-data="{ dirty: false, noRecipients: {{ $selectedAnnouncement->tenants->isEmpty() ? 'true' : 'false' }} }">
                 {{-- Speichern- und Lösch-Formular sind Geschwister, nicht verschachtelt (siehe Mail-Vorlagen). --}}
                 <form
                     id="announcement-form-{{ $selectedAnnouncement->id }}"
@@ -66,7 +66,7 @@
                     method="POST"
                     action="{{ route('admin.mitteilungen.update', $selectedAnnouncement) }}"
                     class="flex min-h-0 flex-1 flex-col"
-                    @input="dirty = window.formIsDirty($el, window.__announcementsDirtyForms)"
+                    @input="dirty = window.formIsDirty($el, window.__announcementsDirtyForms); @if ($chooseOrganizations) noRecipients = $el.querySelectorAll('input[type=checkbox][name^=tenant_ids]:checked').length === 0 @endif"
                     @submit="dirty = false; window.__announcementsDirtyForms.delete($el)"
                 >
                 @csrf
@@ -104,9 +104,7 @@
                             <p class="mt-0.5 text-xs text-gray-400">{{ __('Die Mitteilung sehen die Benutzer dieser Organisationen. Ohne Haken sieht sie niemand.') }}</p>
                         </div>
                     @endif
-                    @if ($selectedAnnouncement->tenants->isEmpty())
-                        <p class="rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-800">{{ __('Diese Mitteilung hat noch keine Empfänger und wird niemandem angezeigt.') }}</p>
-                    @endif
+                    <p x-show="noRecipients" x-cloak class="rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-800">{{ __('Diese Mitteilung hat noch keine Empfänger und wird niemandem angezeigt.') }}</p>
                 </div>
                 </form>
 
