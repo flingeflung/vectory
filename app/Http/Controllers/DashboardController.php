@@ -6,6 +6,7 @@ use App\Models\Favorite;
 use App\Models\Project;
 use App\Models\RecentlyViewedProject;
 use App\Models\Task;
+use App\Services\DashboardMessages;
 use App\Support\DashboardTileCatalog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,7 +14,7 @@ use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, DashboardMessages $dashboardMessages): View
     {
         $user = $request->user();
         $activeTiles = DashboardTileCatalog::activeFor($user);
@@ -21,6 +22,7 @@ class DashboardController extends Controller
         return view('dashboard', [
             'allTiles' => DashboardTileCatalog::available(),
             'activeTiles' => $activeTiles,
+            'messages' => $dashboardMessages->forUser($user),
             'recentProjects' => in_array('recent_projects', $activeTiles, true)
                 ? RecentlyViewedProject::query()
                     ->where('user_id', $user->id)

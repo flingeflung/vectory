@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\HelpArticleController;
 use App\Http\Controllers\Admin\HolidayController;
 use App\Http\Controllers\Admin\JobTypeController;
 use App\Http\Controllers\Admin\LegacyRoleController;
+use App\Http\Controllers\Admin\AnnouncementController;
 use App\Http\Controllers\Admin\MailTemplateController;
 use App\Http\Controllers\Admin\MarketController;
 use App\Http\Controllers\Admin\PaperFormatCombinationController;
@@ -381,6 +382,11 @@ Route::middleware(['auth', 'verified', 'can:access-admin', RememberLastAdminPage
     Route::post('/mail-vorlagen', [MailTemplateController::class, 'store'])->name('mail-vorlagen.store');
     Route::post('/mail-vorlagen/{mailTemplate}', [MailTemplateController::class, 'update'])->name('mail-vorlagen.update');
     Route::delete('/mail-vorlagen/{mailTemplate}', [MailTemplateController::class, 'destroy'])->name('mail-vorlagen.destroy');
+
+    Route::get('/mitteilungen', [AnnouncementController::class, 'index'])->name('mitteilungen');
+    Route::post('/mitteilungen', [AnnouncementController::class, 'store'])->name('mitteilungen.store');
+    Route::post('/mitteilungen/{announcement}', [AnnouncementController::class, 'update'])->name('mitteilungen.update');
+    Route::delete('/mitteilungen/{announcement}', [AnnouncementController::class, 'destroy'])->name('mitteilungen.destroy');
 
     Route::get('/projektattribute', [AttributeController::class, 'index'])->name('projektattribute');
     Route::post('/projektattribute', [AttributeController::class, 'store'])->name('projektattribute.store');

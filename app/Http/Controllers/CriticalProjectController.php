@@ -5,12 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Project;
 use App\Models\SystemSetting;
 use App\Services\CriticalProjects\CriticalProjectEvaluator;
-use App\Services\CriticalProjects\CriticalProjectFindingTracker;
+use App\Services\CriticalProjects\CriticalProjectOverview;
 use App\Support\CriticalProjectAccess;
 use App\Support\CurrentTenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class CriticalProjectController extends Controller
@@ -36,7 +35,7 @@ class CriticalProjectController extends Controller
             ->with('open_project_from_critical_projects', $target->id);
     }
 
-    public function __invoke(Request $request, CriticalProjectEvaluator $evaluator, CriticalProjectFindingTracker $tracker): View
+    public function __invoke(Request $request, CriticalProjectEvaluator $evaluator, CriticalProjectOverview $overview): View
     {
         abort_unless($request->user()->can('project.view'), 403);
 
@@ -56,34 +55,7 @@ class CriticalProjectController extends Controller
             $selectedIds = $allowedIds->values();
         }
 
-        $projects = Project::withoutGlobalScope('tenant')
-            ->tap(fn ($query) => CriticalProjectAccess::scopeProjects($query, $request->user(), $allowedIds))
-            ->whereIn('status', [0, 1])
-            ->with([
-                'tenant',
-                'workflow' => fn ($query) => $query->withoutGlobalScope('tenant'),
-                'projectPeople' => fn ($query) => $query->withoutGlobalScope('tenant'),
-                'projectPeople.person.calendarEntries', 'projectPeople.functionGroup',
-                'projectWorkflowSteps' => fn ($query) => $query->withoutGlobalScope('tenant'),
-                'projectWorkflowSteps.workflowStep' => fn ($query) => $query->withoutGlobalScope('tenant'),
-                'projectWorkflowSteps.workflowStep.functionGroups',
-                'projectMilestones' => fn ($query) => $query->withoutGlobalScope('tenant'),
-                'functionGroupHours', 'projectTemplate.functionGroups',
-            ])->get();
-        $booked = DB::table('job_hours')->whereIn('project_id', $projects->pluck('id'))
-            ->selectRaw('project_id, SUM(hours) AS total')->groupBy('project_id')->pluck('total', 'project_id');
-
-        $rows = $projects->map(function (Project $project) use ($evaluator, $booked) {
-            $findings = $evaluator->evaluate($project, (float) ($booked[$project->id] ?? 0));
-            $currentStep = $project->projectWorkflowSteps
-                ->first(fn ($step) => $step->is_current && $step->workflowStep?->workflow_id === $project->workflow_id);
-
-            return ['project' => $project, 'findings' => $findings, 'current_step' => $currentStep?->workflowStep?->title,
-                'rank' => (int) ($findings->max('rank') ?? 0)];
-        });
-
-        $rows = $tracker->sync($rows, $request->user())
-            ->filter(fn ($row) => $row['findings']->isNotEmpty());
+        $rows = $overview->rows($request->user(), $allowedIds);
 
         $severity = $request->string('severity')->toString();
         $reason = $request->string('reason')->toString();

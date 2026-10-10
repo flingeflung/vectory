@@ -239,15 +239,33 @@
                             <span class="text-xs font-semibold">{{ $mailTimersPending }}</span>
                         </button>
                     @endif
-                    <button
-                        type="button"
-                        @click="window.openIllustrationOrders({{ $project->id }})"
-                        class="{{ $iconBtn }}"
-                    title="{{ __('Illustrationsauftrag') }}"
-                    aria-label="{{ __('Illustrationsauftrag') }}"
-                    >
-                        <x-icon name="illustration" class="h-5 w-5" />
-                    </button>
+                    @php
+                        $illuAll = $project->graphicOrders->count();
+                        $illuOpen = $project->graphicOrders->filter(fn ($order) => $order->status?->isOpen())->count();
+                    @endphp
+                    @if ($illuOpen > 0)
+                        {{-- Auffällig, solange offene Illustrationsaufträge existieren - mit Zahl (Ralf, 2026-10-10) --}}
+                        <button
+                            type="button"
+                            @click="window.openIllustrationOrders({{ $project->id }})"
+                            class="inline-flex items-center gap-1 rounded-md border border-sky-400 bg-sky-100 p-1 pr-1.5 text-sky-900 hover:bg-sky-200"
+                            title="{{ __('Illustrationsaufträge: :open offen von :all', ['open' => $illuOpen, 'all' => $illuAll]) }}"
+                            aria-label="{{ __('Illustrationsauftrag') }}"
+                        >
+                            <x-icon name="illustration" class="h-5 w-5" />
+                            <span class="text-xs font-semibold">{{ $illuOpen }}</span>
+                        </button>
+                    @else
+                        <button
+                            type="button"
+                            @click="window.openIllustrationOrders({{ $project->id }})"
+                            class="{{ $iconBtn }}"
+                            title="{{ __('Illustrationsauftrag') }}"
+                            aria-label="{{ __('Illustrationsauftrag') }}"
+                        >
+                            <x-icon name="illustration" class="h-5 w-5" />
+                        </button>
+                    @endif
                     <button
                         type="button"
                         onclick="window.dispatchEvent(new CustomEvent('open-modal', { detail: 'projekt-checklisten-{{ $project->id }}' }))"

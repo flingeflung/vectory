@@ -25,10 +25,37 @@
              ist damit für SortableJS unsichtbar (bleibt so garantiert fix an
              Position 1, kann nicht durch Drag anderer Kacheln verschoben werden). --}}
         <div class="mx-auto grid max-w-7xl grid-cols-[repeat(auto-fill,20rem)] gap-4">
-            {{-- Meldungen: immer fix zuerst, nicht verschiebbar, nicht abwählbar
-                 (kommt später mit echtem Inhalt + Rechtefilterung). --}}
+            {{-- Meldungen: immer fix zuerst, nicht verschiebbar, nicht abwählbar. Je Meldung eine Zeile mit Zahl und
+                 Sprung zur passenden Seite (DashboardMessages), nur wenn die Zahl größer als 0 ist. --}}
+            @php
+                $toneClasses = [
+                    'red' => 'border-red-200 bg-red-50 text-red-700',
+                    'orange' => 'border-orange-300 bg-orange-50 text-orange-800',
+                    'amber' => 'border-amber-300 bg-amber-100 text-amber-900',
+                    'sky' => 'border-sky-300 bg-sky-100 text-sky-900',
+                    'blue' => 'border-blue-200 bg-blue-50 text-blue-700',
+                ];
+            @endphp
             <x-dashboard-tile :title="__('Meldungen')">
-                <div class="text-gray-400">&ndash; {{ __('derzeit keine Meldungen') }} &ndash;</div>
+                @forelse ($messages as $message)
+                    @php
+                        $rowClass = 'flex items-start gap-2 rounded px-1 py-1.5 text-gray-800';
+                        $pillClass = 'inline-flex min-w-[1.75rem] shrink-0 justify-center rounded border px-1.5 py-0.5 text-xs font-semibold '.($toneClasses[$message['tone']] ?? '');
+                    @endphp
+                    @if ($message['url'])
+                        <a href="{{ $message['url'] }}" title="{{ $message['hint'] }}" class="{{ $rowClass }} hover:bg-gray-50">
+                            <span class="{{ $pillClass }}">{{ $message['count'] ?? 'i' }}</span>
+                            <span class="min-w-0 break-words">{{ $message['text'] }}</span>
+                        </a>
+                    @else
+                        <div title="{{ $message['hint'] }}" class="{{ $rowClass }}">
+                            <span class="{{ $pillClass }}">{{ $message['count'] ?? 'i' }}</span>
+                            <span class="min-w-0 break-words">{{ $message['text'] }}</span>
+                        </div>
+                    @endif
+                @empty
+                    <div class="text-gray-400">&ndash; {{ __('derzeit keine Meldungen') }} &ndash;</div>
+                @endforelse
             </x-dashboard-tile>
 
             <div
